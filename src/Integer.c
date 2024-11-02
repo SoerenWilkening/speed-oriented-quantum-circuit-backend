@@ -7,7 +7,7 @@ element_t *quantum_bool(){
     element_t *integer = malloc(sizeof(element_t));
     integer->type = BOOL;
     integer->qualifier = Qu;
-    integer->q_address = stack.circuit->used_qubit_indices;
+    integer->q_address[0] = stack.circuit->used_qubit_indices;
     stack.circuit->ancilla += 1;
     stack.circuit->used_qubit_indices += 1;
     integer->c_address = NULL;
@@ -18,10 +18,12 @@ element_t *signed_quantum_integer(){
     element_t *integer = malloc(sizeof(element_t));
     integer->type = SIGNED;
     integer->qualifier = Qu;
-    integer->q_address = stack.circuit->used_qubit_indices;
     stack.circuit->ancilla += INTEGERSIZE;
-    stack.circuit->used_qubit_indices += INTEGERSIZE;
     integer->c_address = NULL;
+    for (int i = 0; i < INTEGERSIZE; ++i) {
+        integer->q_address[i] = stack.circuit->used_qubit_indices;
+        stack.circuit->used_qubit_indices++;
+    }
     return integer;
 }
 
@@ -29,9 +31,12 @@ element_t *unsigned_quantum_integer(){
     element_t *integer = malloc(sizeof(element_t));
     integer->type = UNSIGNED;
     integer->qualifier = Qu;
-    integer->q_address = stack.circuit->used_qubit_indices + 1;
+    for (int i = 0; i < INTEGERSIZE; ++i) {
+        integer->q_address[i] = stack.circuit->used_qubit_indices + 1;
+        stack.circuit->used_qubit_indices++;
+    }
+    stack.circuit->used_qubit_indices++; // allocate one more qubit
     stack.circuit->ancilla += INTEGERSIZE + 1;
-    stack.circuit->used_qubit_indices += INTEGERSIZE + 1; // one more qubit for various operations like qq comparison
     integer->c_address = NULL;
     return integer;
 }
@@ -58,6 +63,20 @@ element_t *bit_of_int(element_t *el1, int bit){
     element_t *b = malloc(sizeof(element_t));
     b->type = Qu;
     b->qualifier = BOOL;
-    b->q_address = el1->q_address + bit;
+    b->q_address[0] = el1->q_address[bit];
     return b;
+}
+
+// Function to compute n-bit two's complement bit representation of x
+int *two_complement(int64_t x, int n) {
+    // Print the n-bit two's complement bit representation
+    uint64_t mask = 1ULL << (n - 1);  // Start from the highest bit
+    int *bin = calloc(n, sizeof(int));
+
+    for (int i = 0; i < n; ++i) {
+        // Check each bit using mask and print '1' or '0'
+        bin[i] = (x & mask) ? 1 : 0;
+        mask >>= 1;  // Shift the mask right
+    }
+    return bin;
 }

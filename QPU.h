@@ -100,7 +100,7 @@ typedef enum {
 typedef struct {
     bool_t qualifier;
     union {
-        qubit_t q_address;
+        qubit_t q_address[INTEGERSIZE];
         int64_t *c_address;
     };
     type_t type;
@@ -124,7 +124,6 @@ typedef struct {
     instruction_t instruction_list[10000];
     int instruction_counter;
 
-    int controls[INTEGERSIZE];
     circuit_t *circuit;
 } hybrid_stack_t;
 
@@ -137,6 +136,8 @@ extern hybrid_stack_t stack;
 circuit_t *init_circuit();
 
 // integer generation and stack operation functions ====================================================================
+
+int *two_complement(int64_t x, int n);
 
 element_t *quantum_bool();
 
@@ -172,15 +173,15 @@ void ADD(element_t *el1, element_t *el2);
 
 void SUB(element_t *el1, element_t *el2);
 
+void IMUL(element_t *el1, element_t *el2, element_t *res);
+
+void IDIV(element_t *el1, element_t *el2, element_t *remainder);
+
 void NOT(element_t *el1);
 
 void IF(element_t *el1);
 
 void ELSE(element_t *el1);
-
-void SHR(element_t *el1);
-
-void SHL(element_t *el1);
 
 void TSTBIT(element_t *el1, element_t *el2, int bit);
 
@@ -190,5 +191,7 @@ void execute(instruction_t *instr);
 
 extern sequence_t *precompiled_QQ_add;
 extern sequence_t *precompiled_cQQ_add;
+extern sequence_t *precompiled_CQ_add;
+extern sequence_t *precompiled_cCQ_add;
 
 #endif //CQ_BACKEND_IMPROVED_QPU_H

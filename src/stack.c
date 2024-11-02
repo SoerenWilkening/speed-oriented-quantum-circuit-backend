@@ -10,10 +10,13 @@ void MOV(element_t *el1, element_t *el2, int pov) {
     *el1 = *el2;
 
     if (el2->qualifier == Qu){
-        if (pov == POINTER) ; // memcopy qubits
+        if (pov == POINTER)
+            if (el2->type == BOOL)
+                memcpy(el1->q_address, el2->q_address, sizeof(int)); // memcopy qubits
+            else
+                memcpy(el1->q_address, el2->q_address, INTEGERSIZE * sizeof(int)); // memcopy qubits
         else ; // create copy sequence
     }
-
 }
 
 void init_instruction(instruction_t *instr){
@@ -44,7 +47,7 @@ void execute(instruction_t *instr){
 
     sequence_t *res = instr->routine();
 
-    printf("%p\n", res);
+
     stack.GPR1[0].type = UNINITIALIZED;
     stack.GPR2[0].type = UNINITIALIZED;
     stack.GPR3[0].type = UNINITIALIZED;

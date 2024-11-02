@@ -89,7 +89,13 @@ void cp(gate_t *g, qubit_t target, qubit_t control, double value) {
     g->Target = target;
     g->NumControls = 1;
     g->Control[0] = control;
+}
 
+void p(gate_t *g, qubit_t target, double value) {
+    g->Gate = P;
+    g->GateValue = value;
+    g->Target = target;
+    g->NumControls = 0;
 }
 
 void cx(gate_t *g, qubit_t target, qubit_t control) {
@@ -207,7 +213,6 @@ sequence_t *QFT_inverse(sequence_t *qft) {
 }
 
 sequence_t *QQ_add() {
-//    printf("QQ_add\n");
     if (precompiled_QQ_add != NULL) return precompiled_QQ_add;
 
     sequence_t *add = malloc(sizeof(sequence_t));
@@ -295,7 +300,31 @@ sequence_t *cQQ_add() {
 }
 
 sequence_t *CQ_add() {
-    printf("CQ_add\n");
+    // Compute rotation angles
+    int NonZeroCount = 0;
+    int *bin = two_complement(*stack.GPR2[0].c_address, INTEGERSIZE);
+
+    // Compute rotations for addition
+    double *rotations = calloc(INTEGERSIZE, sizeof(double));
+    for (int i = 0; i < INTEGERSIZE; ++i) {
+        for (int j = 0; j < INTEGERSIZE - i; ++j) {
+            rotations[j + i] += bin[INTEGERSIZE - i - 1] * 2 * M_PI / (Z * pow(2, j + 1));
+        }
+        if (rotations[i] != 0) NonZeroCount++;
+    }
+    free(bin);
+    int start_layer = INTEGERSIZE;
+
+    if (precompiled_cCQ_add) {
+        sequence_t *add = precompiled_cCQ_add;
+
+        for (int i = 0; i < INTEGERSIZE; ++i) {
+            add->seq[start_layer + i][add->gates_per_layer[start_layer + i] - 1].GateValue = rotations[i];
+        }
+        free(rotations);
+        return add;
+    }
+
     sequence_t *add = malloc(sizeof(sequence_t));
     // allocate exact number of layer and enough gates per layer
     add->used_layer = 0;
@@ -307,6 +336,64 @@ sequence_t *CQ_add() {
     }
     QFT(add);
 
+    for (int i = 0; i < INTEGERSIZE; ++i) {
+        p(&add->seq[start_layer + i][add->gates_per_layer[start_layer + i]++], i, rotations[i]);
+    }
+    free(rotations);
+    add->used_layer++;
+
+    QFT_inverse(add);
+
+    precompiled_CQ_add = add;
+    return add;
+}
+
+sequence_t *cCQ_add() {
+    // Compute rotation angles
+    int NonZeroCount = 0;
+    int *bin = two_complement(*stack.GPR2[0].c_address, INTEGERSIZE);
+
+    // Compute rotations for addition
+    double *rotations = calloc(INTEGERSIZE, sizeof(double));
+    for (int i = 0; i < INTEGERSIZE; ++i) {
+        for (int j = 0; j < INTEGERSIZE - i; ++j) {
+            rotations[j + i] += bin[INTEGERSIZE - i - 1] * 2 * M_PI / (Z * pow(2, j + 1));
+        }
+        if (rotations[i] != 0) NonZeroCount++;
+    }
+    free(bin);
+    int start_layer = INTEGERSIZE;
+
+    if (precompiled_cCQ_add) {
+        sequence_t *add = precompiled_cCQ_add;
+
+        for (int i = 0; i < INTEGERSIZE; ++i) {
+            add->seq[start_layer + i][add->gates_per_layer[start_layer + i] - 1].GateValue = rotations[i];
+        }
+        free(rotations);
+        return add;
+    }
+
+    sequence_t *add = malloc(sizeof(sequence_t));
+    // allocate exact number of layer and enough gates per layer
+    add->used_layer = 0;
+    add->num_layer = 4 * INTEGERSIZE - 1;
+    add->seq = malloc(add->num_layer * sizeof(gate_t *));
+    add->gates_per_layer = calloc(add->num_layer, sizeof(num_t));
+    for (int i = 0; i < add->num_layer; ++i) {
+        add->seq[i] = malloc(INTEGERSIZE * sizeof(gate_t));
+    }
+    QFT(add);
+
+    for (int i = 0; i < INTEGERSIZE; ++i) {
+        cp(&add->seq[start_layer + i][add->gates_per_layer[start_layer + i]++], i, INTEGERSIZE + 1, rotations[i]);
+    }
+    free(rotations);
+    add->used_layer++;
+
+    QFT_inverse(add);
+
+    precompiled_cCQ_add = add;
     return add;
 }
 
@@ -334,7 +421,10 @@ void ADD(element_t *el1, element_t *el2) {
     if (el1->qualifier == Qu && el2->qualifier == Qu) {
         if (ins->control->type != UNINITIALIZED) ins->routine = cQQ_add;
         else ins->routine = QQ_add;
-    } else if (el1->qualifier == Qu && el2->qualifier == Cl) ins->routine = CQ_add;
+    } else if (el1->qualifier == Qu && el2->qualifier == Cl) {
+        if (ins->control->type != UNINITIALIZED) ins->routine = cCQ_add;
+        else ins->routine = CQ_add;
+    }
     else if (el1->qualifier == Cl && el2->qualifier == Cl) ins->routine = CC_add;
     else {
         printf("Cannot add quantum integer to classical integer!\n");
@@ -349,7 +439,29 @@ void SUB(element_t *el1, element_t *el2) {
     stack.instruction_list[stack.instruction_counter - 1].invert = INVERTED;
 }
 
-void IDIV(element_t *el1, element_t *el2){
+void IDIV(element_t *el1, element_t *el2, element_t *remainder){
+// create IDIV sequence to Divide Aq / Bq
+    element_t *Y = malloc(sizeof(element_t));
+    memcpy(Y, el1, sizeof(element_t));
+    for (int i = 1; i < INTEGERSIZE; ++i) {
+        memcpy(Y->q_address, &remainder->q_address[i], (INTEGERSIZE - i) * sizeof(int));
+        memcpy(&Y->q_address[(INTEGERSIZE - i)], el1->q_address, i * sizeof(int));
+
+        SUB(Y, el2); // subtract Bq from Aq
+        element_t *bit = bit_of_int(remainder, i - 1);
+        TSTBIT(bit, Y, 0); // check if Aq is negative, stored in Cq
+        IF(bit); // create control for the next instruction
+        ADD(Y, el2); // Add bq back to Aq (controlled by Cq)
+        NOT(bit); // Invert Cq
+    }
+    SUB(el1, el2); // subtract Bq from Aq
+    element_t *bit = bit_of_int(remainder, INTEGERSIZE - 1);
+    TSTBIT(bit, el1, 0); // check if Aq is negative, stored in Cq
+    IF(bit); // create control for the next instruction
+    ADD(el1, el2); // Add bq back to Aq (controlled by Cq)
+    ELSE(bit);
+    SUB(el1, el2);
+    NOT(bit); // Invert Cq
 
 }
 
@@ -360,9 +472,9 @@ void TSTBIT(element_t *el1, element_t *el2, int bit) {
     element_t *qbit = malloc(sizeof(element_t));
     qbit->qualifier = Qu;
     qbit->type = BOOL;
-    qbit->q_address = el2->q_address + bit;
+    qbit->q_address[0] = el2->q_address[bit];
 
-    MOV(ins->el1, qbit, POINTER);
+    MOV(ins->el2, qbit, POINTER);
     ins->routine = cx_gate;
     ins->invert = NOTINVERTED;
     stack.instruction_counter++;
@@ -385,12 +497,4 @@ void ELSE(element_t *el1) {
     NOT(el1);
     MOV(stack.instruction_list[stack.instruction_counter].control, el1, POINTER);
     NOT(el1);
-}
-
-void SHR(element_t *el1){
-    el1->q_address++;
-}
-
-void SHL(element_t *el1){
-    el1->q_address--;
 }

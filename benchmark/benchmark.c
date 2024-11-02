@@ -6,9 +6,7 @@
 #include <time.h>
 #include "../QPU.h"
 
-hybrid_stack_t stack = {
-        .stack_pointer = -1,
-};
+hybrid_stack_t stack;
 sequence_t *precompiled_QQ_add = NULL;
 sequence_t *precompiled_cQQ_add = NULL;
 
