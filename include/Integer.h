@@ -1,0 +1,42 @@
+//
+// Created by Sören Wilkening on 05.11.24.
+//
+
+#ifndef CQ_BACKEND_IMPROVED_INTEGER_H
+#define CQ_BACKEND_IMPROVED_INTEGER_H
+
+#include <math.h>
+#include "definition.h"
+#include "gate.h"
+#include "QPU.h"
+
+int *two_complement(int64_t x, int n);
+
+element_t *quantum_bool();
+
+element_t *signed_quantum_integer();
+
+element_t *unsigned_quantum_integer();
+
+element_t *classical_integer(int64_t intg);
+
+element_t *bit_of_int(element_t *el1, int bit);
+
+
+// implementation of Integer operations gate sequences
+sequence_t *QQ_mul();
+
+sequence_t *QQ_add();
+sequence_t *cQQ_add();
+
+sequence_t *CQ_add();
+sequence_t *cCQ_add();
+
+sequence_t *CC_add();
+
+extern sequence_t *precompiled_QQ_add;
+extern sequence_t *precompiled_cQQ_add;
+extern sequence_t *precompiled_CQ_add;
+extern sequence_t *precompiled_cCQ_add;
+
+#endif //CQ_BACKEND_IMPROVED_INTEGER_H

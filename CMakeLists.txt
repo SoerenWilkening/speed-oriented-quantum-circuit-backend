@@ -5,15 +5,27 @@ set(CMAKE_C_STANDARD 23)
 
 add_executable(CQ_backend_improved main.c
         QPU.h
-        src/stack.c
         src/Integer.c
-        src/circuit.c
-        src/gate.c)
+        src/QPU.c
+        src/gate.c
+        src/IntegerAddition.c
+        src/IntegerMultiplication.c
+        src/AssemblyOperations.c
+        src/LogicOperations.c)
 
 add_executable(bench benchmark/benchmark.c
         QPU.h
-        src/stack.c
         src/Integer.c
-        src/circuit.c
-        src/gate.c)
+        src/QPU.c
+        src/gate.c
+        src/IntegerAddition.c
+        src/IntegerMultiplication.c
+        src/AssemblyOperations.c
+        include/gate.h
+        include/definition.h
+        include/AssemblyOperations.h
+        include/QPU.h
+        include/Integer.h
+        src/LogicOperations.c
+        include/LogicOperations.h)
 

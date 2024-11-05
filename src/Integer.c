@@ -1,7 +1,7 @@
 //
 // Created by Sören Wilkening on 26.10.24.
 //
-#include "../QPU.h"
+#include "../include/QPU.h"
 
 element_t *quantum_bool(){
     element_t *integer = malloc(sizeof(element_t));

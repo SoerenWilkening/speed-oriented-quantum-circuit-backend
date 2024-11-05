@@ -1,0 +1,38 @@
+//
+// Created by Sören Wilkening on 05.11.24.
+//
+
+#ifndef CQ_BACKEND_IMPROVED_DEFINITION_H
+#define CQ_BACKEND_IMPROVED_DEFINITION_H
+
+#include <stdlib.h>
+
+#define INTEGERSIZE 64
+
+#define POINTER 1
+#define VALUE 0
+
+#define Qu 0
+#define Cl 1
+
+// desired functionality for storing all the gates and operations ======================================================
+#define MAXCONTROLS 2
+#define TRUE 1
+#define FALSE 0
+
+#define FREED 1
+#define NOTFREED 0
+
+#define INVERTED 1
+#define NOTINVERTED 0
+
+#define DECOMPOSETOFFOLI 1
+#define DONTDECOMPOSETOFFOLI 0
+typedef char decompose_toffoli_t;
+
+typedef unsigned int qubit_t;
+typedef size_t layer_t;
+typedef unsigned int num_t;
+typedef unsigned char bool_t;
+
+#endif //CQ_BACKEND_IMPROVED_DEFINITION_H
