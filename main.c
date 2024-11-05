@@ -27,13 +27,9 @@ int main(void) {
     element_t *Cc = classical_integer(12);
     element_t *Dc = classical_integer(24);
 
-    element_t *constant_1 = classical_integer(1);
     // ._main
     clock_t t1 = clock();
-//    IDIV(Aq, Cc, Rq);
-//    IF(Cq);
-//    ADD(Aq, Bq);
-    element_t *constant = classical_integer(201);
+
     IMUL(Aq, Bq, Rq);
 
     // ._execute

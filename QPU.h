@@ -83,7 +83,7 @@ typedef struct {
 } circuit_t;
 
 // funcitonality for stack operations and data =========================================================================
-#define INTEGERSIZE 4
+#define INTEGERSIZE 64
 
 #define Qu 0
 #define Cl 1
@@ -191,5 +191,7 @@ extern sequence_t *precompiled_QQ_add;
 extern sequence_t *precompiled_cQQ_add;
 extern sequence_t *precompiled_CQ_add;
 extern sequence_t *precompiled_cCQ_add;
+
+// INTEGERSIZE * (2 * INTEGERSIZE + 6) - 1
 
 #endif //CQ_BACKEND_IMPROVED_QPU_H
