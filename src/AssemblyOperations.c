@@ -95,7 +95,10 @@ void IMUL(element_t *el1, element_t *el2, element_t *res) {
         if (ins->control->type != UNINITIALIZED) ins->routine = cCQ_mul;
         else ins->routine = CQ_mul;
     }
-    else ins->routine = QQ_mul;
+    else {
+        if (ins->control->type != UNINITIALIZED) ins->routine = cQQ_mul;
+        else ins->routine = QQ_mul;
+    }
 
     ins->invert = NOTINVERTED;
     stack.instruction_counter++;

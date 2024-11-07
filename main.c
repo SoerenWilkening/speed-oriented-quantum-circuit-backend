@@ -31,14 +31,15 @@ int main(void) {
 
     // ._main
     clock_t t1 = clock();
-    IF(Cq);
-    ADD(Aq, Bq);
-    ADD(Aq, Bq);
+//    IF(Cq);
+//    ADD(Aq, Bq);
+//    ADD(Aq, Bq);
 //    IMUL(Aq, Bq, Rq);
-    IMUL(Aq, Cc, Bq);
+//    IMUL(Aq, Cc, Bq);
 //    IMUL(Aq, Rq, Bq);
+    IMUL(Aq, Rq, Bq);
     IF(Cq);
-    IMUL(Aq, Cc, Bq);
+    IMUL(Aq, Rq, Bq);
 
     // ._execute
     for (int i = 0; i < stack.instruction_counter; ++i) {
