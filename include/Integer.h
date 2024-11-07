@@ -26,6 +26,7 @@ element_t *bit_of_int(element_t *el1, int bit);
 // implementation of Integer operations gate sequences
 sequence_t *QQ_mul();
 sequence_t *CQ_mul();
+sequence_t *cCQ_mul();
 
 sequence_t *QQ_add();
 sequence_t *cQQ_add();

@@ -17,11 +17,6 @@
 
 // desired functionality for storing all the gates and operations ======================================================
 #define MAXCONTROLS 2
-#define TRUE 1
-#define FALSE 0
-
-#define FREED 1
-#define NOTFREED 0
 
 #define INVERTED 1
 #define NOTINVERTED 0

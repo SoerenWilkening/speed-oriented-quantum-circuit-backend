@@ -26,15 +26,19 @@ int main(void) {
     element_t *Bq = signed_quantum_integer();
     element_t *Rq = signed_quantum_integer();
     element_t *Cq = quantum_bool();
-    element_t *Cc = classical_integer(14);
+    element_t *Cc = classical_integer(12);
     element_t *Dc = classical_integer(24);
 
     // ._main
     clock_t t1 = clock();
     IF(Cq);
     ADD(Aq, Bq);
+    ADD(Aq, Bq);
 //    IMUL(Aq, Bq, Rq);
-//    IMUL(Aq, Cc, Bq);
+    IMUL(Aq, Cc, Bq);
+//    IMUL(Aq, Rq, Bq);
+    IF(Cq);
+    IMUL(Aq, Cc, Bq);
 
     // ._execute
     for (int i = 0; i < stack.instruction_counter; ++i) {

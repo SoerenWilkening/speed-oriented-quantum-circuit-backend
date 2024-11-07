@@ -132,3 +132,73 @@ sequence_t *CQ_mul() {
 
     return mul;
 }
+
+sequence_t *cCQ_mul() {
+    int *bin = two_complement(*stack.GPR3->c_address, INTEGERSIZE);
+
+    sequence_t *mul = malloc(sizeof(sequence_t));
+
+    mul->seq = malloc(
+            (INTEGERSIZE * (2 * INTEGERSIZE + 6) - 1) * sizeof(gate_t));
+    mul->used_layer = 0;
+    mul->num_layer = INTEGERSIZE * (2 * INTEGERSIZE + 6) - 1;
+    mul->gates_per_layer = calloc(mul->num_layer, sizeof(num_t));
+
+    for (int i = 0; i < mul->num_layer; ++i) mul->seq[i] = malloc(2 * INTEGERSIZE * sizeof(gate_t));
+
+    QFT(mul);
+
+    // precompute all the rotation angles
+    double values[INTEGERSIZE];
+    memset(values, 0, INTEGERSIZE * sizeof(double));
+    for (int i = 0; i < INTEGERSIZE; ++i) {
+        for (int bit_int2 = 0; bit_int2 < INTEGERSIZE; ++bit_int2) {
+            values[i] += bin[bit_int2] * M_PI / (pow(2, i + 1)) * pow(2, INTEGERSIZE - bit_int2 - 1);
+        }
+    }
+
+    int rounds;
+    int layer = INTEGERSIZE;
+    for (int bit = (int) INTEGERSIZE - 1; bit >= 0; --bit) {
+        double value = 0;
+        for (int i = 0; i < INTEGERSIZE - bit; ++i) {
+            value += values[i] / 2;
+        }
+        gate_t *g = &mul->seq[layer][mul->gates_per_layer[layer]++];
+        cp(g, INTEGERSIZE - bit - 1, 2 * INTEGERSIZE, value);
+        layer++;
+    }
+
+
+    rounds = 0;
+    for (int bit = (int) INTEGERSIZE - 1; bit >= 0; --bit) {
+        gate_t *g = &mul->seq[layer][mul->gates_per_layer[layer]++];
+        cx(g, 2 * INTEGERSIZE, INTEGERSIZE + bit);
+        layer++;
+        for (int i = 0; i < INTEGERSIZE - rounds; ++i) {
+            g = &mul->seq[layer][mul->gates_per_layer[layer]++];
+            cp(g, i + rounds, 2 * INTEGERSIZE, -values[i] / 2);
+            layer++;
+        }
+        g = &mul->seq[layer][mul->gates_per_layer[layer]++];
+        cx(g, 2 * INTEGERSIZE, INTEGERSIZE + bit);
+        layer++;
+        rounds++;
+    }
+
+    rounds = 0;
+    for (int bit = (int) INTEGERSIZE - 1; bit >= 0; --bit) {
+        for (int i = 0; i < INTEGERSIZE - rounds; ++i) {
+            gate_t *g = &mul->seq[layer][mul->gates_per_layer[layer]++];
+            cp(g, i + rounds, INTEGERSIZE + bit, values[i] / 2);
+            layer++;
+        }
+        layer -= INTEGERSIZE - rounds;
+        rounds++;
+    }
+    mul->used_layer = layer + INTEGERSIZE;
+
+    QFT_inverse(mul);
+
+    return mul;
+}

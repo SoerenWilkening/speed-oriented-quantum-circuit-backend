@@ -54,10 +54,9 @@ sequence_t *cQQ_add() {
         add->seq[i] = malloc(INTEGERSIZE * sizeof(gate_t));
     }
     QFT(add);
-    num_t starting_layer = INTEGERSIZE;
 
-    int rounds = 0;
-    int layer = starting_layer;
+    int rounds;
+    int layer = INTEGERSIZE;
     for (int bit = (int) INTEGERSIZE - 1; bit >= 0; --bit) {
         double value = 0;
         for (int i = 0; i < INTEGERSIZE - bit; ++i) {
@@ -66,7 +65,6 @@ sequence_t *cQQ_add() {
         gate_t *g = &add->seq[layer][add->gates_per_layer[layer]++];
         cp(g, INTEGERSIZE - bit - 1, 2 * INTEGERSIZE, value);
         layer++;
-//        rounds++;
     }
 
 
@@ -83,7 +81,6 @@ sequence_t *cQQ_add() {
         }
         g = &add->seq[layer][add->gates_per_layer[layer]++];
         cx(g, 2 * INTEGERSIZE, INTEGERSIZE + bit);
-//        layer -= INTEGERSIZE - rounds - 2;
         layer++;
         rounds++;
     }

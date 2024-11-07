@@ -91,7 +91,10 @@ void IMUL(element_t *el1, element_t *el2, element_t *res) {
     MOV(ins->el2, el1, POINTER);
     MOV(ins->el3, el2, POINTER);
 
-    if (el2->qualifier == Cl) ins->routine = CQ_mul;
+    if (el2->qualifier == Cl) {
+        if (ins->control->type != UNINITIALIZED) ins->routine = cCQ_mul;
+        else ins->routine = CQ_mul;
+    }
     else ins->routine = QQ_mul;
 
     ins->invert = NOTINVERTED;
