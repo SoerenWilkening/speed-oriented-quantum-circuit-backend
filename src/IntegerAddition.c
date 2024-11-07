@@ -40,7 +40,6 @@ sequence_t *QQ_add() {
 }
 
 sequence_t *cQQ_add() {
-//    printf("cQQ_add\n");
     if (precompiled_cQQ_add != NULL) return precompiled_cQQ_add;
 
     sequence_t *add = malloc(sizeof(sequence_t));

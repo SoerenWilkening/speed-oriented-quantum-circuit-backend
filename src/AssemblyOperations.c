@@ -91,7 +91,8 @@ void IMUL(element_t *el1, element_t *el2, element_t *res) {
     MOV(ins->el2, el1, POINTER);
     MOV(ins->el3, el2, POINTER);
 
-    ins->routine = QQ_mul;
+    if (el2->qualifier == Cl) ins->routine = CQ_mul;
+    else ins->routine = QQ_mul;
 
     ins->invert = NOTINVERTED;
     stack.instruction_counter++;

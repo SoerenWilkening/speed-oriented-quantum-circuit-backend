@@ -34,10 +34,9 @@ typedef struct {
 } sequence_t;
 
 void print_sequence(sequence_t *seq);
-// implementation of sequences, gates are already sorted by layer
-// sequence is already supposed to use the stack
 
 sequence_t *QFT(sequence_t *seq);
+
 sequence_t *QFT_inverse(sequence_t *seq);
 
 void x(gate_t *g, qubit_t target);

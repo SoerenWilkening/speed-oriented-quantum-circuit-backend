@@ -32,7 +32,7 @@ void print_sequence(sequence_t *seq) {
     }
     printf("cycles = %d\n", seq->used_layer);
     printf("gates = %d\n", count);
-    if (seq->used_layer > 1000) return;
+    if (seq->used_layer > 100) return;
     for (int qubit = 0; qubit < 3 * INTEGERSIZE + 2; ++qubit) {
         for (int layer = 0; layer < seq->used_layer; ++layer) {
             for (int gate = 0; gate < seq->gates_per_layer[layer]; ++gate) {
@@ -186,7 +186,6 @@ sequence_t *QFT_inverse(sequence_t *qft) {
     for (int j = 0; j < INTEGERSIZE; ++j) {
         for (int i = 0; i < INTEGERSIZE - 1 - j; ++i) {
             num_t layer = qft->used_layer + 2 * INTEGERSIZE - 1 - (2 * j + i + 1) - 1;
-            num_t index = 2 * INTEGERSIZE - 1 - (2 * j + i + 1) - 1;
             cp(&qft->seq[layer][qft->gates_per_layer[layer]++], j, j + i + 1, -2 * M_PI / pow(2, i + 1));
         }
         num_t layer = qft->used_layer + 2 * INTEGERSIZE - 1 - 2 * j - 1;

@@ -9,6 +9,8 @@ sequence_t *precompiled_cQQ_add = NULL;
 sequence_t *precompiled_CQ_add = NULL;
 sequence_t *precompiled_cCQ_add = NULL;
 
+sequence_t *precompiled_QQ_mul = NULL;
+
 int main(void) {
 
     // initialize the rest of the stack
@@ -24,13 +26,15 @@ int main(void) {
     element_t *Bq = signed_quantum_integer();
     element_t *Rq = signed_quantum_integer();
     element_t *Cq = quantum_bool();
-    element_t *Cc = classical_integer(12);
+    element_t *Cc = classical_integer(14);
     element_t *Dc = classical_integer(24);
 
     // ._main
     clock_t t1 = clock();
-
-    IMUL(Aq, Bq, Rq);
+    IF(Cq);
+    ADD(Aq, Bq);
+//    IMUL(Aq, Bq, Rq);
+//    IMUL(Aq, Cc, Bq);
 
     // ._execute
     for (int i = 0; i < stack.instruction_counter; ++i) {

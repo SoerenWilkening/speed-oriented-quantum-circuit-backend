@@ -25,6 +25,7 @@ element_t *bit_of_int(element_t *el1, int bit);
 
 // implementation of Integer operations gate sequences
 sequence_t *QQ_mul();
+sequence_t *CQ_mul();
 
 sequence_t *QQ_add();
 sequence_t *cQQ_add();
@@ -38,5 +39,7 @@ extern sequence_t *precompiled_QQ_add;
 extern sequence_t *precompiled_cQQ_add;
 extern sequence_t *precompiled_CQ_add;
 extern sequence_t *precompiled_cCQ_add;
+
+extern sequence_t *precompiled_QQ_mul;
 
 #endif //CQ_BACKEND_IMPROVED_INTEGER_H
