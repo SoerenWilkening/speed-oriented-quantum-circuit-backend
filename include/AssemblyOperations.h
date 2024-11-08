@@ -28,6 +28,8 @@ void ELSE(element_t *el1);
 
 void TSTBIT(element_t *el1, element_t *el2, int bit);
 
+void AND(element_t *bool_res, element_t *bool_1, element_t *bool_2);
+
 void init_instruction(instruction_t *instr);
 
 void execute(instruction_t *instr);

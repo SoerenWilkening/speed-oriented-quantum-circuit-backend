@@ -31,7 +31,7 @@ void execute(instruction_t *instr){
 
     sequence_t *res = instr->routine();
 
-    print_sequence(res);
+//    print_sequence(res);
     stack.GPR1[0].type = UNINITIALIZED;
     stack.GPR2[0].type = UNINITIALIZED;
     stack.GPR3[0].type = UNINITIALIZED;
@@ -106,26 +106,59 @@ void IMUL(element_t *el1, element_t *el2, element_t *res) {
 
 void IDIV(element_t *el1, element_t *el2, element_t *remainder) {
     // create IDIV sequence to Divide Aq / Bq
+//    printf("%d %d\n", stack.instruction_list[stack.instruction_counter + 1].control->type, UNINITIALIZED);
+
+    element_t *ctrl = stack.instruction_list[stack.instruction_counter].control;
+    element_t *bool_intermediate = quantum_bool();
+
     element_t *Y = malloc(sizeof(element_t));
     memcpy(Y, el1, sizeof(element_t));
     for (int i = 1; i < INTEGERSIZE; ++i) {
         memcpy(Y->q_address, &remainder->q_address[i], (INTEGERSIZE - i) * sizeof(int));
         memcpy(&Y->q_address[(INTEGERSIZE - i)], el1->q_address, i * sizeof(int));
 
+        IF(ctrl);
         SUB(Y, el2); // subtract Bq from Aq
+
         element_t *bit = bit_of_int(remainder, i - 1);
+
+        IF(ctrl);
         TSTBIT(bit, Y, 0); // check if Aq is negative, stored in Cq
-        IF(bit); // create control for the next instruction
+
+        if (ctrl->type != UNINITIALIZED) {
+            AND(bool_intermediate, ctrl, bit);
+            IF(bool_intermediate);
+        }
+        else IF(bit); // create control for the next instruction
         ADD(Y, el2); // Add bq back to Aq (controlled by Cq)
+
+        // Uncompute and
+        if (ctrl->type != UNINITIALIZED) AND(bool_intermediate, ctrl, bit);
+
+        IF(ctrl);
         NOT(bit); // Invert Cq
     }
+    IF(ctrl);
     SUB(el1, el2); // subtract Bq from Aq
     element_t *bit = bit_of_int(remainder, INTEGERSIZE - 1);
+
+    IF(ctrl);
     TSTBIT(bit, el1, 0); // check if Aq is negative, stored in Cq
-    IF(bit); // create control for the next instruction
+
+    if (ctrl->type != UNINITIALIZED) {
+        AND(bool_intermediate, ctrl, bit);
+        IF(bool_intermediate);
+    }
+    else IF(bit); // create control for the next instruction
     ADD(el1, el2); // Add bq back to Aq (controlled by Cq)
-    ELSE(bit);
+
+    // Uncompute and
+    if (ctrl->type != UNINITIALIZED) AND(bool_intermediate, ctrl, bit);
+
+    IF(ctrl);
     SUB(el1, el2);
+
+    IF(ctrl);
     NOT(bit); // Invert Cq
 
 }
@@ -162,4 +195,16 @@ void ELSE(element_t *el1) {
     NOT(el1);
     MOV(stack.instruction_list[stack.instruction_counter].control, el1, POINTER);
     NOT(el1);
+}
+
+void AND(element_t *bool_res, element_t *bool_1, element_t *bool_2){
+    instruction_t *ins = &stack.instruction_list[stack.instruction_counter];
+    MOV(ins->el1, bool_res, POINTER);
+    MOV(ins->el2, bool_1, POINTER);
+    MOV(ins->el3, bool_2, POINTER);
+
+    ins->routine = toffoli_gate;
+
+    ins->invert = NOTINVERTED;
+    stack.instruction_counter++;
 }

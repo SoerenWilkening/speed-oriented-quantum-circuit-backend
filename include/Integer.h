@@ -44,5 +44,6 @@ extern sequence_t *precompiled_CQ_add;
 extern sequence_t *precompiled_cCQ_add;
 
 extern sequence_t *precompiled_QQ_mul;
+extern sequence_t *precompiled_cQQ_mul;
 
 #endif //CQ_BACKEND_IMPROVED_INTEGER_H

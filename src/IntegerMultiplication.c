@@ -99,6 +99,8 @@ sequence_t *QQ_mul() {
 
 sequence_t *cQQ_mul() {
 
+    if (precompiled_cQQ_mul != NULL) return precompiled_cQQ_mul;
+
     sequence_t *mul = malloc(sizeof(sequence_t));
 
     mul->seq = malloc(3 * (INTEGERSIZE * (2 * INTEGERSIZE + 6) - 1) * sizeof(gate_t));
@@ -209,8 +211,8 @@ sequence_t *cQQ_mul() {
 
     mul->used_layer = layer;
     QFT_inverse(mul);
-//
-//    precompiled_QQ_mul = mul;
+
+    precompiled_cQQ_mul = mul;
     return mul;
 }
 

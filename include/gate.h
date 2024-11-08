@@ -49,4 +49,6 @@ void cx(gate_t *g, qubit_t target, qubit_t control);
 
 sequence_t *cx_gate();
 
+sequence_t *toffoli_gate();
+
 #endif //CQ_BACKEND_IMPROVED_GATE_H

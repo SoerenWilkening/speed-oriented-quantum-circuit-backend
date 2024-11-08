@@ -112,6 +112,22 @@ void cx(gate_t *g, qubit_t target, qubit_t control) {
     g->Control[0] = control;
 }
 
+sequence_t *toffoli_gate(){
+    sequence_t *seq = malloc(sizeof(sequence_t *));
+
+    seq->seq = malloc(sizeof(gate_t *));
+    seq->seq[0] = malloc(sizeof(gate_t));
+    seq->used_layer = 1;
+    seq->num_layer = 1;
+    seq->gates_per_layer = malloc(sizeof(num_t));
+    seq->gates_per_layer[0] = 1;
+    seq->seq[0][0].Control[0] = 1;
+    seq->seq[0][0].Control[1] = 2;
+    seq->seq[0][0].NumControls = 2;
+    seq->seq[0][0].Target = 0;
+    seq->seq[0][0].Gate = X;
+}
+
 sequence_t *cx_gate() {
 //    printf("cx\n");
     sequence_t *seq = malloc(sizeof(sequence_t *));

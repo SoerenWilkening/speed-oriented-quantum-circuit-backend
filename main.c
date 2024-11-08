@@ -9,6 +9,7 @@ sequence_t *precompiled_cQQ_add = NULL;
 sequence_t *precompiled_CQ_add = NULL;
 sequence_t *precompiled_cCQ_add = NULL;
 
+sequence_t *precompiled_cQQ_mul = NULL;
 sequence_t *precompiled_QQ_mul = NULL;
 
 int main(void) {
@@ -31,15 +32,10 @@ int main(void) {
 
     // ._main
     clock_t t1 = clock();
-//    IF(Cq);
-//    ADD(Aq, Bq);
-//    ADD(Aq, Bq);
-//    IMUL(Aq, Bq, Rq);
-//    IMUL(Aq, Cc, Bq);
-//    IMUL(Aq, Rq, Bq);
-    IMUL(Aq, Rq, Bq);
+
     IF(Cq);
-    IMUL(Aq, Rq, Bq);
+    IDIV(Aq, Bq, Rq);
+//    IMUL(Aq, Rq, Bq);
 
     // ._execute
     for (int i = 0; i < stack.instruction_counter; ++i) {

@@ -119,7 +119,7 @@ sequence_t *CQ_add() {
     free(bin);
     int start_layer = INTEGERSIZE;
 
-    if (precompiled_cCQ_add) {
+    if (precompiled_cCQ_add != NULL) {
         sequence_t *add = precompiled_cCQ_add;
 
         for (int i = 0; i < INTEGERSIZE; ++i) {
