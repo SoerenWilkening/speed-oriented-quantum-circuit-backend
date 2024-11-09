@@ -31,7 +31,7 @@ void execute(instruction_t *instr){
 
     sequence_t *res = instr->routine();
 
-//    print_sequence(res);
+    print_sequence(res);
     stack.GPR1[0].type = UNINITIALIZED;
     stack.GPR2[0].type = UNINITIALIZED;
     stack.GPR3[0].type = UNINITIALIZED;
@@ -203,7 +203,7 @@ void AND(element_t *bool_res, element_t *bool_1, element_t *bool_2){
     MOV(ins->el2, bool_1, POINTER);
     MOV(ins->el3, bool_2, POINTER);
 
-    ins->routine = toffoli_gate;
+    ins->routine = and_sequence;
 
     ins->invert = NOTINVERTED;
     stack.instruction_counter++;

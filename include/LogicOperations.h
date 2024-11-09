@@ -8,7 +8,10 @@
 #include "definition.h"
 #include "gate.h"
 #include "QPU.h"
+#include "Integer.h"
 
 sequence_t *not_seq();
+
+sequence_t *and_sequence();
 
 #endif //CQ_BACKEND_IMPROVED_LOGICOPERATIONS_H
