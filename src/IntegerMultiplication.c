@@ -51,12 +51,12 @@ sequence_t *QQ_mul() {
 
     sequence_t *mul = malloc(sizeof(sequence_t));
 
-    mul->seq = malloc((INTEGERSIZE * (2 * INTEGERSIZE + 6) - 1) * sizeof(gate_t));
     mul->used_layer = 0;
     mul->num_layer = INTEGERSIZE * (2 * INTEGERSIZE + 6) - 1;
-    mul->gates_per_layer = calloc(mul->num_layer, sizeof(num_t));
-
-    for (int i = 0; i < mul->num_layer; ++i) mul->seq[i] = malloc(2 * INTEGERSIZE * sizeof(gate_t));
+    memset(mul->gates_per_layer, 0, mul->num_layer * sizeof(num_t));
+//    mul->seq = malloc((INTEGERSIZE * (2 * INTEGERSIZE + 6) - 1) * sizeof(gate_t));
+//    mul->gates_per_layer = calloc(mul->num_layer, sizeof(num_t));
+//    for (int i = 0; i < mul->num_layer; ++i) mul->seq[i] = malloc(2 * INTEGERSIZE * sizeof(gate_t));
 
     QFT(mul);
     num_t layer = INTEGERSIZE;
@@ -103,12 +103,12 @@ sequence_t *cQQ_mul() {
 
     sequence_t *mul = malloc(sizeof(sequence_t));
 
-    mul->seq = malloc(3 * (INTEGERSIZE * (2 * INTEGERSIZE + 6) - 1) * sizeof(gate_t));
     mul->used_layer = 0;
     mul->num_layer = 3 * INTEGERSIZE * (2 * INTEGERSIZE + 6) - 1;
-    mul->gates_per_layer = calloc(mul->num_layer, sizeof(num_t));
-
-    for (int i = 0; i < mul->num_layer; ++i) mul->seq[i] = malloc(2 * INTEGERSIZE * sizeof(gate_t));
+    memset(mul->gates_per_layer, 0, mul->num_layer * sizeof(num_t));
+//    mul->seq = malloc(3 * (INTEGERSIZE * (2 * INTEGERSIZE + 6) - 1) * sizeof(gate_t));
+//    mul->gates_per_layer = calloc(mul->num_layer, sizeof(num_t));
+//    for (int i = 0; i < mul->num_layer; ++i) mul->seq[i] = malloc(2 * INTEGERSIZE * sizeof(gate_t));
 
     QFT(mul);
     num_t layer = INTEGERSIZE;
@@ -221,14 +221,15 @@ sequence_t *CQ_mul() {
     int *bin = two_complement(*stack.GPR3->c_address, INTEGERSIZE);
 
     sequence_t *mul = malloc(sizeof(sequence_t));
-
-    mul->seq = malloc(
-            (INTEGERSIZE * (2 * INTEGERSIZE + 6) - 1) * sizeof(gate_t));
     mul->used_layer = 0;
     mul->num_layer = INTEGERSIZE * (2 * INTEGERSIZE + 6) - 1;
-    mul->gates_per_layer = calloc(mul->num_layer, sizeof(num_t));
+    memset(mul->gates_per_layer, 0, mul->num_layer * sizeof(num_t));
 
-    for (int i = 0; i < mul->num_layer; ++i) mul->seq[i] = malloc(2 * INTEGERSIZE * sizeof(gate_t));
+//    mul->seq = malloc(
+//            (INTEGERSIZE * (2 * INTEGERSIZE + 6) - 1) * sizeof(gate_t));
+//    mul->gates_per_layer = calloc(mul->num_layer, sizeof(num_t));
+//
+//    for (int i = 0; i < mul->num_layer; ++i) mul->seq[i] = malloc(2 * INTEGERSIZE * sizeof(gate_t));
 
     QFT(mul);
     num_t layer = INTEGERSIZE;
@@ -262,14 +263,15 @@ sequence_t *cCQ_mul() {
     int *bin = two_complement(*stack.GPR3->c_address, INTEGERSIZE);
 
     sequence_t *mul = malloc(sizeof(sequence_t));
-
-    mul->seq = malloc(
-            (INTEGERSIZE * (2 * INTEGERSIZE + 6) - 1) * sizeof(gate_t));
     mul->used_layer = 0;
     mul->num_layer = INTEGERSIZE * (2 * INTEGERSIZE + 6) - 1;
-    mul->gates_per_layer = calloc(mul->num_layer, sizeof(num_t));
+    memset(mul->gates_per_layer, 0, mul->num_layer * sizeof(num_t));
 
-    for (int i = 0; i < mul->num_layer; ++i) mul->seq[i] = malloc(2 * INTEGERSIZE * sizeof(gate_t));
+//    mul->seq = malloc(
+//            (INTEGERSIZE * (2 * INTEGERSIZE + 6) - 1) * sizeof(gate_t));
+//    mul->gates_per_layer = calloc(mul->num_layer, sizeof(num_t));
+//
+//    for (int i = 0; i < mul->num_layer; ++i) mul->seq[i] = malloc(2 * INTEGERSIZE * sizeof(gate_t));
 
     QFT(mul);
 

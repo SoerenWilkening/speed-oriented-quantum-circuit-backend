@@ -25,7 +25,7 @@ qubit_t MaxQubit(gate_t *g) {
 }
 
 void print_sequence(sequence_t *seq) {
-    if (seq == NULL || seq->seq == NULL) return;
+    if (seq == NULL) return;
     int count = 0;
     for (int layer = 0; layer < seq->used_layer; ++layer) {
         count += seq->gates_per_layer[layer];
@@ -123,16 +123,10 @@ void ccx(gate_t *g, qubit_t target, qubit_t control1, qubit_t control2) {
 sequence_t *cx_gate() {
     sequence_t *seq = malloc(sizeof(sequence_t *));
 
-    seq->seq = malloc(sizeof(gate_t *));
-    seq->seq[0] = malloc(sizeof(gate_t));
     seq->used_layer = 1;
     seq->num_layer = 1;
-    seq->gates_per_layer = malloc(sizeof(num_t));
     seq->gates_per_layer[0] = 1;
-    seq->seq[0][0].Control[0] = 1;
-    seq->seq[0][0].NumControls = 1;
-    seq->seq[0][0].Target = 0;
-    seq->seq[0][0].Gate = X;
+    cx(&seq->seq[0][0], 0, 1);
 
     return seq;
 }
@@ -149,11 +143,7 @@ sequence_t *QFT(sequence_t *qft) {
         qft = malloc(sizeof(sequence_t));
         qft->used_layer = 0;
         qft->num_layer = 2 * INTEGERSIZE - 1;
-        qft->gates_per_layer = calloc(2 * INTEGERSIZE - 1, sizeof(num_t));
-
-        // allocate space for every gate
-        qft->seq = malloc((2 * INTEGERSIZE - 1) * sizeof(gate_t *));
-        for (int i = 0; i < (2 * INTEGERSIZE - 1); ++i) qft->seq[i] = malloc(sum[i] * sizeof(gate_t));
+        memset(qft->gates_per_layer, 0, qft->num_layer * sizeof(num_t));
     }
     memcpy(&qft->gates_per_layer[qft->used_layer], sum, (2 * INTEGERSIZE - 1) * sizeof(num_t));
 
@@ -183,11 +173,12 @@ sequence_t *QFT_inverse(sequence_t *qft) {
         qft = malloc(sizeof(sequence_t));
         qft->used_layer = 0;
         qft->num_layer = 2 * INTEGERSIZE - 1;
-        qft->gates_per_layer = calloc(2 * INTEGERSIZE - 1, sizeof(num_t));
+        memset(qft->gates_per_layer, 0, qft->num_layer * sizeof(num_t));
 
+//        qft->gates_per_layer = calloc(2 * INTEGERSIZE - 1, sizeof(num_t));
         // allocate space for every gate
-        qft->seq = malloc((2 * INTEGERSIZE - 1) * sizeof(gate_t *));
-        for (int i = 0; i < (2 * INTEGERSIZE - 1); ++i) qft->seq[i] = malloc(sum[i] * sizeof(gate_t));
+//        qft->seq = malloc((2 * INTEGERSIZE - 1) * sizeof(gate_t *));
+//        for (int i = 0; i < (2 * INTEGERSIZE - 1); ++i) qft->seq[i] = malloc(sum[i] * sizeof(gate_t));
     }
 
     for (int j = 0; j < INTEGERSIZE; ++j) {

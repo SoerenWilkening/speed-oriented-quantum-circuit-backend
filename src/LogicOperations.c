@@ -9,10 +9,10 @@ sequence_t *not_seq() {
     if (stack.GPR1[0].type == BOOL) number = 1;
 
     sequence_t *seq = malloc(sizeof(sequence_t));
-    seq->gates_per_layer = malloc(sizeof(num_t));
+//    seq->gates_per_layer = malloc(sizeof(num_t));
+//    seq->seq = malloc(sizeof(gate_t *));
+//    seq->seq[0] = malloc(number * sizeof(gate_t));
     seq->gates_per_layer[0] = number;
-    seq->seq = malloc(sizeof(gate_t *));
-    seq->seq[0] = malloc(number * sizeof(gate_t));
     seq->used_layer = 1;
     seq->num_layer = 1;
     for (int i = 0; i < number; ++i) {
@@ -52,9 +52,9 @@ sequence_t *and_sequence() {
         for (int i = 0; i < INTEGERSIZE; ++i) Non_zero += bin[i];
 
         sequence_t *seq = malloc(sizeof(sequence_t *));
-        seq->gates_per_layer = malloc(sizeof(num_t));
-        seq->seq = malloc(sizeof(gate_t *));
-        seq->seq[0] = malloc(Non_zero * sizeof(gate_t));
+//        seq->gates_per_layer = malloc(sizeof(num_t));
+//        seq->seq = malloc(sizeof(gate_t *));
+//        seq->seq[0] = malloc(Non_zero * sizeof(gate_t));
         seq->used_layer = 1;
         seq->num_layer = 1;
         seq->gates_per_layer[0] = 0;
@@ -74,14 +74,14 @@ sequence_t *and_sequence() {
     // pure quantum
 
     sequence_t *seq = malloc(sizeof(sequence_t *));
-    seq->seq = malloc(sizeof(gate_t *));
+//    seq->seq = malloc(sizeof(gate_t *));
+//    seq->seq[0] = malloc(number * sizeof(gate_t));
+//    seq->gates_per_layer = malloc(sizeof(num_t));
+
     seq->used_layer = 1;
     seq->num_layer = 1;
-
     int number = INTEGERSIZE;
     if (stack.GPR1[0].type == BOOL) number = 1;
-    seq->seq[0] = malloc(number * sizeof(gate_t));
-    seq->gates_per_layer = malloc(sizeof(num_t));
     seq->gates_per_layer[0] = number;
     for (int i = 0; i < number; ++i) {
         ccx(&seq->seq[0][i], i, number + i, 2 * number + i);

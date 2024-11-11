@@ -31,16 +31,17 @@ sequence_t *CQ_equal() {
     int Zeros = 0;
     for (int i = 0; i < INTEGERSIZE; ++i) Zeros += bin[i];
 
-    seq->seq = malloc(sizeof(gate_t *));
-    for (int i = 0; i < ceil(log2(Zeros + 1)); ++i) {
-        seq->seq[i] = malloc(Zeros * sizeof(gate_t));
-    }
-    seq->gates_per_layer = malloc(ceil(log2(Zeros + 1)) * sizeof(num_t));
+//    seq->seq = malloc(sizeof(gate_t *));
+//    for (int i = 0; i < ceil(log2(Zeros + 1)); ++i) {
+//        seq->seq[i] = malloc(Zeros * sizeof(gate_t));
+//    }
+//    seq->gates_per_layer = malloc(ceil(log2(Zeros + 1)) * sizeof(num_t));
     seq->used_layer = 0;
     seq->num_layer = 1;
-    for (int i = 0; i < ceil(log2(Zeros + 1)); ++i) {
-        seq->gates_per_layer[i] = 0;
-    }
+    memset(seq->gates_per_layer, 0, ceil(log2(Zeros + 1)) * sizeof(num_t));
+//    for (int i = 0; i < ceil(log2(Zeros + 1)); ++i) {
+//        seq->gates_per_layer[i] = 0;
+//    }
 
     for (int i = 0; i < INTEGERSIZE; ++i) {
         if (bin[i] == 0) {

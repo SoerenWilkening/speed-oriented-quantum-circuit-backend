@@ -27,13 +27,13 @@ typedef struct {
 } gate_t;
 
 #define MAXLAYERINSEQUENCE 10000
-#define MAXGATESPERLAYER 500
+#define MAXGATESPERLAYER 2 * INTEGERSIZE
 
 typedef struct {
-    gate_t **seq;
+    gate_t seq[MAXLAYERINSEQUENCE][MAXGATESPERLAYER];
     num_t num_layer;
     num_t used_layer;
-    num_t *gates_per_layer;
+    num_t gates_per_layer[MAXLAYERINSEQUENCE];
 } sequence_t;
 
 void print_sequence(sequence_t *seq);
