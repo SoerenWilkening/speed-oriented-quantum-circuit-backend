@@ -32,12 +32,13 @@ element_t *unsigned_quantum_integer(){
     integer->type = UNSIGNED;
     integer->qualifier = Qu;
     for (int i = 0; i < INTEGERSIZE; ++i) {
-        integer->q_address[i] = stack.circuit->used_qubit_indices + 1;
+//        printf("%d %d\n", i, stack.circuit->used_qubit_indices + 1);
+        integer->q_address[i] = (qubit_t) stack.circuit->used_qubit_indices + 1;
         stack.circuit->used_qubit_indices++;
     }
     stack.circuit->used_qubit_indices++; // allocate one more qubit
     stack.circuit->ancilla += INTEGERSIZE + 1;
-    integer->c_address = NULL;
+//    integer->c_address = NULL;
     return integer;
 }
 

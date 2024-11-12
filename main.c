@@ -30,36 +30,39 @@ int main(void) {
     element_t *phase = classical_integer(-1);
     element_t *bool1 = quantum_bool();
 
-    BRANCH(state, 0);
-    BRANCH(state, 1);
-    BRANCH(state, 2);
-    BRANCH(state, 3);
+//    BRANCH(state, 0);
+//    BRANCH(state, 1);
+//    BRANCH(state, 2);
+//    BRANCH(state, 3);
+
+
+
 
     // function oracle
+//    IF(bool1);
     IMOD(mod, state, constant_5);
-    EQ(bool1, mod, constant_0);
-    PMUL(bool1, phase);
-    INV();
-    EQ(bool1, mod, constant_0);
-    INV();
-    IMOD(mod, state, constant_5);
-
-    BRANCH(state, 0);
-    BRANCH(state, 1);
-    BRANCH(state, 2);
-    BRANCH(state, 3);
-
-    // phase oracle for 0 state
-    EQ(bool1, state, constant_0);
-    PMUL(bool1, phase);
-    INV();
-    EQ(bool1, state, constant_0);
-
-    BRANCH(state, 0);
-    BRANCH(state, 1);
-    BRANCH(state, 2);
-    BRANCH(state, 3);
-
+//    EQ(bool1, mod, constant_0);
+//    PMUL(bool1, phase);
+//    INV();
+//    EQ(bool1, mod, constant_0);
+//    INV();
+//    IMOD(mod, state, constant_5);
+//
+//    BRANCH(state, 0);
+//    BRANCH(state, 1);
+//    BRANCH(state, 2);
+//    BRANCH(state, 3);
+//
+//    // phase oracle for 0 state
+//    EQ(bool1, state, constant_0);
+//    PMUL(bool1, phase);
+//    INV();
+//    EQ(bool1, state, constant_0);
+//
+//    BRANCH(state, 0);
+//    BRANCH(state, 1);
+//    BRANCH(state, 2);
+//    BRANCH(state, 3);
 
     // Include measurement
 

@@ -3,7 +3,26 @@
 //
 #include "../include/AssemblyOperations.h"
 
-void init_instruction(instruction_t *instr){
+void qubit__mapping(qubit_t qubit_arrray[]) {
+    int start = 0;
+    if (stack.GPR1[0].type != UNINITIALIZED && stack.GPR1[0].qualifier == Qu) {
+        int value =(stack.GPR1[0].type == BOOL) ? 1 : INTEGERSIZE;
+        memcpy(qubit_arrray, stack.GPR1[0].q_address, value * sizeof(qubit_t));
+        start += value;
+    }
+    if (stack.GPR2[0].type != UNINITIALIZED && stack.GPR2[0].qualifier == Qu) {
+        int value = (stack.GPR2[0].type == BOOL) ? 1 : INTEGERSIZE;
+        memcpy(&qubit_arrray[start], stack.GPR2[0].q_address, value * sizeof(qubit_t));
+        start += value;
+    }
+    if (stack.GPR3[0].type != UNINITIALIZED && stack.GPR3[0].qualifier == Qu) {
+        int value = (stack.GPR3[0].type == BOOL) ? 1 : INTEGERSIZE;
+        memcpy(&qubit_arrray[start], stack.GPR3[0].q_address, value * sizeof(qubit_t));
+        start += value;
+    }
+}
+
+void init_instruction(instruction_t *instr) {
     instr->el1 = malloc(sizeof(element_t));
     instr->el1->c_address = malloc(sizeof(int64_t));
     instr->el1->type = UNINITIALIZED;
@@ -22,16 +41,26 @@ void init_instruction(instruction_t *instr){
 
 }
 
-void execute(instruction_t *instr){
+// apply the sequences to the desired qubits
+void run_instruction(sequence_t *res){
+    if (res == NULL) return;
+
+
+
+}
+
+void execute(instruction_t *instr) {
     if (instr->el1->type != UNINITIALIZED) MOV(stack.GPR1, instr->el1, POINTER);
     if (instr->el2->type != UNINITIALIZED) MOV(stack.GPR2, instr->el2, POINTER);
     if (instr->el3->type != UNINITIALIZED) MOV(stack.GPR3, instr->el3, POINTER);
 
     if (instr->control->type != UNINITIALIZED) MOV(stack.GPC, instr->control, POINTER);
 
+    qubit_t qubit_array[5 * INTEGERSIZE];
+    qubit__mapping(qubit_array);
+
     sequence_t *res = instr->routine();
 
-//    print_sequence(res);
     stack.GPR1[0].type = UNINITIALIZED;
     stack.GPR2[0].type = UNINITIALIZED;
     stack.GPR3[0].type = UNINITIALIZED;
@@ -42,13 +71,13 @@ void MOV(element_t *el1, element_t *el2, int pov) {
     if (el2 == NULL) return;
     *el1 = *el2;
 
-    if (el2->qualifier == Qu){
+    if (el2->qualifier == Qu) {
         if (pov == POINTER)
             if (el2->type == BOOL)
                 memcpy(el1->q_address, el2->q_address, sizeof(int)); // memcopy qubits
             else
                 memcpy(el1->q_address, el2->q_address, INTEGERSIZE * sizeof(int)); // memcopy qubits
-        else ; // create copy sequence
+        else; // create copy sequence
     }
 }
 
@@ -60,6 +89,11 @@ void IADD(element_t *el1, element_t *el2) {
     // copy values instruction registers
     MOV(ins->el1, el1, POINTER);
     MOV(ins->el2, el2, POINTER);
+//    printf("elements\n");
+//    for (int i = 0; i < INTEGERSIZE; ++i) printf("%d ", ins->el1->q_address[i]);
+//    printf("\n");
+//    for (int i = 0; i < INTEGERSIZE; ++i) printf("%d ", ins->el2->q_address[i]);
+//    printf("\n");
 
     // routine assignments
     ins->routine = NULL;
@@ -94,8 +128,7 @@ void IMUL(element_t *el1, element_t *el2, element_t *res) {
     if (el2->qualifier == Cl) {
         if (ins->control->type != UNINITIALIZED) ins->routine = cCQ_mul;
         else ins->routine = CQ_mul;
-    }
-    else {
+    } else {
         if (ins->control->type != UNINITIALIZED) ins->routine = cQQ_mul;
         else ins->routine = QQ_mul;
     }
@@ -106,8 +139,6 @@ void IMUL(element_t *el1, element_t *el2, element_t *res) {
 
 void IDIV(element_t *el1, element_t *el2, element_t *remainder) {
     // create IDIV sequence to Divide Aq / Bq
-//    printf("%d %d\n", stack.instruction_list[stack.instruction_counter + 1].control->type, UNINITIALIZED);
-
     element_t *ctrl = stack.instruction_list[stack.instruction_counter].control;
     element_t *bool_intermediate = quantum_bool();
 
@@ -128,8 +159,7 @@ void IDIV(element_t *el1, element_t *el2, element_t *remainder) {
         if (ctrl->type != UNINITIALIZED) {
             AND(bool_intermediate, ctrl, bit);
             IF(bool_intermediate);
-        }
-        else IF(bit); // create control for the next instruction
+        } else IF(bit); // create control for the next instruction
         IADD(Y, el2); // Add bq back to Aq (controlled by Cq)
 
         // Uncompute and
@@ -148,8 +178,7 @@ void IDIV(element_t *el1, element_t *el2, element_t *remainder) {
     if (ctrl->type != UNINITIALIZED) {
         AND(bool_intermediate, ctrl, bit);
         IF(bool_intermediate);
-    }
-    else IF(bit); // create control for the next instruction
+    } else IF(bit); // create control for the next instruction
     IADD(el1, el2); // Add bq back to Aq (controlled by Cq)
 
     // Uncompute and
@@ -163,15 +192,9 @@ void IDIV(element_t *el1, element_t *el2, element_t *remainder) {
 
 }
 
-void IMOD(element_t *mod, element_t *el1, element_t *el2){
+void IMOD(element_t *mod, element_t *el1, element_t *el2) {
 
     IDIV(el1, el2, mod);
-
-//    // when not controlled, only registers need to be swapped classically
-//    element_t *step = malloc(sizeof(element_t));
-//    MOV(step, mod, POINTER);
-//    MOV(mod, el1, POINTER);
-//    MOV(el1, step, POINTER);
 }
 
 void TSTBIT(element_t *el1, element_t *el2, int bit) {
@@ -186,7 +209,7 @@ void TSTBIT(element_t *el1, element_t *el2, int bit) {
     stack.instruction_counter++;
 }
 
-void BRANCH(element_t *el1, int bit){
+void BRANCH(element_t *el1, int bit) {
     instruction_t *ins = &stack.instruction_list[stack.instruction_counter];
     element_t *qbit = bit_of_int(el1, bit);
 
@@ -220,7 +243,7 @@ void ELSE(element_t *el1) {
     NOT(el1);
 }
 
-void AND(element_t *bool_res, element_t *bool_1, element_t *bool_2){
+void AND(element_t *bool_res, element_t *bool_1, element_t *bool_2) {
     instruction_t *ins = &stack.instruction_list[stack.instruction_counter];
     MOV(ins->el1, bool_res, POINTER);
     MOV(ins->el2, bool_1, POINTER);
@@ -232,8 +255,8 @@ void AND(element_t *bool_res, element_t *bool_1, element_t *bool_2){
     stack.instruction_counter++;
 }
 
-void EQ(element_t *bool_res, element_t *bool_1, element_t *bool_2){
-    if (bool_1->qualifier == Qu && bool_2->qualifier == Qu){
+void EQ(element_t *bool_res, element_t *bool_1, element_t *bool_2) {
+    if (bool_1->qualifier == Qu && bool_2->qualifier == Qu) {
         ISUB(bool_1, bool_2);
     }
 
@@ -241,10 +264,10 @@ void EQ(element_t *bool_res, element_t *bool_1, element_t *bool_2){
     MOV(ins->el1, bool_res, POINTER);
     MOV(ins->el2, bool_1, POINTER);
 
-    if (bool_1->qualifier == Qu && bool_2->qualifier == Qu){
+    if (bool_1->qualifier == Qu && bool_2->qualifier == Qu) {
         element_t *zero = classical_integer(0);
         MOV(ins->el3, zero, POINTER);
-    }else {
+    } else {
         MOV(ins->el3, bool_2, POINTER);
     }
 
@@ -254,12 +277,12 @@ void EQ(element_t *bool_res, element_t *bool_1, element_t *bool_2){
     ins->invert = NOTINVERTED;
     stack.instruction_counter++;
 
-    if (bool_1->qualifier == Qu && bool_2->qualifier == Qu){
+    if (bool_1->qualifier == Qu && bool_2->qualifier == Qu) {
         IADD(bool_1, bool_2);
     }
 }
 
-void LEQ(element_t *bool_res, element_t *bool_1, element_t *bool_2){
+void LEQ(element_t *bool_res, element_t *bool_1, element_t *bool_2) {
 
     ISUB(bool_1, bool_2);
 
@@ -268,7 +291,7 @@ void LEQ(element_t *bool_res, element_t *bool_1, element_t *bool_2){
     IADD(bool_1, bool_2);
 }
 
-void GEQ(element_t *bool_res, element_t *bool_1, element_t *bool_2){
+void GEQ(element_t *bool_res, element_t *bool_1, element_t *bool_2) {
 
     ISUB(bool_2, bool_1);
 
@@ -278,7 +301,7 @@ void GEQ(element_t *bool_res, element_t *bool_1, element_t *bool_2){
 }
 
 
-void PMUL(element_t *el1, element_t *phase){
+void PMUL(element_t *el1, element_t *phase) {
     instruction_t *ins = &stack.instruction_list[stack.instruction_counter];
     MOV(ins->el1, el1, POINTER);
     MOV(ins->el2, phase, POINTER);
