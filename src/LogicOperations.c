@@ -9,9 +9,7 @@ sequence_t *not_seq() {
     if (stack.GPR1[0].type == BOOL) number = 1;
 
     sequence_t *seq = malloc(sizeof(sequence_t));
-//    seq->gates_per_layer = malloc(sizeof(num_t));
-//    seq->seq = malloc(sizeof(gate_t *));
-//    seq->seq[0] = malloc(number * sizeof(gate_t));
+
     seq->gates_per_layer[0] = number;
     seq->used_layer = 1;
     seq->num_layer = 1;
@@ -74,9 +72,6 @@ sequence_t *and_sequence() {
     // pure quantum
 
     sequence_t *seq = malloc(sizeof(sequence_t *));
-//    seq->seq = malloc(sizeof(gate_t *));
-//    seq->seq[0] = malloc(number * sizeof(gate_t));
-//    seq->gates_per_layer = malloc(sizeof(num_t));
 
     seq->used_layer = 1;
     seq->num_layer = 1;
@@ -87,5 +82,18 @@ sequence_t *and_sequence() {
         ccx(&seq->seq[0][i], i, number + i, 2 * number + i);
     }
 
+    return seq;
+}
+
+sequence_t *branch(){
+    sequence_t *seq = malloc(sizeof(sequence_t *));
+
+    seq->used_layer = 1;
+    seq->num_layer = 1;
+    seq->gates_per_layer[0] = 1;
+
+    seq->seq[0][0].Gate = H;
+    seq->seq[0][0].Target = 0;
+    seq->seq[0][0].NumControls = 0;
     return seq;
 }

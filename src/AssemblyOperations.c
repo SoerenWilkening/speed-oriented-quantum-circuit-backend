@@ -31,7 +31,7 @@ void execute(instruction_t *instr){
 
     sequence_t *res = instr->routine();
 
-    print_sequence(res);
+//    print_sequence(res);
     stack.GPR1[0].type = UNINITIALIZED;
     stack.GPR2[0].type = UNINITIALIZED;
     stack.GPR3[0].type = UNINITIALIZED;
@@ -52,7 +52,7 @@ void MOV(element_t *el1, element_t *el2, int pov) {
     }
 }
 
-void ADD(element_t *el1, element_t *el2) {
+void IADD(element_t *el1, element_t *el2) {
     if (el1->qualifier == Cl && el2->qualifier == Qu) exit(5);
 
     instruction_t *ins = &stack.instruction_list[stack.instruction_counter];
@@ -78,8 +78,8 @@ void ADD(element_t *el1, element_t *el2) {
     stack.instruction_counter++;
 }
 
-void SUB(element_t *el1, element_t *el2) {
-    ADD(el1, el2);
+void ISUB(element_t *el1, element_t *el2) {
+    IADD(el1, el2);
     stack.instruction_list[stack.instruction_counter - 1].invert = INVERTED;
 }
 
@@ -118,7 +118,7 @@ void IDIV(element_t *el1, element_t *el2, element_t *remainder) {
         memcpy(&Y->q_address[(INTEGERSIZE - i)], el1->q_address, i * sizeof(int));
 
         IF(ctrl);
-        SUB(Y, el2); // subtract Bq from Aq
+        ISUB(Y, el2); // subtract Bq from Aq
 
         element_t *bit = bit_of_int(remainder, i - 1);
 
@@ -130,7 +130,7 @@ void IDIV(element_t *el1, element_t *el2, element_t *remainder) {
             IF(bool_intermediate);
         }
         else IF(bit); // create control for the next instruction
-        ADD(Y, el2); // Add bq back to Aq (controlled by Cq)
+        IADD(Y, el2); // Add bq back to Aq (controlled by Cq)
 
         // Uncompute and
         if (ctrl->type != UNINITIALIZED) AND(bool_intermediate, ctrl, bit);
@@ -139,7 +139,7 @@ void IDIV(element_t *el1, element_t *el2, element_t *remainder) {
         NOT(bit); // Invert Cq
     }
     IF(ctrl);
-    SUB(el1, el2); // subtract Bq from Aq
+    ISUB(el1, el2); // subtract Bq from Aq
     element_t *bit = bit_of_int(remainder, INTEGERSIZE - 1);
 
     IF(ctrl);
@@ -150,17 +150,28 @@ void IDIV(element_t *el1, element_t *el2, element_t *remainder) {
         IF(bool_intermediate);
     }
     else IF(bit); // create control for the next instruction
-    ADD(el1, el2); // Add bq back to Aq (controlled by Cq)
+    IADD(el1, el2); // Add bq back to Aq (controlled by Cq)
 
     // Uncompute and
     if (ctrl->type != UNINITIALIZED) AND(bool_intermediate, ctrl, bit);
 
     IF(ctrl);
-    SUB(el1, el2);
+    ISUB(el1, el2);
 
     IF(ctrl);
     NOT(bit); // Invert Cq
 
+}
+
+void IMOD(element_t *mod, element_t *el1, element_t *el2){
+
+    IDIV(el1, el2, mod);
+
+//    // when not controlled, only registers need to be swapped classically
+//    element_t *step = malloc(sizeof(element_t));
+//    MOV(step, mod, POINTER);
+//    MOV(mod, el1, POINTER);
+//    MOV(el1, step, POINTER);
 }
 
 void TSTBIT(element_t *el1, element_t *el2, int bit) {
@@ -171,6 +182,17 @@ void TSTBIT(element_t *el1, element_t *el2, int bit) {
 
     MOV(ins->el2, qbit, POINTER);
     ins->routine = cx_gate;
+    ins->invert = NOTINVERTED;
+    stack.instruction_counter++;
+}
+
+void BRANCH(element_t *el1, int bit){
+    instruction_t *ins = &stack.instruction_list[stack.instruction_counter];
+    element_t *qbit = bit_of_int(el1, bit);
+
+    MOV(ins->el1, qbit, POINTER);
+
+    ins->routine = branch;
     ins->invert = NOTINVERTED;
     stack.instruction_counter++;
 }
@@ -186,6 +208,10 @@ void NOT(element_t *el1) {
 
 void IF(element_t *el1) {
     MOV(stack.instruction_list[stack.instruction_counter].control, el1, POINTER);
+}
+
+void INV() {
+    stack.instruction_list[stack.instruction_counter].invert = INVERTED;
 }
 
 void ELSE(element_t *el1) {
@@ -208,7 +234,7 @@ void AND(element_t *bool_res, element_t *bool_1, element_t *bool_2){
 
 void EQ(element_t *bool_res, element_t *bool_1, element_t *bool_2){
     if (bool_1->qualifier == Qu && bool_2->qualifier == Qu){
-        SUB(bool_1, bool_2);
+        ISUB(bool_1, bool_2);
     }
 
     instruction_t *ins = &stack.instruction_list[stack.instruction_counter];
@@ -229,24 +255,36 @@ void EQ(element_t *bool_res, element_t *bool_1, element_t *bool_2){
     stack.instruction_counter++;
 
     if (bool_1->qualifier == Qu && bool_2->qualifier == Qu){
-        ADD(bool_1, bool_2);
+        IADD(bool_1, bool_2);
     }
 }
 
 void LEQ(element_t *bool_res, element_t *bool_1, element_t *bool_2){
 
-    SUB(bool_1, bool_2);
+    ISUB(bool_1, bool_2);
 
     TSTBIT(bool_res, bool_1, 0);
 
-    ADD(bool_1, bool_2);
+    IADD(bool_1, bool_2);
 }
 
 void GEQ(element_t *bool_res, element_t *bool_1, element_t *bool_2){
 
-    SUB(bool_2, bool_1);
+    ISUB(bool_2, bool_1);
 
     TSTBIT(bool_res, bool_2, 0);
 
-    ADD(bool_2, bool_1);
+    IADD(bool_2, bool_1);
+}
+
+
+void PMUL(element_t *el1, element_t *phase){
+    instruction_t *ins = &stack.instruction_list[stack.instruction_counter];
+    MOV(ins->el1, el1, POINTER);
+    MOV(ins->el2, phase, POINTER);
+
+    ins->routine = phase_multiplication;
+
+    ins->invert = NOTINVERTED;
+    stack.instruction_counter++;
 }

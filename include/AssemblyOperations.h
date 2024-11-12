@@ -19,12 +19,17 @@ void execute(instruction_t *instr);
 void MOV(element_t *el1, element_t *el2, int pov);
 
 // integer arithmetic
-void ADD(element_t *el1, element_t *el2);
-void SUB(element_t *el1, element_t *el2);
+void IADD(element_t *el1, element_t *el2);
+void ISUB(element_t *el1, element_t *el2);
 void IMUL(element_t *el1, element_t *el2, element_t *res);
 void IDIV(element_t *el1, element_t *el2, element_t *remainder);
+void IMOD(element_t *mod, element_t *el1, element_t *el2);
+
+// phase operations
+void PMUL(element_t *el1, element_t *phase);
 
 // Logical operations
+void BRANCH(element_t *el1, int bit);
 void NOT(element_t *el1);
 void AND(element_t *bool_res, element_t *bool_1, element_t *bool_2);
 void TSTBIT(element_t *el1, element_t *el2, int bit);
@@ -37,5 +42,7 @@ void LEQ(element_t *bool_res, element_t *bool_1, element_t *bool_2);
 // program functionality
 void IF(element_t *el1);
 void ELSE(element_t *el1);
+void INV();
+
 
 #endif //CQ_BACKEND_IMPROVED_ASSEMBLYOPERATIONS_H

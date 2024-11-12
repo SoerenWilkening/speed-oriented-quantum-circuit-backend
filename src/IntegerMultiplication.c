@@ -329,3 +329,16 @@ sequence_t *cCQ_mul() {
 
     return mul;
 }
+
+
+sequence_t *phase_multiplication(){
+    sequence_t *seq = malloc(sizeof(sequence_t));
+
+    seq->gates_per_layer[0] = 1;
+    seq->used_layer = 1;
+    seq->num_layer = 1;
+    // implement correct phase multiplication
+    p(&seq->seq[0][0], 0, M_PI);
+
+    return seq;
+}

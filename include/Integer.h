@@ -38,6 +38,8 @@ sequence_t *cCQ_add();
 
 sequence_t *CC_add();
 
+sequence_t *phase_multiplication();
+
 extern sequence_t *precompiled_QQ_add;
 extern sequence_t *precompiled_cQQ_add;
 extern sequence_t *precompiled_CQ_add;

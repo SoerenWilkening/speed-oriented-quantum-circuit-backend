@@ -22,25 +22,49 @@ int main(void) {
         init_instruction(&stack.instruction_list[i]);
     }
 
-    // ._data
-    element_t *Aq = signed_quantum_integer();
-    element_t *Bq = signed_quantum_integer();
-    element_t *Rq = signed_quantum_integer();
-    element_t *Cq = quantum_bool();
-    element_t *Dq = quantum_bool();
-    element_t *Eq = quantum_bool();
-    element_t *Cc = classical_integer(0);
-    element_t *Dc = classical_integer(24);
-
     // ._main
-    clock_t t1 = clock();
-    LEQ(Cq, Aq, Bq);
-//    AND(Aq, Dc, Bq);
-//    IF(Cq);
-//    IDIV(Aq, Bq, Rq);
-//    IMUL(Aq, Rq, Bq);
+    element_t *state = unsigned_quantum_integer();
+    element_t *mod = unsigned_quantum_integer();
+    element_t *constant_0 = classical_integer(0);
+    element_t *constant_5 = classical_integer(5);
+    element_t *phase = classical_integer(-1);
+    element_t *bool1 = quantum_bool();
+
+    BRANCH(state, 0);
+    BRANCH(state, 1);
+    BRANCH(state, 2);
+    BRANCH(state, 3);
+
+    // function oracle
+    IMOD(mod, state, constant_5);
+    EQ(bool1, mod, constant_0);
+    PMUL(bool1, phase);
+    INV();
+    EQ(bool1, mod, constant_0);
+    INV();
+    IMOD(mod, state, constant_5);
+
+    BRANCH(state, 0);
+    BRANCH(state, 1);
+    BRANCH(state, 2);
+    BRANCH(state, 3);
+
+    // phase oracle for 0 state
+    EQ(bool1, state, constant_0);
+    PMUL(bool1, phase);
+    INV();
+    EQ(bool1, state, constant_0);
+
+    BRANCH(state, 0);
+    BRANCH(state, 1);
+    BRANCH(state, 2);
+    BRANCH(state, 3);
+
+
+    // Include measurement
 
     // ._execute
+    clock_t t1 = clock();
     for (int i = 0; i < stack.instruction_counter; ++i) {
         execute(&stack.instruction_list[i]);
     }
