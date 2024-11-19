@@ -225,12 +225,6 @@ sequence_t *CQ_mul() {
     mul->num_layer = INTEGERSIZE * (2 * INTEGERSIZE + 6) - 1;
     memset(mul->gates_per_layer, 0, mul->num_layer * sizeof(num_t));
 
-//    mul->seq = malloc(
-//            (INTEGERSIZE * (2 * INTEGERSIZE + 6) - 1) * sizeof(gate_t));
-//    mul->gates_per_layer = calloc(mul->num_layer, sizeof(num_t));
-//
-//    for (int i = 0; i < mul->num_layer; ++i) mul->seq[i] = malloc(2 * INTEGERSIZE * sizeof(gate_t));
-
     QFT(mul);
     num_t layer = INTEGERSIZE;
     int rounds = 0;
@@ -266,12 +260,6 @@ sequence_t *cCQ_mul() {
     mul->used_layer = 0;
     mul->num_layer = INTEGERSIZE * (2 * INTEGERSIZE + 6) - 1;
     memset(mul->gates_per_layer, 0, mul->num_layer * sizeof(num_t));
-
-//    mul->seq = malloc(
-//            (INTEGERSIZE * (2 * INTEGERSIZE + 6) - 1) * sizeof(gate_t));
-//    mul->gates_per_layer = calloc(mul->num_layer, sizeof(num_t));
-//
-//    for (int i = 0; i < mul->num_layer; ++i) mul->seq[i] = malloc(2 * INTEGERSIZE * sizeof(gate_t));
 
     QFT(mul);
 
@@ -331,14 +319,14 @@ sequence_t *cCQ_mul() {
 }
 
 
-sequence_t *phase_multiplication(){
+sequence_t *phase_addition(){
     sequence_t *seq = malloc(sizeof(sequence_t));
 
     seq->gates_per_layer[0] = 1;
     seq->used_layer = 1;
     seq->num_layer = 1;
     // implement correct phase multiplication
-    p(&seq->seq[0][0], 0, M_PI);
+    p(&seq->seq[0][0], 0, *stack.GPR2[0].c_address);
 
     return seq;
 }

@@ -193,11 +193,6 @@ sequence_t *QFT_inverse(sequence_t *qft) {
         qft->used_layer = 0;
         qft->num_layer = 2 * INTEGERSIZE - 1;
         memset(qft->gates_per_layer, 0, qft->num_layer * sizeof(num_t));
-
-//        qft->gates_per_layer = calloc(2 * INTEGERSIZE - 1, sizeof(num_t));
-        // allocate space for every gate
-//        qft->seq = malloc((2 * INTEGERSIZE - 1) * sizeof(gate_t *));
-//        for (int i = 0; i < (2 * INTEGERSIZE - 1); ++i) qft->seq[i] = malloc(sum[i] * sizeof(gate_t));
     }
 
     for (int j = 0; j < INTEGERSIZE; ++j) {

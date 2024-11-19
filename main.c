@@ -27,8 +27,9 @@ int main(void) {
     element_t *mod = unsigned_quantum_integer();
     element_t *constant_0 = classical_integer(0);
     element_t *constant_5 = classical_integer(5);
-    element_t *phase = classical_integer(-1);
+    element_t *phase = classical_integer(3);
     element_t *bool1 = quantum_bool();
+
 
     BRANCH(state, 0);
     BRANCH(state, 1);
@@ -38,7 +39,7 @@ int main(void) {
     // function oracle
     IMOD(mod, state, constant_5);
     EQ(bool1, mod, constant_0);
-    PMUL(bool1, phase);
+    PADD(bool1, phase);
     INV();
     EQ(bool1, mod, constant_0);
     INV();
@@ -51,7 +52,7 @@ int main(void) {
 
     // phase oracle for 0 state
     EQ(bool1, state, constant_0);
-    PMUL(bool1, phase);
+    PADD(bool1, phase);
     INV();
     EQ(bool1, state, constant_0);
 
@@ -63,7 +64,7 @@ int main(void) {
     // second grover iteration ---------------------------------------------------------------------------------------
     IMOD(mod, state, constant_5);
     EQ(bool1, mod, constant_0);
-    PMUL(bool1, phase);
+    PADD(bool1, phase);
     INV();
     EQ(bool1, mod, constant_0);
     INV();
@@ -76,7 +77,7 @@ int main(void) {
 
     // phase oracle for 0 state
     EQ(bool1, state, constant_0);
-    PMUL(bool1, phase);
+    PADD(bool1, phase);
     INV();
     EQ(bool1, state, constant_0);
 
@@ -89,8 +90,10 @@ int main(void) {
 
     // ._execute
     clock_t t1 = clock();
+    instruction_t *instruction_pointer = stack.instruction_list;
     for (int i = 0; i < stack.instruction_counter; ++i) {
-        execute(&stack.instruction_list[i]);
+        execute(instruction_pointer);
+        instruction_pointer++;
     }
     print_circuit(stack.circuit);
 

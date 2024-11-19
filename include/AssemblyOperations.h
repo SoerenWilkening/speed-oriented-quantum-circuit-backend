@@ -24,9 +24,9 @@ void ISUB(element_t *el1, element_t *el2);
 void IMUL(element_t *el1, element_t *el2, element_t *res);
 void IDIV(element_t *el1, element_t *el2, element_t *remainder);
 void IMOD(element_t *mod, element_t *el1, element_t *el2);
-
+void NEG(element_t *el1);
 // phase operations
-void PMUL(element_t *el1, element_t *phase);
+void PADD(element_t *el1, element_t *phase);
 
 // Logical operations
 void BRANCH(element_t *el1, int bit);

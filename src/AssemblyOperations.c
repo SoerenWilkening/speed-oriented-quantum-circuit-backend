@@ -156,6 +156,16 @@ void IMUL(element_t *el1, element_t *el2, element_t *res) {
     stack.instruction_counter++;
 }
 
+void NEG(element_t *el1){
+    element_t *ctrl = stack.instruction_list[stack.instruction_counter].control;
+    IF(ctrl);
+    NOT(el1);
+    element_t *constant = classical_integer(1);
+    IF(ctrl);
+    ISUB(el1, constant);
+}
+
+
 void IDIV(element_t *el1, element_t *el2, element_t *remainder) {
     // create IDIV sequence to Divide Aq / Bq
     element_t *ctrl = stack.instruction_list[stack.instruction_counter].control;
@@ -321,12 +331,12 @@ void GEQ(element_t *bool_res, element_t *bool_1, element_t *bool_2) {
 }
 
 
-void PMUL(element_t *el1, element_t *phase) {
+void PADD(element_t *el1, element_t *phase) {
     instruction_t *ins = &stack.instruction_list[stack.instruction_counter];
     MOV(ins->el1, el1, POINTER);
     MOV(ins->el2, phase, POINTER);
 
-    ins->routine = phase_multiplication;
+    ins->routine = phase_addition;
 
     ins->invert = NOTINVERTED;
     stack.instruction_counter++;

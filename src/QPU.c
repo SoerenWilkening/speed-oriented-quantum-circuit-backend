@@ -88,7 +88,7 @@ void print_circuit(circuit_t *circ) {
                     else if (circ->sequence[layer_index][gate_index].Target == qubit) {
                         switch (circ->sequence[layer_index][gate_index].Gate) {
                             case P:
-                                printf("P%5.1f", circ->sequence[layer_index][gate_index].GateValue);
+                                printf("P%4.1f", circ->sequence[layer_index][gate_index].GateValue);
                                 print_dash(1);
                                 skip_dash = 1;
                                 break;
@@ -111,7 +111,7 @@ void print_circuit(circuit_t *circ) {
                     }
                     else print_dash(1);
                     if (width[counter] == 3) print_dash(1);
-                    else if(skip_dash == 0) print_dash(6);
+                    else if(skip_dash == 0) print_dash(5);
                     counter++;
                 }
 //                printf("\u250A");
