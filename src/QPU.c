@@ -107,7 +107,6 @@ void print_circuit(circuit_t *circ) {
                         }
                     } else if (qubit > MinQubit(&circ->sequence[layer_index][gate_index]) && qubit < MaxQubit(&circ->sequence[layer_index][gate_index])) {
                         printf("\xE2\x94\x82");
-//                        printf("\u2503");
                     }
                     else print_dash(1);
                     if (width[counter] == 3) print_dash(1);
@@ -117,6 +116,7 @@ void print_circuit(circuit_t *circ) {
 //                printf("\u250A");
             }
             printf("\n");
+//            if (qubit % INTEGERSIZE == INTEGERSIZE - 1) printf("\n");
         }
     }
 }

@@ -37,6 +37,7 @@ typedef struct {
 } sequence_t;
 
 void print_dash(int k);
+void print_empty(int k);
 void print_sequence(sequence_t *seq);
 
 sequence_t *QFT(sequence_t *seq);

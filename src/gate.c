@@ -10,6 +10,12 @@ void print_dash(int k){
     }
 }
 
+void print_empty(int k){
+    for (int i = 0; i < k; ++i) {
+        printf(" ");
+    }
+}
+
 
 qubit_t MinQubit(gate_t *g) {
     qubit_t min = g->Target;
