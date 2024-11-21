@@ -9,6 +9,6 @@
 
 void ReadAssembly(char *asmb[], int num);
 
-char *AsmbFromFile();
+void AsmbFromFile();
 
 #endif //CQ_BACKEND_IMPROVED_ASSEMBLYREADER_H

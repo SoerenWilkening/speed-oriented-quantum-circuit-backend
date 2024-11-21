@@ -9,6 +9,7 @@
 #include <string.h>
 
 #define MAX_LINE_LENGTH 1024 // Maximum length of a line
+#define hash_size 128
 
 typedef struct {
     char *addon;
@@ -17,27 +18,86 @@ typedef struct {
     char *var2;
     char *var3;
     int value;
-} call;
+} call_t;
 
-call calls[1024];
+typedef struct {
+    element_t *integer;
+    char *word;
+} hash_element_t;
+
+call_t calls[1024];
 int counter = 0;
+int total = 0;
 int variable_counter = 0;
+hash_element_t hash_table[hash_size];
+
+// hashing functionality
+unsigned int hash(const char *word){
+    unsigned int hash = 5381;
+    while (*word){
+        hash = ((hash << 5) + hash) + *word;
+        word++;
+    }
+    return hash % hash_size;
+}
+
+element_t *add_get_element(char *word){
+    if (word == NULL) return NULL;
+    unsigned int h = hash(word);
+    if (hash_table[h].integer != NULL && strcmp(hash_table[h].word, word) == 0) return hash_table[h].integer;
+    while (hash_table[h].integer != NULL && strcmp(hash_table[h].word, word) != 0){
+        h++;
+    }
+
+    int all_false = 1;
+    if (strcmp(calls[counter].addon, "QUINT") == 0) {
+        all_false = 0;
+        hash_table[h].integer = QUINT();
+    }
+    if (strcmp(calls[counter].addon, "QINT") == 0) {
+        all_false = 0;
+        hash_table[h].integer = QINT();
+    }
+    if (strcmp(calls[counter].addon, "UINT") == 0) {
+        all_false = 0;
+        hash_table[h].integer = INT(calls[counter].value);
+    }
+    if (strcmp(calls[counter].addon, "INT") == 0) {
+        all_false = 0;
+        hash_table[h].integer = INT(calls[counter].value);
+    }
+    if (strcmp(calls[counter].addon, "QBOOL") == 0) {
+        all_false = 0;
+        hash_table[h].integer = QBOOL();
+    }
+    if (strcmp(calls[counter].addon, "BOOL") == 0) {
+        all_false = 0;
+        hash_table[h].integer = INT(calls[counter].value);
+    }
+    if (!all_false) {
+        hash_table[h].word = word;
+        return hash_table[h].integer;
+    }
+    return NULL;
+}
 
 // Function to check if the string is a word (alphabetic characters only)
 bool is_word(const char* str) {
     if (!str || *str == '\0') {
         return false; // Empty or null string is not a word
     }
+    bool has_alpha = false;
 
     for (size_t i = 0; str[i] != '\0'; i++) {
-        if (!isalpha((unsigned char)str[i])) {
-            return false; // Contains non-alphabetic characters
+        if (!isalnum((unsigned char)str[i])) {
+            return false; // Contains non-alphanumeric characters
+        }
+        if (isalpha((unsigned char)str[i])) {
+            has_alpha = true; // Contains at least one alphabetic character
         }
     }
-
-    return true;
+    return has_alpha;
 }
-
 
 char** extract_items_from_line(const char* line, size_t* item_count) {
     if (!line || !item_count) {
@@ -73,25 +133,35 @@ char** extract_items_from_line(const char* line, size_t* item_count) {
     return items;
 }
 
+int is_addon(char *word){
+    if (strcmp(word, "INV") == 0) return true;
+    if (strcmp(word, "QUINT") == 0) return true;
+    if (strcmp(word, "QINT") == 0) return true;
+    if (strcmp(word, "UINT") == 0) return true;
+    if (strcmp(word, "INT") == 0) return true;
+    if (strcmp(word, "QBOOL") == 0) return true;
+    if (strcmp(word, "BOOL") == 0) return true;
+    return false;
+}
+
+int is_instruction(char *word){
+    if (strcmp(word, "BRANCH") == 0) return true;
+    if (strcmp(word, "IADD") == 0) return true;
+    if (strcmp(word, "PADD") == 0) return true;
+    if (strcmp(word, "ISUB") == 0) return true;
+    if (strcmp(word, "IMUL") == 0) return true;
+    if (strcmp(word, "IDIV") == 0) return true;
+    if (strcmp(word, "MOD") == 0) return true;
+    if (strcmp(word, "EQ") == 0) return true;
+    if (strcmp(word, "MEASURE") == 0) return true;
+    if (strcmp(word, "IF") == 0) return true;
+    return false;
+}
+
 void word_to_call(char *word){
     if (!is_word(word)) return;
-    if (strcmp(word, "INV") == 0) calls[counter].addon = word;
-    else if (strcmp(word, "QUINT") == 0) calls[counter].addon = word;
-    else if (strcmp(word, "QINT") == 0) calls[counter].addon = word;
-    else if (strcmp(word, "UINT") == 0) calls[counter].addon = word;
-    else if (strcmp(word, "INT") == 0) calls[counter].addon = word;
-    else if (strcmp(word, "QBOOL") == 0) calls[counter].addon = word;
-    else if (strcmp(word, "BOOL") == 0) calls[counter].addon = word;
-    else if (strcmp(word, "BRANCH") == 0) calls[counter].instruction = word;
-    else if (strcmp(word, "IADD") == 0) calls[counter].instruction = word;
-    else if (strcmp(word, "PADD") == 0) calls[counter].instruction = word;
-    else if (strcmp(word, "ISUB") == 0) calls[counter].instruction = word;
-    else if (strcmp(word, "IMUL") == 0) calls[counter].instruction = word;
-    else if (strcmp(word, "IDIV") == 0) calls[counter].instruction = word;
-    else if (strcmp(word, "MOD") == 0) calls[counter].instruction = word;
-    else if (strcmp(word, "EQ") == 0) calls[counter].instruction = word;
-    else if (strcmp(word, "MEASURE") == 0) calls[counter].instruction = word;
-    else if (strcmp(word, "IF") == 0) calls[counter].instruction = word;
+    if (is_addon(word)) calls[counter].addon = word;
+    else if (is_instruction(word)) calls[counter].instruction = word;
     else{
         if (variable_counter == 0) calls[counter].var1 = word;
         if (variable_counter == 1) calls[counter].var2 = word;
@@ -103,7 +173,7 @@ void word_to_call(char *word){
 void value_to_call(char *word){
     if (is_word(word)) return;
     char *succ;
-    calls[counter].value = strtol(word, &succ, 10);
+    calls[counter].value = (int) strtol(word, &succ, 10);
 }
 
 void lines_to_call(char *line){
@@ -123,18 +193,52 @@ void lines_to_call(char *line){
         word_to_call(words[j]);
         value_to_call(words[j]);
     }
-    printf("%s ", calls[counter].addon);
-    printf("%s ", calls[counter].instruction);
-    printf("%s ", calls[counter].var1);
-    printf("%s ", calls[counter].var2);
-    printf("%s ", calls[counter].var3);
-    printf("%d ", calls[counter].value);
+
+    // store all the variables in a hash table
     counter++;
-    printf("\n");
+}
+
+void run_instr(){
+    if(calls[counter].instruction == NULL) return;
+    printf("%s %s, %s, %s, %d\n", calls[counter].instruction, calls[counter].var1, calls[counter].var2, calls[counter].var3, calls[counter].value);
+    if (strcmp(calls[counter].instruction, "BRANCH") == 0) {
+        BRANCH(add_get_element(calls[counter].var1), calls[counter].value);
+    }
+    if (strcmp(calls[counter].instruction, "MOD") == 0){
+        element_t *el3 = add_get_element(calls[counter].var3);
+        if (el3 == NULL) el3 = INT(calls[counter].value);
+        printf("%llu\n", *el3->c_address);
+        fflush(stdout);
+        IMOD(add_get_element(calls[counter].var1), add_get_element(calls[counter].var2), el3);
+    }
 }
 
 
+void execute_assembly(){
+    total = counter;
+    counter = 0;
+
+//    for (int i = 0; i < total; ++i) {
+    for (int i = 0; i < 8; ++i) {
+        // create the variables and store in hash table
+        element_t *var = NULL;
+        if (calls[counter].addon != NULL) var = add_get_element(calls[counter].var1);
+
+        // run instructions ------------------------------------
+
+        // call inverse
+        if (calls[counter].addon != NULL && var == NULL) INV();
+
+        run_instr();
+
+        counter++;
+    }
+
+
+}
+
 void ReadAssembly(char *asmb[], int num){
+    for (int i = 0; i < hash_size; ++i) hash_table[i].integer = NULL;
     for (int i = 0; i < num; ++i) {
         variable_counter = 0;
         // go through every line
@@ -142,7 +246,7 @@ void ReadAssembly(char *asmb[], int num){
     }
 }
 
-char *AsmbFromFile(){
+void AsmbFromFile(){
 
     FILE *file = fopen("../assembly.pqsm", "r");
     int line_count = 0;
@@ -167,9 +271,11 @@ char *AsmbFromFile(){
 
         line_count++;
     }
-
     ReadAssembly(lines, line_count);
 
+    execute_assembly();
 
-    return NULL;
+//    for (int i = 0; i < hash_size; ++i) {
+//        printf("%p\n", hash_table[i].integer);
+//    }
 }

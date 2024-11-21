@@ -6,7 +6,7 @@
 
 sequence_t *not_seq() {
     int number = INTEGERSIZE;
-    if (stack.GPR1[0].type == BOOL) number = 1;
+    if (stack.GPR1[0].type == BOOLEAN) number = 1;
 
     sequence_t *seq = malloc(sizeof(sequence_t));
 
@@ -40,7 +40,7 @@ sequence_t *and_sequence() {
             factor = 2;
         }
 
-        if (quantum_element->type == BOOL) {
+        if (quantum_element->type == BOOLEAN) {
             if (*classical_element->c_address == 0) return NULL;
             return cx_gate();
         }
@@ -72,7 +72,7 @@ sequence_t *and_sequence() {
     seq->used_layer = 1;
     seq->num_layer = 1;
     int number = INTEGERSIZE;
-    if (stack.GPR1[0].type == BOOL) number = 1;
+    if (stack.GPR1[0].type == BOOLEAN) number = 1;
     seq->gates_per_layer[0] = number;
     for (int i = 0; i < number; ++i) {
         ccx(&seq->seq[0][i], i, number + i, 2 * number + i);

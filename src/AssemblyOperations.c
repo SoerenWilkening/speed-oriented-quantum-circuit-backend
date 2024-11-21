@@ -6,17 +6,17 @@
 void qubit_mapping(qubit_t qubit_arrray[]) {
     int start = 0;
     if (stack.GPR1[0].type != UNINITIALIZED && stack.GPR1[0].qualifier == Qu) {
-        int value =(stack.GPR1[0].type == BOOL) ? 1 : INTEGERSIZE;
+        int value = (stack.GPR1[0].type == BOOLEAN) ? 1 : INTEGERSIZE;
         memcpy(qubit_arrray, stack.GPR1[0].q_address, value * sizeof(qubit_t));
         start += value;
     }
     if (stack.GPR2[0].type != UNINITIALIZED && stack.GPR2[0].qualifier == Qu) {
-        int value = (stack.GPR2[0].type == BOOL) ? 1 : INTEGERSIZE;
+        int value = (stack.GPR2[0].type == BOOLEAN) ? 1 : INTEGERSIZE;
         memcpy(&qubit_arrray[start], stack.GPR2[0].q_address, value * sizeof(qubit_t));
         start += value;
     }
     if (stack.GPR3[0].type != UNINITIALIZED && stack.GPR3[0].qualifier == Qu) {
-        int value = (stack.GPR3[0].type == BOOL) ? 1 : INTEGERSIZE;
+        int value = (stack.GPR3[0].type == BOOLEAN) ? 1 : INTEGERSIZE;
         memcpy(&qubit_arrray[start], stack.GPR3[0].q_address, value * sizeof(qubit_t));
         start += value;
     }
@@ -97,7 +97,7 @@ void MOV(element_t *el1, element_t *el2, int pov) {
 
     if (el2->qualifier == Qu) {
         if (pov == POINTER)
-            if (el2->type == BOOL)
+            if (el2->type == BOOLEAN)
                 memcpy(el1->q_address, el2->q_address, sizeof(int)); // memcopy qubits
             else
                 memcpy(el1->q_address, el2->q_address, INTEGERSIZE * sizeof(int)); // memcopy qubits
@@ -160,7 +160,7 @@ void NEG(element_t *el1){
     element_t *ctrl = stack.instruction_list[stack.instruction_counter].control;
     IF(ctrl);
     NOT(el1);
-    element_t *constant = classical_integer(1);
+    element_t *constant = INT(1);
     IF(ctrl);
     ISUB(el1, constant);
 }
@@ -169,7 +169,7 @@ void NEG(element_t *el1){
 void IDIV(element_t *el1, element_t *el2, element_t *remainder) {
     // create IDIV sequence to Divide Aq / Bq
     element_t *ctrl = stack.instruction_list[stack.instruction_counter].control;
-    element_t *bool_intermediate = quantum_bool();
+    element_t *bool_intermediate = QBOOL();
 
     element_t *Y = malloc(sizeof(element_t));
     memcpy(Y, el1, sizeof(element_t));
@@ -295,7 +295,7 @@ void EQ(element_t *bool_res, element_t *bool_1, element_t *bool_2) {
     MOV(ins->el2, bool_1, POINTER);
 
     if (bool_1->qualifier == Qu && bool_2->qualifier == Qu) {
-        element_t *zero = classical_integer(0);
+        element_t *zero = INT(0);
         MOV(ins->el3, zero, POINTER);
     } else {
         MOV(ins->el3, bool_2, POINTER);

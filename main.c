@@ -27,12 +27,12 @@ int main(void) {
 
 //
 //    // ._main
-//    element_t *state = unsigned_quantum_integer();
-//    element_t *mod = unsigned_quantum_integer();
-//    element_t *constant_0 = classical_integer(0);
-//    element_t *constant_5 = classical_integer(5);
-//    element_t *phase = classical_integer(3);
-//    element_t *bool1 = quantum_bool();
+//    element_t *state = QUINT();
+//    element_t *mod = QUINT();
+//    element_t *constant_0 = INT(0);
+//    element_t *constant_5 = INT(5);
+//    element_t *phase = INT(3);
+//    element_t *bool1 = QBOOL();
 //
 //
 //    BRANCH(state, 0);
@@ -94,12 +94,12 @@ int main(void) {
 
     // ._execute
     clock_t t1 = clock();
-//    instruction_t *instruction_pointer = stack.instruction_list;
-//    for (int i = 0; i < stack.instruction_counter; ++i) {
-//        execute(instruction_pointer);
-//        instruction_pointer++;
-//    }
-//    print_circuit(stack.circuit);
+    instruction_t *instruction_pointer = stack.instruction_list;
+    for (int i = 0; i < stack.instruction_counter; ++i) {
+        execute(instruction_pointer);
+        instruction_pointer++;
+    }
+    print_circuit(stack.circuit);
 
     printf("%f\n", (double) (clock() - t1) / CLOCKS_PER_SEC);
     return 0;

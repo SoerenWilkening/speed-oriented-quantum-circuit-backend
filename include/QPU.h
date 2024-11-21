@@ -36,7 +36,7 @@ typedef struct {
 } circuit_t;
 
 typedef enum {
-    BOOL,
+    BOOLEAN,
     SIGNED,
     UNSIGNED,
     UNINITIALIZED

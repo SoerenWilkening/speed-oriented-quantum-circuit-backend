@@ -12,13 +12,13 @@
 
 int *two_complement(int64_t x, int n);
 
-element_t *quantum_bool();
+element_t *QBOOL();
 
-element_t *signed_quantum_integer();
+element_t *QINT();
 
-element_t *unsigned_quantum_integer();
+element_t *QUINT();
 
-element_t *classical_integer(int64_t intg);
+element_t *INT(int64_t intg);
 
 element_t *bit_of_int(element_t *el1, int bit);
 
