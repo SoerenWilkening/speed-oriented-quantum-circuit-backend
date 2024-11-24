@@ -26,7 +26,8 @@ void TSTBIT(element_t *el1, element_t *el2, int bit) {
 
     MOV(ins->el2, qbit, POINTER);
     ins->routine = cx_gate;
-    ins->invert = NOTINVERTED;
+//    ins->invert = NOTINVERTED;
+    stack.instruction_list[stack.instruction_counter].next_instruction = &stack.instruction_list[stack.instruction_counter + 1];
     stack.instruction_counter++;
 }
 

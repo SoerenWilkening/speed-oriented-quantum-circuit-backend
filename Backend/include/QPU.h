@@ -60,6 +60,7 @@ typedef struct {
     sequence_t *(*routine)();
 
     bool_t invert;
+    struct instruction_t *next_instruction;
 } instruction_t;
 
 typedef struct {

@@ -8,7 +8,7 @@ call_t calls[1024];
 int counter = 0;
 int total = 0;
 int variable_counter = 0;
-hash_element_t hash_elements[hash_size];
+hash_element_t variables[hash_size];
 
 // hashing functionality
 unsigned int hash(const char *word) {
@@ -23,39 +23,39 @@ unsigned int hash(const char *word) {
 element_t *hash_element(char *word) {
     if (word == NULL) return NULL;
     unsigned int h = hash(word);
-    while (hash_elements[h].integer != NULL && strcmp(hash_elements[h].word, word) != 0) {
+    while (variables[h].integer != NULL && strcmp(variables[h].word, word) != 0) {
         h++;
     }
-    if (hash_elements[h].integer != NULL && strcmp(hash_elements[h].word, word) == 0) return hash_elements[h].integer;
+    if (variables[h].integer != NULL && strcmp(variables[h].word, word) == 0) return variables[h].integer;
 
     int all_false = 1;
     if (strcmp(calls[counter].addon, "QUINT") == 0) {
         all_false = 0;
-        hash_elements[h].integer = QUINT();
+	    variables[h].integer = QUINT();
     }
     if (strcmp(calls[counter].addon, "QINT") == 0) {
         all_false = 0;
-        hash_elements[h].integer = QINT();
+	    variables[h].integer = QINT();
     }
     if (strcmp(calls[counter].addon, "UINT") == 0) {
         all_false = 0;
-        hash_elements[h].integer = INT(calls[counter].value);
+	    variables[h].integer = INT(calls[counter].value);
     }
     if (strcmp(calls[counter].addon, "INT") == 0) {
         all_false = 0;
-        hash_elements[h].integer = INT(calls[counter].value);
+	    variables[h].integer = INT(calls[counter].value);
     }
     if (strcmp(calls[counter].addon, "QBOOL") == 0) {
         all_false = 0;
-        hash_elements[h].integer = QBOOL();
+	    variables[h].integer = QBOOL();
     }
     if (strcmp(calls[counter].addon, "BOOL") == 0) {
         all_false = 0;
-        hash_elements[h].integer = INT(calls[counter].value);
+	    variables[h].integer = INT(calls[counter].value);
     }
     if (!all_false) {
-        hash_elements[h].word = word;
-        return hash_elements[h].integer;
+	    variables[h].word = word;
+        return variables[h].integer;
     }
     return NULL;
 }
@@ -158,7 +158,8 @@ char **extract_items_from_line(const char *line, size_t *item_count) {
 }
 
 void lines_to_call(char *line) {
-    if (line[0] == *"/" || line[1] == *"/") return;
+    if (line[0] == *"/" && line[1] == *"/") return;
+    printf("%s\n", line);
 
     calls[counter].value = 0;
     calls[counter].addon = NULL;
@@ -189,17 +190,17 @@ void run_instr() {
         BRANCH(hash_element(calls[counter].var1), calls[counter].value);
     }
     if (strcmp(calls[counter].instruction, "IADD") == 0) {
-        element_t *el3 = hash_element(calls[counter].var3);
+        element_t *el3 = hash_element(calls[counter].var2);
         if (el3 == NULL) el3 = INT(calls[counter].value);
         IADD(hash_element(calls[counter].var1), el3);
     }
     if (strcmp(calls[counter].instruction, "ISUB") == 0) {
-        element_t *el3 = hash_element(calls[counter].var3);
+        element_t *el3 = hash_element(calls[counter].var2);
         if (el3 == NULL) el3 = INT(calls[counter].value);
         ISUB(hash_element(calls[counter].var1), el3);
     }
     if (strcmp(calls[counter].instruction, "PADD") == 0) {
-        element_t *el3 = hash_element(calls[counter].var3);
+        element_t *el3 = hash_element(calls[counter].var2);
         if (el3 == NULL) el3 = INT(calls[counter].value);
         PADD(hash_element(calls[counter].var1), el3);
     }
@@ -255,7 +256,7 @@ void execute_assembly() {
 }
 
 void ReadAssembly(char *asmb[], int num) {
-    for (int i = 0; i < hash_size; ++i) hash_elements[i].integer = NULL;
+    for (int i = 0; i < hash_size; ++i) variables[i].integer = NULL;
     for (int i = 0; i < num; ++i) {
         variable_counter = 0;
         // go through every line
@@ -290,5 +291,5 @@ void AsmbFromFile() {
     }
     ReadAssembly(lines, line_count);
 
-    execute_assembly();
+//    execute_assembly();
 }

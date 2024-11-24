@@ -27,14 +27,13 @@ int main(void) {
     for (int i = 0; i < 10000; ++i) init_instruction(&stack.instruction_list[i]);
 
     AsmbFromFile();
+    stack.instruction_list[stack.instruction_counter - 1].next_instruction = NULL;
+
 
     // ._execute
     clock_t t1 = clock();
-    instruction_t *instruction_pointer = stack.instruction_list;
-    for (int i = 0; i < stack.instruction_counter; ++i) {
-        execute(instruction_pointer);
-        instruction_pointer++;
-    }
+    execute(stack.instruction_list);
+
     print_circuit(stack.circuit);
 
     printf("%f\n", (double) (clock() - t1) / CLOCKS_PER_SEC);

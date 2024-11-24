@@ -11,7 +11,7 @@ void BRANCH(element_t *el1, int bit) {
     MOV(ins->el1, qbit, POINTER);
 
     ins->routine = branch;
-    ins->invert = NOTINVERTED;
+    stack.instruction_list[stack.instruction_counter].next_instruction = &stack.instruction_list[stack.instruction_counter + 1];
     stack.instruction_counter++;
 }
 
@@ -20,7 +20,7 @@ void NOT(element_t *el1) {
     MOV(ins->el1, el1, POINTER);
 
     ins->routine = not_seq;
-    ins->invert = NOTINVERTED;
+    stack.instruction_list[stack.instruction_counter].next_instruction = &stack.instruction_list[stack.instruction_counter + 1];
     stack.instruction_counter++;
 }
 
@@ -33,5 +33,6 @@ void AND(element_t *bool_res, element_t *bool_1, element_t *bool_2) {
     ins->routine = and_sequence;
 
     ins->invert = NOTINVERTED;
+    stack.instruction_list[stack.instruction_counter].next_instruction = &stack.instruction_list[stack.instruction_counter + 1];
     stack.instruction_counter++;
 }

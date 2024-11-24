@@ -90,4 +90,6 @@ void execute(instruction_t *instr) {
     stack.GPR2[0].type = UNINITIALIZED;
     stack.GPR3[0].type = UNINITIALIZED;
     stack.GPC[0].type = UNINITIALIZED;
+
+    if (instr->next_instruction != NULL) execute(instr->next_instruction);
 }
