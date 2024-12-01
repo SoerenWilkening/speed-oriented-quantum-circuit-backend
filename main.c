@@ -27,7 +27,7 @@ int main(void) {
     stack.GPC[0].type = UNINITIALIZED;
     stack.circuit = init_circuit();
     stack.instruction_counter = 0;
-    for (int i = 0; i < MAXINSTRUCTIONS; ++i) init_instruction(&stack.instruction_list[i]);
+//    for (int i = 0; i < MAXINSTRUCTIONS; ++i) init_instruction(&stack.instruction_list[i]);
 
     AsmbFromFile();
 

@@ -21,6 +21,7 @@ void MOV(element_t *el1, element_t *el2, int pov) {
 
 void TSTBIT(element_t *el1, element_t *el2, int bit) {
     instruction_t *ins = &stack.instruction_list[stack.instruction_counter];
+	init_instruction(ins);
     MOV(ins->el1, el1, POINTER); // return value
 
     element_t *qbit = bit_of_int(el2, bit);
@@ -50,8 +51,10 @@ void JMP(){
 
 void JNZ(element_t *bool1){ // Jump if bool1 is not 0 (1)
 	// proper jump, only if bool is classical
-	MOV(stack.instruction_list[stack.instruction_counter].el1, bool1, POINTER);
+	instruction_t *ins = &stack.instruction_list[stack.instruction_counter];
+	init_instruction(ins);
+	MOV(ins->el1, bool1, POINTER);
 
-	stack.instruction_list[stack.instruction_counter].routine = void_seq;
+	ins->routine = void_seq;
 	stack.instruction_counter++;
 }

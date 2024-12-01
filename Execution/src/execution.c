@@ -31,28 +31,6 @@ void qubit_mapping(qubit_t qubit_arrray[]) {
     }
 }
 
-void init_instruction(instruction_t *instr) {
-    instr->el1 = malloc(sizeof(element_t));
-    instr->el1->c_address = malloc(sizeof(int64_t));
-    instr->el1->type = UNINITIALIZED;
-
-    instr->el2 = malloc(sizeof(element_t));
-    instr->el2->c_address = malloc(sizeof(int64_t));
-    instr->el2->type = UNINITIALIZED;
-
-    instr->el3 = malloc(sizeof(element_t));
-    instr->el3->c_address = malloc(sizeof(int64_t));
-    instr->el3->type = UNINITIALIZED;
-
-    instr->control = malloc(sizeof(element_t));
-    instr->control->c_address = malloc(sizeof(int64_t));
-    instr->control->type = UNINITIALIZED;
-
-	instr->next_instruction = NULL;
-	instr->routine = NULL;
-	instr->invert = NOTINVERTED;
-}
-
 // apply the sequences to the desired qubits
 void run_instruction(sequence_t *res, qubit_t qubit_array[], bool_t invert){
     if (res == NULL) return;
@@ -77,7 +55,8 @@ void run_instruction(sequence_t *res, qubit_t qubit_array[], bool_t invert){
 }
 
 void execute(instruction_t *instr) {
-//	printf("%p\n", instr);
+
+	if (instr->el1 == NULL) return;
 
     if (instr->el1->type != UNINITIALIZED) MOV(stack.GPR1, instr->el1, POINTER);
     if (instr->el2->type != UNINITIALIZED) MOV(stack.GPR2, instr->el2, POINTER);

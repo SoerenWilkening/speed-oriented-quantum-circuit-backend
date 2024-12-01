@@ -7,7 +7,9 @@
 void IADD(element_t *el1, element_t *el2) {
     if (el1->qualifier == Cl && el2->qualifier == Qu) exit(5);
 
-    instruction_t *ins = &stack.instruction_list[stack.instruction_counter];
+
+	instruction_t *ins = &stack.instruction_list[stack.instruction_counter];
+	init_instruction(ins);
 
     // copy values instruction registers
     MOV(ins->el1, el1, POINTER);
@@ -46,6 +48,7 @@ void DCR(element_t *el1){
 
 void IMUL(element_t *el1, element_t *el2, element_t *res) {
     instruction_t *ins = &stack.instruction_list[stack.instruction_counter];
+	init_instruction(ins);
 
     // copy values instruction registers
     MOV(ins->el1, res, POINTER);
@@ -66,8 +69,8 @@ void IMUL(element_t *el1, element_t *el2, element_t *res) {
 
 void IDIV(element_t *el1, element_t *el2, element_t *remainder) {
     // create IDIV sequence to Divide Aq / Bq
-    element_t *ctrl = stack.instruction_list[stack.instruction_counter].control;
-    element_t *bool_intermediate = QBOOL();
+//    element_t *ctrl = stack.instruction_list[stack.instruction_counter].control;
+//    element_t *bool_intermediate = QBOOL();
 
     element_t *Y = malloc(sizeof(element_t));
     memcpy(Y, el1, sizeof(element_t));
@@ -75,46 +78,48 @@ void IDIV(element_t *el1, element_t *el2, element_t *remainder) {
         memcpy(Y->q_address, &remainder->q_address[i], (INTEGERSIZE - i) * sizeof(int));
         memcpy(&Y->q_address[(INTEGERSIZE - i)], el1->q_address, i * sizeof(int));
 
-        IF(ctrl);
+//        IF(ctrl);
         ISUB(Y, el2); // subtract Bq from Aq
 
         element_t *bit = bit_of_int(remainder, i - 1);
 
-        IF(ctrl);
+//        IF(ctrl);
         TSTBIT(bit, Y, 0); // check if Aq is negative, stored in Cq
 
-        if (ctrl->type != UNINITIALIZED) {
-            AND(bool_intermediate, ctrl, bit);
-            IF(bool_intermediate);
-        } else IF(bit); // create control for the next instruction
+//        if (ctrl->type != UNINITIALIZED) {
+//            AND(bool_intermediate, ctrl, bit);
+//            IF(bool_intermediate);
+//        } else IF(bit); // create control for the next instruction
+	    IF(bit);
         IADD(Y, el2); // Add bq back to Aq (controlled by Cq)
 
         // Uncompute and
-        if (ctrl->type != UNINITIALIZED) AND(bool_intermediate, ctrl, bit);
+//        if (ctrl->type != UNINITIALIZED) AND(bool_intermediate, ctrl, bit);
 
-        IF(ctrl);
+//        IF(ctrl);
         NOT(bit); // Invert Cq
     }
-    IF(ctrl);
+//    IF(ctrl);
     ISUB(el1, el2); // subtract Bq from Aq
     element_t *bit = bit_of_int(remainder, INTEGERSIZE - 1);
 
-    IF(ctrl);
+//    IF(ctrl);
     TSTBIT(bit, el1, 0); // check if Aq is negative, stored in Cq
 
-    if (ctrl->type != UNINITIALIZED) {
-        AND(bool_intermediate, ctrl, bit);
-        IF(bool_intermediate);
-    } else IF(bit); // create control for the next instruction
+//    if (ctrl->type != UNINITIALIZED) {
+//        AND(bool_intermediate, ctrl, bit);
+//        IF(bool_intermediate);
+//    } else IF(bit); // create control for the next instruction
+	IF(bit);
     IADD(el1, el2); // Add bq back to Aq (controlled by Cq)
 
     // Uncompute and
-    if (ctrl->type != UNINITIALIZED) AND(bool_intermediate, ctrl, bit);
-
-    IF(ctrl);
+//    if (ctrl->type != UNINITIALIZED) AND(bool_intermediate, ctrl, bit);
+//
+//    IF(ctrl);
     ISUB(el1, el2);
 
-    IF(ctrl);
+//    IF(ctrl);
     NOT(bit); // Invert Cq
 
 }
@@ -125,6 +130,7 @@ void MOD(element_t *mod, element_t *el1, element_t *el2) {
 
 void PADD(element_t *el1, element_t *phase) {
     instruction_t *ins = &stack.instruction_list[stack.instruction_counter];
+	init_instruction(ins);
     MOV(ins->el1, el1, POINTER);
     MOV(ins->el2, phase, POINTER);
 

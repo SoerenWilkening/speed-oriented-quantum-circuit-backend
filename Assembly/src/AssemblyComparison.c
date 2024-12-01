@@ -9,6 +9,8 @@ void EQ(element_t *bool_res, element_t *bool_1, element_t *bool_2) {
     }
 
     instruction_t *ins = &stack.instruction_list[stack.instruction_counter];
+	init_instruction(ins);
+
     MOV(ins->el1, bool_res, POINTER);
     MOV(ins->el2, bool_1, POINTER);
 

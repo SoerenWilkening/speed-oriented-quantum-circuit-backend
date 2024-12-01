@@ -366,7 +366,7 @@ void create_executable() {
 
 void AsmbFromFile() {
 
-    FILE *file = fopen("assembly.pqsm", "r");
+    FILE *file = fopen("../assembly.pqsm", "r");
     int line_count = 0;
 
     size_t capacity = 256; // Initial capacity for the array of lines
