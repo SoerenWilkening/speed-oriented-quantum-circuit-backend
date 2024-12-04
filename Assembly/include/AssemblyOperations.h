@@ -41,6 +41,8 @@ void LABEL(char label[]);
 void BRANCH(element_t *el1, int bit);
 void NOT(element_t *el1);
 void AND(element_t *bool_res, element_t *bool_1, element_t *bool_2);
+void OR();
+void XOR();
 
 void EQ(element_t *bool_res, element_t *bool_1, element_t *bool_2);
 void GEQ(element_t *bool_res, element_t *bool_1, element_t *bool_2);
