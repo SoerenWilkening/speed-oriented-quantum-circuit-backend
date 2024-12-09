@@ -54,25 +54,29 @@ typedef struct {
 } element_t;
 
 typedef struct {
-	unsigned int qubits[1];
-} quantum_bool_t;
-
-typedef struct {
+	char MSB;
 	unsigned int qubits[INTEGERSIZE];
 } quantum_int_t;
 
 typedef struct instruction_t {
 	char *name;
-    void *el1;
-    void *el2;
-    void *el3;
-	void *el4;
-	void *control;
+
+	// quantum storing registers
+    void *Q0;
+    void *Q1;
+    void *Q2;
+	void *Q3;
+
+	// classical storing registers
+	int *R0;
+	int *R1;
+	int *R2;
+	int *R3;
 
     sequence_t *(*routine)();
 
-    bool_t invert;
-    struct instruction_t *next_instruction;
+    bool invert;
+    struct instruction_t *next_instruction; // used for jumps
 } instruction_t;
 
 typedef struct {

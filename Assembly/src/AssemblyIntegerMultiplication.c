@@ -9,9 +9,9 @@ void mul(element_t *el1, element_t *el2, element_t *res) {
 	init_instruction();
 
 	// copy values instruction registers
-	ins->el1 = res;
-	ins->el2 = el1;
-	ins->el3 = el2;
+	ins->Q0 = res;
+	ins->Q1 = el1;
+	ins->Q2 = el2;
 
 	ins->routine = void_seq; // replace with actual multiplication
 }
@@ -21,9 +21,9 @@ void qmul(element_t *el1, element_t *el2, element_t *res) {
 	init_instruction();
 
 	// copy values instruction registers
-	ins->el1 = res;
-	ins->el2 = el1;
-	ins->el3 = el2;
+	ins->Q0 = res;
+	ins->Q1 = el1;
+	ins->Q2 = el2;
 
 	ins->routine = CQ_mul;
 }
@@ -33,10 +33,10 @@ void cqmul(element_t *el1, element_t *el2, element_t *res, element_t *ctrl) {
 	init_instruction();
 
 	// copy values instruction registers
-	ins->el1 = res;
-	ins->el2 = el1;
-	ins->el3 = el2;
-	ins->control = ctrl;
+	ins->Q0 = res;
+	ins->Q1 = el1;
+	ins->Q2 = el2;
+	ins->Q3 = ctrl;
 
 	ins->routine = cCQ_mul;
 }
@@ -46,9 +46,9 @@ void qqmul(element_t *el1, element_t *el2, element_t *res) {
 	init_instruction();
 
 	// copy values instruction registers
-	ins->el1 = res;
-	ins->el2 = el1;
-	ins->el3 = el2;
+	ins->Q0 = res;
+	ins->Q1 = el1;
+	ins->Q2 = el2;
 
 	ins->routine = QQ_mul;
 }
@@ -58,10 +58,10 @@ void cqqmul(element_t *el1, element_t *el2, element_t *res, element_t *ctrl) {
 	init_instruction();
 
 	// copy values instruction registers
-	ins->el1 = res;
-	ins->el2 = el1;
-	ins->el3 = el2;
-	ins->control = ctrl;
+	ins->Q0 = res;
+	ins->Q1 = el1;
+	ins->Q2 = el2;
+	ins->Q3 = ctrl;
 
 	ins->routine = cQQ_mul;
 }

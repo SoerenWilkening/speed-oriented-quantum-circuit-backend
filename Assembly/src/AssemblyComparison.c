@@ -6,18 +6,18 @@
 void eq(element_t *bool_res, element_t *bool_1, element_t *bool_2) {
 	instruction_t *ins = init_instruction();
 
-	ins->el1 = bool_res;
-	ins->el2 = bool_1;
-	ins->el3 = bool_2;
+	ins->Q0 = bool_res;
+	ins->Q1 = bool_1;
+	ins->Q2 = bool_2;
 
     ins->routine = CC_equal;
 }
 void qeq(element_t *bool_res, element_t *bool_1, element_t *bool_2) {
 	instruction_t *ins = init_instruction();
 
-	ins->el1 = bool_res;
-	ins->el2 = bool_1;
-	ins->el3 = bool_2;
+	ins->Q0 = bool_res;
+	ins->Q1 = bool_1;
+	ins->Q2 = bool_2;
 
     ins->routine = CQ_equal;
 }
@@ -27,9 +27,9 @@ void qqeq(element_t *bool_res, element_t *bool_1, element_t *bool_2) {
 
 	element_t *zero = INT(0);
 
-	ins->el1 = bool_res;
-	ins->el2 = bool_1;
-	ins->el3 = zero;
+	ins->Q0 = bool_res;
+	ins->Q1 = bool_1;
+	ins->Q2 = zero;
 
 	ins->routine = CQ_equal;
 	qqadd(bool_1, bool_2);
@@ -37,10 +37,10 @@ void qqeq(element_t *bool_res, element_t *bool_1, element_t *bool_2) {
 void cqeq(element_t *bool_res, element_t *bool_1, element_t *bool_2, element_t *ctrl) {
 	instruction_t *ins = init_instruction();
 
-	ins->el1 = bool_res;
-	ins->el2 = bool_1;
-	ins->el3 = bool_2;
-	ins->control = ctrl;
+	ins->Q0 = bool_res;
+	ins->Q1 = bool_1;
+	ins->Q2 = bool_2;
+	ins->Q3 = ctrl;
 
 	// TODO: needs controlled version !!
     ins->routine = CQ_equal;
@@ -51,10 +51,10 @@ void cqqeq(element_t *bool_res, element_t *bool_1, element_t *bool_2, element_t 
 	instruction_t *ins = init_instruction();
 	element_t *zero = INT(0);
 
-	ins->el1 = bool_res;
-	ins->el2 = bool_1;
-	ins->el3 = zero;
-	ins->control = ctrl;
+	ins->Q0 = bool_res;
+	ins->Q1 = bool_1;
+	ins->Q2 = zero;
+	ins->Q3 = ctrl;
 
 	// TODO: needs controlled sequence
     ins->routine = CQ_equal;

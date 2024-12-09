@@ -5,137 +5,137 @@
 #include "AssemblyOperations.h"
 
 // include functionality for unsigned integers
-//void udiv(element_t *el1, element_t *el2, element_t *remainder) {
+//void udiv(element_t *Q0, element_t *Q1, element_t *remainder) {
 //	// include functionality
 //}
-//void qudiv(element_t *el1, element_t *el2, element_t *remainder) {
+//void qudiv(element_t *Q0, element_t *Q1, element_t *remainder) {
 //	// create qqsdiv sequence to Divide Aq / Bq
 //	// increase size of Y to unsigned operations
 //
 //	element_t *Y = malloc(sizeof(element_t));
-//	memcpy(Y, el1, sizeof(element_t));
+//	memcpy(Y, Q0, sizeof(element_t));
 //	for (int i = 2; i < INTEGERSIZE; ++i) {
 //		memcpy(Y->q_address, &remainder->q_address[i], (INTEGERSIZE - i) * sizeof(int));
-//		memcpy(&Y->q_address[(INTEGERSIZE - i)], el1->q_address, i * sizeof(int));
+//		memcpy(&Y->q_address[(INTEGERSIZE - i)], Q0->q_address, i * sizeof(int));
 //
-//		qsub(Y, el2); // subtract Bq from Aq
+//		qsub(Y, Q1); // subtract Bq from Aq
 //
 //		element_t *bit = bit_of_int(remainder, i - 1);
 //
 //		qtstbit(bit, Y, 0); // check if Aq is negative, stored in Cq
 //
 //		jez(bit);
-//		qadd(Y, el2); // Add bq back to Aq (controlled by Cq)
+//		qadd(Y, Q1); // Add bq back to Aq (controlled by Cq)
 //		label("internal_ctrl_add1");
 //
 //		qnot(bit); // Invert Cq
 //	}
-//	qsub(el1, el2); // subtract Bq from Aq
+//	qsub(Q0, Q1); // subtract Bq from Aq
 //	element_t *bit = bit_of_int(remainder, INTEGERSIZE - 1);
 //
-//	qtstbit(bit, el1, 0); // check if Aq is negative, stored in Cq
+//	qtstbit(bit, Q0, 0); // check if Aq is negative, stored in Cq
 //
 //	jez(bit);
-//	qadd(el1, el2); // Add bq back to Aq (controlled by Cq)
+//	qadd(Q0, Q1); // Add bq back to Aq (controlled by Cq)
 //	label("internal_ctrl_add2");
 //
 //	qnot(bit); // Invert Cq
 //}
-//void qqudiv(element_t *el1, element_t *el2, element_t *remainder) {
+//void qqudiv(element_t *Q0, element_t *Q1, element_t *remainder) {
 //	// create qqsdiv sequence to Divide Aq / Bq
 //	// increase size of Y to unsigned operations
 //
 //	element_t *Y = malloc(sizeof(element_t));
-//	memcpy(Y, el1, sizeof(element_t));
+//	memcpy(Y, Q0, sizeof(element_t));
 //	for (int i = 2; i < INTEGERSIZE; ++i) {
 //		memcpy(Y->q_address, &remainder->q_address[i], (INTEGERSIZE - i) * sizeof(int));
-//		memcpy(&Y->q_address[(INTEGERSIZE - i)], el1->q_address, i * sizeof(int));
+//		memcpy(&Y->q_address[(INTEGERSIZE - i)], Q0->q_address, i * sizeof(int));
 //
-//		qqsub(Y, el2); // subtract Bq from Aq
+//		qqsub(Y, Q1); // subtract Bq from Aq
 //
 //		element_t *bit = bit_of_int(remainder, i - 1);
 //
 //		qtstbit(bit, Y, 0); // check if Aq is negative, stored in Cq
 //
 //		jez(bit);
-//		qqadd(Y, el2); // Add bq back to Aq (controlled by Cq)
+//		qqadd(Y, Q1); // Add bq back to Aq (controlled by Cq)
 //		label("internal_ctrl_add1");
 //
 //		qnot(bit); // Invert Cq
 //	}
-//	qqsub(el1, el2); // subtract Bq from Aq
+//	qqsub(Q0, Q1); // subtract Bq from Aq
 //	element_t *bit = bit_of_int(remainder, INTEGERSIZE - 1);
 //
-//	qtstbit(bit, el1, 0); // check if Aq is negative, stored in Cq
+//	qtstbit(bit, Q0, 0); // check if Aq is negative, stored in Cq
 //
 //	jez(bit);
-//	qqadd(el1, el2); // Add bq back to Aq (controlled by Cq)
+//	qqadd(Q0, Q1); // Add bq back to Aq (controlled by Cq)
 //	label("internal_ctrl_add2");
 //
 //	qnot(bit); // Invert Cq
 //}
-//void cqudiv(element_t *el1, element_t *el2, element_t *remainder, element_t *ctrl) {
+//void cqudiv(element_t *Q0, element_t *Q1, element_t *remainder, element_t *ctrl) {
 //	// create qqsdiv sequence to Divide Aq / Bq
 //	// increase size of Y to unsigned operations
 //
 //	element_t *Y = malloc(sizeof(element_t));
-//	memcpy(Y, el1, sizeof(element_t));
+//	memcpy(Y, Q0, sizeof(element_t));
 //	for (int i = 2; i < INTEGERSIZE; ++i) {
 //		memcpy(Y->q_address, &remainder->q_address[i], (INTEGERSIZE - i) * sizeof(int));
-//		memcpy(&Y->q_address[(INTEGERSIZE - i)], el1->q_address, i * sizeof(int));
+//		memcpy(&Y->q_address[(INTEGERSIZE - i)], Q0->q_address, i * sizeof(int));
 //
-//		qsub(Y, el2); // subtract Bq from Aq
+//		qsub(Y, Q1); // subtract Bq from Aq
 //
 //		element_t *bit = bit_of_int(remainder, i - 1);
 //
 //		qtstbit(bit, Y, 0); // check if Aq is negative, stored in Cq
 //
 //		jez(bit);
-//		qadd(Y, el2); // Add bq back to Aq (controlled by Cq)
+//		qadd(Y, Q1); // Add bq back to Aq (controlled by Cq)
 //		label("internal_ctrl_add1");
 //
 //		qnot(bit); // Invert Cq
 //	}
-//	qsub(el1, el2); // subtract Bq from Aq
+//	qsub(Q0, Q1); // subtract Bq from Aq
 //	element_t *bit = bit_of_int(remainder, INTEGERSIZE - 1);
 //
-//	qtstbit(bit, el1, 0); // check if Aq is negative, stored in Cq
+//	qtstbit(bit, Q0, 0); // check if Aq is negative, stored in Cq
 //
 //	jez(bit);
-//	qadd(el1, el2); // Add bq back to Aq (controlled by Cq)
+//	qadd(Q0, Q1); // Add bq back to Aq (controlled by Cq)
 //	label("internal_ctrl_add2");
 //
 //	qnot(bit); // Invert Cq
 //}
-//void cqqudiv(element_t *el1, element_t *el2, element_t *remainder, element_t *ctrl) {
+//void cqqudiv(element_t *Q0, element_t *Q1, element_t *remainder, element_t *ctrl) {
 //	// create qqsdiv sequence to Divide Aq / Bq
 //	// increase size of Y to unsigned operations
 //
 //	element_t *Y = malloc(sizeof(element_t));
-//	memcpy(Y, el1, sizeof(element_t));
+//	memcpy(Y, Q0, sizeof(element_t));
 //	for (int i = 2; i < INTEGERSIZE; ++i) {
 //		memcpy(Y->q_address, &remainder->q_address[i], (INTEGERSIZE - i) * sizeof(int));
-//		memcpy(&Y->q_address[(INTEGERSIZE - i)], el1->q_address, i * sizeof(int));
+//		memcpy(&Y->q_address[(INTEGERSIZE - i)], Q0->q_address, i * sizeof(int));
 //
-//		qqsub(Y, el2); // subtract Bq from Aq
+//		qqsub(Y, Q1); // subtract Bq from Aq
 //
 //		element_t *bit = bit_of_int(remainder, i - 1);
 //
 //		qtstbit(bit, Y, 0); // check if Aq is negative, stored in Cq
 //
 //		jez(bit);
-//		qqadd(Y, el2); // Add bq back to Aq (controlled by Cq)
+//		qqadd(Y, Q1); // Add bq back to Aq (controlled by Cq)
 //		label("internal_ctrl_add1");
 //
 //		qnot(bit); // Invert Cq
 //	}
-//	qqsub(el1, el2); // subtract Bq from Aq
+//	qqsub(Q0, Q1); // subtract Bq from Aq
 //	element_t *bit = bit_of_int(remainder, INTEGERSIZE - 1);
 //
-//	qtstbit(bit, el1, 0); // check if Aq is negative, stored in Cq
+//	qtstbit(bit, Q0, 0); // check if Aq is negative, stored in Cq
 //
 //	jez(bit);
-//	qqadd(el1, el2); // Add bq back to Aq (controlled by Cq)
+//	qqadd(Q0, Q1); // Add bq back to Aq (controlled by Cq)
 //	label("internal_ctrl_add2");
 //
 //	qnot(bit); // Invert Cq
@@ -265,20 +265,20 @@ void cqqsdiv(element_t *A, element_t *B, element_t *remainder, element_t *ctrl) 
 }
 
 //
-//void umod(element_t *mod, element_t *el1, element_t *el2) {
-//	udiv(el1, el2, mod);
+//void umod(element_t *mod, element_t *Q0, element_t *Q1) {
+//	udiv(Q0, Q1, mod);
 //}
-//void qumod(element_t *mod, element_t *el1, element_t *el2) {
-//	qudiv(el1, el2, mod);
+//void qumod(element_t *mod, element_t *Q0, element_t *Q1) {
+//	qudiv(Q0, Q1, mod);
 //}
-//void qqumod(element_t *mod, element_t *el1, element_t *el2) {
-//	qqudiv(el1, el2, mod);
+//void qqumod(element_t *mod, element_t *Q0, element_t *Q1) {
+//	qqudiv(Q0, Q1, mod);
 //}
-//void cqumod(element_t *mod, element_t *el1, element_t *el2, element_t *ctrl) {
-//	cqudiv(el1, el2, mod, ctrl);
+//void cqumod(element_t *mod, element_t *Q0, element_t *Q1, element_t *ctrl) {
+//	cqudiv(Q0, Q1, mod, ctrl);
 //}
-//void cqqumod(element_t *mod, element_t *el1, element_t *el2, element_t *ctrl) {
-//	cqqudiv(el1, el2, mod, ctrl);
+//void cqqumod(element_t *mod, element_t *Q0, element_t *Q1, element_t *ctrl) {
+//	cqqudiv(Q0, Q1, mod, ctrl);
 //}
 
 void smod(element_t *mod, element_t *el1, element_t *el2) {

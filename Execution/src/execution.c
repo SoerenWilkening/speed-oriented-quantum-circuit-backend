@@ -55,7 +55,7 @@ void run_instruction(sequence_t *res, qubit_t qubit_array[], bool_t invert){
 
 void execute(instruction_t *instr) {
 
-	if (instr->el1 == NULL) return;
+	if (instr->Q0 == NULL) return;
 
 	if (instr->routine == NULL) return;
 	qubit_t qubit_array[5 * INTEGERSIZE];

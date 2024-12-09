@@ -9,7 +9,7 @@ void branch(element_t *el1, int bit) {
 	ins->name = "branch_seq ";
 	element_t *qbit = bit_of_int(el1, bit);
 
-	ins->el1 = qbit;
+	ins->Q0 = qbit;
 
 	ins->routine = branch_seq;
 }
@@ -17,7 +17,7 @@ void branch(element_t *el1, int bit) {
 void not(element_t *el1) {
 	instruction_t *ins = init_instruction();
 	ins->name = "not ";
-	ins->el1 = el1;
+	ins->Q0 = el1;
 
 	ins->routine = void_seq;
 }
@@ -25,7 +25,7 @@ void not(element_t *el1) {
 void qnot(element_t *el1) {
 	instruction_t *ins = init_instruction();
 	ins->name = "qnot ";
-	ins->el1 = el1;
+	ins->Q0 = el1;
 
 	ins->routine = not_seq;
 }
@@ -33,8 +33,8 @@ void qnot(element_t *el1) {
 void cqnot(element_t *el1, element_t *ctrl) {
 	instruction_t *ins = init_instruction();
 	ins->name = "qnot ";
-	ins->el1 = el1;
-	ins->el2 = ctrl;
+	ins->Q0 = el1;
+	ins->Q1 = ctrl;
 
 	ins->routine = ctrl_not_seq;
 }
@@ -42,9 +42,9 @@ void cqnot(element_t *el1, element_t *ctrl) {
 void and(element_t *bool_res, element_t *bool_1, element_t *bool_2) {
 	instruction_t *ins = init_instruction();
 	ins->name = "and ";
-	ins->el1 = bool_res;
-	ins->el2 = bool_1;
-	ins->el3 = bool_2;
+	ins->Q0 = bool_res;
+	ins->Q1 = bool_1;
+	ins->Q2 = bool_2;
 
 	ins->routine = and_seq;
 
@@ -54,9 +54,9 @@ void and(element_t *bool_res, element_t *bool_1, element_t *bool_2) {
 void qand(element_t *bool_res, element_t *bool_1, element_t *bool_2) {
 	instruction_t *ins = init_instruction();
 	ins->name = "qand ";
-	ins->el1 = bool_res;
-	ins->el2 = bool_1;
-	ins->el3 = bool_2;
+	ins->Q0 = bool_res;
+	ins->Q1 = bool_1;
+	ins->Q2 = bool_2;
 
 	ins->routine = q_and_seq;
 
@@ -66,9 +66,9 @@ void qand(element_t *bool_res, element_t *bool_1, element_t *bool_2) {
 void qqand(element_t *bool_res, element_t *bool_1, element_t *bool_2) {
 	instruction_t *ins = init_instruction();
 	ins->name = "qqand ";
-	ins->el1 = bool_res;
-	ins->el2 = bool_1;
-	ins->el3 = bool_2;
+	ins->Q0 = bool_res;
+	ins->Q1 = bool_1;
+	ins->Q2 = bool_2;
 
 	ins->routine = qq_and_seq;
 

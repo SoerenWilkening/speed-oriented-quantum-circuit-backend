@@ -6,12 +6,15 @@
 
 instruction_t *init_instruction() {
 	instruction_t *instr = &stack.instruction_list[stack.instruction_counter];
-	instr->el1 = NULL;
-	instr->el2 = NULL;
-	instr->el3 = NULL;
-	instr->el4 = NULL;
+	instr->Q0 = NULL;
+	instr->Q1 = NULL;
+	instr->Q2 = NULL;
+	instr->Q3 = NULL;
 
-	instr->control = NULL;
+	instr->R0 = NULL;
+	instr->R1 = NULL;
+	instr->R2 = NULL;
+	instr->R3 = NULL;
 
 	instr->routine = NULL;
 	instr->invert = NOTINVERTED;
@@ -24,34 +27,34 @@ instruction_t *init_instruction() {
 void tstbit(element_t *el1, element_t *el2, int bit) {
 	instruction_t *ins = init_instruction();
 	ins->name = "testbit ";
-	ins->el1 = el1;
+	ins->Q0 = el1;
 
 	element_t *qbit = bit_of_int(el2, bit);
 
-	ins->el2 = qbit;
+	ins->Q1 = qbit;
 	ins->routine = void_seq;
 }
 
 void qtstbit(element_t *el1, element_t *el2, int bit) {
 	instruction_t *ins = init_instruction();
 	ins->name = "testbit ";
-	ins->el1 = el1; // return value
+	ins->Q0 = el1; // return value
 
 	element_t *qbit = bit_of_int(el2, bit);
 
-	ins->el2 = qbit;
+	ins->Q1 = qbit;
 	ins->routine = cx_gate;
 }
 
 void cqtstbit(element_t *el1, element_t *el2, element_t *ctrl, int bit) {
 	instruction_t *ins = init_instruction();
 	ins->name = "testbit ";
-	ins->el1 = el1; // return value
+	ins->Q0 = el1; // return value
 
 	element_t *qbit = bit_of_int(el2, bit);
 
-	ins->el2 = qbit;
-	ins->control = ctrl;
+	ins->Q1 = qbit;
+	ins->Q2 = ctrl;
 	ins->routine = ccx_gate;
 }
 

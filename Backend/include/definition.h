@@ -33,6 +33,5 @@ typedef char decompose_toffoli_t;
 typedef unsigned int qubit_t;
 typedef size_t layer_t;
 typedef unsigned int num_t;
-typedef unsigned char bool_t;
 
 #endif //CQ_BACKEND_IMPROVED_DEFINITION_H
