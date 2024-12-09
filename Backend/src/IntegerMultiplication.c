@@ -218,7 +218,7 @@ sequence_t *cQQ_mul() {
 
 
 sequence_t *CQ_mul() {
-    int *bin = two_complement(*stack.GPR3->c_address, INTEGERSIZE);
+    int *bin = two_complement(*((int *) stack.GPR3), INTEGERSIZE);
 
     sequence_t *mul = malloc(sizeof(sequence_t));
     mul->used_layer = 0;
@@ -254,7 +254,7 @@ sequence_t *CQ_mul() {
 }
 
 sequence_t *cCQ_mul() {
-    int *bin = two_complement(*stack.GPR3->c_address, INTEGERSIZE);
+    int *bin = two_complement(*((int *)stack.GPR3), INTEGERSIZE);
 
     sequence_t *mul = malloc(sizeof(sequence_t));
     mul->used_layer = 0;

@@ -13,8 +13,13 @@
 sequence_t *void_seq();
 
 sequence_t *not_seq();
+sequence_t *ctrl_not_seq();
 
-sequence_t *and_sequence();
+sequence_t *and_seq();
+sequence_t *q_and_seq();
+sequence_t *qq_and_seq();
+sequence_t *ctrl_q_and_seq();
+sequence_t *ctrl_qq_and_seq();
 
 sequence_t *branch_seq();
 

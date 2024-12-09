@@ -6,16 +6,16 @@
 
 void add(element_t *el1, element_t *el2) {
 	instruction_t *ins = init_instruction();
-	mov(ins->el1, el1, POINTER);
-	mov(ins->el2, el2, POINTER);
+	ins->el1 = el1;
+	ins->el2 = el2;
 	ins->name = "CC_add ";
 	ins->routine = CC_add;
 }
 
 void qadd(element_t *el1, element_t *el2) {
 	instruction_t *ins = init_instruction();
-	mov(ins->el1, el1, POINTER);
-	mov(ins->el2, el2, POINTER);
+	ins->el1 = el1;
+	ins->el2 = el2;
 
 	ins->name = "CQ_add ";
 	ins->routine = CQ_add;
@@ -23,8 +23,8 @@ void qadd(element_t *el1, element_t *el2) {
 
 void cqadd(element_t *el1, element_t *el2, element_t *ctrl) {
 	instruction_t *ins = init_instruction();
-	mov(ins->el1, el1, POINTER);
-	mov(ins->el2, el2, POINTER);
+	ins->el1 = el1;
+	ins->el2 = el2;
 
 	ins->name = "cCQ_add ";
 	ins->routine = cCQ_add;
@@ -32,8 +32,8 @@ void cqadd(element_t *el1, element_t *el2, element_t *ctrl) {
 
 void qqadd(element_t *el1, element_t *el2) {
 	instruction_t *ins = init_instruction();
-	mov(ins->el1, el1, POINTER);
-	mov(ins->el2, el2, POINTER);
+	ins->el1 = el1;
+	ins->el2 = el2;
 
 	// routine assignments
 	ins->name = "QQ_add ";
@@ -42,9 +42,9 @@ void qqadd(element_t *el1, element_t *el2) {
 
 void cqqadd(element_t *el1, element_t *el2, element_t *ctrl) {
 	instruction_t *ins = init_instruction();
-	mov(ins->el1, el1, POINTER);
-	mov(ins->el2, el2, POINTER);
-	mov(ins->control, ctrl, POINTER);
+	ins->el1 = el1;
+	ins->el2 = el2;
+	ins->control = ctrl;
 
 	// routine assignments
 	ins->name = "cQQ_add ";
@@ -108,17 +108,17 @@ void cqdcr(element_t *el1, element_t *ctrl) {
 
 void padd(element_t *el1, element_t *phase) {
 	instruction_t *ins = init_instruction();
-	mov(ins->el1, el1, POINTER);
-	mov(ins->el2, phase, POINTER);
+	ins->el1 = el1;
+	ins->el2 = phase;
 
 	ins->routine = P_add;
 }
 
 void cpadd(element_t *el1, element_t *phase, element_t *ctrl) {
 	instruction_t *ins = init_instruction();
-	mov(ins->el1, el1, POINTER);
-	mov(ins->el2, phase, POINTER);
-	mov(ins->control, ctrl, POINTER);
+	ins->el1 = el1;
+	ins->el2 = phase;
+	ins->control = ctrl;
 
 	ins->routine = P_add;
 }

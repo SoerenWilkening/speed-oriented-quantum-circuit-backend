@@ -7,17 +7,17 @@
 void branch(element_t *el1, int bit) {
 	instruction_t *ins = init_instruction();
 	ins->name = "branch_seq ";
-    element_t *qbit = bit_of_int(el1, bit);
+	element_t *qbit = bit_of_int(el1, bit);
 
-	mov(ins->el1, qbit, POINTER);
+	ins->el1 = qbit;
 
-    ins->routine = branch_seq;
+	ins->routine = branch_seq;
 }
 
 void not(element_t *el1) {
 	instruction_t *ins = init_instruction();
 	ins->name = "not ";
-	mov(ins->el1, el1, POINTER);
+	ins->el1 = el1;
 
 	ins->routine = void_seq;
 }
@@ -25,27 +25,28 @@ void not(element_t *el1) {
 void qnot(element_t *el1) {
 	instruction_t *ins = init_instruction();
 	ins->name = "qnot ";
-	mov(ins->el1, el1, POINTER);
+	ins->el1 = el1;
 
-    ins->routine = not_seq;
+	ins->routine = not_seq;
 }
 
 void cqnot(element_t *el1, element_t *ctrl) {
 	instruction_t *ins = init_instruction();
 	ins->name = "qnot ";
-	mov(ins->el1, el1, POINTER);
+	ins->el1 = el1;
+	ins->el2 = ctrl;
 
-	ins->routine = cx_gate;
+	ins->routine = ctrl_not_seq;
 }
 
 void and(element_t *bool_res, element_t *bool_1, element_t *bool_2) {
 	instruction_t *ins = init_instruction();
 	ins->name = "and ";
-	mov(ins->el1, bool_res, POINTER);
-	mov(ins->el2, bool_1, POINTER);
-	mov(ins->el3, bool_2, POINTER);
+	ins->el1 = bool_res;
+	ins->el2 = bool_1;
+	ins->el3 = bool_2;
 
-	ins->routine = and_sequence;
+	ins->routine = and_seq;
 
 	ins->invert = NOTINVERTED;
 }
@@ -53,11 +54,11 @@ void and(element_t *bool_res, element_t *bool_1, element_t *bool_2) {
 void qand(element_t *bool_res, element_t *bool_1, element_t *bool_2) {
 	instruction_t *ins = init_instruction();
 	ins->name = "qand ";
-	mov(ins->el1, bool_res, POINTER);
-	mov(ins->el2, bool_1, POINTER);
-	mov(ins->el3, bool_2, POINTER);
+	ins->el1 = bool_res;
+	ins->el2 = bool_1;
+	ins->el3 = bool_2;
 
-	ins->routine = and_sequence;
+	ins->routine = q_and_seq;
 
 	ins->invert = NOTINVERTED;
 }
@@ -65,11 +66,11 @@ void qand(element_t *bool_res, element_t *bool_1, element_t *bool_2) {
 void qqand(element_t *bool_res, element_t *bool_1, element_t *bool_2) {
 	instruction_t *ins = init_instruction();
 	ins->name = "qqand ";
-	mov(ins->el1, bool_res, POINTER);
-	mov(ins->el2, bool_1, POINTER);
-	mov(ins->el3, bool_2, POINTER);
+	ins->el1 = bool_res;
+	ins->el2 = bool_1;
+	ins->el3 = bool_2;
 
-    ins->routine = and_sequence;
+	ins->routine = qq_and_seq;
 
-    ins->invert = NOTINVERTED;
+	ins->invert = NOTINVERTED;
 }

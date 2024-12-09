@@ -17,19 +17,9 @@ sequence_t *CQ_equal() {
 
     sequence_t *seq = malloc(sizeof(sequence_t));
 
-    element_t *classical_element;
-    element_t *quantum_element;
-    int factor = 1;
+	int factor = 1;
 
-    if (stack.GPR2[0].qualifier == Qu) {
-        quantum_element = stack.GPR2;
-        classical_element = stack.GPR3;
-    } else {
-        quantum_element = stack.GPR3;
-        classical_element = stack.GPR2;
-    }
-
-    int *bin = two_complement(*classical_element->c_address, INTEGERSIZE);
+    int *bin = two_complement(*((int *) stack.GPR2), INTEGERSIZE);
     int Zeros = 0;
     for (int i = 0; i < INTEGERSIZE; ++i) Zeros += (1 - bin[i]);
 
@@ -112,6 +102,6 @@ sequence_t *CQ_equal() {
 }
 
 sequence_t *CC_equal() {
-    *stack.GPR1[0].c_address = *stack.GPR2[0].c_address == *stack.GPR3[0].c_address;
+    *((int *) stack.GPR1) = *((int *) stack.GPR2) == *((int *) stack.GPR3);
     return NULL;
 }

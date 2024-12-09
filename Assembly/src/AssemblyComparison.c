@@ -6,18 +6,18 @@
 void eq(element_t *bool_res, element_t *bool_1, element_t *bool_2) {
 	instruction_t *ins = init_instruction();
 
-	mov(ins->el1, bool_res, POINTER);
-	mov(ins->el2, bool_1, POINTER);
-	mov(ins->el3, bool_2, POINTER);
+	ins->el1 = bool_res;
+	ins->el2 = bool_1;
+	ins->el3 = bool_2;
 
     ins->routine = CC_equal;
 }
 void qeq(element_t *bool_res, element_t *bool_1, element_t *bool_2) {
 	instruction_t *ins = init_instruction();
 
-	mov(ins->el1, bool_res, POINTER);
-	mov(ins->el2, bool_1, POINTER);
-	mov(ins->el3, bool_2, POINTER);
+	ins->el1 = bool_res;
+	ins->el2 = bool_1;
+	ins->el3 = bool_2;
 
     ins->routine = CQ_equal;
 }
@@ -25,11 +25,11 @@ void qqeq(element_t *bool_res, element_t *bool_1, element_t *bool_2) {
 	qqsub(bool_1, bool_2);
 	instruction_t *ins = init_instruction();
 
-	mov(ins->el1, bool_res, POINTER);
-	mov(ins->el2, bool_1, POINTER);
-
 	element_t *zero = INT(0);
-	mov(ins->el3, zero, POINTER);
+
+	ins->el1 = bool_res;
+	ins->el2 = bool_1;
+	ins->el3 = zero;
 
 	ins->routine = CQ_equal;
 	qqadd(bool_1, bool_2);
@@ -37,10 +37,10 @@ void qqeq(element_t *bool_res, element_t *bool_1, element_t *bool_2) {
 void cqeq(element_t *bool_res, element_t *bool_1, element_t *bool_2, element_t *ctrl) {
 	instruction_t *ins = init_instruction();
 
-	mov(ins->el1, bool_res, POINTER);
-	mov(ins->el2, bool_1, POINTER);
-	mov(ins->el3, bool_2, POINTER);
-	mov(ins->control, ctrl, POINTER);
+	ins->el1 = bool_res;
+	ins->el2 = bool_1;
+	ins->el3 = bool_2;
+	ins->control = ctrl;
 
 	// TODO: needs controlled version !!
     ins->routine = CQ_equal;
@@ -49,11 +49,12 @@ void cqqeq(element_t *bool_res, element_t *bool_1, element_t *bool_2, element_t 
     qqsub(bool_1, bool_2);
 
 	instruction_t *ins = init_instruction();
-	mov(ins->el1, bool_res, POINTER);
-	mov(ins->el2, bool_1, POINTER);
-    element_t *zero = INT(0);
-	mov(ins->el3, zero, POINTER);
-	mov(ins->control, ctrl, POINTER);
+	element_t *zero = INT(0);
+
+	ins->el1 = bool_res;
+	ins->el2 = bool_1;
+	ins->el3 = zero;
+	ins->control = ctrl;
 
 	// TODO: needs controlled sequence
     ins->routine = CQ_equal;

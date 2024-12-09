@@ -54,11 +54,20 @@ typedef struct {
 } element_t;
 
 typedef struct {
+	unsigned int qubits[1];
+} quantum_bool_t;
+
+typedef struct {
+	unsigned int qubits[INTEGERSIZE];
+} quantum_int_t;
+
+typedef struct instruction_t {
 	char *name;
-    element_t *el1;
-    element_t *el2;
-    element_t *el3;
-    element_t *control;
+    void *el1;
+    void *el2;
+    void *el3;
+	void *el4;
+	void *control;
 
     sequence_t *(*routine)();
 
@@ -67,10 +76,10 @@ typedef struct {
 } instruction_t;
 
 typedef struct {
-    element_t GPR1[1];
-    element_t GPR2[1];
-    element_t GPR3[1];
-    element_t GPC[1];
+    void *GPR1;
+    void *GPR2;
+    void *GPR3;
+    void *GPR4;
 
     instruction_t instruction_list[MAXINSTRUCTIONS];
     int instruction_counter;
@@ -79,8 +88,6 @@ typedef struct {
 } hybrid_stack_t;
 
 extern hybrid_stack_t stack;
-
-//void init_instruction(instruction_t *instr);
 
 circuit_t *init_circuit();
 

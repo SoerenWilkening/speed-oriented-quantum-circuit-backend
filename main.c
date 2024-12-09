@@ -21,14 +21,12 @@ int main(void) {
 
     // initialize the rest of the stack
     // prepare exerything for the execution
-    stack.GPR1[0].type = UNINITIALIZED;
-    stack.GPR2[0].type = UNINITIALIZED;
-    stack.GPR3[0].type = UNINITIALIZED;
-    stack.GPC[0].type = UNINITIALIZED;
+    stack.GPR1 = NULL;
+    stack.GPR2 = NULL;
+    stack.GPR3 = NULL;
+    stack.GPR4 = NULL;
     stack.circuit = init_circuit();
     stack.instruction_counter = 0;
-
-	active_label[0].ctrl[0].type = UNINITIALIZED;
 
     AsmbFromFile();
 

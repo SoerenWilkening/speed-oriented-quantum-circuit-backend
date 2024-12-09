@@ -6,29 +6,29 @@
 
 void qubit_mapping(qubit_t qubit_arrray[]) {
     int start = 0;
-    if (stack.GPR1[0].type != UNINITIALIZED && stack.GPR1[0].qualifier == Qu) {
-        int value = (stack.GPR1[0].type == BOOLEAN) ? 1 : INTEGERSIZE;
-        memcpy(qubit_arrray, stack.GPR1[0].q_address, value * sizeof(qubit_t));
-        start += value;
-    }
-    if (stack.GPR2[0].type != UNINITIALIZED && stack.GPR2[0].qualifier == Qu) {
-        int value = (stack.GPR2[0].type == BOOLEAN) ? 1 : INTEGERSIZE;
-        memcpy(&qubit_arrray[start], stack.GPR2[0].q_address, value * sizeof(qubit_t));
-        start += value;
-    }
-    if (stack.GPR3[0].type != UNINITIALIZED && stack.GPR3[0].qualifier == Qu) {
-        int value = (stack.GPR3[0].type == BOOLEAN) ? 1 : INTEGERSIZE;
-        memcpy(&qubit_arrray[start], stack.GPR3[0].q_address, value * sizeof(qubit_t));
-        start += value;
-    }
-    if (stack.GPC[0].type != UNINITIALIZED && stack.GPC[0].qualifier == Qu){
-        int value = 1;
-        memcpy(&qubit_arrray[start], stack.GPC[0].q_address, value * sizeof(qubit_t));
-        start += value;
-    }
-    for (int i = 0; i < 5 * INTEGERSIZE - start; ++i) {
-        qubit_arrray[start + i] = stack.circuit->ancilla[i];
-    }
+//    if (stack.GPR1[0].type != UNINITIALIZED && stack.GPR1[0].qualifier == Qu) {
+//        int value = (stack.GPR1[0].type == BOOLEAN) ? 1 : INTEGERSIZE;
+//        memcpy(qubit_arrray, stack.GPR1[0].q_address, value * sizeof(qubit_t));
+//        start += value;
+//    }
+//    if (stack.GPR2[0].type != UNINITIALIZED && stack.GPR2[0].qualifier == Qu) {
+//        int value = (stack.GPR2[0].type == BOOLEAN) ? 1 : INTEGERSIZE;
+//        memcpy(&qubit_arrray[start], stack.GPR2[0].q_address, value * sizeof(qubit_t));
+//        start += value;
+//    }
+//    if (stack.GPR3[0].type != UNINITIALIZED && stack.GPR3[0].qualifier == Qu) {
+//        int value = (stack.GPR3[0].type == BOOLEAN) ? 1 : INTEGERSIZE;
+//        memcpy(&qubit_arrray[start], stack.GPR3[0].q_address, value * sizeof(qubit_t));
+//        start += value;
+//    }
+//    if (stack.GPC[0].type != UNINITIALIZED && stack.GPC[0].qualifier == Qu){
+//        int value = 1;
+//        memcpy(&qubit_arrray[start], stack.GPC[0].q_address, value * sizeof(qubit_t));
+//        start += value;
+//    }
+//    for (int i = 0; i < 5 * INTEGERSIZE - start; ++i) {
+//        qubit_arrray[start + i] = stack.circuit->ancilla[i];
+//    }
 }
 
 // apply the sequences to the desired qubits
@@ -44,7 +44,6 @@ void run_instruction(sequence_t *res, qubit_t qubit_array[], bool_t invert){
             memcpy(g, &res->seq[layer][gate], sizeof(gate_t));
             g->Target = qubit_array[g->Target];
             for (int i = 0; i < g->NumControls; ++i) {
-//                printf("%d %d\n", g->Control[i], qubit_array[g->Control[i]]);
                 g->Control[i] = qubit_array[g->Control[i]];
             }
             g->GateValue *= pow(-1, invert);
@@ -58,12 +57,6 @@ void execute(instruction_t *instr) {
 
 	if (instr->el1 == NULL) return;
 
-    if (instr->el1->type != UNINITIALIZED) mov(stack.GPR1, instr->el1, POINTER);
-    if (instr->el2->type != UNINITIALIZED) mov(stack.GPR2, instr->el2, POINTER);
-    if (instr->el3->type != UNINITIALIZED) mov(stack.GPR3, instr->el3, POINTER);
-
-    if (instr->control->type != UNINITIALIZED) mov(stack.GPC, instr->control, POINTER);
-
 	if (instr->routine == NULL) return;
 	qubit_t qubit_array[5 * INTEGERSIZE];
 	qubit_mapping(qubit_array);
@@ -71,18 +64,13 @@ void execute(instruction_t *instr) {
 
     run_instruction(res, qubit_array, instr->invert);
 
-	bool will_jump = 0;
-	if (stack.GPR1[0].qualifier == Cl) {
-		if (stack.GPR1[0].type != UNINITIALIZED && *stack.GPR1[0].c_address == 1) will_jump = 1;
-	}
-
-    stack.GPR1[0].type = UNINITIALIZED;
-    stack.GPR2[0].type = UNINITIALIZED;
-    stack.GPR3[0].type = UNINITIALIZED;
-    stack.GPC[0].type = UNINITIALIZED;
+    stack.GPR1 = NULL;
+    stack.GPR2 = NULL;
+    stack.GPR3 = NULL;
+    stack.GPR4 = NULL;
 
 	instruction_t *pointer = instr + 1;
-    if (instr->next_instruction != NULL && will_jump) {
+    if (instr->next_instruction != NULL) {
 		pointer = (instruction_t *) instr->next_instruction;
 	    printf("jump \n");
 	}

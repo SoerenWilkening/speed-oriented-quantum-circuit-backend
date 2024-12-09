@@ -21,7 +21,6 @@ extern label_t labels[3000];
 
 instruction_t *init_instruction();
 
-void mov(element_t *el1, element_t *el2, int pov);
 void inv();
 void tstbit(element_t *el1, element_t *el2, int bit);
 void qtstbit(element_t *el1, element_t *el2, int bit);
