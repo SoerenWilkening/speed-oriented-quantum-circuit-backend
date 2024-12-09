@@ -19,6 +19,7 @@ typedef struct {
     char *var1;
     char *var2;
     char *var3;
+    char *var4;
     int value;
 	instruction_t *ptr;
 } call_t;

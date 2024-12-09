@@ -22,6 +22,7 @@ add_executable(CQ_backend_improved main.c
         Assembly/src/AssemblyLogic.c
         Assembly/src/AssemblyArithmetic.c
         Assembly/src/AssemblyBasics.c
+        Assembly/src/AssemblyIntegerAddition.c
         Assembly/src/AssemblyIntegerMultiplication.c
         Assembly/src/AssemblyIntegerDivision.c)
 

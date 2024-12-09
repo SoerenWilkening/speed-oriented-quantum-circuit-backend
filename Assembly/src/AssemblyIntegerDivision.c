@@ -264,21 +264,22 @@ void cqqsdiv(element_t *A, element_t *B, element_t *remainder, element_t *ctrl) 
 	cqnot(bit, ctrl); // Invert Cq
 }
 
-void umod(element_t *mod, element_t *el1, element_t *el2) {
-	udiv(el1, el2, mod);
-}
-void qumod(element_t *mod, element_t *el1, element_t *el2) {
-	qudiv(el1, el2, mod);
-}
-void qqumod(element_t *mod, element_t *el1, element_t *el2) {
-	qqudiv(el1, el2, mod);
-}
-void cqumod(element_t *mod, element_t *el1, element_t *el2, element_t *ctrl) {
-	cqudiv(el1, el2, mod, ctrl);
-}
-void cqqumod(element_t *mod, element_t *el1, element_t *el2, element_t *ctrl) {
-	cqqudiv(el1, el2, mod, ctrl);
-}
+//
+//void umod(element_t *mod, element_t *el1, element_t *el2) {
+//	udiv(el1, el2, mod);
+//}
+//void qumod(element_t *mod, element_t *el1, element_t *el2) {
+//	qudiv(el1, el2, mod);
+//}
+//void qqumod(element_t *mod, element_t *el1, element_t *el2) {
+//	qqudiv(el1, el2, mod);
+//}
+//void cqumod(element_t *mod, element_t *el1, element_t *el2, element_t *ctrl) {
+//	cqudiv(el1, el2, mod, ctrl);
+//}
+//void cqqumod(element_t *mod, element_t *el1, element_t *el2, element_t *ctrl) {
+//	cqqudiv(el1, el2, mod, ctrl);
+//}
 
 void smod(element_t *mod, element_t *el1, element_t *el2) {
 	sdiv(el1, el2, mod);
