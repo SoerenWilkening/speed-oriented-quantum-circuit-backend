@@ -96,7 +96,7 @@ sequence_t *cQQ_add() {
 sequence_t *CQ_add() {
 	// Compute rotation angles
 	int NonZeroCount = 0;
-	int *bin = two_complement(*((int *) stack.GPR2), INTEGERSIZE);
+	int *bin = two_complement(*((int *) stack.Q1), INTEGERSIZE);
 
 	// Compute rotations for addition
 	double *rotations = calloc(INTEGERSIZE, sizeof(double));
@@ -141,7 +141,7 @@ sequence_t *CQ_add() {
 sequence_t *cCQ_add() {
 	// Compute rotation angles
 	int NonZeroCount = 0;
-	int *bin = two_complement(*((int *) stack.GPR2), INTEGERSIZE);
+	int *bin = two_complement(*((int *) stack.Q1), INTEGERSIZE);
 
 	// Compute rotations for addition
 	double *rotations = calloc(INTEGERSIZE, sizeof(double));
@@ -184,7 +184,7 @@ sequence_t *cCQ_add() {
 }
 
 sequence_t *CC_add() {
-	*((int *) stack.GPR1) += *((int *) stack.GPR2);
+	*((int *) stack.Q0) += *((int *) stack.Q1);
 	return NULL;
 }
 
@@ -195,7 +195,7 @@ sequence_t *P_add() {
 	seq->used_layer = 1;
 	seq->num_layer = 1;
 	// implement correct phase multiplication
-	p(&seq->seq[0][0], 0, *((int *) stack.GPR2));
+	p(&seq->seq[0][0], 0, *((int *) stack.Q1));
 
 	return seq;
 }
@@ -207,7 +207,7 @@ sequence_t *cP_add() {
 	seq->used_layer = 1;
 	seq->num_layer = 1;
 	// implement correct phase multiplication
-	cp(&seq->seq[0][0], 0, 1, *((int *) stack.GPR2));
+	cp(&seq->seq[0][0], 0, 1, *((int *) stack.Q1));
 
 	return seq;
 }

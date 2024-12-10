@@ -21,14 +21,18 @@ int main(void) {
 
     // initialize the rest of the stack
     // prepare exerything for the execution
-    stack.GPR1 = NULL;
-    stack.GPR2 = NULL;
-    stack.GPR3 = NULL;
-    stack.GPR4 = NULL;
+    stack.Q0 = NULL;
+    stack.Q1 = NULL;
+    stack.Q2 = NULL;
+    stack.Q3 = NULL;
     stack.circuit = init_circuit();
     stack.instruction_counter = 0;
 
-    AsmbFromFile();
+	element_t *a = QUINT();
+	element_t *b = QUINT();
+	element_t *c = QUINT();
+	qqudiv(a, b, c);
+//    AsmbFromFile();
 
     // ._execute
     clock_t t1 = clock();

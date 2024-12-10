@@ -62,7 +62,7 @@ sequence_t *ctrl_not_seq() {
 
 sequence_t *and_seq() {
 	// classical and
-	*((int *) stack.GPR1) = *((int *) stack.GPR2) & *((int *) stack.GPR3);
+	*((int *) stack.Q0) = *((int *) stack.Q1) & *((int *) stack.Q2);
 	return NULL;
 }
 
@@ -71,7 +71,7 @@ sequence_t *q_and_seq() {
 	// -> GRP2 always has to be the quantum element
 	int factor = 1;
 
-	int *bin = two_complement(*((int *) stack.GPR3), INTEGERSIZE);
+	int *bin = two_complement(*((int *) stack.Q2), INTEGERSIZE);
 	int Non_zero = 0;
 	for (int i = 0; i < INTEGERSIZE; ++i) Non_zero += bin[i];
 
@@ -97,7 +97,7 @@ sequence_t *ctrl_q_and_seq() {
 	// -> GRP2 always has to be the quantum element
 	int factor = 1;
 
-	int *bin = two_complement(*((int *) stack.GPR3), INTEGERSIZE);
+	int *bin = two_complement(*((int *) stack.Q2), INTEGERSIZE);
 	int Non_zero = 0;
 	for (int i = 0; i < INTEGERSIZE; ++i) Non_zero += bin[i];
 

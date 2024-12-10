@@ -45,7 +45,7 @@ typedef enum {
 } type_t;
 
 typedef struct {
-    bool_t qualifier;
+    bool qualifier;
     union {
         qubit_t q_address[INTEGERSIZE];
         int64_t *c_address;
@@ -62,10 +62,10 @@ typedef struct instruction_t {
 	char *name;
 
 	// quantum storing registers
-    void *Q0;
-    void *Q1;
-    void *Q2;
-	void *Q3;
+    element_t *Q0;
+    element_t *Q1;
+    element_t *Q2;
+	element_t *Q3;
 
 	// classical storing registers
 	int *R0;
@@ -80,10 +80,15 @@ typedef struct instruction_t {
 } instruction_t;
 
 typedef struct {
-    void *GPR1;
-    void *GPR2;
-    void *GPR3;
-    void *GPR4;
+    element_t *Q0;
+    element_t *Q1;
+    element_t *Q2;
+    element_t *Q3;
+
+	int *R0;
+	int *R1;
+	int *R2;
+	int *R3;
 
     instruction_t instruction_list[MAXINSTRUCTIONS];
     int instruction_counter;

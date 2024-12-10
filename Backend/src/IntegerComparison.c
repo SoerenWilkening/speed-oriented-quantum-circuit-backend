@@ -19,7 +19,7 @@ sequence_t *CQ_equal() {
 
 	int factor = 1;
 
-    int *bin = two_complement(*((int *) stack.GPR2), INTEGERSIZE);
+    int *bin = two_complement(*((int *) stack.Q1), INTEGERSIZE);
     int Zeros = 0;
     for (int i = 0; i < INTEGERSIZE; ++i) Zeros += (1 - bin[i]);
 
@@ -102,6 +102,6 @@ sequence_t *CQ_equal() {
 }
 
 sequence_t *CC_equal() {
-    *((int *) stack.GPR1) = *((int *) stack.GPR2) == *((int *) stack.GPR3);
+    *((int *) stack.Q0) = *((int *) stack.Q1) == *((int *) stack.Q2);
     return NULL;
 }

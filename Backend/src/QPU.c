@@ -46,7 +46,7 @@ circuit_t *init_circuit() {
 }
 
 
-bool_t ValueInArray(const qubit_t *Array, num_t NumValues, qubit_t Value) {
+bool ValueInArray(const qubit_t *Array, num_t NumValues, qubit_t Value) {
     if (Array == NULL) return false;
     for (int i = 0; i < NumValues; ++i) if (Array[i] == Value) return true;
     return false;

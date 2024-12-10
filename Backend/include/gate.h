@@ -54,7 +54,7 @@ void ccx(gate_t *g, qubit_t target, qubit_t control1, qubit_t control2);
 sequence_t *cx_gate();
 sequence_t *ccx_gate();
 
-bool_t is_inverse(gate_t *G1, gate_t *G2);
+bool is_inverse(gate_t *G1, gate_t *G2);
 
 qubit_t MaxQubit(gate_t *g);
 qubit_t MinQubit(gate_t *g);

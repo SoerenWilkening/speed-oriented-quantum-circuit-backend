@@ -5,34 +5,28 @@
 #include "execution.h"
 
 void qubit_mapping(qubit_t qubit_arrray[]) {
-    int start = 0;
-//    if (stack.GPR1[0].type != UNINITIALIZED && stack.GPR1[0].qualifier == Qu) {
-//        int value = (stack.GPR1[0].type == BOOLEAN) ? 1 : INTEGERSIZE;
-//        memcpy(qubit_arrray, stack.GPR1[0].q_address, value * sizeof(qubit_t));
-//        start += value;
-//    }
-//    if (stack.GPR2[0].type != UNINITIALIZED && stack.GPR2[0].qualifier == Qu) {
-//        int value = (stack.GPR2[0].type == BOOLEAN) ? 1 : INTEGERSIZE;
-//        memcpy(&qubit_arrray[start], stack.GPR2[0].q_address, value * sizeof(qubit_t));
-//        start += value;
-//    }
-//    if (stack.GPR3[0].type != UNINITIALIZED && stack.GPR3[0].qualifier == Qu) {
-//        int value = (stack.GPR3[0].type == BOOLEAN) ? 1 : INTEGERSIZE;
-//        memcpy(&qubit_arrray[start], stack.GPR3[0].q_address, value * sizeof(qubit_t));
-//        start += value;
-//    }
-//    if (stack.GPC[0].type != UNINITIALIZED && stack.GPC[0].qualifier == Qu){
-//        int value = 1;
-//        memcpy(&qubit_arrray[start], stack.GPC[0].q_address, value * sizeof(qubit_t));
-//        start += value;
-//    }
-//    for (int i = 0; i < 5 * INTEGERSIZE - start; ++i) {
-//        qubit_arrray[start + i] = stack.circuit->ancilla[i];
-//    }
+	int start = 0;
+	if (stack.Q0 != NULL){
+		start += INTEGERSIZE;
+		memcpy(qubit_arrray, stack.Q0->q_address, INTEGERSIZE * sizeof(int));
+	}
+	if (stack.Q1 != NULL){
+		start += INTEGERSIZE;
+		memcpy(&qubit_arrray[INTEGERSIZE], stack.Q1->q_address, INTEGERSIZE * sizeof(int));
+	}
+	if (stack.Q2 != NULL){
+		start += INTEGERSIZE;
+		memcpy(&qubit_arrray[2 * INTEGERSIZE], stack.Q2->q_address, INTEGERSIZE * sizeof(int));
+	}
+	if (stack.Q3 != NULL){
+		start += INTEGERSIZE;
+		memcpy(&qubit_arrray[3 * INTEGERSIZE], stack.Q3->q_address, INTEGERSIZE * sizeof(int));
+	}
+	memcpy(&qubit_arrray[start], stack.circuit->ancilla, INTEGERSIZE * sizeof(int));
 }
 
 // apply the sequences to the desired qubits
-void run_instruction(sequence_t *res, qubit_t qubit_array[], bool_t invert){
+void run_instruction(sequence_t *res, qubit_t qubit_array[], bool invert){
     if (res == NULL) return;
     int direction = (invert) ? -1 : 1;
 
@@ -55,6 +49,11 @@ void run_instruction(sequence_t *res, qubit_t qubit_array[], bool_t invert){
 
 void execute(instruction_t *instr) {
 
+	stack.Q0 = instr->Q0;
+	stack.Q1 = instr->Q1;
+	stack.Q2 = instr->Q2;
+	stack.Q3 = instr->Q3;
+
 	if (instr->Q0 == NULL) return;
 
 	if (instr->routine == NULL) return;
@@ -64,10 +63,10 @@ void execute(instruction_t *instr) {
 
     run_instruction(res, qubit_array, instr->invert);
 
-    stack.GPR1 = NULL;
-    stack.GPR2 = NULL;
-    stack.GPR3 = NULL;
-    stack.GPR4 = NULL;
+    stack.Q0 = NULL;
+    stack.Q1 = NULL;
+    stack.Q2 = NULL;
+    stack.Q3 = NULL;
 
 	instruction_t *pointer = instr + 1;
     if (instr->next_instruction != NULL) {
