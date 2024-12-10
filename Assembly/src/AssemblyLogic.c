@@ -32,7 +32,7 @@ void qnot(element_t *el1) {
 
 void cqnot(element_t *el1, element_t *ctrl) {
 	instruction_t *ins = init_instruction();
-	ins->name = "qnot ";
+	ins->name = "cqnot ";
 	ins->Q0 = el1;
 	ins->Q1 = ctrl;
 
@@ -69,6 +69,7 @@ void qqand(element_t *bool_res, element_t *bool_1, element_t *bool_2) {
 	ins->Q0 = bool_res;
 	ins->Q1 = bool_1;
 	ins->Q2 = bool_2;
+//	printf("%d %d %d\n", bool_res->q_address[INTEGERSIZE - 1], bool_1->q_address[INTEGERSIZE - 1], bool_2->q_address[INTEGERSIZE - 1]);
 
 	ins->routine = qq_and_seq;
 

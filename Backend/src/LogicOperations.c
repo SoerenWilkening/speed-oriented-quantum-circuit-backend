@@ -40,10 +40,13 @@ sequence_t *not_seq() {
 
 	sequence_t *seq = malloc(sizeof(sequence_t));
 
-	seq->gates_per_layer[0] = number;
+	seq->gates_per_layer[0] = INTEGERSIZE - number + 1;
 	seq->used_layer = 1;
 	seq->num_layer = 1;
-	for (int i = 0; i < number; ++i) x(&seq->seq[0][i], i);
+	int counter = 0;
+	for (int i = number - 1; i < INTEGERSIZE; ++i) {
+		x(&seq->seq[0][counter++], i);
+	}
 	return seq;
 }
 
@@ -52,10 +55,13 @@ sequence_t *ctrl_not_seq() {
 
 	sequence_t *seq = malloc(sizeof(sequence_t));
 
-	seq->gates_per_layer[0] = number;
+	seq->gates_per_layer[0] = INTEGERSIZE - number + 1;
 	seq->used_layer = 1;
 	seq->num_layer = 1;
-	for (int i = 0; i < number; ++i) cx(&seq->seq[0][i], i, 1);
+	int counter = 0;
+	for (int i = number - 1; i < INTEGERSIZE; ++i) {
+		cx(&seq->seq[0][counter++], i, 2 * INTEGERSIZE - 1);
+	}
 	return seq;
 }
 
@@ -125,10 +131,13 @@ sequence_t *qq_and_seq() {
 	seq->used_layer = 1;
 	seq->num_layer = 1;
 	int number = INTEGERSIZE;
+//	int number = 1;
 
-	seq->gates_per_layer[0] = number;
-	for (int i = 0; i < number; ++i) {
-		ccx(&seq->seq[0][i], i, number + i, 2 * number + i);
+	seq->gates_per_layer[0] = INTEGERSIZE - number + 1;
+	int counter = 0;
+	for (int i = number - 1; i < INTEGERSIZE; ++i) {
+		printf("%d %d %d\n", i, number + i, 2 * number + i);
+		ccx(&seq->seq[0][counter++], i, number + i, 2 * number + i);
 	}
 
 	return seq;

@@ -7,7 +7,7 @@ element_t *QBOOL(){
     element_t *integer = malloc(sizeof(element_t));
     integer->type = BOOLEAN;
     integer->qualifier = Qu;
-    integer->q_address[0] = stack.circuit->used_qubit_indices;
+    integer->q_address[INTEGERSIZE - 1] = stack.circuit->used_qubit_indices;
     stack.circuit->ancilla += 1;
     stack.circuit->used_qubit_indices += 1;
     return integer;
@@ -35,8 +35,7 @@ element_t *QUINT(){
         integer->q_address[i] = (qubit_t) stack.circuit->used_qubit_indices;
         stack.circuit->used_qubit_indices++;
     }
-    stack.circuit->used_qubit_indices++; // allocate one more qubit
-    stack.circuit->ancilla += INTEGERSIZE + 1;
+    stack.circuit->ancilla += INTEGERSIZE;
 //    integer->c_address = NULL;
     return integer;
 }
@@ -63,7 +62,7 @@ element_t *bit_of_int(element_t *el1, int bit){
     element_t *b = malloc(sizeof(element_t));
     b->type = Qu;
     b->qualifier = BOOLEAN;
-    b->q_address[0] = el1->q_address[bit];
+    b->q_address[INTEGERSIZE - 1] = el1->q_address[bit];
     return b;
 }
 

@@ -151,7 +151,7 @@ sequence_t *cx_gate() {
     seq->used_layer = 1;
     seq->num_layer = 1;
     seq->gates_per_layer[0] = 1;
-    cx(&seq->seq[0][0], 0, 1);
+    cx(&seq->seq[0][0], INTEGERSIZE - 1, 2 * INTEGERSIZE - 1);
 
     return seq;
 }

@@ -63,6 +63,12 @@ void execute(instruction_t *instr) {
 
     run_instruction(res, qubit_array, instr->invert);
 
+	printf("%s ", instr->name);
+	for (int i = 0; i < 3 * INTEGERSIZE; ++i) {
+		printf("%d ", qubit_array[i]);
+	}
+	printf("\n");
+
     stack.Q0 = NULL;
     stack.Q1 = NULL;
     stack.Q2 = NULL;

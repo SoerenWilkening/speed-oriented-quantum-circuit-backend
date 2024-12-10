@@ -111,8 +111,8 @@ void cqqsdiv(element_t *A, element_t *B, element_t *remainder, element_t *ctrl);
 void udiv(element_t *el1, element_t *el2, element_t *remainder);
 void qudiv(element_t *A, element_t *B, element_t *remainder);
 void qqudiv(element_t *A, element_t *B, element_t *remainder);
-void cqudiv(element_t *el1, element_t *el2, element_t *remainder, element_t *ctrl);
-void cqqudiv(element_t *el1, element_t *el2, element_t *remainder, element_t *ctrl);
+void cqudiv(element_t *A, element_t *B, element_t *remainder, element_t *ctrl);
+void cqqudiv(element_t *A, element_t *B, element_t *remainder, element_t *ctrl);
 
 void smod(element_t *mod, element_t *el1, element_t *el2);
 void qsmod(element_t *mod, element_t *el1, element_t *el2);
