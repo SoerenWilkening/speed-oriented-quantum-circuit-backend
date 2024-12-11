@@ -9,14 +9,11 @@ void print_dash(int k){
         printf("\u2500");
     }
 }
-
 void print_empty(int k){
     for (int i = 0; i < k; ++i) {
         printf(" ");
     }
 }
-
-
 qubit_t MinQubit(gate_t *g) {
     qubit_t min = g->Target;
     for (int i = 0; i < g->NumControls; ++i) {
@@ -26,7 +23,6 @@ qubit_t MinQubit(gate_t *g) {
     }
     return min;
 }
-
 qubit_t MaxQubit(gate_t *g) {
     qubit_t max = g->Target;
     for (int i = 0; i < g->NumControls; ++i) {
@@ -36,7 +32,6 @@ qubit_t MaxQubit(gate_t *g) {
     }
     return max;
 }
-
 void print_sequence(sequence_t *seq) {
     if (seq == NULL) return;
     int count = 0;
@@ -108,13 +103,11 @@ void x(gate_t *g, qubit_t target) {
     g->Target = target;
     g->NumControls = 0;
 }
-
 void h(gate_t *g, qubit_t target) {
     g->Gate = H;
     g->Target = target;
     g->NumControls = 0;
 }
-
 void cp(gate_t *g, qubit_t target, qubit_t control, double value) {
     g->Gate = P;
     g->GateValue = value;
@@ -122,21 +115,18 @@ void cp(gate_t *g, qubit_t target, qubit_t control, double value) {
     g->NumControls = 1;
     g->Control[0] = control;
 }
-
 void p(gate_t *g, qubit_t target, double value) {
     g->Gate = P;
     g->GateValue = value;
     g->Target = target;
     g->NumControls = 0;
 }
-
 void cx(gate_t *g, qubit_t target, qubit_t control) {
     g->Gate = X;
     g->Target = target;
     g->NumControls = 1;
     g->Control[0] = control;
 }
-
 void ccx(gate_t *g, qubit_t target, qubit_t control1, qubit_t control2) {
     g->Gate = X;
     g->Target = target;
@@ -155,7 +145,6 @@ sequence_t *cx_gate() {
 
     return seq;
 }
-
 sequence_t *ccx_gate() {
 	sequence_t *seq = malloc(sizeof(sequence_t *));
 
@@ -196,7 +185,6 @@ sequence_t *QFT(sequence_t *qft) {
 
     return qft;
 }
-
 sequence_t *QFT_inverse(sequence_t *qft) {
     // determine the number of gates per layer for the qft
     num_t sum[2 * INTEGERSIZE - 1];

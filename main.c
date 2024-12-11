@@ -28,7 +28,10 @@ int main(void) {
     stack.circuit = init_circuit();
     stack.instruction_counter = 0;
 
-    AsmbFromFile();
+	element_t *q1 = QINT();
+	element_t *q2 = QINT();
+	element_t *q3 = QBOOL();
+	element_t *r0 = INT(123);
 
     // ._execute
     clock_t t1 = clock();

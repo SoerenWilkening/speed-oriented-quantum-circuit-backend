@@ -13,6 +13,15 @@ void branch(element_t *el1, int bit) {
 
 	ins->routine = branch_seq;
 }
+void cbranch(element_t *el1, element_t *ctrl, int bit) {
+	instruction_t *ins = init_instruction();
+	ins->name = "branch_seq ";
+	element_t *qbit = bit_of_int(el1, bit);
+
+	ins->Q0 = qbit;
+
+	ins->routine = branch_seq;
+}
 
 void not(element_t *el1) {
 	instruction_t *ins = init_instruction();
@@ -21,7 +30,6 @@ void not(element_t *el1) {
 
 	ins->routine = void_seq;
 }
-
 void qnot(element_t *el1) {
 	instruction_t *ins = init_instruction();
 	ins->name = "qnot ";
@@ -29,7 +37,6 @@ void qnot(element_t *el1) {
 
 	ins->routine = not_seq;
 }
-
 void cqnot(element_t *el1, element_t *ctrl) {
 	instruction_t *ins = init_instruction();
 	ins->name = "cqnot ";
@@ -50,7 +57,6 @@ void and(element_t *bool_res, element_t *bool_1, element_t *bool_2) {
 
 	ins->invert = NOTINVERTED;
 }
-
 void qand(element_t *bool_res, element_t *bool_1, element_t *bool_2) {
 	instruction_t *ins = init_instruction();
 	ins->name = "qand ";
@@ -62,7 +68,6 @@ void qand(element_t *bool_res, element_t *bool_1, element_t *bool_2) {
 
 	ins->invert = NOTINVERTED;
 }
-
 void qqand(element_t *bool_res, element_t *bool_1, element_t *bool_2) {
 	instruction_t *ins = init_instruction();
 	ins->name = "qqand ";
@@ -73,4 +78,32 @@ void qqand(element_t *bool_res, element_t *bool_1, element_t *bool_2) {
 	ins->routine = qq_and_seq;
 
 	ins->invert = NOTINVERTED;
+}
+
+void xor(element_t *R0, element_t *R1){}
+void qxor(element_t *Q0, element_t *R0){
+	instruction_t *ins = init_instruction();
+	ins->Q0 = Q0;
+	ins->R0 = (int *) R0->c_address;
+	ins->routine = q_xor_seq;
+}
+void qqxor(element_t *Q0, element_t *Q1){
+	instruction_t *ins = init_instruction();
+	ins->Q0 = Q0;
+	ins->Q1 = Q1;
+	ins->routine = qq_xor_seq;
+}
+void cqxor(element_t *Q0, element_t *R0, element_t *ctrl){
+	instruction_t *ins = init_instruction();
+	ins->Q0 = Q0;
+	ins->Q1 = ctrl;
+	ins->R0 = (int *) R0->c_address;
+	ins->routine = cq_xor_seq;
+}
+void cqqxor(element_t *Q0, element_t *Q1, element_t *ctrl){
+	instruction_t *ins = init_instruction();
+	ins->Q0 = Q0;
+	ins->Q1 = Q1;
+	ins->Q2 = ctrl;
+	ins->routine = cqq_xor_seq;
 }
