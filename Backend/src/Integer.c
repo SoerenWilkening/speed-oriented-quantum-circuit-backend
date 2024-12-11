@@ -12,7 +12,6 @@ element_t *QBOOL(){
     stack.circuit->used_qubit_indices += 1;
     return integer;
 }
-
 element_t *QINT(){
     element_t *integer = malloc(sizeof(element_t));
     integer->type = SIGNED;
@@ -25,7 +24,6 @@ element_t *QINT(){
     }
     return integer;
 }
-
 element_t *QUINT(){
     element_t *integer = malloc(sizeof(element_t));
     integer->type = UNSIGNED;
@@ -39,7 +37,6 @@ element_t *QUINT(){
 //    integer->c_address = NULL;
     return integer;
 }
-
 element_t *INT(int64_t intg){
     element_t *integer = malloc(sizeof(integer));
     integer->qualifier = Cl;
@@ -48,7 +45,6 @@ element_t *INT(int64_t intg){
     *integer->c_address = intg;
     return integer;
 }
-
 element_t *BOOL(bool intg){
     element_t *integer = malloc(sizeof(integer));
     integer->qualifier = Cl;
@@ -57,7 +53,6 @@ element_t *BOOL(bool intg){
     *integer->c_address = intg;
     return integer;
 }
-
 element_t *bit_of_int(element_t *el1, int bit){
     element_t *b = malloc(sizeof(element_t));
     b->type = Qu;

@@ -35,6 +35,10 @@ sequence_t *ctrl_branch_seq() {
 }
 
 sequence_t *not_seq() {
+	*((int *) stack.R0) = !(*((int *) stack.R0));
+	return NULL;
+}
+sequence_t *q_not_seq() {
 	int number = INTEGERSIZE;
 
 	sequence_t *seq = malloc(sizeof(sequence_t));
@@ -48,27 +52,25 @@ sequence_t *not_seq() {
 	}
 	return seq;
 }
-sequence_t *ctrl_not_seq() {
+sequence_t *cq_not_seq() {
 	int number = INTEGERSIZE;
 	if (stack.Q0->type != BOOLEAN) number = 1;
 
 	sequence_t *seq = malloc(sizeof(sequence_t));
 
-	seq->gates_per_layer[0] = INTEGERSIZE - number + 1;
-	seq->used_layer = 1;
-	seq->num_layer = 1;
-	int counter = 0;
+	for (int i = 0; i < INTEGERSIZE; ++i) seq->gates_per_layer[i] = 0;
+	seq->used_layer = 0;
+	seq->num_layer = INTEGERSIZE;
 	for (int i = number - 1; i < INTEGERSIZE; ++i) {
-//		printf("%d\n", i);
-		cx(&seq->seq[0][counter++], i, 2 * INTEGERSIZE - 1);
+		cx(&seq->seq[seq->used_layer][seq->gates_per_layer[seq->used_layer]++], i, 2 * INTEGERSIZE - 1);
+		seq->used_layer++;
 	}
 	return seq;
 }
 
-
 sequence_t *and_seq() {
 	// classical and
-	*((int *) stack.Q0) = *((int *) stack.Q1) & *((int *) stack.Q2);
+	*((int *) stack.R0) = *((int *) stack.R1) & *((int *) stack.R2);
 	return NULL;
 }
 sequence_t *q_and_seq() {
@@ -165,6 +167,10 @@ sequence_t *cqq_and_seq() {
 	return seq;
 }
 
+sequence_t *xor_seq() {
+	*((int *) stack.R0) = *((int *) stack.R1) ^ *((int *) stack.R2);
+	return NULL;
+}
 sequence_t *q_xor_seq() {
 	// pure quantum
 
@@ -248,6 +254,10 @@ sequence_t *cqq_xor_seq() {
 	return seq;
 }
 
+sequence_t *or_seq() {
+	*((int *) stack.R0) = *((int *) stack.R1) | *((int *) stack.R2);
+	return NULL;
+}
 sequence_t *q_or_seq() {
 	// pure quantum
 

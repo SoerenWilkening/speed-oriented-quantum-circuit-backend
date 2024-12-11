@@ -9,13 +9,12 @@ void mul(element_t *el1, element_t *el2, element_t *res) {
 	init_instruction();
 
 	// copy values instruction registers
-	ins->Q0 = res;
-	ins->Q1 = el1;
-	ins->Q2 = el2;
+	ins->R0 = (int *) res->c_address;
+	ins->R1 = (int *) el1->c_address;
+	ins->R2 = (int *) el2->c_address;
 
-	ins->routine = void_seq; // replace with actual multiplication
+	ins->routine = CC_mul; // replace with actual multiplication
 }
-
 void qmul(element_t *el1, element_t *el2, element_t *res) {
 	instruction_t *ins = &stack.instruction_list[stack.instruction_counter];
 	init_instruction();
@@ -23,11 +22,10 @@ void qmul(element_t *el1, element_t *el2, element_t *res) {
 	// copy values instruction registers
 	ins->Q0 = res;
 	ins->Q1 = el1;
-	ins->Q2 = el2;
+	ins->R0 = (int *) el2->c_address;
 
 	ins->routine = CQ_mul;
 }
-
 void cqmul(element_t *el1, element_t *el2, element_t *res, element_t *ctrl) {
 	instruction_t *ins = &stack.instruction_list[stack.instruction_counter];
 	init_instruction();
@@ -35,12 +33,11 @@ void cqmul(element_t *el1, element_t *el2, element_t *res, element_t *ctrl) {
 	// copy values instruction registers
 	ins->Q0 = res;
 	ins->Q1 = el1;
-	ins->Q2 = el2;
+	ins->R0 = (int *)el2->c_address;
 	ins->Q3 = ctrl;
 
 	ins->routine = cCQ_mul;
 }
-
 void qqmul(element_t *el1, element_t *el2, element_t *res) {
 	instruction_t *ins = &stack.instruction_list[stack.instruction_counter];
 	init_instruction();
@@ -52,7 +49,6 @@ void qqmul(element_t *el1, element_t *el2, element_t *res) {
 
 	ins->routine = QQ_mul;
 }
-
 void cqqmul(element_t *el1, element_t *el2, element_t *res, element_t *ctrl) {
 	instruction_t *ins = &stack.instruction_list[stack.instruction_counter];
 	init_instruction();
@@ -71,7 +67,6 @@ void qneg(element_t *el1) {
 	qnot(el1);
 	qsub(el1, constant);
 }
-
 void cqneg(element_t *el1, element_t *ctrl) {
 	element_t *constant = INT(1);
 	cqnot(el1, ctrl);

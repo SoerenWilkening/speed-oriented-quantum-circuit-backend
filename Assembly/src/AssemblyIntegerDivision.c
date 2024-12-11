@@ -1,7 +1,28 @@
 #include "AssemblyOperations.h"
 
-void udiv(element_t *Q0, element_t *Q1, element_t *remainder) {
-	// include functionality
+sequence_t *udiv_seq(){
+	*((int *) stack.R0) /= *((int *) stack.R1);
+	return NULL;
+}
+sequence_t *sdiv_seq(){
+	*((int *) stack.R0) /= *((int *) stack.R1);
+	return NULL;
+}
+sequence_t *umod_seq(){
+	*((int *) stack.R0) %= *((int *) stack.R1);
+	return NULL;
+}
+sequence_t *smod_seq(){
+	*((int *) stack.R0) %= *((int *) stack.R1);
+	return NULL;
+}
+
+void udiv(element_t *R0, element_t *R1) {
+	instruction_t *ins = init_instruction();
+	ins->R0 = (int *) R0->c_address;
+	ins->R1 = (int *) R1->c_address;
+	ins->name = "udiv ";
+	ins->routine = udiv_seq;
 }
 void qudiv(element_t *A, element_t *B, element_t *remainder) {
 	// create qqsdiv sequence to Divide Aq / Bq
@@ -239,9 +260,12 @@ void cqqudiv(element_t *A, element_t *B, element_t *remainder, element_t *ctrl) 
 	}
 }
 
-
-void sdiv(element_t *el1, element_t *el2, element_t *remainder) {
-	// include functionality
+void sdiv(element_t *A, element_t *B) {
+	instruction_t *ins = init_instruction();
+	ins->R0 = (int *) A->c_address;
+	ins->R1 = (int *) B->c_address;
+	ins->name = "sdiv ";
+	ins->routine = sdiv_seq;
 }
 void qsdiv(element_t *A, element_t *B, element_t *remainder) {
 	// create qqsdiv sequence to Divide Aq / Bq
@@ -378,9 +402,12 @@ void cqqsdiv(element_t *A, element_t *B, element_t *remainder, element_t *ctrl) 
 	free_element(sign_B);
 }
 
-
-void umod(element_t *mod, element_t *Q0, element_t *Q1) {
-	udiv(Q0, Q1, mod);
+void umod(element_t *Q0, element_t *Q1) {
+	instruction_t *ins = init_instruction();
+	ins->R0 = (int *) Q0->c_address;
+	ins->R1 = (int *) Q1->c_address;
+	ins->name = "umod ";
+	ins->routine = umod_seq;
 }
 void qumod(element_t *mod, element_t *Q0, element_t *Q1) {
 	qudiv(Q0, Q1, mod);
@@ -395,8 +422,12 @@ void cqqumod(element_t *mod, element_t *Q0, element_t *Q1, element_t *ctrl) {
 	cqqudiv(Q0, Q1, mod, ctrl);
 }
 
-void smod(element_t *mod, element_t *el1, element_t *el2) {
-	sdiv(el1, el2, mod);
+void smod(element_t *el1, element_t *el2) {
+	instruction_t *ins = init_instruction();
+	ins->R0 = (int *) el1->c_address;
+	ins->R1 = (int *) el2->c_address;
+	ins->name = "smod ";
+	ins->routine = smod_seq;
 }
 void qsmod(element_t *mod, element_t *el1, element_t *el2) {
 	qsdiv(el1, el2, mod);

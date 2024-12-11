@@ -4,6 +4,54 @@
 
 #include "Integer.h"
 
+sequence_t *CC_add() {
+	*((int *) stack.R0) += *((int *) stack.R1);
+	return NULL;
+}
+sequence_t *CQ_add() {
+	// Compute rotation angles
+	int NonZeroCount = 0;
+	int *bin = two_complement(*(stack.R0), INTEGERSIZE);
+
+	// Compute rotations for addition
+	double *rotations = calloc(INTEGERSIZE, sizeof(double));
+	for (int i = 0; i < INTEGERSIZE; ++i) {
+		for (int j = 0; j < INTEGERSIZE - i; ++j) {
+			rotations[j + i] += bin[INTEGERSIZE - i - 1] * 2 * M_PI / (Z * pow(2, j + 1));
+		}
+		if (rotations[i] != 0) NonZeroCount++;
+	}
+	free(bin);
+	int start_layer = INTEGERSIZE;
+
+	if (precompiled_CQ_add != NULL) {
+		sequence_t *add = precompiled_CQ_add;
+
+		for (int i = 0; i < INTEGERSIZE; ++i) {
+			add->seq[start_layer + i][add->gates_per_layer[start_layer + i] - 1].GateValue = rotations[i];
+		}
+		free(rotations);
+		return add;
+	}
+
+	sequence_t *add = malloc(sizeof(sequence_t));
+	// allocate exact number of layer and enough gates per layer
+	add->used_layer = 0;
+	add->num_layer = 4 * INTEGERSIZE - 1;
+	memset(add->gates_per_layer, 0, add->num_layer * sizeof(num_t));
+	QFT(add);
+
+	for (int i = 0; i < INTEGERSIZE; ++i) {
+		p(&add->seq[start_layer + i][add->gates_per_layer[start_layer + i]++], i, rotations[i]);
+	}
+	free(rotations);
+	add->used_layer++;
+
+	QFT_inverse(add);
+
+	precompiled_CQ_add = add;
+	return add;
+}
 sequence_t *QQ_add() {
 	if (precompiled_QQ_add != NULL) return precompiled_QQ_add;
 
@@ -30,6 +78,50 @@ sequence_t *QQ_add() {
 	QFT_inverse(add);
 	precompiled_QQ_add = add;
 
+	return add;
+}
+sequence_t *cCQ_add() {
+	// Compute rotation angles
+	int NonZeroCount = 0;
+	int *bin = two_complement(*(stack.R0), INTEGERSIZE);
+
+	// Compute rotations for addition
+	double *rotations = calloc(INTEGERSIZE, sizeof(double));
+	for (int i = 0; i < INTEGERSIZE; ++i) {
+		for (int j = 0; j < INTEGERSIZE - i; ++j) {
+			rotations[j + i] += bin[INTEGERSIZE - i - 1] * 2 * M_PI / (Z * pow(2, j + 1));
+		}
+		if (rotations[i] != 0) NonZeroCount++;
+	}
+	free(bin);
+	int start_layer = INTEGERSIZE;
+
+	if (precompiled_cCQ_add) {
+		sequence_t *add = precompiled_cCQ_add;
+
+		for (int i = 0; i < INTEGERSIZE; ++i) {
+			add->seq[start_layer + i][add->gates_per_layer[start_layer + i] - 1].GateValue = rotations[i];
+		}
+		free(rotations);
+		return add;
+	}
+
+	sequence_t *add = malloc(sizeof(sequence_t));
+	// allocate exact number of layer and enough gates per layer
+	add->used_layer = 0;
+	add->num_layer = 4 * INTEGERSIZE - 1;
+	memset(add->gates_per_layer, 0, add->num_layer * sizeof(num_t));
+	QFT(add);
+
+	for (int i = 0; i < INTEGERSIZE; ++i) {
+		cp(&add->seq[start_layer + i][add->gates_per_layer[start_layer + i]++], i, 2 * INTEGERSIZE - 1, rotations[i]);
+	}
+	free(rotations);
+	add->used_layer++;
+
+	QFT_inverse(add);
+
+	precompiled_cCQ_add = add;
 	return add;
 }
 sequence_t *cQQ_add() {
@@ -92,98 +184,7 @@ sequence_t *cQQ_add() {
 
 	return add;
 }
-sequence_t *CQ_add() {
-	// Compute rotation angles
-	int NonZeroCount = 0;
-	int *bin = two_complement(*(stack.R0), INTEGERSIZE);
 
-	// Compute rotations for addition
-	double *rotations = calloc(INTEGERSIZE, sizeof(double));
-	for (int i = 0; i < INTEGERSIZE; ++i) {
-		for (int j = 0; j < INTEGERSIZE - i; ++j) {
-			rotations[j + i] += bin[INTEGERSIZE - i - 1] * 2 * M_PI / (Z * pow(2, j + 1));
-		}
-		if (rotations[i] != 0) NonZeroCount++;
-	}
-	free(bin);
-	int start_layer = INTEGERSIZE;
-
-	if (precompiled_CQ_add != NULL) {
-		sequence_t *add = precompiled_CQ_add;
-
-		for (int i = 0; i < INTEGERSIZE; ++i) {
-			add->seq[start_layer + i][add->gates_per_layer[start_layer + i] - 1].GateValue = rotations[i];
-		}
-		free(rotations);
-		return add;
-	}
-
-	sequence_t *add = malloc(sizeof(sequence_t));
-	// allocate exact number of layer and enough gates per layer
-	add->used_layer = 0;
-	add->num_layer = 4 * INTEGERSIZE - 1;
-	memset(add->gates_per_layer, 0, add->num_layer * sizeof(num_t));
-	QFT(add);
-
-	for (int i = 0; i < INTEGERSIZE; ++i) {
-		p(&add->seq[start_layer + i][add->gates_per_layer[start_layer + i]++], i, rotations[i]);
-	}
-	free(rotations);
-	add->used_layer++;
-
-	QFT_inverse(add);
-
-	precompiled_CQ_add = add;
-	return add;
-}
-sequence_t *cCQ_add() {
-	// Compute rotation angles
-	int NonZeroCount = 0;
-	int *bin = two_complement(*(stack.R0), INTEGERSIZE);
-
-	// Compute rotations for addition
-	double *rotations = calloc(INTEGERSIZE, sizeof(double));
-	for (int i = 0; i < INTEGERSIZE; ++i) {
-		for (int j = 0; j < INTEGERSIZE - i; ++j) {
-			rotations[j + i] += bin[INTEGERSIZE - i - 1] * 2 * M_PI / (Z * pow(2, j + 1));
-		}
-		if (rotations[i] != 0) NonZeroCount++;
-	}
-	free(bin);
-	int start_layer = INTEGERSIZE;
-
-	if (precompiled_cCQ_add) {
-		sequence_t *add = precompiled_cCQ_add;
-
-		for (int i = 0; i < INTEGERSIZE; ++i) {
-			add->seq[start_layer + i][add->gates_per_layer[start_layer + i] - 1].GateValue = rotations[i];
-		}
-		free(rotations);
-		return add;
-	}
-
-	sequence_t *add = malloc(sizeof(sequence_t));
-	// allocate exact number of layer and enough gates per layer
-	add->used_layer = 0;
-	add->num_layer = 4 * INTEGERSIZE - 1;
-	memset(add->gates_per_layer, 0, add->num_layer * sizeof(num_t));
-	QFT(add);
-
-	for (int i = 0; i < INTEGERSIZE; ++i) {
-		cp(&add->seq[start_layer + i][add->gates_per_layer[start_layer + i]++], i, 2 * INTEGERSIZE - 1, rotations[i]);
-	}
-	free(rotations);
-	add->used_layer++;
-
-	QFT_inverse(add);
-
-	precompiled_cCQ_add = add;
-	return add;
-}
-sequence_t *CC_add() {
-	*((int *) stack.Q0) += *((int *) stack.Q1);
-	return NULL;
-}
 sequence_t *P_add() {
 	sequence_t *seq = malloc(sizeof(sequence_t));
 
@@ -191,7 +192,7 @@ sequence_t *P_add() {
 	seq->used_layer = 1;
 	seq->num_layer = 1;
 	// implement correct phase multiplication
-	p(&seq->seq[0][0], 0, *((int *) stack.Q1));
+	p(&seq->seq[0][0], 0, *((int *) stack.R0));
 
 	return seq;
 }
@@ -202,7 +203,7 @@ sequence_t *cP_add() {
 	seq->used_layer = 1;
 	seq->num_layer = 1;
 	// implement correct phase multiplication
-	cp(&seq->seq[0][0], 0, 1, *((int *) stack.Q1));
+	cp(&seq->seq[0][0], 0, 1, *((int *) stack.R0));
 
 	return seq;
 }

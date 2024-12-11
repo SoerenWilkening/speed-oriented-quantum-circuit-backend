@@ -35,7 +35,7 @@ void qnot(element_t *el1) {
 	ins->name = "qnot ";
 	ins->Q0 = el1;
 
-	ins->routine = not_seq;
+	ins->routine = q_not_seq;
 }
 void cqnot(element_t *el1, element_t *ctrl) {
 	instruction_t *ins = init_instruction();
@@ -43,7 +43,7 @@ void cqnot(element_t *el1, element_t *ctrl) {
 	ins->Q0 = el1;
 	ins->Q1 = ctrl;
 
-	ins->routine = ctrl_not_seq;
+	ins->routine = cq_not_seq;
 }
 
 void and(element_t *bool_res, element_t *bool_1, element_t *bool_2) {

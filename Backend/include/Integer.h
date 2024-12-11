@@ -13,33 +13,25 @@
 int *two_complement(int64_t x, int n);
 
 element_t *QBOOL();
-
 element_t *QINT();
-
 element_t *QUINT();
-
 element_t *INT(int64_t intg);
-
 element_t *BOOL(bool intg);
-
 element_t *bit_of_int(element_t *el1, int bit);
-
 void free_element(element_t *el1);
 
 // implementation of Integer operations gate sequences
+sequence_t *CC_mul();
+sequence_t *CQ_mul();
 sequence_t *QQ_mul();
+sequence_t *cCQ_mul();
 sequence_t *cQQ_mul();
 
-sequence_t *CQ_mul();
-sequence_t *cCQ_mul();
-
-sequence_t *QQ_add();
-sequence_t *cQQ_add();
-
-sequence_t *CQ_add();
-sequence_t *cCQ_add();
-
 sequence_t *CC_add();
+sequence_t *CQ_add();
+sequence_t *QQ_add();
+sequence_t *cCQ_add();
+sequence_t *cQQ_add();
 
 sequence_t *P_add();
 

@@ -4,13 +4,10 @@
 
 #include "IntegerComparison.h"
 
-
-sequence_t *QQ_equal() {
-    sequence_t *eq = malloc(sizeof(sequence_t));
-
-    return eq;
+sequence_t *CC_equal() {
+	*((int *) stack.R0) = *((int *) stack.R1) == *((int *) stack.R2);
+	return NULL;
 }
-
 sequence_t *CQ_equal() {
     // the ancilla count starts at 2 * INTEGERSIZE
     int ancilla = 2 * INTEGERSIZE; // reference
@@ -100,7 +97,6 @@ sequence_t *CQ_equal() {
 
     return seq;
 }
-
 sequence_t *cCQ_equal() {
 	// the ancilla count starts at 2 * INTEGERSIZE
 	int ancilla = 3 * INTEGERSIZE; // reference
@@ -189,9 +185,4 @@ sequence_t *cCQ_equal() {
 	seq->used_layer++;
 
 	return seq;
-}
-
-sequence_t *CC_equal() {
-    *((int *) stack.Q0) = *((int *) stack.Q1) == *((int *) stack.Q2);
-    return NULL;
 }

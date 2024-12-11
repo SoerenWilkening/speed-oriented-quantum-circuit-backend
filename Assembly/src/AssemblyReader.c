@@ -298,7 +298,7 @@ void create_instruction() {
 
 	if (strcmp(calls[counter].instruction, "padd") == 0) padd(hash_element(calls[counter].var1), INT(calls[counter].value));
 
-	if (strcmp(calls[counter].instruction, "sdiv") == 0) sdiv(hash_element(calls[counter].var1), hash_element(calls[counter].var2), hash_element(calls[counter].var3));
+	if (strcmp(calls[counter].instruction, "sdiv") == 0) sdiv(hash_element(calls[counter].var1), hash_element(calls[counter].var2));
 	if (strcmp(calls[counter].instruction, "qsdiv") == 0) qsdiv(hash_element(calls[counter].var1), INT(calls[counter].value), hash_element(calls[counter].var2));
 	if (strcmp(calls[counter].instruction, "qqsdiv") == 0) qqsdiv(hash_element(calls[counter].var1), hash_element(calls[counter].var2), hash_element(calls[counter].var3));
 	if (strcmp(calls[counter].instruction, "cqsdiv") == 0) cqsdiv(hash_element(calls[counter].var1), INT(calls[counter].value), hash_element(calls[counter].var2), hash_element(calls[counter].var3));
