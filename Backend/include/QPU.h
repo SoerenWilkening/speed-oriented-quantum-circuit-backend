@@ -93,6 +93,8 @@ typedef struct {
     instruction_t instruction_list[MAXINSTRUCTIONS];
     int instruction_counter;
 
+	instruction_t *QPU_state;
+
     circuit_t *circuit;
 } hybrid_stack_t;
 

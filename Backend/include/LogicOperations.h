@@ -11,6 +11,7 @@
 #include "Integer.h"
 
 sequence_t *void_seq();
+sequence_t *jmp_seq();
 
 sequence_t *q_not_seq();
 sequence_t *cq_not_seq();

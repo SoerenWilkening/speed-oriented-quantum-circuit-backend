@@ -47,7 +47,9 @@ void run_instruction(sequence_t *res, qubit_t qubit_array[], bool invert){
     }
 }
 
-void execute(instruction_t *instr) {
+void execute() {
+
+	instruction_t *instr = stack.QPU_state;
 
 	stack.Q0 = instr->Q0;
 	stack.Q1 = instr->Q1;
@@ -64,7 +66,6 @@ void execute(instruction_t *instr) {
 	qubit_mapping(qubit_array);
 	sequence_t *res = instr->routine();
 
-	print_sequence(res);
     run_instruction(res, qubit_array, instr->invert);
 
     stack.Q0 = NULL;
@@ -77,11 +78,7 @@ void execute(instruction_t *instr) {
 	stack.R2 = NULL;
 	stack.R3 = NULL;
 
-	instruction_t *pointer = instr + 1;
-    if (instr->next_instruction != NULL) {
-		pointer = (instruction_t *) instr->next_instruction;
-	    printf("jump \n");
-	}
+	if (instr == stack.QPU_state) stack.QPU_state++;
 
-	execute(pointer);
+	execute();
 }

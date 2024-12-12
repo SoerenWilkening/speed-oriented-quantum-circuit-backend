@@ -67,37 +67,22 @@ void jmp() {
 	jez(cb);
 }
 
-void jez(element_t *bool1) { // Jump if bool1 is qnot 0 (1)
-	// proper jump, only if bool is classical
-	element_t *step;
-//	if (active_label_counter > 0) {
-//		step = QBOOL();
-//		qqand(step, active_label[active_label_counter].ctrl, bool1);
-//		mov(active_label[active_label_counter].step, bool1, POINTER);
-//	} else step = bool1;
+void jez(element_t *bool1) {
+	// jumps are purely classical
 
 	instruction_t *ins = init_instruction();
+	ins->R0 = (int *) bool1->c_address;
 	ins->name = "jez ";
-//	if (step->qualifier == Qu) {
-//		mov(active_label[active_label_counter + 1].ctrl, step, POINTER);
-//		active_label_counter++;
-//	}
-	ins->routine = void_seq;
+
+	ins->routine = jmp_seq;
 
 }
 
 void label(char label[]) {
-//	if (active_label_counter > 1){
-//		qqand(active_label[active_label_counter].ctrl, active_label[active_label_counter - 1].ctrl,
-//		      active_label[active_label_counter - 1].step);
-//		free_element(active_label[active_label_counter].ctrl);
-//	}
-//	if (stack.instruction_counter > 0) active_label_counter--;
-//
-//	labels[label_counter].label = label;
-//	labels[label_counter++].ins_ptr = &stack.instruction_list[stack.instruction_counter];
-
 	instruction_t *ins = init_instruction();
 	ins->name = "label ";
+	labels[label_counter].ins_ptr = ins;
+	labels[label_counter].label = label;
+	label_counter++;
 	ins->routine = void_seq;
 }

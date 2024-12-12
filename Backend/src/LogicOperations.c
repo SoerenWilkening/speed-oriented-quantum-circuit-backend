@@ -8,6 +8,11 @@ sequence_t *void_seq() {
 	return NULL;
 }
 
+sequence_t *jmp_seq() {
+	if (*stack.QPU_state->R0 == 0) stack.QPU_state = stack.QPU_state->next_instruction;
+	return NULL;
+}
+
 sequence_t *branch_seq() {
 	sequence_t *seq = malloc(sizeof(sequence_t *));
 

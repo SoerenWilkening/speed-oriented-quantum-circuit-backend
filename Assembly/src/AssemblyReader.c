@@ -338,10 +338,12 @@ void apply_label(){
 	for (int i = 0; i < counter; ++i) {
 		if (calls[i].instruction != NULL) {
 			if (strcmp(calls[i].instruction, "jez") == 0) {
-				printf("label_ptr = %p\n", labels[label_index(calls[i].var2)].ins_ptr);
+//				printf("jez %s %d %p\n", calls[i].var1, label_index(calls[i].var1), labels[label_index(calls[i].var1)].ins_ptr);
+//				printf("label_ptr = %p\n", labels[label_index(calls[i].var1)].ins_ptr);
 				calls[i].ptr->next_instruction = (struct instruction_t *) labels[label_index(calls[i].var2)].ins_ptr;
 			}
 			if (strcmp(calls[i].instruction, "jmp") == 0) {
+//				printf("jmp %s %d %p\n", calls[i].var1, label_index(calls[i].var1), labels[label_index(calls[i].var1)].ins_ptr);
 				calls[i].ptr->next_instruction = (struct instruction_t *) labels[label_index(calls[i].var1)].ins_ptr;
 			}
 		}
