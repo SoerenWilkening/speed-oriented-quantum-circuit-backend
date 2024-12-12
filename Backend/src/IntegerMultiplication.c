@@ -12,11 +12,12 @@ void CP_sequence(sequence_t *mul, num_t *layer, int rounds, num_t control, doubl
         l2 = 0;
         fac = -1;
     }
-
-    for (int i = l1; i < l2; i += fac) {
-        num_t target = i + rounds;
-        double value = M_PI / (pow(2, i + 1)) * multiplyer;
-        gate_t *g = &mul->seq[*layer][mul->gates_per_layer[*layer]++];
+	for (int i = l1; i < l2; i += fac) {
+		printf("multiplier %f\n", multiplyer);
+//        num_t target = i + rounds;
+	    num_t target = INTEGERSIZE - i - 1 - rounds;
+	    double value = M_PI / (pow(2, i + 1)) * multiplyer;
+	    gate_t *g = &mul->seq[*layer][mul->gates_per_layer[*layer]++];
         cp(g, target, control, value);
         (*layer)++;
     }
@@ -33,7 +34,8 @@ void all_rot(sequence_t *mul, num_t *layer, int inverted, double multiplyer){
     int rounds = 0;
     for (int bit = INTEGERSIZE - 1; bit >= 0; --bit) {
         num_t control = INTEGERSIZE + bit;
-        CP_sequence(mul, layer, rounds, control, -(pow(2, INTEGERSIZE) - 1) / 2 * multiplyer, inverted);
+//        CP_sequence(mul, layer, rounds, control, -(pow(2, INTEGERSIZE) - 1) / 2 * multiplyer, inverted);
+        CP_sequence(mul, layer, rounds, control, - multiplyer / 2, inverted);
         *layer -= INTEGERSIZE - rounds;
         rounds++;
     }
@@ -97,38 +99,50 @@ sequence_t *QQ_mul() {
     QFT(mul);
     num_t layer = INTEGERSIZE;
 
+	// block 1
     int rounds = 0;
     // First blocks of CCP decompositions
     // all the CP block of the first decomp step can be merged
     for (int bit = INTEGERSIZE - 1; bit >= 0; --bit) {
-        layer = INTEGERSIZE + 2 * rounds;
+        layer = 2 * INTEGERSIZE + 2 * rounds - 1;
         CP_sequence(mul, &layer, rounds, INTEGERSIZE + bit, pow(2, INTEGERSIZE) - 1, false);
         rounds++;
     }
-    layer -= INTEGERSIZE - 1;
+	layer++;
+//    layer -= INTEGERSIZE - 1;
 
+	// block 2
     // intermediate step, C1X0 C0P_2(value/2)C1X0
     for (int bit_int2 = 0; bit_int2 < INTEGERSIZE; ++bit_int2) {
         CX_sequence(mul, &layer, - bit_int2);
 
-        all_rot(mul, &layer, false, 2);
+        all_rot(mul, &layer, false, pow(2, 1 + bit_int2));
 
         CX_sequence(mul, &layer, - bit_int2);
 
-        layer -= INTEGERSIZE - 1;
+	    for (int i = 0; i < INTEGERSIZE; ++i) {
+			gate_t *g = &mul->seq[layer][mul->gates_per_layer[layer]++];
+//		    printf("%d %d %f %f\n", bit_int2, i, pow(2, i + 1) - 1, pow(2, bit_int2));
+			double value = pow(2, - i - 1) * M_PI * (pow(2, i + 1) - 1) * pow(2, bit_int2);
+		    cp(g, INTEGERSIZE - i - 1, 3 * INTEGERSIZE - bit_int2 - 1, value);
+			layer++;
+	    }
     }
+	layer++;
 
+	printf("block3\n");
     // the final step, C1P(value/2)
-    rounds = INTEGERSIZE - 1;
-    for (int bit = 0; bit < INTEGERSIZE; ++bit) {
-        CP_sequence(mul, &layer, rounds, 3 * INTEGERSIZE - bit - 1, pow(2, INTEGERSIZE) - 1, true);
-        rounds--;
-    }
-
+    rounds = 0;
+//	for (int bit = INTEGERSIZE - 1; bit >= 0; --bit) {
+//        CP_sequence(mul, &layer, rounds, 2 * INTEGERSIZE + bit, pow(2, INTEGERSIZE - 1) - 1, false);
+//        rounds++;
+//    }
+	layer++;
+	layer++;
     mul->used_layer = layer - 1;
     QFT_inverse(mul);
-
-    precompiled_QQ_mul = mul;
+//
+//    precompiled_QQ_mul = mul;
     return mul;
 }
 sequence_t *cCQ_mul() {

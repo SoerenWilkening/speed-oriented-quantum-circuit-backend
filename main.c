@@ -35,8 +35,9 @@ int main(void) {
 	element_t *r0 = INT(3);
 //	element_t *r0 = BOOL(1);
 
-//	cqqadd(q1, q2, q2);
-	cqmul(q1, r0, q2, q4);
+//	qqadd(q1, q2);
+//	cqqadd(q1, q2, q4);
+	qqmul(q1, q2, q3);
 //	cqneg(q1, q4);
 //	qsub(q1, r0);
 //	qadd(q1, r0);
