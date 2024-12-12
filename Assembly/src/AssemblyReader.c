@@ -10,6 +10,32 @@ int total = 0;
 int variable_counter = 0;
 hash_element_t variables[hash_size];
 
+// Function to check if a string is a valid integer
+bool is_integer(const char* str) {
+	if (!str || *str == '\0') {
+		return false; // Null or empty string is qnot an integer
+	}
+
+	// Optional leading sign
+	if (*str == '+' || *str == '-') {
+		str++; // Skip the sign
+	}
+
+	// Ensure there's at least one digit
+	if (!isdigit((unsigned char)*str)) {
+		return false; // No digits after the sign
+	}
+
+	// Check remaining characters are all digits
+	for (; *str != '\0'; str++) {
+		if (!isdigit((unsigned char)*str)) {
+			return false; // Non-digit character found
+		}
+	}
+
+	return true; // All checks passed
+}
+
 // hashing functionality
 unsigned int hash(const char *word) {
     unsigned int hash = 5381;
@@ -29,24 +55,29 @@ int label_index(char *label){
 
 quantum_int_t *hash_element(char *word) {
     if (word == NULL) return NULL;
+//    if (calls[counter].addon == NULL) return NULL;
     unsigned int h = hash(word);
     while (variables[h].integer != NULL && strcmp(variables[h].word, word) != 0) {
         h++;
     }
     if (variables[h].integer != NULL && strcmp(variables[h].word, word) == 0) return variables[h].integer;
 
+	if (is_integer(word)){
+		variables[h].integer = malloc(sizeof(int));
+		*((int *) variables[h].integer) = atoi(calls[counter].var2);
+		variables[h].word = word;
+		return variables[h].integer;
+	}
+	if (calls[counter].addon == NULL) return NULL;
     int all_false = 1;
     if (strcmp(calls[counter].addon, "QINT") == 0) {
         all_false = 0;
 	    variables[h].integer = QINT();
     }
-    if (strcmp(calls[counter].addon, "UINT") == 0) {
-        all_false = 0;
-	    variables[h].integer = INT(calls[counter].value);
-    }
     if (strcmp(calls[counter].addon, "INT") == 0) {
         all_false = 0;
-	    variables[h].integer = INT(calls[counter].value);
+	    variables[h].integer = malloc(sizeof(int));
+	    *((int *) variables[h].integer) = atoi(calls[counter].var2);
     }
     if (strcmp(calls[counter].addon, "QBOOL") == 0) {
         all_false = 0;
@@ -54,7 +85,8 @@ quantum_int_t *hash_element(char *word) {
     }
     if (strcmp(calls[counter].addon, "BOOL") == 0) {
         all_false = 0;
-	    variables[h].integer = BOOL(calls[counter].value);
+	    variables[h].integer = malloc(sizeof(int));
+	    *((int *) variables[h].integer) = atoi(calls[counter].var2);
     }
     if (!all_false) {
 	    variables[h].word = word;
@@ -112,36 +144,9 @@ int is_instruction(char *word) {
 	return false;
 }
 
-// Function to check if a string is a valid integer
-bool is_integer(const char* str) {
-	if (!str || *str == '\0') {
-		return false; // Null or empty string is qnot an integer
-	}
-
-	// Optional leading sign
-	if (*str == '+' || *str == '-') {
-		str++; // Skip the sign
-	}
-
-	// Ensure there's at least one digit
-	if (!isdigit((unsigned char)*str)) {
-		return false; // No digits after the sign
-	}
-
-	// Check remaining characters are all digits
-	for (; *str != '\0'; str++) {
-		if (!isdigit((unsigned char)*str)) {
-			return false; // Non-digit character found
-		}
-	}
-
-	return true; // All checks passed
-}
 int is_addon(char *word) {
     if (strcmp(word, "inv") == 0) return true;
-    if (strcmp(word, "QUINT") == 0) return true;
     if (strcmp(word, "QINT") == 0) return true;
-    if (strcmp(word, "UINT") == 0) return true;
     if (strcmp(word, "INT") == 0) return true;
     if (strcmp(word, "QBOOL") == 0) return true;
     if (strcmp(word, "BOOL") == 0) return true;
@@ -180,7 +185,7 @@ int is_label(char *str){
 }
 
 void word_to_call(char *word) {
-    if (is_integer(word)) return;
+//    if (is_integer(word)) return;
     if (is_addon(word)) calls[counter].addon = word;
     else if (is_instruction(word)) calls[counter].instruction = word;
     else {
@@ -191,11 +196,11 @@ void word_to_call(char *word) {
         variable_counter++;
     }
 }
-void value_to_call(char *word) {
-    if (!is_integer(word)) return;
-    char *succ;
-    calls[counter].value = (int) strtol(word, &succ, 10);
-}
+//void value_to_call(char *word) {
+//    if (!is_integer(word)) return;
+//    char *succ;
+//    calls[counter].value = (int) strtol(word, &succ, 10);
+//}
 
 char **extract_items_from_line(const char *line, size_t *item_count) {
     if (!line || !item_count) return NULL;
@@ -254,7 +259,7 @@ void lines_to_call(char *line) {
         if (words[j][0] != *"/" && !comment) {
 //	        printf("%s %d ", words[j], is_integer(words[j]));
             word_to_call(words[j]);
-            value_to_call(words[j]);
+//            value_to_call(words[j]);
         } else { comment = 1; }
     }
 
@@ -275,8 +280,13 @@ void ReadAssembly(char *asmb[], int num) {
 
 void create_instruction() {
 	if (calls[counter].instruction == NULL) return;
+	if (!is_instruction(calls[counter].instruction)) return;
 //    printf("%s %s, %s, %s, %d\n", calls[counter].instruction, calls[counter].var1, calls[counter].var2, calls[counter].var3, calls[counter].value);
-	if (strcmp(calls[counter].instruction, "branch") == 0) branch(hash_element(calls[counter].var1), calls[counter].value);
+	quantum_int_t *var1 = hash_element(calls[counter].var1);
+	quantum_int_t *var2 = hash_element(calls[counter].var2);
+	quantum_int_t *var3 = hash_element(calls[counter].var3);
+	quantum_int_t *var4 = hash_element(calls[counter].var4);
+	if (strcmp(calls[counter].instruction, "branch") == 0) branch(var1, *((int *) var2));
 	if (strcmp(calls[counter].instruction, "inc") == 0)  inc(hash_element(calls[counter].var1));
 	if (strcmp(calls[counter].instruction, "dcr") == 0)  dcr(hash_element(calls[counter].var1));
 
@@ -293,27 +303,20 @@ void create_instruction() {
 	if (strcmp(calls[counter].instruction, "sdiv") == 0) sdiv(hash_element(calls[counter].var1), hash_element(calls[counter].var2));
 	if (strcmp(calls[counter].instruction, "qsdiv") == 0) qsdiv(hash_element(calls[counter].var1), INT(calls[counter].value), hash_element(calls[counter].var2));
 	if (strcmp(calls[counter].instruction, "qqsdiv") == 0) qqsdiv(hash_element(calls[counter].var1), hash_element(calls[counter].var2), hash_element(calls[counter].var3));
-	if (strcmp(calls[counter].instruction, "cqsdiv") == 0) cqsdiv(hash_element(calls[counter].var1), INT(calls[counter].value), hash_element(calls[counter].var2), hash_element(calls[counter].var3));
-	if (strcmp(calls[counter].instruction, "cqqsdiv") == 0) cqqsdiv(hash_element(calls[counter].var1), hash_element(calls[counter].var2), hash_element(calls[counter].var3), hash_element(calls[counter].var4));
+	if (strcmp(calls[counter].instruction, "cqsdiv") == 0) cqsdiv(hash_element(calls[counter].var1), hash_element(calls[counter].var2), hash_element(calls[counter].var3), hash_element(calls[counter].var4));
+	if (strcmp(calls[counter].instruction, "cqqsdiv") == 0)
+		cqqsdiv((quantum_int_t *)var1, (quantum_int_t *)var2, (quantum_int_t *)var3, (quantum_int_t *) var4);
 
 	if (strcmp(calls[counter].instruction, "qqsmod") == 0) qqsmod(hash_element(calls[counter].var1), hash_element(calls[counter].var2), hash_element(calls[counter].var3));
 
 	if (strcmp(calls[counter].instruction, "qeq") == 0) {
-		quantum_int_t *el3 = hash_element(calls[counter].var3);
-		if (el3 == NULL) el3 = INT(calls[counter].value);
-		qeq(hash_element(calls[counter].var1), hash_element(calls[counter].var2), el3);
+		qeq(hash_element(calls[counter].var1), hash_element(calls[counter].var2), hash_element(calls[counter].var3));
 	}
 	if (strcmp(calls[counter].instruction, "qgeq") == 0) {
-		quantum_int_t *el3 = hash_element(calls[counter].var3);
-		if (el3 == NULL) {
-			el3 = INT(calls[counter].value);
-		}
-		qgeq(hash_element(calls[counter].var1), hash_element(calls[counter].var2), el3);
+		qgeq(hash_element(calls[counter].var1), hash_element(calls[counter].var2), hash_element(calls[counter].var3));
 	}
 	if (strcmp(calls[counter].instruction, "qleq") == 0) {
-		quantum_int_t *el3 = hash_element(calls[counter].var3);
-		if (el3 == NULL) el3 = INT(calls[counter].value);
-		qleq(hash_element(calls[counter].var1), hash_element(calls[counter].var2), el3);
+		qleq(hash_element(calls[counter].var1), hash_element(calls[counter].var2), hash_element(calls[counter].var3));
 	}
 	if (strcmp(calls[counter].instruction, "qqand") == 0) {
 		quantum_int_t *el3 = hash_element(calls[counter].var3);
@@ -333,7 +336,7 @@ void apply_label(){
 	for (int i = 0; i < counter; ++i) {
 		if (calls[i].instruction != NULL) {
 			if (strcmp(calls[i].instruction, "jez") == 0) {
-//				printf("jez %s %d %p\n", calls[i].var1, label_index(calls[i].var1), labels[label_index(calls[i].var1)].ins_ptr);
+				printf("jez %s %d %p\n", calls[i].var1, label_index(calls[i].var2), labels[label_index(calls[i].var2)].ins_ptr);
 //				printf("label_ptr = %p\n", labels[label_index(calls[i].var1)].ins_ptr);
 				calls[i].ptr->next_instruction = (struct instruction_t *) labels[label_index(calls[i].var2)].ins_ptr;
 			}

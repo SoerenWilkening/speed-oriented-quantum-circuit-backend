@@ -105,7 +105,7 @@ sequence_t *qq_and_seq() {
 	sequence_t *seq = malloc(sizeof(sequence_t));
 
 	int number = QPU_state->Q0->MSB + 1;
-	printf("%d\n", number);
+//	printf("%d\n", number);
 
 	seq->used_layer = 1;
 	seq->num_layer = 1;

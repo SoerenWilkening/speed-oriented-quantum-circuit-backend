@@ -27,27 +27,12 @@ int main(void) {
 	instruction_counter = 0;
 	QPU_state = instruction_list;
 
-	quantum_int_t *A = QINT();
-	quantum_int_t *B = QINT();
-	quantum_int_t *C = QINT();
-	quantum_int_t *D = QBOOL();
-	quantum_int_t *klass = INT(123);
-
-//	qnot(A);
-//	cqnot(A, D);
-
-//	qxor(A, klass);
-//	qqxor(A, B);
-//	cqqxor(A, B, D);
-
-//	qor(A, B, klass);
-//	qqor(A, B, C);
-//	cqqor(A, B, C, D);
-
-//	qand(A, B, klass);
-//	qqand(A, B, C);
-//	cqqand(A, B, C, D);
-
+//	quantum_int_t *D = QBOOL();
+//	quantum_int_t *A = QINT();
+//	quantum_int_t *B = QINT();
+//	quantum_int_t *C = QINT();
+//
+//	cqqsdiv(A, B, C, D);
 	AsmbFromFile();
 
 	// ._execute

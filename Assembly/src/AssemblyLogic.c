@@ -7,7 +7,7 @@
 void branch(quantum_int_t *Q0, int bit) {
 	instruction_t *ins = init_instruction();
 	ins->name = "branch_seq ";
-	quantum_int_t *qbit = bit_of_int(Q0, bit);
+	quantum_int_t *qbit = bit_of_int(Q0, Q0->MSB + bit);
 
 	ins->Q0 = qbit;
 

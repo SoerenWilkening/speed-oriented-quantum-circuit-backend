@@ -37,7 +37,7 @@ void tstbit(quantum_int_t *el1, quantum_int_t *el2, int bit) {
 
 void qtstbit(quantum_int_t *res, quantum_int_t *integer, int bit) {
 	instruction_t *ins = init_instruction();
-	ins->name = "testbit ";
+	ins->name = "qtestbit ";
 	ins->Q0 = res; // return value
 
 	quantum_int_t *qbit = bit_of_int(integer, bit);
@@ -47,8 +47,9 @@ void qtstbit(quantum_int_t *res, quantum_int_t *integer, int bit) {
 }
 
 void cqtstbit(quantum_int_t *res, quantum_int_t *integer, quantum_int_t *ctrl, int bit) {
+	// inputs are boolean variables
 	instruction_t *ins = init_instruction();
-	ins->name = "testbit ";
+	ins->name = "cqtestbit ";
 	ins->Q0 = res; // return value
 
 	quantum_int_t *qbit = bit_of_int(integer, bit);

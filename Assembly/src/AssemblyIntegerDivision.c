@@ -360,14 +360,14 @@ void cqsdiv(quantum_int_t *A, int *B, quantum_int_t *remainder, quantum_int_t *c
 }
 void cqqsdiv(quantum_int_t *A, quantum_int_t *B, quantum_int_t *remainder, quantum_int_t *ctrl) {
 	// create qqsdiv sequence to Divide Aq / Bq
-	quantum_int_t *sign_A = QBOOL();
-	quantum_int_t *sign_B = QBOOL();
-
-	qtstbit(sign_A, A, 0);
-	qtstbit(sign_B, B, 0);
-
-	cqneg(A, sign_A);
-	cqneg(B, sign_B);
+//	quantum_int_t *sign_A = QBOOL();
+//	quantum_int_t *sign_B = QBOOL();
+//
+//	qtstbit(sign_A, A, 0);
+//	qtstbit(sign_B, B, 0);
+//
+//	cqneg(A, sign_A);
+//	cqneg(B, sign_B);
 
 	for (int i = 2; i < INTEGERSIZE + 1; ++i) {
 		quantum_int_t *Y = malloc(sizeof(quantum_int_t));
@@ -389,17 +389,17 @@ void cqqsdiv(quantum_int_t *A, quantum_int_t *B, quantum_int_t *remainder, quant
 		cqnot(bit, ctrl); // Invert Cq
 	}
 
-	cqnot(sign_A, sign_B);
-	cqneg(A, sign_A);
-	cqneg(remainder, sign_A);
-	cqneg(B, sign_B);
-	cqnot(sign_A, sign_B);
-
-	qtstbit(sign_A, A, 0);
-	qtstbit(sign_B, B, 0);
-
-	free_element(sign_A);
-	free_element(sign_B);
+//	cqnot(sign_A, sign_B);
+//	cqneg(A, sign_A);
+//	cqneg(remainder, sign_A);
+//	cqneg(B, sign_B);
+//	cqnot(sign_A, sign_B);
+//
+//	qtstbit(sign_A, A, 0);
+//	qtstbit(sign_B, B, 0);
+//
+//	free_element(sign_A);
+//	free_element(sign_B);
 }
 
 void umod(int *R0, int *R1) {

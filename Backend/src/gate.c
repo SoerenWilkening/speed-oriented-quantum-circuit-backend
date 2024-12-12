@@ -57,6 +57,7 @@ void print_sequence(sequence_t *seq) {
 
 
     for (int qubit = 0; qubit < 4 * INTEGERSIZE + 2; ++qubit) {
+	    printf("%3d ", qubit + 1);
         counter = 0;
         for (int layer = 0; layer < seq->used_layer; ++layer) {
             for (int gate = 0; gate < seq->gates_per_layer[layer]; ++gate) {
@@ -151,7 +152,7 @@ sequence_t *ccx_gate() {
 	seq->used_layer = 1;
 	seq->num_layer = 1;
 	seq->gates_per_layer[0] = 1;
-	ccx(&seq->seq[0][0], 0, 1, 2);
+	ccx(&seq->seq[0][0], INTEGERSIZE - 1, 2 * INTEGERSIZE - 1, 3 * INTEGERSIZE - 1);
 
 	return seq;
 }

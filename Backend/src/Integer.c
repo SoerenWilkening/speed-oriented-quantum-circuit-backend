@@ -39,6 +39,7 @@ quantum_int_t *BOOL(bool intg){
 }
 quantum_int_t *bit_of_int(quantum_int_t *el1, int bit){
     quantum_int_t *b = malloc(sizeof(quantum_int_t));
+	b->MSB = INTEGERSIZE - 1;
     b->q_address[INTEGERSIZE - 1] = el1->q_address[bit];
     return b;
 }
