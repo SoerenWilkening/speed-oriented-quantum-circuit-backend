@@ -4,7 +4,7 @@
 
 #include "AssemblyReader.h"
 
-call_t calls[65536];
+call_t *calls;
 int counter = 0;
 int total = 0;
 int variable_counter = 0;
@@ -96,6 +96,8 @@ void *hash_element(char *word) {
 }
 
 int is_instruction(char *word) {
+	if (strcmp(word, "qtstbit") == 0) return true;
+
 	if (strcmp(word, "branch") == 0) return true;
 	if (strcmp(word, "mov") == 0) return true;
 	if (strcmp(word, "inc") == 0) return true;
@@ -138,6 +140,7 @@ int is_instruction(char *word) {
 	if (strcmp(word, "qleq") == 0) return true;
 	if (strcmp(word, "MEASURE") == 0) return true;
 	if (strcmp(word, "qnot") == 0) return true;
+	if (strcmp(word, "cqnot") == 0) return true;
 	if (strcmp(word, "jez") == 0) return true;
 	if (strcmp(word, "jmp") == 0) return true;
 	if (strcmp(word, "qset") == 0) return true;
@@ -286,6 +289,7 @@ void create_instruction() {
 	void *var2 = hash_element(calls[counter].var2);
 	void *var3 = hash_element(calls[counter].var3);
 	void *var4 = hash_element(calls[counter].var4);
+	if (strcmp(calls[counter].instruction, "qtstbit") == 0) qtstbit(var1, var2, *(int *)var3);
 	if (strcmp(calls[counter].instruction, "branch") == 0) branch(var1, *((int *) var2));
 	if (strcmp(calls[counter].instruction, "inc") == 0)  inc(hash_element(calls[counter].var1));
 	if (strcmp(calls[counter].instruction, "dcr") == 0)  dcr(hash_element(calls[counter].var1));
@@ -296,12 +300,13 @@ void create_instruction() {
 	if (strcmp(calls[counter].instruction, "cqadd") == 0) cqadd(hash_element(calls[counter].var1), hash_element(calls[counter].var2), hash_element(calls[counter].var3));
 	if (strcmp(calls[counter].instruction, "cqqadd") == 0) cqqadd(hash_element(calls[counter].var1), hash_element(calls[counter].var2), hash_element(calls[counter].var3));
 
+	if (strcmp(calls[counter].instruction, "qsub") == 0) qsub(var1, (int * ) var2);
 	if (strcmp(calls[counter].instruction, "qqsub") == 0) qqsub(hash_element(calls[counter].var1), hash_element(calls[counter].var2));
 
-	if (strcmp(calls[counter].instruction, "padd") == 0) padd(hash_element(calls[counter].var1), INT(calls[counter].value));
+//	if (strcmp(calls[counter].instruction, "padd") == 0) padd(hash_element(calls[counter].var1), INT(calls[counter].value));
 
 	if (strcmp(calls[counter].instruction, "sdiv") == 0) sdiv(hash_element(calls[counter].var1), hash_element(calls[counter].var2));
-	if (strcmp(calls[counter].instruction, "qsdiv") == 0) qsdiv(hash_element(calls[counter].var1), INT(calls[counter].value), hash_element(calls[counter].var2));
+//	if (strcmp(calls[counter].instruction, "qsdiv") == 0) qsdiv(hash_element(calls[counter].var1), INT(calls[counter].value), hash_element(calls[counter].var2));
 	if (strcmp(calls[counter].instruction, "qqsdiv") == 0) qqsdiv(hash_element(calls[counter].var1), hash_element(calls[counter].var2), hash_element(calls[counter].var3));
 	if (strcmp(calls[counter].instruction, "cqsdiv") == 0) cqsdiv(hash_element(calls[counter].var1), hash_element(calls[counter].var2), hash_element(calls[counter].var3), hash_element(calls[counter].var4));
 	if (strcmp(calls[counter].instruction, "cqqsdiv") == 0) cqqsdiv(var1, var2, var3, var4);
@@ -322,7 +327,8 @@ void create_instruction() {
 		if (el3 == NULL) el3 = INT(calls[counter].value);
 		qqand(hash_element(calls[counter].var1), hash_element(calls[counter].var2), el3);
 	}
-	if (strcmp(calls[counter].instruction, "qnot") == 0) qnot(hash_element(calls[counter].var1));
+	if (strcmp(calls[counter].instruction, "qnot") == 0) qnot(var1);
+	if (strcmp(calls[counter].instruction, "cqnot") == 0) cqnot(var1, var2);
 	if (strcmp(calls[counter].instruction, "jez") == 0) jez(hash_element(calls[counter].var1));
 	if (strcmp(calls[counter].instruction, "jmp") == 0) jmp();
 	if (strcmp(calls[counter].instruction, "qset") == 0) qset(var1, var2);
@@ -371,9 +377,11 @@ void create_executable() {
 	}
 }
 
-void AsmbFromFile() {
+void AsmbFromFile(char *f) {
 
-    FILE *file = fopen("../assembly.pqsm", "r");
+	calls = malloc(5000000 * sizeof(call_t));
+
+    FILE *file = fopen(f, "r");
     int line_count = 0;
 
     size_t capacity = 256; // Initial capacity for the array of lines

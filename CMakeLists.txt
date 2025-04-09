@@ -20,6 +20,7 @@ add_executable(CQ_backend_improved main.c
         Assembly/src/AssemblyIntegerAddition.c
         Assembly/src/AssemblyIntegerMultiplication.c
         Assembly/src/AssemblyIntegerDivision.c)
+target_compile_options(CQ_backend_improved PRIVATE -O3)
 
 add_executable(bench benchmark/benchmark.c
         Backend/src/Integer.c

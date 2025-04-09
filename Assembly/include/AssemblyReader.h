@@ -31,6 +31,6 @@ typedef struct {
 
 void ReadAssembly(char *asmb[], int num);
 
-void AsmbFromFile();
+void AsmbFromFile(char *f);
 
 #endif //CQ_BACKEND_IMPROVED_ASSEMBLYREADER_H

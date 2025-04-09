@@ -20,7 +20,7 @@ sequence_t *precompiled_QQ_mul = NULL;
 int label_counter = 0;
 label_t labels[3000];
 
-int main(void) {
+int main(int argc, char *argv[]) {
 	// initialize the rest of the stack
 	// prepare exerything for the execution
 	circuit = init_circuit();
@@ -31,13 +31,14 @@ int main(void) {
 //	quantum_int_t *B = QBOOL();
 //	int C = 123;
 //	qset(A, &C);
-	AsmbFromFile();
+
+	AsmbFromFile(argv[1]);
 
 	// ._execute
 	clock_t t1 = clock();
-	execute();
+	while (execute() == 1);
 
-	CircuitToOPANQASM(circuit, "..");
+//	CircuitToOPANQASM(circuit, "..");
 
 	print_circuit(circuit);
 

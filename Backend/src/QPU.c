@@ -71,7 +71,7 @@ void print_circuit(circuit_t *circ) {
 		}
 	}
 
-	for (int qubit = 0; qubit < QUBITBLOCK; ++qubit) {
+	for (int qubit = 0; qubit < circ->used_qubits + 1; ++qubit) {
 		if (circ->used_layer_per_qubit[qubit] != 0) {
 			printf("%3d ", qubit);
 			counter = 0;

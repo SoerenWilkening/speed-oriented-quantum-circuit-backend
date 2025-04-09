@@ -389,10 +389,10 @@ void cqqsdiv(quantum_int_t *A, quantum_int_t *B, quantum_int_t *remainder, quant
 		cqnot(bit, ctrl); // Invert Cq
 	}
 
-//	cqnot(sign_A, sign_B);
 //	cqneg(A, sign_A);
-//	cqneg(remainder, sign_A);
 //	cqneg(B, sign_B);
+//	cqnot(sign_A, sign_B);
+//	cqneg(remainder, sign_A);
 //	cqnot(sign_A, sign_B);
 //
 //	qtstbit(sign_A, A, 0);

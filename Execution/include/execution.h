@@ -11,6 +11,6 @@
 
 // functionality for C
 //void init_instruction(instruction_t *instr);
-void execute();
+int execute();
 
 #endif //CQ_BACKEND_IMPROVED_EXECUTION_H

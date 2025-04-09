@@ -47,11 +47,11 @@ void run_instruction(sequence_t *res, qubit_t qubit_array[], bool invert){
     }
 }
 
-void execute() {
+int execute() {
 
 	instruction_t *instr = QPU_state;
 
-	if (instr->routine == NULL) return;
+	if (instr->routine == NULL) return 0;
 
 	qubit_t qubit_array[6 * INTEGERSIZE];
 	qubit_mapping(qubit_array);
@@ -63,11 +63,11 @@ void execute() {
 //		if (i % 4 == 3) printf("  ");
 //	}
 //	printf("\n");
-//
+
 //	print_sequence(res);
     run_instruction(res, qubit_array, instr->invert);
 
 	if (instr == QPU_state) QPU_state++;
-
-	execute();
+	return 1;
+//	execute();
 }
