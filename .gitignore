@@ -5,3 +5,5 @@ benchmark/CQ_inprov_qtf.csv
 assembly*.pqsm
 circuit.qasm
 .venv
+old_stuff
+circ.pqsm

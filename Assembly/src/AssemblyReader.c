@@ -199,11 +199,6 @@ void word_to_call(char *word) {
         variable_counter++;
     }
 }
-//void value_to_call(char *word) {
-//    if (!is_integer(word)) return;
-//    char *succ;
-//    calls[counter].value = (int) strtol(word, &succ, 10);
-//}
 
 char **extract_items_from_line(const char *line, size_t *item_count) {
     if (!line || !item_count) return NULL;
@@ -260,7 +255,7 @@ void lines_to_call(char *line) {
     int comment = 0;
     for (int j = 0; j < count; ++j) {
         if (words[j][0] != *"/" && !comment) {
-//	        printf("%s %d ", words[j], is_integer(words[j]));
+//	        printf("%s %d\n", words[j], is_integer(words[j]));
             word_to_call(words[j]);
 //            value_to_call(words[j]);
         } else { comment = 1; }
@@ -323,9 +318,7 @@ void create_instruction() {
 		qleq(hash_element(calls[counter].var1), hash_element(calls[counter].var2), hash_element(calls[counter].var3));
 	}
 	if (strcmp(calls[counter].instruction, "qqand") == 0) {
-		quantum_int_t *el3 = hash_element(calls[counter].var3);
-		if (el3 == NULL) el3 = INT(calls[counter].value);
-		qqand(hash_element(calls[counter].var1), hash_element(calls[counter].var2), el3);
+		qqand(hash_element(calls[counter].var1), hash_element(calls[counter].var2), hash_element(calls[counter].var3));
 	}
 	if (strcmp(calls[counter].instruction, "qnot") == 0) qnot(var1);
 	if (strcmp(calls[counter].instruction, "cqnot") == 0) cqnot(var1, var2);

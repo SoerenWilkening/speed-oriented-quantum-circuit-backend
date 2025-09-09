@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
 	clock_t t1 = clock();
 	while (execute() == 1);
 
-//	CircuitToOPANQASM(circuit, "..");
+	CircuitToOPANQASM(circuit, "..");
 
 	print_circuit(circuit);
 
