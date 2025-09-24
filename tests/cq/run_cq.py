@@ -17,16 +17,16 @@ for s in sizes:
     res = subprocess.run(["/usr/bin/time", "-l", "./build/CQ_backend_improved"], capture_output=True, text = True)
 
     os.system("cd ../../ && rm -r tests/cq/build")
-    print(res.stdout)
-    print(res.stderr)
     _, t2, t1 = map(float, res.stdout.split())
     mem = int(res.stderr.split("maximum resident set size")[0].split("\n")[-1])
 
-    with open("CQ_impr.csv", "a") as f:
-        f.write(f"{s},{t1},{mem}\n")
-        f.close()
 
-    with open("CQ.csv", "a") as f:
-        f.write(f"{s},{t2},{mem}\n")
-        f.close()
+
+    # with open("CQ_impr.csv", "a") as f:
+    #     f.write(f"{s},{t1},{mem}\n")
+    #     f.close()
+
+    # with open("CQ.csv", "a") as f:
+    #     f.write(f"{s},{t2},{mem}\n")
+    #     f.close()
 
