@@ -16,13 +16,19 @@
 
 #define MAXINSTRUCTIONS 7
 
+#define NUM_GATE_LAYERS 100
+#define NUM_GATE_LAYER_QUBITS 50
+
 typedef struct {
     gate_t **sequence; // [layer][used_gates_per_layer]
     num_t used_layer;
     num_t allocated_layer;
     num_t *used_gates_per_layer; // [layer]
     num_t *allocated_gates_per_layer; // [layer]
+
 	int **gate_index_layer_qubits; // [layer][qubit] stores for every layer the gate index occupying the respective qubits
+	int allocated_layer_indices;
+	int *allocated_layer_qubit_indices;
 	// -1 refers to the qubit being not occupied
 
     layer_t **layer_on_qubit; // [qubits][layer]

@@ -21,13 +21,13 @@ circuit_t *init_circuit() {
 		circ->sequence[i] = malloc(GATESPERLAYERBLOCK * sizeof(gate_t));
 	}
 
-	circ->gate_index_layer_qubits = malloc(2 * LAYERBLOCK * sizeof(int *));
-	for (int i = 0; i < 2 * LAYERBLOCK; ++i) {
-		circ->gate_index_layer_qubits[i] = malloc(MAXQUBITS * sizeof(int));
-		memset(circ->gate_index_layer_qubits[i], 0xFF, MAXQUBITS * sizeof(int));
-//		for (int j = 0; j < MAXQUBITS; ++j) {
-//			circ->gate_index_layer_qubits[i][j] = -1;
-//		}
+	circ->allocated_layer_indices = NUM_GATE_LAYERS;
+	circ->gate_index_layer_qubits = malloc(NUM_GATE_LAYERS * sizeof(int *));
+	circ->allocated_layer_qubit_indices = malloc(NUM_GATE_LAYERS * sizeof(int *));
+	for (int i = 0; i < NUM_GATE_LAYERS; ++i) {
+		circ->allocated_layer_qubit_indices[i] = NUM_GATE_LAYER_QUBITS;
+		circ->gate_index_layer_qubits[i] = malloc(NUM_GATE_LAYER_QUBITS * sizeof(int));
+		memset(circ->gate_index_layer_qubits[i], 0xFF, NUM_GATE_LAYER_QUBITS * sizeof(int));
 	}
 
 	// allocate layer informations
@@ -280,9 +280,29 @@ int AppendGate(circuit_t *circ, gate_t *g, layer_t MinPossibleLayer) {
 	memcpy(store, g, sizeof(gate_t));
 
 	// store gate index in 2-d array
+	// if necessary: increase allocated layer
+	if (MinPossibleLayer >= circ->allocated_layer_indices){
+		size_t new = MinPossibleLayer + NUM_GATE_LAYERS;
+		circ->gate_index_layer_qubits = realloc(circ->gate_index_layer_qubits, new * sizeof(int *));
+		circ->allocated_layer_qubit_indices = realloc(circ->allocated_layer_qubit_indices, new * sizeof(int));
+		for (int i = circ->allocated_layer_indices; i < new; ++i) {
+			circ->allocated_layer_qubit_indices[i] = NUM_GATE_LAYER_QUBITS;
+			circ->gate_index_layer_qubits[i] = malloc(NUM_GATE_LAYER_QUBITS * sizeof(int));
+			memset(circ->gate_index_layer_qubits[i], 0xFF, NUM_GATE_LAYER_QUBITS * sizeof(int));
+		}
+		circ->allocated_layer_indices = new;
+	}
+	// if necessary: increase allocated qubits of MinPosibleLayer
+	if (MaxQubit(g) >= circ->allocated_layer_qubit_indices[MinPossibleLayer]){
+		size_t new = MaxQubit(g) + NUM_GATE_LAYER_QUBITS;
+		circ->gate_index_layer_qubits[MinPossibleLayer] = realloc(circ->gate_index_layer_qubits[MinPossibleLayer], new * sizeof(int));
+		memset(&circ->gate_index_layer_qubits[MinPossibleLayer][circ->allocated_layer_qubit_indices[MinPossibleLayer]],
+			   0xFF, (new - circ->allocated_layer_qubit_indices[MinPossibleLayer]) * sizeof(int));
+		circ->allocated_layer_qubit_indices[MinPossibleLayer] = new;
+	}
+
 	circ->gate_index_layer_qubits[MinPossibleLayer][g->Target] = pos;
 	for (int i = 0; i < g->NumControls; ++i) circ->gate_index_layer_qubits[MinPossibleLayer][g->Control[i]] = pos;
-//    copy_basis_gate(store, g, NOTFREED);
 
 	apply_layer(circ, g, MinPossibleLayer);
 

@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
 
 	int num_qubits = (int) strtol(argv[1], NULL, 10);
 	int run = (int) strtol(argv[2], NULL, 10);
-//	int num_qubits = 1075;
+//	int num_qubits = 20;
 //	int run = 1;
 	clock_t t1 = clock();
 	sequence_t  *seq = QFT(NULL, num_qubits);
