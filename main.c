@@ -31,16 +31,14 @@ int main(int argc, char *argv[]) {
 	clock_t t2 = clock();
 
 	// ._execute
-	circuit = init_circuit();
+	circuit_t *circ = init_circuit();
 	qubit_t qubit_array[6 * INTEGERSIZE];
-	qubit_mapping(qubit_array);
+	qubit_mapping(qubit_array, circ);
 
-	run_instruction(seq, qubit_array, false);
+	run_instruction(seq, qubit_array, false, circ);
 	printf("%f %f\n", (double) (clock() - t1) / CLOCKS_PER_SEC, (double) (t2 - t1) / CLOCKS_PER_SEC);
 
 	free(seq);
-//	print_circuit(circuit);
-
 
 	return 0;
 }

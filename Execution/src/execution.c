@@ -4,7 +4,7 @@
 
 #include "execution.h"
 
-void qubit_mapping(qubit_t qubit_arrray[]) {
+void qubit_mapping(qubit_t qubit_arrray[], circuit_t *circ) {
 	int start = 0;
 	if (QPU_state->Q0 != NULL){
 		start += INTEGERSIZE;
@@ -22,11 +22,11 @@ void qubit_mapping(qubit_t qubit_arrray[]) {
 		start += INTEGERSIZE;
 		memcpy(&qubit_arrray[3 * INTEGERSIZE], QPU_state->Q3->q_address, INTEGERSIZE * sizeof(int));
 	}
-	memcpy(&qubit_arrray[start], circuit->ancilla, 2 * INTEGERSIZE * sizeof(int));
+	memcpy(&qubit_arrray[start], circ->ancilla, 2 * INTEGERSIZE * sizeof(int));
 }
 
 // apply the sequences to the desired qubits
-void run_instruction(sequence_t *res, qubit_t qubit_array[], bool invert){
+void run_instruction(sequence_t *res, qubit_t qubit_array[], bool invert, circuit_t *circ){
     if (res == NULL) return;
     int direction = (invert) ? -1 : 1;
 
@@ -42,19 +42,19 @@ void run_instruction(sequence_t *res, qubit_t qubit_array[], bool invert){
             }
             g->GateValue *= pow(-1, invert);
 
-            add_gate(circuit, g);
+            add_gate(circ, g);
         }
     }
 }
 
-int execute() {
+int execute(circuit_t *circ) {
 
 	instruction_t *instr = QPU_state;
 
 	if (instr->routine == NULL) return 0;
 
 	qubit_t qubit_array[6 * INTEGERSIZE];
-	qubit_mapping(qubit_array);
+	qubit_mapping(qubit_array, circ);
 	sequence_t *res = instr->routine();
 
 //	printf("%s\n", instr->name);
@@ -65,7 +65,7 @@ int execute() {
 //	printf("\n");
 
 //	print_sequence(res);
-    run_instruction(res, qubit_array, instr->invert);
+    run_instruction(res, qubit_array, instr->invert, circ);
 
 	if (instr == QPU_state) QPU_state++;
 	return 1;

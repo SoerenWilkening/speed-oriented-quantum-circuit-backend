@@ -35,8 +35,10 @@ def run_cq(s):
     os.system("cd ../ && rm -r tests/cq/build")
     _, t2, t1 = map(float, res.stdout.split())
     mem = int(res.stderr.split("maximum resident set size")[0].split("\n")[-1])
-    store("cq_impr", s, t1, mem)
-    store("cq", s, t2, mem)
+    print(s, t1, mem)
+    print(s, t2, mem)
+    # store("cq_impr", s, t1, mem)
+    # store("cq", s, t2, mem)
     # return t1, t2, mem
 
 def run_ket(s):
@@ -91,10 +93,10 @@ print(x)
 for s in x:
 # for s in [30]:
     print(s)
-    run_aria(s)
+    # run_aria(s)
     # if s <= 495: run_projectq(s)
     # run_qiskit(s)
-    # run_cq(s)
+    run_cq(s)
     # run_ket(s)
     # run_cirq(s)
     # run_amazon(s)

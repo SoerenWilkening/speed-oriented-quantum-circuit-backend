@@ -168,6 +168,12 @@ sequence_t *QFT(sequence_t *qft) {
     }
     if (qft == NULL) {
         qft = malloc(sizeof(sequence_t));
+		qft->gates_per_layer = calloc(2 * INTEGERSIZE - 1, sizeof(num_t));
+		qft->seq = calloc(2 * INTEGERSIZE - 1, sizeof(gate_t *));
+	    for (int i = 0; i < 2 * INTEGERSIZE - 1; ++i) {
+			if (i < INTEGERSIZE) qft->seq[i] = calloc(i, sizeof(gate_t));
+			else qft->seq[i] = calloc(2 * INTEGERSIZE - i, sizeof(gate_t));
+	    }
         qft->used_layer = 0;
         qft->num_layer = 2 * INTEGERSIZE - 1;
         memset(qft->gates_per_layer, 0, qft->num_layer * sizeof(num_t));

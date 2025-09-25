@@ -229,7 +229,7 @@ void apply_layer(circuit_t *circ, gate_t *g, layer_t MinPossibleLayer) {
 }
 
 int AppendGate(circuit_t *circ, gate_t *g, layer_t MinPossibleLayer) {
-	qubit_t *ctrl = g->Control;
+//	qubit_t *ctrl = g->Control;
 	int added = merge_gates(circ, g, MinPossibleLayer);
 	// check every gate within the previous layer to check, if gates will eradicate themselves
 	if (!added) return added;
@@ -237,6 +237,7 @@ int AppendGate(circuit_t *circ, gate_t *g, layer_t MinPossibleLayer) {
 	// gate will be added to MinPossibleLayer
 	// assign layer
 	layer_t pos = circ->used_gates_per_layer[MinPossibleLayer];
+	increase_gates_per_layer(circ, MinPossibleLayer, pos);
 
 	// increase the number of storable gates on MinPossibleLayer if needed
 	if (pos >= circ->allocated_gates_per_layer[MinPossibleLayer]) {
@@ -277,6 +278,14 @@ void increase_sequence_layers(circuit_t *circ, layer_t MinPossibleLayer) {
 	}
 
 	circ->allocated_layer = new;
+}
+
+void increase_gates_per_layer(circuit_t *circ, layer_t layer, layer_t pos) {
+	if (pos < circ->allocated_gates_per_layer[layer]) return;
+
+	num_t new_size = circ->allocated_gates_per_layer[layer] + GATESPERLAYERBLOCK;
+	circ->sequence[layer] = realloc(circ->sequence[layer], new_size * sizeof(gate_t));
+	circ->allocated_gates_per_layer[layer] = new_size;
 }
 
 void add_gate(circuit_t *circ, gate_t *g) {

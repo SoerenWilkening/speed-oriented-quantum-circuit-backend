@@ -75,6 +75,8 @@ void print_circuit(circuit_t *circ);
 
 void add_gate(circuit_t *circ, gate_t *g);
 
+void increase_gates_per_layer(circuit_t *circ, layer_t layer, layer_t pos);
+
 void CircuitToOPANQASM(circuit_t *circuit, char *path);
 
 #endif //CQ_BACKEND_IMPROVED_QPU_H

@@ -30,10 +30,10 @@ typedef struct {
 #define MAXGATESPERLAYER INTEGERSIZE
 
 typedef struct {
-    gate_t seq[MAXLAYERINSEQUENCE][MAXGATESPERLAYER];
+    gate_t **seq;
     num_t num_layer;
     num_t used_layer;
-    num_t gates_per_layer[MAXLAYERINSEQUENCE];
+    num_t *gates_per_layer;
 } sequence_t;
 
 void print_dash(int k);
