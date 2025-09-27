@@ -100,15 +100,28 @@ void print_sequence(sequence_t *seq) {
     }
 }
 
-void x(gate_t *g, qubit_t target) {
-    g->Gate = X;
-    g->Target = target;
-    g->NumControls = 0;
+
+void y(gate_t *g, qubit_t target) {
+	g->Gate = Y;
+	g->Target = target;
+	g->NumControls = 0;
+}
+void cy(gate_t *g, qubit_t target, qubit_t control) {
+	g->Gate = Y;
+	g->Target = target;
+	g->NumControls = 1;
+	g->Control[0] = control;
 }
 void z(gate_t *g, qubit_t target) {
 	g->Gate = Z;
 	g->Target = target;
 	g->NumControls = 0;
+}
+void cz(gate_t *g, qubit_t target, qubit_t control) {
+	g->Gate = Z;
+	g->Target = target;
+	g->NumControls = 1;
+	g->Control[0] = control;
 }
 void h(gate_t *g, qubit_t target) {
     g->Gate = H;
@@ -116,18 +129,23 @@ void h(gate_t *g, qubit_t target) {
     g->NumControls = 0;
     g->GateValue = 0;
 }
-void cp(gate_t *g, qubit_t target, qubit_t control, double value) {
-    g->Gate = P;
-    g->GateValue = value;
-    g->Target = target;
-    g->NumControls = 1;
-    g->Control[0] = control;
-}
 void p(gate_t *g, qubit_t target, double value) {
     g->Gate = P;
     g->GateValue = value;
     g->Target = target;
     g->NumControls = 0;
+}
+void cp(gate_t *g, qubit_t target, qubit_t control, double value) {
+	g->Gate = P;
+	g->GateValue = value;
+	g->Target = target;
+	g->NumControls = 1;
+	g->Control[0] = control;
+}
+void x(gate_t *g, qubit_t target) {
+	g->Gate = X;
+	g->Target = target;
+	g->NumControls = 0;
 }
 void cx(gate_t *g, qubit_t target, qubit_t control) {
     g->Gate = X;

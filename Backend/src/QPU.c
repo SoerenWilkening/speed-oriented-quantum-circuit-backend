@@ -104,11 +104,14 @@ void print_circuit(circuit_t *circ) {
 							case X:
 								printf("X");
 								break;
-							case H:
-								printf("H");
+							case Y:
+								printf("Y");
 								break;
 							case Z:
 								printf("Z");
+								break;
+							case H:
+								printf("H");
 								break;
 							case M:
 								printf("M");
@@ -160,14 +163,14 @@ void IncreaseQubitRegister(circuit_t *circ, gate_t *g) {
 
 }
 
-int index_smallest_value(int *arr, int length, int *val){
+int index_smallest_value(int *arr, int length, int *val) {
 	int index = 0;
 	int value = INT16_MAX;
 	for (int i = 0; i < length; ++i) {
-		if (arr[i] == -1){
+		if (arr[i] == -1) {
 			return i;
 		}
-		if(value > arr[i]){
+		if (value > arr[i]) {
 			value = arr[i];
 			index = i;
 		}
@@ -175,8 +178,10 @@ int index_smallest_value(int *arr, int length, int *val){
 	*val = value;
 	return index;
 }
+
 //X, R, H, Rx, Ry, Rz, P, Z
-int gates_are_swappable(gate_t *g1, gate_t *g2){
+int gates_are_swappable(gate_t *g1, gate_t *g2) {
+	if (g1->NumControls > 0 && g2->NumControls > 0 && g1->Target != g2->Target) return true;
 	switch (g1->Gate) {
 		case P:
 			if (g2->Gate == P) return true;
@@ -184,11 +189,12 @@ int gates_are_swappable(gate_t *g1, gate_t *g2){
 			if (g2->Gate == X && g1->Target != g2->Target) return true; // does only apply, when targets dont overlap
 			break;
 		case X:
-			if (g2->Gate == X && g1->Target == g2->Target) return true; // does not apply, when target and control overlap
-			if (g2->Gate == P && g1->NumControls > 0 && g1->Target != g2->Target) return true; // does only apply, when targets dont overlap
+			if (g2->Gate == X && g1->Target == g2->Target)
+				return true; // does not apply, when target and control overlap
 			break;
 		case H:
-			if (g2->Gate == H && g1->Target == g2->Target) return true; // does not apply, when target and control overlap
+			if (g2->Gate == H && g1->Target == g2->Target)
+				return true; // does not apply, when target and control overlap
 			break;
 		case Z:
 			if (g2->Gate == P) return true;
@@ -234,8 +240,8 @@ layer_t MinimumLayer(circuit_t *circ, gate_t *g) {
 		MiniLayers[i] = (int) MinPossibleLayer;
 	}
 	for (int i = 0; i < saves - 1; ++i) {
-//		printf("(%d,", MiniLayers[i]);
-//		printf("%d) ", coor_qubit[i]);
+		printf("%d, (%d,%d|", i, MiniLayers[i], MiniLayers[i + 1]);
+		printf("%d,%d) ", coor_qubit[i], coor_qubit[i + 1]);
 		if (coor_qubit[i] == -1) {
 			// reached layer 0 => MinPossible layer is 0
 			break;
@@ -244,12 +250,12 @@ layer_t MinimumLayer(circuit_t *circ, gate_t *g) {
 		int index = circ->gate_index_layer_qubits[MiniLayers[i] - 1][coor_qubit[i]];
 		gate_t *g2 = &circ->sequence[MiniLayers[i] - 1][index];
 		int swappable = gates_are_swappable(g, g2);
-		if (swappable && (MiniLayers[i] - MiniLayers[i+1]) != 1) MinPossibleLayer = MiniLayers[i + 1];
+		printf("%d %d %d %d %d", swappable, g->Gate, g2->Gate, index, (MiniLayers[i] - MiniLayers[i + 1]));
+		if (swappable && (MiniLayers[i] - MiniLayers[i + 1]) > 1) MinPossibleLayer = MiniLayers[i + 1];
 		else break;
-//		printf("%d %d %d %d", swappable, g->Gate, g2->Gate, index);
-//		printf("\n");
+		printf("\n");
 	}
-//	printf(" -> %d\n", MinPossibleLayer);
+	printf(" -> %d\n", MinPossibleLayer);
 	return MinPossibleLayer;
 }
 
@@ -261,44 +267,37 @@ int merge_gates(circuit_t *circ, gate_t *g, layer_t MinPossibleLayer) {
 	// if index == -1: qubit not occupied -> cannot be inverse to other gates
 
 	int index = circ->gate_index_layer_qubits[MinPossibleLayer - 1][g->Target]; // index of gate
-	if (index != -1) {
-		int comp = is_inverse(g, &circ->sequence[MinPossibleLayer - 1][index]);
-		// if comp is true: remove gate
-		if (comp) {
-			circ->gate_index_layer_qubits[MinPossibleLayer - 1][g->Target] = -1; // reset target index
-			for (int k = 0; k < g->NumControls; ++k) {
-				circ->gate_index_layer_qubits[MinPossibleLayer - 1][g->Control[k]] = -1; // reset control indices
-				circ->used_layer_per_qubit[ctrl[k]]--;
-			}
+	if (index == -1) return true;
+	if (!is_inverse(g, &circ->sequence[MinPossibleLayer - 1][index])) return true;
+	// if is inverse: remove gate
 
-			circ->layer_on_qubit[g->Target][circ->used_layer_per_qubit[g->Target] - 1] = 0;
-			circ->used_layer_per_qubit[g->Target]--;
-			// swap gate to the end of layer to be reused
-			for (int k = index; k < circ->used_gates_per_layer[MinPossibleLayer - 1]; ++k) {
-				circ->sequence[MinPossibleLayer - 1][k] = circ->sequence[MinPossibleLayer - 1][k + 1];
-
-				gate_t *helper = &circ->sequence[MinPossibleLayer - 1][k];
-				// reduce the stored gate index of remaining gates
-				circ->gate_index_layer_qubits[MinPossibleLayer - 1][helper->Target]--;
-				for (int l = 0; l < helper->NumControls; ++l) {
-					circ->gate_index_layer_qubits[MinPossibleLayer - 1][helper->Control[l]]--;
-				}
-			}
-			// layer contains less gates
-			circ->used_gates_per_layer[MinPossibleLayer - 1]--;
-			circ->used--;
-
-			// remove layer, if last gate was removed
-			if (circ->used_gates_per_layer[MinPossibleLayer - 1] == 0) {
-				for (int j = MinPossibleLayer - 1; j < circ->used_layer - 1; ++j) {
-					*circ->sequence[j] = *circ->sequence[j + 1];
-				}
-				circ->used_layer--;
-			}
-			return false;
-		}
+	circ->gate_index_layer_qubits[MinPossibleLayer - 1][g->Target] = -1; // reset target index
+	for (int k = 0; k < g->NumControls; ++k) {
+		circ->gate_index_layer_qubits[MinPossibleLayer - 1][g->Control[k]] = -1; // reset control indices
+		circ->used_layer_per_qubit[ctrl[k]]--;
 	}
-	return true;
+
+	circ->layer_on_qubit[g->Target][circ->used_layer_per_qubit[g->Target] - 1] = 0;
+	circ->used_layer_per_qubit[g->Target]--;
+	// swap gate to the end of layer to be reused
+	for (int k = index; k < circ->used_gates_per_layer[MinPossibleLayer - 1]; ++k) {
+		circ->sequence[MinPossibleLayer - 1][k] = circ->sequence[MinPossibleLayer - 1][k + 1];
+
+		gate_t *helper = &circ->sequence[MinPossibleLayer - 1][k];
+		// reduce the stored gate index of remaining gates
+		circ->gate_index_layer_qubits[MinPossibleLayer - 1][helper->Target]--;
+		for (int l = 0; l < helper->NumControls; ++l) circ->gate_index_layer_qubits[MinPossibleLayer - 1][helper->Control[l]]--;
+	}
+	// layer contains less gates
+	circ->used_gates_per_layer[MinPossibleLayer - 1]--;
+	circ->used--;
+
+	// remove layer, if last gate was removed
+	if (circ->used_gates_per_layer[MinPossibleLayer - 1] == 0) {
+		for (int j = MinPossibleLayer - 1; j < circ->used_layer - 1; ++j) *circ->sequence[j] = *circ->sequence[j + 1];
+		circ->used_layer--;
+	}
+	return false;
 }
 
 void apply_layer(circuit_t *circ, gate_t *g, layer_t MinPossibleLayer) {
@@ -389,9 +388,7 @@ void increase_sequence_layers(circuit_t *circ, layer_t MinPossibleLayer) {
 
 	// increase sequence layers
 	circ->sequence = realloc(circ->sequence, new * sizeof(gate_t *));
-	for (int i = circ->allocated_layer; i < new; ++i) {
-		circ->sequence[i] = malloc(GATESPERLAYERBLOCK * sizeof(gate_t));
-	}
+	for (int i = circ->allocated_layer; i < new; ++i) circ->sequence[i] = malloc(GATESPERLAYERBLOCK * sizeof(gate_t));
 
 	circ->allocated_layer = new;
 }

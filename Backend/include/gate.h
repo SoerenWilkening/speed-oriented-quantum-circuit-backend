@@ -12,7 +12,7 @@
 #include "definition.h"
 
 typedef enum {
-    X, R, H, Rx, Ry, Rz, P, Z, M
+    X, Y, Z, R, H, Rx, Ry, Rz, P, M
 } Standardgate_t;
 
 typedef struct {
@@ -45,9 +45,14 @@ sequence_t *QFT_inverse(sequence_t *seq, int num_qubits);
 
 void p(gate_t *g, qubit_t target, double value);
 void h(gate_t *g, qubit_t target);
-void z(gate_t *g, qubit_t target);
 
 void cp(gate_t *g, qubit_t target, qubit_t control, double value);
+
+void z(gate_t *g, qubit_t target);
+void cz(gate_t *g, qubit_t target, qubit_t control);
+
+void y(gate_t *g, qubit_t target);
+void cy(gate_t *g, qubit_t target, qubit_t control);
 
 void x(gate_t *g, qubit_t target);
 void cx(gate_t *g, qubit_t target, qubit_t control);
