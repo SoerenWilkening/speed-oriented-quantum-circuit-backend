@@ -61,9 +61,10 @@ void ccx(gate_t *g, qubit_t target, qubit_t control1, qubit_t control2);
 sequence_t *cx_gate();
 sequence_t *ccx_gate();
 
-bool is_inverse(gate_t *G1, gate_t *G2);
+bool gates_are_inverse(gate_t *G1, gate_t *G2);
+bool gates_commute(gate_t *g1, gate_t *g2);
 
-qubit_t MaxQubit(gate_t *g);
-qubit_t MinQubit(gate_t *g);
+qubit_t max_qubit(gate_t *g);
+qubit_t min_qubit(gate_t *g);
 
 #endif //CQ_BACKEND_IMPROVED_GATE_H

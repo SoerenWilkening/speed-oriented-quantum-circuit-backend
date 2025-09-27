@@ -39,21 +39,10 @@ int main(int argc, char *argv[]) {
 	h(&g, 1);
 	add_gate(circ, &g);
 
-//	h(&g, 2);
-//	add_gate(circ, &g);
-
-//	cx(&g, 3, 2);
-//	add_gate(circ, &g);
-
-//	cp(&g, 0, 2, 1);
-//	add_gate(circ, &g);
 	cp(&g, 0, 2, 1);
 	add_gate(circ, &g);
 
-//	y(&g, 3);
-//	add_gate(circ, &g);
-
-	cx(&g, 3, 2);
+	cx(&g, 2, 100);
 	add_gate(circ, &g);
 
 	for (int i = 0; i < 5; ++i) {

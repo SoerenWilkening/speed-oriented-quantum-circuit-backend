@@ -21,7 +21,9 @@ add_executable(CQ_backend_improved main.c
         Assembly/src/AssemblyBasics.c
         Assembly/src/AssemblyIntegerAddition.c
         Assembly/src/AssemblyIntegerMultiplication.c
-        Assembly/src/AssemblyIntegerDivision.c)
+        Assembly/src/AssemblyIntegerDivision.c
+        Backend/src/circuit_allocations.c
+        Backend/src/ciruict_outputs.c)
 #set(INTEGERSIZE 30 CACHE STRING "Size of integer")
 #target_compile_definitions(CQ_backend_improved PRIVATE INTEGERSIZE=${INTEGERSIZE})
 #add_compile_definitions(CQ_backend_improved PRIVATE INTEGERSIZE=${INTEGERSIZE})

@@ -8,10 +8,10 @@
 #include "gate.h"
 
 // functionality to store the circuit structure ========================================================================
-#define QUBITBLOCK 100
-#define LAYERBLOCK 2000
-#define GATESPERLAYERBLOCK 50
-#define LAYERQUBITBLOCK 2000
+#define QUBIT_BLOCK 100
+#define LAYER_BLOCK 2000
+#define GATES_PER_LAYER_BLOCK 50
+#define QUBIT_INDEX_BLOCK 2000
 #define MAXQUBITS 2000
 
 #define MAXINSTRUCTIONS 7
@@ -27,13 +27,11 @@ typedef struct {
     num_t *allocated_gates_per_layer; // [layer]
 
 	int **gate_index_layer_qubits; // [layer][qubit] stores for every layer the gate index occupying the respective qubits
-	int allocated_layer_indices;
-	int *allocated_layer_qubit_indices;
 	// -1 refers to the qubit being not occupied
 
     layer_t **layer_on_qubit; // [qubits][index]
-    num_t *allocated_layer_per_qubit; // [qubit]
-    num_t *used_layer_per_qubit; // [qubits]
+    num_t *allocated_indices_per_qubit; // [qubit]
+    num_t *used_indices_per_qubit; // [qubits]
 
     num_t allocated_qubits;
     num_t used_qubits;
@@ -78,13 +76,14 @@ extern instruction_t *QPU_state;
 extern circuit_t *circuit;
 
 circuit_t *init_circuit();
-
-void print_circuit(circuit_t *circ);
+void allocate_more_qubits(circuit_t *circ, gate_t *g);
+void allocate_more_layer(circuit_t *circ, layer_t min_possible_layer);
+void allocate_more_gates_per_layer(circuit_t *circ, layer_t layer, layer_t pos);
+void allocate_more_indices_per_qubit(circuit_t *circ, int loc);
 
 void add_gate(circuit_t *circ, gate_t *g);
 
-void increase_gates_per_layer(circuit_t *circ, layer_t layer, layer_t pos);
-
-void CircuitToOPANQASM(circuit_t *circuit, char *path);
+void print_circuit(circuit_t *circ);
+void circuit_to_opanqasm(circuit_t *circ, char *path);
 
 #endif //CQ_BACKEND_IMPROVED_QPU_H

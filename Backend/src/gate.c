@@ -15,7 +15,7 @@ void print_empty(int k){
         printf(" ");
     }
 }
-qubit_t MinQubit(gate_t *g) {
+qubit_t min_qubit(gate_t *g) {
     qubit_t min = g->Target;
     for (int i = 0; i < g->NumControls; ++i) {
         if (g->Control[i] < min) {
@@ -24,7 +24,7 @@ qubit_t MinQubit(gate_t *g) {
     }
     return min;
 }
-qubit_t MaxQubit(gate_t *g) {
+qubit_t max_qubit(gate_t *g) {
     qubit_t max = g->Target;
     for (int i = 0; i < g->NumControls; ++i) {
         if (g->Control[i] > max) {
@@ -86,7 +86,7 @@ void print_sequence(sequence_t *seq) {
                             printf("M");
                             break;
                     }
-                } else if (qubit > MinQubit(g) && qubit < MaxQubit(g)) {
+                } else if (qubit > min_qubit(g) && qubit < max_qubit(g)) {
                     printf("\xE2\x94\x82");
                 }
                 else print_dash(1);
@@ -252,7 +252,8 @@ sequence_t *QFT_inverse(sequence_t *qft, int num_qubits) {
     return qft;
 }
 
-bool is_inverse(gate_t *G1, gate_t *G2) {
+bool gates_are_inverse(gate_t *G1, gate_t *G2) {
+    if (G2 == NULL) return false;
     if (G1->Target != G2->Target) return false;
     if (G1->NumControls != G2->NumControls) return false;
     if (G1->Gate != G2->Gate) return false;
@@ -261,4 +262,28 @@ bool is_inverse(gate_t *G1, gate_t *G2) {
 	for (int i = 0; i < G1->NumControls; ++i) if (G1->Control[i] != G2->Control[i]) return false;
 
     return true;
+}
+
+bool gates_commute(gate_t *g1, gate_t *g2) {
+    if (g2 == NULL) return false;
+    if (g1->NumControls > 0 && g2->NumControls > 0 && g1->Target != g2->Target) return true;
+    switch (g1->Gate) {
+        case P: if (g2->Gate == P) return true;
+            if (g2->Gate == Z) return true;
+            if (g2->Gate == X && g1->Target != g2->Target) return true; // does only apply, when targets dont overlap
+            break;
+        case X:
+            if (g2->Gate == X && g1->Target == g2->Target)
+                return true; // does not apply, when target and control overlap
+            break;
+        case H:
+            if (g2->Gate == H && g1->Target == g2->Target)
+                return true; // does not apply, when target and control overlap
+            break;
+        case Z: if (g2->Gate == P) return true;
+            if (g2->Gate == Z) return true;
+            if (g2->Gate == X && g1->Target != g2->Target) return true; // it connect to one of the controls
+            break;
+    }
+    return false;
 }
