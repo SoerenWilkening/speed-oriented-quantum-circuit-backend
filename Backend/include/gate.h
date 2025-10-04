@@ -39,6 +39,7 @@ typedef struct {
 void print_dash(int k);
 void print_empty(int k);
 void print_sequence(sequence_t *seq);
+void print_gate(gate_t *g);
 
 sequence_t *QFT(sequence_t *seq, int num_qubits);
 sequence_t *QFT_inverse(sequence_t *seq, int num_qubits);

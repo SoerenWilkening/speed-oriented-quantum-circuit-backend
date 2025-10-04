@@ -8,11 +8,11 @@
 #include "gate.h"
 
 // functionality to store the circuit structure ========================================================================
-#define QUBIT_BLOCK 256
-#define LAYER_BLOCK 512
-#define GATES_PER_LAYER_BLOCK 64
-#define QUBIT_INDEX_BLOCK 512
-#define MAXQUBITS 2048
+#define QUBIT_BLOCK 128
+#define LAYER_BLOCK 128
+#define GATES_PER_LAYER_BLOCK 32
+#define QUBIT_INDEX_BLOCK 128
+#define MAXQUBITS 2000
 
 #define MAXINSTRUCTIONS 7
 

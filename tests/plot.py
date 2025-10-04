@@ -18,7 +18,7 @@ import matplotlib
 from matplotlib.patches import Patch
 
 sns.set_theme()
-font = {'family': 'serif', 'size': 18}
+font = {'family': 'serif', 'size': 12}
 matplotlib.rc('font', **font)
 
 plt.rcParams["font.family"] = "serif"
@@ -44,7 +44,7 @@ def optimal_qft(n, cpu_frec=4e9):
 
 def optimal_mem_qft(n, cpu_frec=4e9):
     n = np.array(n)
-    res = (4 * n + 6 * (n * (n + 1) / 2 - n)) * 4
+    res = (4 * n + 6 * (n * (n + 1) / 2 - n) * 2) * 2
     return res
 
 
@@ -66,73 +66,13 @@ pytket = res[res["meth"] == "pytket"]
 quipper = res[res["meth"] == "quipper"]
 straw = res[res["meth"] == "strawberry"]
 
-fontsize = 10. / 0.8
+fontsize = 12
 every = 1
 size = 5
 width = 0.75
 linewidth = 1.5
-# , markevery=every, markersize=size, markeredgewidth=width, linewidth=linewidth
-#
-# Example plot
-fig, ax = plt.subplots()
-line2 = ax.fill_between(cq_impr["n"], 10 * optimal_qft(cq_impr["n"]), 20 * optimal_qft(cq_impr["n"]), label="realistic hardware limit", alpha=0.4, color=colors[0])
-line1, = ax.plot(cq_impr["n"], optimal_qft(cq_impr["n"]), "--", label="theoretical limit", color=colors[1])
-line3, = ax.plot(cq["n"], cq["t"], "--", label=method_name, color=colors[3], marker = markers[1], markevery=every)
-line4, = ax.plot(cq_impr["n"], cq_impr["t"], "--", label=method_name2, color=colors[5], marker = markers[0], markevery=every, markersize=size, markeredgewidth=width, linewidth=linewidth)
-line5, = ax.plot(qisk["n"], qisk["t"], "--", label="Qiskit", color=colors[1], marker = markers[2], markevery=every, markersize=size, markeredgewidth=width, linewidth=linewidth)
-line6, = ax.plot(cirq["n"], cirq["t"], "--", label="Cirq", color=colors[4], marker = markers[3], markevery=every, markersize=size, markeredgewidth=width, linewidth=linewidth)
-line7, = ax.plot(qs["n"], qs["t"], "--", label="Q#", color=colors[6], marker = markers[4], markevery=every, markersize=size, markeredgewidth=width, linewidth=linewidth)
-line8, = ax.plot(quipper["n"], quipper["t"], "--", label="Quipper", color=colors[2], marker = markers[5], markevery=every, markersize=size, markeredgewidth=width, linewidth=linewidth)
-line9, = ax.plot(amaz["n"], amaz["t"], "--", label="Amazon-Braket", color=colors[7], marker = markers[6], markevery=every, markersize=size, markeredgewidth=width, linewidth=linewidth)
-line10, = ax.plot(ket["n"], ket["t"], "--", label="Ket", color=colors[8], marker = markers[7], markevery=every, markersize=size, markeredgewidth=width, linewidth=linewidth)
-line11, = ax.plot(penny["n"], penny["t"], "--", label="Pennylane", color=colors[9], marker = markers[8], markevery=every, markersize=size, markeredgewidth=width, linewidth=linewidth)
-line15, = ax.plot(straw["n"], straw["t"], "--", label="Strawberryfields", color=colors[13], marker = markers[12], markevery=every, markersize=size, markeredgewidth=width, linewidth=linewidth)
-line12, = ax.plot(pytket["n"], pytket["t"], "--", label="PyTKet", color=colors[10], marker = markers[9], markevery=every, markersize=size, markeredgewidth=width, linewidth=linewidth)
-line13, = ax.plot(aria["n"], aria["t"], "--", label="AriaQuanta", color=colors[11], marker = markers[10], markevery=every, markersize=size, markeredgewidth=width, linewidth=linewidth)
-line14, = ax.plot(projectq["n"], projectq["t"], "--", label="ProjectQ", color=colors[12], marker = markers[11], markevery=every, markersize=size, markeredgewidth=width, linewidth=linewidth)
 
-ax.set_title("Main Plot (no legend here)")
-
-proxy_fill1 = Patch(facecolor=colors[0], alpha=0.5, label="realistic hardware limit")
-
-hand = [
-	line1,
-	proxy_fill1,
-	line3,
-	line4,
-	line5,
-	line6,
-	line7,
-	line8,
-	line9,
-	line10,
-	line11,
-	line12,
-	line13,
-	line14,
-	line15,
-]
-
-# Create a separate figure just for the legend
-fig_legend = plt.figure(figsize=(3.5,1.8))
-fig_legend.legend(
-	handles=hand,
-	labels=[line.get_label() for line in hand],
-	loc='center',
-	fontsize=fontsize * 0.8,
-	ncol=2
-)
-
-# Remove axes in legend figure
-for ax in fig_legend.axes:
-	ax.remove()
-
-fig_legend.tight_layout()
-plt.savefig("legend.pdf")
-plt.show()
-
-
-f = plt.figure(figsize=(8, 5))
+f = plt.figure(figsize=(15.11078 / 2.54, 15.11078 / 1.3 / 2.54))
 plt.plot(cq_impr["n"], optimal_qft(cq_impr["n"]), "--", label="theoretical limit", color=colors[0])
 plt.fill_between(cq_impr["n"], 10 * optimal_qft(cq_impr["n"]), 20 * optimal_qft(cq_impr["n"]), label="realistic hardware limit", alpha=0.4, color=colors[0])
 plt.plot(cq["n"], cq["t"], "--", label=method_name, color=colors[3], marker = markers[1], markevery=every, markersize=size, markeredgewidth=width, linewidth=linewidth)
@@ -156,11 +96,26 @@ plt.ylabel('Time $[s]$', fontsize = fontsize)
 plt.xlabel('Qubits', fontsize = fontsize)
 plt.xticks(fontsize = fontsize)
 plt.yticks(fontsize = fontsize)
-plt.tight_layout(pad = 0.2)
+# Place legend **outside to the right**
+# clean legend placement + smaller font
+plt.legend(
+    ncol=4,
+    loc='lower center',
+    bbox_to_anchor=(0.5, 1.001),  # just above plot, minimal space
+    fontsize=9,
+)
+# plt.legend(
+#     # loc='center left',             # anchor legend from left center
+#     # bbox_to_anchor=(1, 0.5),        # (x, y) position: 1 is just outside the axes on the right
+#     fontsize = fontsize,
+#     ncols=2
+# )
+# plt.subplots_adjust(right=0.76)
+plt.tight_layout(pad = 0.)
 plt.savefig("time_circuit_generation.pdf")
 plt.show()
 
-f = plt.figure(figsize=(8, 5))
+f = plt.figure(figsize=(15.11078 / 2.54, 15.11078 / 1.3 / 2.54))
 plt.plot(cq_impr["n"], optimal_mem_qft(cq_impr["n"]), "--", label="theoretical limit", color=colors[0])
 plt.plot(cq_impr["n"], cq_impr["m"], "--", label=method_name, color=colors[5], marker = markers[0], markevery=every, markersize=size, markeredgewidth=width, linewidth=linewidth)
 plt.plot(cq["n"], cq["m"], "--", label=method_name2, color=colors[3], marker = markers[1], markevery=every, markersize=size, markeredgewidth=width, linewidth=linewidth)
@@ -183,6 +138,13 @@ plt.xticks(fontsize = fontsize)
 plt.yticks(fontsize = fontsize)
 plt.ylabel('Memory $[$bytes$]$', fontsize=fontsize)
 plt.xlabel('Qubits', fontsize=fontsize)
-plt.tight_layout(pad = 0.2)
+plt.legend(
+    ncol=4,
+    loc='lower center',
+    bbox_to_anchor=(0.5, 1.001),  # just above plot, minimal space
+    fontsize=9,
+)
+# plt.subplots_adjust(right=0.76)
+plt.tight_layout(pad = 0.)
 plt.savefig("memory_circuit_generation.pdf")
 plt.show()

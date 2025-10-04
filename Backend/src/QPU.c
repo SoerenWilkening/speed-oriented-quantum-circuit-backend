@@ -4,28 +4,32 @@
 #include "QPU.h"
 
 
-layer_t minimum_layer(circuit_t *circ, gate_t *g, int offset) {
+layer_t smallest_layer_below_comp(circuit_t *circ, qubit_t qubit, layer_t compar){
+    // TODO: improve with binary search
+    // maybe not necessary
+    int last_index = (int) circ->used_occupation_indices_per_qubit[qubit];
+    if (last_index < 0) return 0;
+    for (int i = last_index; i > 0; ++i) {
+        if (circ->occupied_layers_of_qubit[qubit][i - 1] < compar) {
+            return circ->occupied_layers_of_qubit[qubit][i - 1];
+        }
+    }
+    return 0;
+}
+
+layer_t minimum_layer(circuit_t *circ, gate_t *g, layer_t compared_layer) {
     qubit_t *ctrl = g->Control;
     layer_t min_possible_layer = 0;
     // Determine the minimal possible layer where gate can be applied
-    min_possible_layer = 0;
     for (int j = 0; j < g->NumControls; ++j) {
         layer_t qubit = ctrl[j];
-        int last_layer = (int) circ->used_occupation_indices_per_qubit[qubit] - offset;
-        
-        if (last_layer >= 0) {
-            if (last_layer > 0 && circ->occupied_layers_of_qubit[qubit][last_layer - 1] > min_possible_layer) {
-                min_possible_layer = circ->occupied_layers_of_qubit[qubit][last_layer - 1];
-            }
-        }
+        layer_t min_layer = smallest_layer_below_comp(circ, qubit, compared_layer);
+        if (min_layer > min_possible_layer) min_possible_layer = min_layer;
     }
     layer_t qubit = g->Target;
-    int last_layer = (int) circ->used_occupation_indices_per_qubit[qubit] - offset;
-    if (last_layer >= 0) {
-        if (last_layer > 0 && circ->occupied_layers_of_qubit[qubit][last_layer - 1] > min_possible_layer) {
-            min_possible_layer = circ->occupied_layers_of_qubit[qubit][last_layer - 1];
-        }
-    }
+    layer_t min_layer = smallest_layer_below_comp(circ, qubit, compared_layer);
+    if (min_layer > min_possible_layer) min_possible_layer = min_layer;
+
     return min_possible_layer;
 }
 
@@ -97,14 +101,25 @@ void append_gate(circuit_t *circ, gate_t *g, layer_t min_possible_layer) {
 }
 
 
-gate_t *colliding_gate(circuit_t *circ, gate_t *g, layer_t min_possible_layer, int *gate_index) {
-    if (min_possible_layer == 0) return NULL;
-    *gate_index = circ->gate_index_of_layer_and_qubits[min_possible_layer - 1][g->Target]; // index of gate
+gate_t **colliding_gates(circuit_t *circ, gate_t *g, layer_t min_possible_layer, int *gate_index) {
+    gate_t **coll = malloc(3 * sizeof(gate_t *));
+    coll[0] = NULL;
+    coll[1] = NULL;
+    coll[2] = NULL;
+    // we have at most three colliding gates
+    if (min_possible_layer == 0) return coll;
+    gate_index[0] = circ->gate_index_of_layer_and_qubits[min_possible_layer - 1][g->Target]; // index of gate
+    if (gate_index[0] >= 0){
+        coll[0] = &circ->sequence[min_possible_layer - 1][gate_index[0]];
+    }
     for (int i = 0; i < g->NumControls; ++i) {
         int step = circ->gate_index_of_layer_and_qubits[min_possible_layer - 1][g->Control[i]];
-        *gate_index = (step >= 0) ? step : *gate_index;
+        if (step >= 0) {
+            coll[0] = &circ->sequence[min_possible_layer - 1][gate_index[0]];
+            gate_index[i + 1] = step;
+        }
     }
-    return &circ->sequence[min_possible_layer - 1][*gate_index];
+    return coll;
 }
 
 void add_gate(circuit_t *circ, gate_t *g) {
@@ -112,21 +127,51 @@ void add_gate(circuit_t *circ, gate_t *g) {
     // Currently: Toffoli (CCX) and every single control single qubit gate (CU) is allowed
     // Determine the minimal possible layer where gate can be applied
     allocate_more_qubits(circ, g);
-    layer_t min_possible_layer = minimum_layer(circ, g, 0);
-    allocate_more_layer(circ, min_possible_layer);
+    layer_t min_possible_layer;
     
-    // will be NULL, if min_possible_layer = 0
-    int gate_index;
-    gate_t *g2 = colliding_gate(circ, g, min_possible_layer, &gate_index);
-
-//    int commute = gates_commute(g, g2);
+    int prev = INT32_MAX;
     
-    // if inverse, gate is removed
-    if (gates_are_inverse(g, g2)) {
-        merge_gates(circ, g, min_possible_layer, gate_index);
-        return;
+    for (int i = 0; i < 2; ++i) {
+//        printf("previous = %d\n", prev);
+        min_possible_layer = minimum_layer(circ, g, prev);
+        allocate_more_layer(circ, min_possible_layer);
+//        printf("mini = %d | ", min_possible_layer);
+        
+        // will be NULL, if min_possible_layer = 0
+        int gate_index[3];
+        gate_t **coll = colliding_gates(circ, g, min_possible_layer, gate_index);
+        int delta = prev - min_possible_layer;
+        
+        int commute = 1;
+        int total_inverse = 1;
+        
+//        for (int j = 0; j < 3; ++j) {
+//            // compare with all the colliding gates
+//            gate_t *g2 = coll[j];
+//
+//            if (g2 != NULL) {
+//                print_gate(g2);
+//                commute &= gates_commute(g, g2);
+//                int inverse = gates_are_inverse(g, g2);
+//
+//                // if inverse, gate is removed
+//                if (gates_are_inverse(g, g2)) {
+//                    merge_gates(circ, g, min_possible_layer, gate_index[j]);
+//                    free(coll);
+//                    return;
+//                }
+//                total_inverse &= inverse;
+//            }
+//        }
+//        free(coll);
+//        // only previous layer and dont merge: undo swap
+//        if (delta == 1 && !total_inverse) {
+//            min_possible_layer =  prev;
+//            break;
+//        }
+        if (!commute) break;
+//        prev = min_possible_layer;
     }
-    
     append_gate(circ, g, min_possible_layer);
     apply_layer(circ, g, min_possible_layer);
 }

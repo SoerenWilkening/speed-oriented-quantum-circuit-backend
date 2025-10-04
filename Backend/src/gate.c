@@ -101,6 +101,36 @@ void print_sequence(sequence_t *seq) {
 }
 
 
+void print_gate(gate_t *g){
+    if (g == NULL) return;
+    switch (g->Gate) {
+        case X:
+            printf("X->");
+            break;
+        case Y:
+            printf("Y->");
+            break;
+        case H:
+            printf("H->");
+            break;
+        case P:
+            printf("P(%.1f)->", g->GateValue);
+            break;
+        case Z:
+            printf("Z->");
+            break;
+        case M:
+            printf("M->");
+            break;
+    }
+    printf("(%d,", g->Target);
+    for (int i = 0; i < g->NumControls; ++i) {
+        printf("%d,", g->Control[i]);
+    }
+    printf(")\n");
+}
+
+
 void y(gate_t *g, qubit_t target) {
 	g->Gate = Y;
 	g->Target = target;
@@ -145,12 +175,14 @@ void cp(gate_t *g, qubit_t target, qubit_t control, double value) {
 void x(gate_t *g, qubit_t target) {
 	g->Gate = X;
 	g->Target = target;
+    g->GateValue = 1;
 	g->NumControls = 0;
 }
 void cx(gate_t *g, qubit_t target, qubit_t control) {
     g->Gate = X;
     g->Target = target;
     g->NumControls = 1;
+    g->GateValue = 1;
     g->Control[0] = control;
 }
 void ccx(gate_t *g, qubit_t target, qubit_t control1, qubit_t control2) {
@@ -159,6 +191,7 @@ void ccx(gate_t *g, qubit_t target, qubit_t control1, qubit_t control2) {
     g->NumControls = 2;
     g->Control[0] = control1;
     g->Control[1] = control2;
+    g->GateValue = 1;
 }
 
 sequence_t *cx_gate() {
@@ -265,7 +298,7 @@ bool gates_are_inverse(gate_t *G1, gate_t *G2) {
 }
 
 bool gates_commute(gate_t *g1, gate_t *g2) {
-    if (g2 == NULL) return false;
+    if (g2 == NULL) return true;
     if (g1->NumControls > 0 && g2->NumControls > 0 && g1->Target != g2->Target) return true;
     switch (g1->Gate) {
         case P: if (g2->Gate == P) return true;
