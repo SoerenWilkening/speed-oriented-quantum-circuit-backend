@@ -4,6 +4,9 @@
 
 #include "AssemblyOperations.h"
 
+int label_counter = 0;
+label_t labels[3];
+
 instruction_t *init_instruction() {
 	instruction_t *instr = &instruction_list[instruction_counter];
 	instr->Q0 = NULL;

@@ -70,7 +70,7 @@ typedef struct instruction_t {
   struct instruction_t *next_instruction; // used for jumps
 } instruction_t;
 
-extern instruction_t instruction_list[MAXINSTRUCTIONS];
+extern instruction_t *instruction_list;
 extern int instruction_counter;
 extern instruction_t *QPU_state;
 extern circuit_t *circuit;

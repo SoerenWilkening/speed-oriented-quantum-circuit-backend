@@ -3,6 +3,7 @@
 //
 #include "QPU.h"
 
+instruction_t *instruction_list = NULL;
 instruction_t *QPU_state = NULL;
 circuit_t *circuit = NULL;
 int instruction_counter = 0;
