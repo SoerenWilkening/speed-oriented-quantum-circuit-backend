@@ -1,7 +1,4 @@
-from qutip import tensor, basis, Qobj
-import os
 from time import time
-import numpy as np
 
 # from qutip_qip.qasm import read_qasm
 # qc = read_qasm("../../circuit.qasm")
@@ -16,7 +13,7 @@ from qiskit import execute
 # Use the Aer simulator
 simulator = Aer.get_backend('aer_simulator')
 
-read = qiskit.qasm3.load("/Users/sorenwilkening/Desktop/UNI/Promotion/Projects/Quantum Programming Language/Quantum_Assembly/circuit.qasm")
+read = qiskit.qasm3.load("circuit.qasm")
 n = len(read.qubits)
 t1 = time()
 circuit = QuantumCircuit(n)
