@@ -5,13 +5,12 @@ B = ql.qint()
 c = ql.qbool()
 d = ql.qbool()
 
-print(A)
+# with c:
+# A = 3 * A
 
-with c:
-	A += 3
-C = 3 * A
-
-H = ql.qint()
+# A += 3
+# print(A[0])
+A < 3
 
 
 # print(A)

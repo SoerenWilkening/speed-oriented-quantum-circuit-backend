@@ -53,14 +53,15 @@ int merge_gates(circuit_t *circ, gate_t *g, layer_t min_possible_layer, int gate
     circ->used_occupation_indices_per_qubit[g->Target]--;
     
     // swap gate to the end of layer to be reused
-    for (int k = gate_index; k < circ->used_gates_per_layer[min_possible_layer - 1]; ++k) {
+    for (int k = gate_index; k < circ->used_gates_per_layer[min_possible_layer - 1] - 1; ++k) {
         circ->sequence[min_possible_layer - 1][k] = circ->sequence[min_possible_layer - 1][k + 1];
         
         gate_t *helper = &circ->sequence[min_possible_layer - 1][k];
         // reduce the stored gate index of remaining gates
         circ->gate_index_of_layer_and_qubits[min_possible_layer - 1][helper->Target]--;
-        for (int l = 0; l < helper->NumControls; ++l)
+        for (int l = 0; l < helper->NumControls; ++l) {
             circ->gate_index_of_layer_and_qubits[min_possible_layer - 1][helper->Control[l]]--;
+        }
     }
     // layer contains less gates
     circ->used_gates_per_layer[min_possible_layer - 1]--;
@@ -110,17 +111,21 @@ gate_t **colliding_gates(circuit_t *circ, gate_t *g, layer_t min_possible_layer,
     coll[0] = NULL;
     coll[1] = NULL;
     coll[2] = NULL;
-    // we have at most three colliding gates
     if (min_possible_layer == 0) return coll;
-    gate_index[0] = circ->gate_index_of_layer_and_qubits[min_possible_layer - 1][g->Target]; // index of gate
-    if (gate_index[0] >= 0){
+    gate_index[0] = circ->gate_index_of_layer_and_qubits[min_possible_layer - 1][g->Target];
+//    printf("indices %d ", gate_index[0]);
+    if (gate_index[0] >= 0) {
         coll[0] = &circ->sequence[min_possible_layer - 1][gate_index[0]];
+        return coll;
     }
+    // we have at most three colliding gates
     for (int i = 0; i < g->NumControls; ++i) {
         int step = circ->gate_index_of_layer_and_qubits[min_possible_layer - 1][g->Control[i]];
+//        printf("%d ", step);
         if (step >= 0) {
-            coll[0] = &circ->sequence[min_possible_layer - 1][gate_index[0]];
-            gate_index[i + 1] = step;
+            coll[0] = &circ->sequence[min_possible_layer - 1][step];
+            gate_index[0] = step;
+            return coll;
         }
     }
     return coll;
@@ -135,45 +140,46 @@ void add_gate(circuit_t *circ, gate_t *g) {
     
     int prev = INT32_MAX;
     
-    for (int i = 0; i < 2; ++i) {
-//        printf("previous = %d\n", prev);
+    for (int i = 0; i < 1; ++i) {
         min_possible_layer = minimum_layer(circ, g, prev);
+//        printf("min_layer = %d\n", min_possible_layer);
         allocate_more_layer(circ, min_possible_layer);
-//        printf("mini = %d | ", min_possible_layer);
         
         // will be NULL, if min_possible_layer = 0
         int gate_index[3];
         gate_t **coll = colliding_gates(circ, g, min_possible_layer, gate_index);
+//        printf("\n");
         int delta = prev - min_possible_layer;
         
-        int commute = 1;
+//        int commute = 1;
         int total_inverse = 1;
         
-//        for (int j = 0; j < 3; ++j) {
-//            // compare with all the colliding gates
-//            gate_t *g2 = coll[j];
-//
-//            if (g2 != NULL) {
-//                print_gate(g2);
+        for (int j = 0; j < 1; ++j) {
+            // compare with all the colliding gates
+            gate_t *g2 = coll[j];
+
+            if (g2 != NULL) {
 //                commute &= gates_commute(g, g2);
-//                int inverse = gates_are_inverse(g, g2);
-//
-//                // if inverse, gate is removed
-//                if (gates_are_inverse(g, g2)) {
-//                    merge_gates(circ, g, min_possible_layer, gate_index[j]);
-//                    free(coll);
-//                    return;
-//                }
-//                total_inverse &= inverse;
-//            }
-//        }
-//        free(coll);
-//        // only previous layer and dont merge: undo swap
+                int inverse = gates_are_inverse(g, g2);
+//                printf("%d\n", inverse);
+//                fflush(stdout);
+
+                // if inverse, gate is removed
+                if (gates_are_inverse(g, g2)) {
+                    merge_gates(circ, g, min_possible_layer, gate_index[j]);
+                    free(coll);
+                    return;
+                }
+                total_inverse &= inverse;
+            }
+        }
+        free(coll);
+        // only previous layer and dont merge: undo swap
 //        if (delta == 1 && !total_inverse) {
 //            min_possible_layer =  prev;
 //            break;
 //        }
-        if (!commute) break;
+//        if (!commute) break;
 //        prev = min_possible_layer;
     }
     append_gate(circ, g, min_possible_layer);

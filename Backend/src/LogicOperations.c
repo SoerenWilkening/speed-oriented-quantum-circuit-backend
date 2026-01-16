@@ -44,28 +44,36 @@ sequence_t *not_seq() {
 	return NULL;
 }
 sequence_t *q_not_seq() {
-	int number = QPU_state->Q0->MSB + 1;
+//	int number = QPU_state->Q0->MSB + 1;
 
 	sequence_t *seq = malloc(sizeof(sequence_t));
-
-	seq->gates_per_layer[0] = INTEGERSIZE - number + 1;
+    
+    seq->gates_per_layer = calloc(1, sizeof(num_t));
+    seq->seq = calloc(1, sizeof(gate_t *));
+    seq->seq[0] = calloc(1, sizeof(gate_t));
+    
+	seq->gates_per_layer[0] = 1;
 	seq->used_layer = 1;
 	seq->num_layer = 1;
 	int counter = 0;
-	for (int i = number - 1; i < INTEGERSIZE; ++i) {
+	for (int i = INTEGERSIZE - 1; i < INTEGERSIZE; ++i) {
 		x(&seq->seq[0][counter++], i);
 	}
 	return seq;
 }
 sequence_t *cq_not_seq() {
-	int number = QPU_state->Q0->MSB + 1;
+//	int number = QPU_state->Q0->MSB + 1;
 
 	sequence_t *seq = malloc(sizeof(sequence_t));
+    
+    seq->gates_per_layer = calloc(1, sizeof(num_t));
+    seq->seq = calloc(1, sizeof(gate_t *));
+    seq->seq[0] = calloc(1, sizeof(gate_t));
 
-	for (int i = 0; i < INTEGERSIZE; ++i) seq->gates_per_layer[i] = 0;
+	for (int i = 0; i < 1; ++i) seq->gates_per_layer[i] = 0;
 	seq->used_layer = 0;
-	seq->num_layer = INTEGERSIZE;
-	for (int i = number - 1; i < INTEGERSIZE; ++i) {
+	seq->num_layer = 1;
+	for (int i = INTEGERSIZE - 1; i < INTEGERSIZE; ++i) {
 		cx(&seq->seq[seq->used_layer][seq->gates_per_layer[seq->used_layer]++], i, 2 * INTEGERSIZE - 1);
 		seq->used_layer++;
 	}

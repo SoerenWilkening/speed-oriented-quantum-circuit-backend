@@ -1,3 +1,5 @@
+import sys
+
 import numpy as np
 # cimport numpy as np
 
@@ -28,8 +30,13 @@ for i in range(NUMANCILLY):
 	ancilla[i] = i
 
 
-def array() -> list[qint | qbool]:
-	return
+def array(dim: int | tuple[int, int] | list[int], dtype = qint) -> list[qint | qbool]:
+	if type(dim) == list:
+		return [dtype(j) for j in dim]
+	if type(dim) == tuple:
+		return [[dtype() for j in range(dim[1])] for i in range(dim[0])]
+
+	return [dtype() for j in range(dim)]
 
 
 cdef class circuit:
@@ -57,23 +64,28 @@ cdef class qint(circuit):
 	cdef int value
 	cdef object qubits
 
-	def __init__(self, value = 0, bits = INTEGERSIZE, classical = False):
+	def __init__(self, value = 0, bits = INTEGERSIZE, classical = False, create_new = True, bit_list = None):
 		global _controlled, _control_bool, _int_counter, _smallest_allocated_qubit, ancilla
 		global _num_qubits
 		super().__init__()
-		_int_counter += 1
-		self.counter = _int_counter
-		self.bits : int = bits
-		self.value: int | bool = value
 
-		_num_qubits += bits
+		if (create_new):
+			_int_counter += 1
+			self.counter = _int_counter
+			self.bits : int = bits
+			self.value: int | bool = value
 
-		self.qubits = np.ndarray(INTEGERSIZE, dtype = np.uint32)
-		for i in range(bits):
-			self.qubits[INTEGERSIZE - bits + i] = _smallest_allocated_qubit + i
+			_num_qubits += bits
 
-		_smallest_allocated_qubit += bits
-		ancilla += bits
+			self.qubits = np.ndarray(INTEGERSIZE, dtype = np.uint32)
+			for i in range(bits):
+				self.qubits[INTEGERSIZE - bits + i] = _smallest_allocated_qubit + i
+
+			_smallest_allocated_qubit += bits
+			ancilla += bits
+		else:
+			self.bits = bits
+			self.qubits = bit_list
 
 	def print_circuit(self):
 		print_circuit(_circuit)
@@ -102,7 +114,7 @@ cdef class qint(circuit):
 		_control_bool = None
 		return False  # do not suppress exceptions
 
-	cdef addition_inplace(self, other: qint | int):
+	cdef addition_inplace(self, other: qint | int, invert: int  = False):
 		global _controlled, _control_bool, qubit_array
 		cdef sequence_t *seq
 		cdef unsigned int[:] arr
@@ -124,7 +136,7 @@ cdef class qint(circuit):
 				seq = CQ_add()
 
 			arr = qubit_array
-			run_instruction(seq, &arr[0], False, _circuit)
+			run_instruction(seq, &arr[0], invert, _circuit)
 
 			return self
 		if type(other) != qint:
@@ -145,7 +157,7 @@ cdef class qint(circuit):
 			seq = QQ_add()
 
 		arr = qubit_array
-		run_instruction(seq, &arr[0], False, _circuit)
+		run_instruction(seq, &arr[0], invert, _circuit)
 		return self
 
 	def __add__(self, other: qint | int):
@@ -163,6 +175,16 @@ cdef class qint(circuit):
 	def __iadd__(self, other: qint | int):
 		# in place addition
 		return self.addition_inplace(other)
+
+	def __sub__(self, other: qint | int):
+		# in place addition
+		a = qint(value = self.value, bits = self.bits)
+		a -= other
+		return a
+
+	def __isub__(self, other: qint | int):
+		# in place addition
+		return self.addition_inplace(other, invert = True)
 
 
 	cdef multiplication_inplace(self, other: qint | int, ret: qint):
@@ -281,13 +303,64 @@ cdef class qint(circuit):
 		return a
 
 	def __invert__(self):
-		a = qbool()
-		print("not")
+		global _controlled, _control_bool, qubit_array
+		cdef sequence_t *seq
+		cdef unsigned int[:] arr
+
+		if _controlled:
+			qubit_array[INTEGERSIZE: 2 * INTEGERSIZE] = (<qbool> _control_bool).qubits
+			qubit_array[: INTEGERSIZE] = self.qubits
+			seq = cq_not_seq()
+		else:
+			qubit_array[: INTEGERSIZE] = self.qubits
+			seq = q_not_seq()
+
+		arr = qubit_array
+		run_instruction(seq, &arr[0], False, _circuit)
+
+		free(seq)
+
 		# TODO: include quantum functionality
+		return self
+
+	def __getitem__(self, item):
+		bit_list = np.zeros(INTEGERSIZE)
+		bit_list[-1] = self.qubits[item]
+		a = qbool(create_new = False, bit_list = bit_list)
 		return a
+
+	def __gt__(self, other):
+		a = self[0]
+		self.addition_inplace(other, True)
+		c = qbool()
+		c = ~c
+
+		with a:
+			c = ~c
+
+		self.addition_inplace(other, False)
+		return c
+
+	def __ge__(self, other):
+		return self > other - 1
+
+	def __lt__(self, other):
+		a = self[0]
+		self.addition_inplace(other, True)
+		c = qbool()
+
+		with a:
+			c = ~c
+
+		self.addition_inplace(other, False)
+		return c
+
+	def __le__(self, other):
+		return self < other + 1
+
 
 
 cdef class qbool(qint):
 
-	def __init__(self, value: bool = False, classical: bool = False):
-		super().__init__(value, bits = 1, classical = classical)
+	def __init__(self, value: bool = False, classical: bool = False, create_new = True, bit_list = None):
+		super().__init__(value, bits = 1, classical = classical, create_new = create_new, bit_list=bit_list)

@@ -90,9 +90,9 @@ sequence_t *CQ_mul() {
 			double value = 0;
 			for (int bit_int2 = 0; bit_int2 < INTEGERSIZE; ++bit_int2) {
 				value += bin[bit_int2] * 2 * M_PI / (pow(2, i + 1)) * pow(2, INTEGERSIZE - bit_int2 - 1);
-				printf("%d %f ", bit_int2, 2 * M_PI / (pow(2, i + 1)) * pow(2, INTEGERSIZE - bit_int2 - 1));
+//				printf("%d %f ", bit_int2, 2 * M_PI / (pow(2, i + 1)) * pow(2, INTEGERSIZE - bit_int2 - 1));
 			}
-			printf("\n");
+//			printf("\n");
 			gate_t *g = &mul->seq[layer][mul->gates_per_layer[layer]++];
 			cp(g, target, control, value);
 			layer++;

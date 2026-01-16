@@ -29,6 +29,9 @@ cdef extern from "LogicOperations.h":
 	sequence_t *qq_and_seq();
 	sequence_t *cqq_and_seq();
 
+	sequence_t *q_not_seq();
+	sequence_t *cq_not_seq();
+
 
 cdef extern from "QPU.h":
 	ctypedef struct circuit_t:
