@@ -1,13 +1,25 @@
-from quantum_language import qint, qbool
+import quantum_language as ql
 
-A = qint(classical = False)
-B = qint(classical = False)
-c = qbool(classical = False)
+A = ql.qint()
+B = ql.qint()
+c = ql.qbool()
+d = ql.qbool()
 
-
+print(A)
 
 with c:
-	A += B
+	A += 3
+C = 3 * A
+
+H = ql.qint()
+
+
+# print(A)
+
+# with c:
+# 	C = 5 + B
+# 	B += 3
+# 	A += B + C
 # 	with d:
 # 		3 + B
 # with ~c:

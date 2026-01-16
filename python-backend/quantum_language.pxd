@@ -23,6 +23,13 @@ cdef extern from "Integer.h":
 	sequence_t *cQQ_add();
 
 
+cdef extern from "LogicOperations.h":
+	sequence_t *q_and_seq();
+	sequence_t *cq_and_seq();
+	sequence_t *qq_and_seq();
+	sequence_t *cqq_and_seq();
+
+
 cdef extern from "QPU.h":
 	ctypedef struct circuit_t:
 		pass
@@ -30,12 +37,17 @@ cdef extern from "QPU.h":
 	ctypedef struct quantum_int_t:
 		pass
 
+	ctypedef struct instruction_t:
+		int *R0
+
+	instruction_t *QPU_state
+
 	circuit_t *init_circuit();
 	void print_circuit(circuit_t *circ);
 	void free_circuit(circuit_t *circ);
 
 cdef extern from "execution.h":
 	void qubit_mapping(unsigned int qubit_arrray[], circuit_t *circ);
-	void run_instruction(sequence_t *res, const unsigned int qubit_array[], bool invert, circuit_t *circ);
+	void run_instruction(sequence_t *res, const unsigned int qubit_array[], int invert, circuit_t *circ);
 
 

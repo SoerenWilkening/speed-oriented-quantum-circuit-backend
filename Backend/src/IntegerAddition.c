@@ -44,7 +44,10 @@ sequence_t *CQ_add() {
 	// allocate exact number of layer and enough gates per layer
 	add->used_layer = 0;
 	add->num_layer = 4 * INTEGERSIZE - 1;
-	memset(add->gates_per_layer, 0, add->num_layer * sizeof(num_t));
+    add->gates_per_layer = calloc(add->num_layer, sizeof(num_t));
+    memset(add->gates_per_layer, 0, add->num_layer * sizeof(num_t));
+    add->seq = calloc(add->num_layer, sizeof(gate_t *));
+    for (int i = 0; i < add->num_layer; ++i) add->seq[i] = calloc(2 * INTEGERSIZE, sizeof(gate_t));
 	QFT(add, INTEGERSIZE);
 
 	for (int i = 0; i < INTEGERSIZE; ++i) {
@@ -131,7 +134,12 @@ sequence_t *cCQ_add() {
 	// allocate exact number of layer and enough gates per layer
 	add->used_layer = 0;
 	add->num_layer = 4 * INTEGERSIZE - 1;
-	memset(add->gates_per_layer, 0, add->num_layer * sizeof(num_t));
+    add->gates_per_layer = calloc(add->num_layer, sizeof(num_t));
+    memset(add->gates_per_layer, 0, add->num_layer * sizeof(num_t));
+    add->seq = calloc(add->num_layer, sizeof(gate_t *));
+    for (int i = 0; i < add->num_layer; ++i) {
+        add->seq[i] = calloc(2 * INTEGERSIZE, sizeof(gate_t));
+    }
 	QFT(add, INTEGERSIZE);
 
 	for (int i = 0; i < INTEGERSIZE; ++i) {

@@ -104,16 +104,20 @@ sequence_t *qq_and_seq() {
 	// pure quantum
 	sequence_t *seq = malloc(sizeof(sequence_t));
 
-	int number = QPU_state->Q0->MSB + 1;
+//	int number = QPU_state->Q0->MSB + 1;
 //	printf("%d\n", number);
 
 	seq->used_layer = 1;
 	seq->num_layer = 1;
-	seq->gates_per_layer[0] = INTEGERSIZE - number + 1;
+    seq->gates_per_layer = calloc(1, sizeof(num_t));
+    seq->seq = calloc(1, sizeof(gate_t *));
+    seq->seq[0] = calloc(1, sizeof(gate_t));
+    
+	seq->gates_per_layer[0] = 1;
 	int counter = 0;
-	for (int i = number - 1; i < INTEGERSIZE; ++i) {
-		ccx(&seq->seq[0][counter++], i, INTEGERSIZE + i, 2 * INTEGERSIZE + i);
-	}
+//	for (int i = number - 1; i < INTEGERSIZE; ++i) {
+    ccx(&seq->seq[0][counter++], INTEGERSIZE - 1, 2 * INTEGERSIZE - 1, 3 * INTEGERSIZE - 1);
+//	}
 
 	return seq;
 }

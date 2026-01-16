@@ -1,8 +1,10 @@
 import numpy as np
 # cimport numpy as np
 
-INTEGERSIZE = 64
+INTEGERSIZE = 8
 NUMANCILLY = 2 * INTEGERSIZE
+
+QPU_state[0].R0 = <int *> malloc(sizeof(int))
 
 QUANTUM = 0
 CLASSICAL = 1
@@ -14,16 +16,21 @@ cdef int _num_qubits = 0
 cdef bool _controlled = False
 cdef object _control_bool = None
 cdef int _int_counter = 0
+cdef object list_of_constrols = []
 
 cdef unsigned int _smallest_allocated_qubit = 0
 
-
 # cdef unsigned int * qubit_array = <unsigned int *> malloc(6 * INTEGERSIZE)
 
-qubit_array = np.ndarray(6 * INTEGERSIZE, dtype = np.uint32)
+qubit_array = np.ndarray(4 * INTEGERSIZE + NUMANCILLY, dtype = np.uint32)
 ancilla = np.ndarray(NUMANCILLY, dtype = np.uint32)
 for i in range(NUMANCILLY):
 	ancilla[i] = i
+
+
+def array() -> list[qint | qbool]:
+	return
+
 
 cdef class circuit:
 	def __init__(self):
@@ -48,10 +55,9 @@ cdef class qint(circuit):
 	cdef int counter
 	cdef int bits
 	cdef int value
-	cdef int _type
 	cdef object qubits
 
-	def __init__(self, value = 0, bits = 64, classical = True):
+	def __init__(self, value = 0, bits = INTEGERSIZE, classical = False):
 		global _controlled, _control_bool, _int_counter, _smallest_allocated_qubit, ancilla
 		global _num_qubits
 		super().__init__()
@@ -59,7 +65,6 @@ cdef class qint(circuit):
 		self.counter = _int_counter
 		self.bits : int = bits
 		self.value: int | bool = value
-		self._type: bool = classical
 
 		_num_qubits += bits
 
@@ -74,10 +79,7 @@ cdef class qint(circuit):
 		print_circuit(_circuit)
 
 	def __str__(self):
-		print(INTEGERSIZE)
-		print(self.qubits)
-		# print_circuit(_circuit)
-		return f"int {self.counter} -> {self.bits} bits"
+		return f"{self.qubits}"
 
 	# Context manager protocol
 	def __enter__(self):
@@ -86,6 +88,7 @@ cdef class qint(circuit):
 			_control_bool = self
 		else:
 			# TODO: and operation of self and qint._control_bool
+			list_of_constrols.append(_control_bool)
 			_control_bool &= self
 			pass
 		_controlled = True
@@ -99,107 +102,158 @@ cdef class qint(circuit):
 		_control_bool = None
 		return False  # do not suppress exceptions
 
-	cdef addition_quantum(self, other: qint | int):
+	cdef addition_inplace(self, other: qint | int):
 		global _controlled, _control_bool, qubit_array
 		cdef sequence_t *seq
 		cdef unsigned int[:] arr
 
+		start = 0
+
 		qubit_array[:INTEGERSIZE] = self.qubits
-		# memcpy(qubit_array, <const void *>self.qubits, INTEGERSIZE * sizeof(int))
+		start += INTEGERSIZE
 
 		if type(other) == int:
-			# add classical value to structure
-			if self._type == CLASSICAL:
-				# value is classical at the moment
-				# a = qint(self.value + other, self.bits)
-				print(f"{self.value} + {other}")
-				self.value += other
-				return self
+			# value is a quantum integer
+			QPU_state[0].R0[0] = other
+			if _controlled:
+				qubit_array[start: start + INTEGERSIZE] = (<qbool> _control_bool).qubits
+				qubit_array[start + INTEGERSIZE: start + INTEGERSIZE + NUMANCILLY] = ancilla
+				seq = cCQ_add()
 			else:
+				qubit_array[start: start + NUMANCILLY] = ancilla
+				seq = CQ_add()
+
+			arr = qubit_array
+			run_instruction(seq, &arr[0], False, _circuit)
+
+			return self
+		if type(other) != qint:
+			raise ValueError()
+
+
+		# other type is qint as well
+		qubit_array[start: start + INTEGERSIZE] = (<qint> other).qubits
+		start += INTEGERSIZE
+
+
+		if _controlled:
+			qubit_array[2 * INTEGERSIZE: 3 * INTEGERSIZE] = (<qbool> _control_bool).qubits
+			qubit_array[3 * INTEGERSIZE: 3 * INTEGERSIZE + NUMANCILLY] = ancilla
+			seq = cQQ_add()
+		else:
+			qubit_array[2 * INTEGERSIZE: 2 * INTEGERSIZE + NUMANCILLY] = ancilla
+			seq = QQ_add()
+
+		arr = qubit_array
+		run_instruction(seq, &arr[0], False, _circuit)
+		return self
+
+	def __add__(self, other: qint | int):
+		# out of place addition
+		a = qint(value = self.value, bits = self.bits)
+		a += other
+		return a
+
+	def __radd__(self, other: qint | int):
+		# out of place addition
+		a = qint(value = self.value, bits = self.bits)
+		a += other
+		return a
+
+	def __iadd__(self, other: qint | int):
+		# in place addition
+		return self.addition_inplace(other)
+
+
+	cdef multiplication_inplace(self, other: qint | int, ret: qint):
+			global _controlled, _control_bool, qubit_array
+			cdef sequence_t *seq
+			cdef unsigned int[:] arr
+
+			start = 0
+
+			qubit_array[INTEGERSIZE: 2 * INTEGERSIZE] = self.qubits
+			start += INTEGERSIZE
+
+			if type(other) == int:
 				# value is a quantum integer
-				# TODO: include quantum operations
+				QPU_state[0].R0[0] = other
+				qubit_array[: INTEGERSIZE] = (<qint> ret).qubits
 				if _controlled:
-					print("cqadd")
-				else:
-					print("qadd")
-				return self
-
-		if type(other) == qint:
-			qubit_array[INTEGERSIZE: 2 * INTEGERSIZE] = (<qint> other).qubits
-
-		if type(other) == qint and (<qint> other)._type == CLASSICAL:
-			# add qint to structure that is classical
-			if self._type == CLASSICAL:
-				# value is classical at the moment
-				# a = qint(self.value + other.value, self.bits)
-				print(f"{self.value} + {other.value}")
-				self.value += other.value
-				return self
-			else:
-				# value is a quantum integer
-				# TODO: include quantum operations
-				if _controlled:
-					print("cqadd")
-				else:
-					print("qadd")
-				return self
-
-		if type(other) == qint and (<qint> other)._type == QUANTUM:
-			# add qint to structure that is quantum
-			if self._type == CLASSICAL:
-				# value is a quantum integer
-				# TODO: include quantum operations
-				if _controlled:
-					print("cqadd")
-				else:
-					print("qadd")
-				return other
-			if self._type == QUANTUM:
-				# value is a quantum integer
-				# TODO: include quantum operations
-
-				qubit_array[2 * INTEGERSIZE: 3 * INTEGERSIZE] = (<qint> other).qubits
-
-				if _controlled:
-					print("cqqadd")
-					qubit_array[3 * INTEGERSIZE: 4 * INTEGERSIZE] = (<qbool> _control_bool).qubits
-					qubit_array[4 * INTEGERSIZE: 4 * INTEGERSIZE + NUMANCILLY] = ancilla
-					seq = cQQ_add()
-				else:
-					print("qqadd")
+					qubit_array[2 * INTEGERSIZE: 3 * INTEGERSIZE] = (<qbool> _control_bool).qubits
 					qubit_array[3 * INTEGERSIZE: 3 * INTEGERSIZE + NUMANCILLY] = ancilla
-					seq = QQ_add()
+					seq = cCQ_mul()
+				else:
+					qubit_array[2 * INTEGERSIZE: 2 * INTEGERSIZE + NUMANCILLY] = ancilla
+					seq = CQ_mul()
 
 				arr = qubit_array
 				run_instruction(seq, &arr[0], False, _circuit)
-				return self
 
-	def __add__(self, other):
-		# out of place addition
-		a = qint(value = self.value, bits = self.bits, classical = self._type)
-		a += other
+				return ret
+
+			if type(other) != qint:
+				raise ValueError()
+
+			qubit_array[start + INTEGERSIZE: start + 2 * INTEGERSIZE] = (<qint> other).qubits
+			start += INTEGERSIZE
+
+			# value is a quantum integer
+
+			if _controlled:
+				qubit_array[2 * INTEGERSIZE: 3 * INTEGERSIZE] = (<qbool> _control_bool).qubits
+				qubit_array[3 * INTEGERSIZE: 3 * INTEGERSIZE + NUMANCILLY] = ancilla
+				seq = cQQ_add()
+			else:
+				qubit_array[2 * INTEGERSIZE: 2 * INTEGERSIZE + NUMANCILLY] = ancilla
+				seq = QQ_add()
+
+			arr = qubit_array
+			run_instruction(seq, &arr[0], False, _circuit)
+			return self
+
+	def __mul__(self, other):
+		a = qint(bits = self.bits)
+		self.multiplication_inplace(other, a)
 		return a
 
-	def __radd__(self, other):
-		# out of place addition
-		a = qint(value = self.value, bits = self.bits, classical = self._type)
-		a += other
+	def __rmul__(self, other):
+		a = qint(bits = self.bits)
+		self.multiplication_inplace(other, a)
 		return a
 
-	def __iadd__(self, other):
-		# in place addition
-		return self.addition_quantum(other)
+	cdef and_functionality(self, other, ret):
+		cdef sequence_t *seq;
+		cdef unsigned int[:] arr
+
+		if type(other) == int:
+			pass
+
+		if type(other) == qbool:
+			qubit_array[: INTEGERSIZE] = (<qbool> ret).qubits
+			qubit_array[INTEGERSIZE: 2 * INTEGERSIZE] = self.qubits
+			qubit_array[2 * INTEGERSIZE: 3 * INTEGERSIZE] = (<qbool> other).qubits
+
+			seq = qq_and_seq()
+
+			arr = qubit_array
+			run_instruction(seq, &arr[0], False, _circuit)
+
+			free(seq)
+
+	def measure(self):
+		return self.value
 
 	def __and__(self, other):
-		a = qbool()
+		a = qint(self.bits)
 		print("and")
 		# TODO: include quantum functionality
 		return a
 
 	def __iand__(self, other):
-		a = qbool()
-		print("and")
-		# TODO: include quantum functionality
+		a = qint(self.bits)
+		print("iand")
+		self.and_functionality(other, a)
 		return a
 
 	def __or__(self, other):
@@ -235,5 +289,5 @@ cdef class qint(circuit):
 
 cdef class qbool(qint):
 
-	def __init__(self, value: bool = False, classical: bool = True):
+	def __init__(self, value: bool = False, classical: bool = False):
 		super().__init__(value, bits = 1, classical = classical)

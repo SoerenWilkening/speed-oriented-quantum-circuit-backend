@@ -4,7 +4,7 @@
 #include "QPU.h"
 
 instruction_t instruction_list[MAXINSTRUCTIONS];
-instruction_t *QPU_state = NULL;
+instruction_t *QPU_state = &instruction_list[0];
 circuit_t *circuit = NULL;
 int instruction_counter = 0;
 

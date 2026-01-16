@@ -18,8 +18,8 @@ sequence_t *cq_not_seq();
 
 sequence_t *and_seq();
 sequence_t *q_and_seq();
-sequence_t *qq_and_seq();
 sequence_t *cq_and_seq();
+sequence_t *qq_and_seq();
 sequence_t *cqq_and_seq();
 
 sequence_t *branch_seq();
