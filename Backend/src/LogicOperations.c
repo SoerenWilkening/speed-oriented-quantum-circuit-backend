@@ -301,32 +301,38 @@ sequence_t *q_or_seq() {
 sequence_t *qq_or_seq() {
 	// pure quantum
 
-	int number = QPU_state->Q0->MSB + 1;
+//	int number = QPU_state->Q0->MSB + 1;
 
 	sequence_t *seq = malloc(sizeof(sequence_t));
 	seq->used_layer = 3;
 	seq->num_layer = 3;
+    seq->gates_per_layer = calloc(3, sizeof(num_t));
+    seq->seq = calloc(3, sizeof(gate_t *));
+    for (int i = 0; i < 3; ++i) {
+        seq->seq[i] = calloc(1, sizeof(gate_t));
+    }
 
 	seq->gates_per_layer[0] = 0;
 	seq->gates_per_layer[1] = 0;
 	seq->gates_per_layer[2] = 0;
 
-	for (int i = number - 1; i < INTEGERSIZE; ++i) {
+	for (int i = INTEGERSIZE - 1; i < INTEGERSIZE; ++i) {
 		gate_t *g = &seq->seq[0][seq->gates_per_layer[0]++];
 		cx(g, i, INTEGERSIZE + i);
 	}
 
-	for (int i = number - 1; i < INTEGERSIZE; ++i) {
+	for (int i = INTEGERSIZE - 1; i < INTEGERSIZE; ++i) {
 		gate_t *g = &seq->seq[1][seq->gates_per_layer[1]++];
 		cx(g, i, 2 * INTEGERSIZE + i);
 	}
-	for (int i = number - 1; i < INTEGERSIZE; ++i) {
+	for (int i = INTEGERSIZE - 1; i < INTEGERSIZE; ++i) {
 		gate_t *g = &seq->seq[2][seq->gates_per_layer[2]++];
 		ccx(g, i, INTEGERSIZE + i, 2 * INTEGERSIZE + i);
 	}
 
 	return seq;
 }
+
 sequence_t *cq_or_seq() {
 	// pure quantum
 

@@ -50,9 +50,9 @@ cdef class circuit:
 		global _num_qubits
 		_num_qubits += qubits
 
-	def __str__(self):
-		print_circuit(_circuit)
-		return ""
+	# def __str__(self):
+	# 	print_circuit(_circuit)
+	# 	return ""
 
 	def __dealloc__(self):
 		pass
@@ -63,13 +63,14 @@ cdef class qint(circuit):
 	cdef int bits
 	cdef int value
 	cdef object qubits
+	cdef bool allocated_qubits
 
 	def __init__(self, value = 0, bits = INTEGERSIZE, classical = False, create_new = True, bit_list = None):
 		global _controlled, _control_bool, _int_counter, _smallest_allocated_qubit, ancilla
 		global _num_qubits
 		super().__init__()
 
-		if (create_new):
+		if create_new:
 			_int_counter += 1
 			self.counter = _int_counter
 			self.bits : int = bits
@@ -83,12 +84,21 @@ cdef class qint(circuit):
 
 			_smallest_allocated_qubit += bits
 			ancilla += bits
+			self.allocated_qubits = True
 		else:
 			self.bits = bits
 			self.qubits = bit_list
+			self.allocated_qubits = False
 
 	def print_circuit(self):
 		print_circuit(_circuit)
+
+	def __del__(self):
+		global _controlled, _control_bool, _int_counter, _smallest_allocated_qubit, ancilla
+		global _num_qubits
+		if self.allocated_qubits:
+			_smallest_allocated_qubit -= self.bits
+			ancilla -= self.bits
 
 	def __str__(self):
 		return f"{self.qubits}"
@@ -107,11 +117,11 @@ cdef class qint(circuit):
 		return self
 
 	def __exit__(self, exc__type, exc, tb):
-		global _controlled, _control_bool
+		global _controlled, _control_bool, ancilla, _smallest_allocated_qubit
 		_controlled = False
+		_control_bool = None
 
 		# undo logical and operations
-		_control_bool = None
 		return False  # do not suppress exceptions
 
 	cdef addition_inplace(self, other: qint | int, invert: int  = False):
@@ -130,10 +140,11 @@ cdef class qint(circuit):
 			if _controlled:
 				qubit_array[start: start + INTEGERSIZE] = (<qbool> _control_bool).qubits
 				qubit_array[start + INTEGERSIZE: start + INTEGERSIZE + NUMANCILLY] = ancilla
-				seq = cCQ_add()
+				seq = cCQ_add(self.bits)
 			else:
 				qubit_array[start: start + NUMANCILLY] = ancilla
-				seq = CQ_add()
+				seq = CQ_add(self.bits)
+
 
 			arr = qubit_array
 			run_instruction(seq, &arr[0], invert, _circuit)
@@ -248,47 +259,54 @@ cdef class qint(circuit):
 		cdef sequence_t *seq;
 		cdef unsigned int[:] arr
 
-		if type(other) == int:
-			pass
+		qubit_array[: INTEGERSIZE] = (<qbool> ret).qubits
+		qubit_array[INTEGERSIZE: 2 * INTEGERSIZE] = self.qubits
+		qubit_array[2 * INTEGERSIZE: 3 * INTEGERSIZE] = (<qbool> other).qubits
 
-		if type(other) == qbool:
-			qubit_array[: INTEGERSIZE] = (<qbool> ret).qubits
-			qubit_array[INTEGERSIZE: 2 * INTEGERSIZE] = self.qubits
-			qubit_array[2 * INTEGERSIZE: 3 * INTEGERSIZE] = (<qbool> other).qubits
+		seq = qq_and_seq()
 
-			seq = qq_and_seq()
-
-			arr = qubit_array
-			run_instruction(seq, &arr[0], False, _circuit)
-
-			free(seq)
+		arr = qubit_array
+		run_instruction(seq, &arr[0], False, _circuit)
+		free(seq)
 
 	def measure(self):
 		return self.value
 
 	def __and__(self, other):
-		a = qint(self.bits)
-		print("and")
+		a = qbool()
+		# print("and")
 		# TODO: include quantum functionality
+		self.and_functionality(other, a)
 		return a
 
 	def __iand__(self, other):
-		a = qint(self.bits)
+		a = qbool()
 		print("iand")
 		self.and_functionality(other, a)
 		return a
 
 	def __or__(self, other):
+		global _smallest_allocated_qubit, ancilla
 		a = qbool()
-		print("or")
-		# TODO: include quantum functionality
+		cdef sequence_t *seq;
+		cdef unsigned int[:] arr
+
+		qubit_array[: INTEGERSIZE] = a.qubits
+		qubit_array[INTEGERSIZE: 2 * INTEGERSIZE] = self.qubits
+		qubit_array[2 * INTEGERSIZE: 3 * INTEGERSIZE] = (<qbool> other).qubits
+
+		seq = qq_or_seq()
+
+		arr = qubit_array
+		run_instruction(seq, &arr[0], False, _circuit)
+		free(seq)
+		_smallest_allocated_qubit += 1
+		ancilla += 1
 		return a
 
 	def __ior__(self, other):
-		a = qbool()
-		print("or")
-		# TODO: include quantum functionality
-		return a
+
+		return
 
 	def __xor__(self, other):
 		a = qbool()
@@ -323,14 +341,15 @@ cdef class qint(circuit):
 		# TODO: include quantum functionality
 		return self
 
-	def __getitem__(self, item):
+	def __getitem__(self, item: int):
 		bit_list = np.zeros(INTEGERSIZE)
 		bit_list[-1] = self.qubits[item]
 		a = qbool(create_new = False, bit_list = bit_list)
 		return a
 
 	def __gt__(self, other):
-		a = self[0]
+		global _smallest_allocated_qubit, ancilla
+		a = self[INTEGERSIZE - self.bits]
 		self.addition_inplace(other, True)
 		c = qbool()
 		c = ~c
@@ -345,10 +364,10 @@ cdef class qint(circuit):
 		return self > other - 1
 
 	def __lt__(self, other):
-		a = self[0]
+		global _smallest_allocated_qubit, ancilla
+		a = self[INTEGERSIZE - self.bits]
 		self.addition_inplace(other, True)
 		c = qbool()
-
 		with a:
 			c = ~c
 

@@ -17,9 +17,9 @@ cdef extern from "Integer.h":
 	sequence_t *cQQ_mul();
 
 	sequence_t *CC_add();
-	sequence_t *CQ_add();
+	sequence_t *CQ_add(int bits);
 	sequence_t *QQ_add();
-	sequence_t *cCQ_add();
+	sequence_t *cCQ_add(int bits);
 	sequence_t *cQQ_add();
 
 
@@ -31,6 +31,8 @@ cdef extern from "LogicOperations.h":
 
 	sequence_t *q_not_seq();
 	sequence_t *cq_not_seq();
+
+	sequence_t *qq_or_seq();
 
 
 cdef extern from "QPU.h":

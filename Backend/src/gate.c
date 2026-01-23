@@ -216,6 +216,8 @@ sequence_t *ccx_gate() {
 }
 
 sequence_t *QFT(sequence_t *qft, int num_qubits) {
+    int offset = INTEGERSIZE - num_qubits;
+    
     num_t sum[2 * num_qubits - 1];
     memset(sum, 0, (2 * num_qubits - 1) * sizeof(num_t));
     // determine the number of gates per layer for the qft
@@ -239,10 +241,10 @@ sequence_t *QFT(sequence_t *qft, int num_qubits) {
 
     memset(sum, 0, (2 * num_qubits - 1) * sizeof(num_t));
     for (int j = 0; j < num_qubits; ++j) {
-        h(&qft->seq[qft->used_layer + 2 * j][sum[2 * j]], j);
+        h(&qft->seq[qft->used_layer + 2 * j][sum[2 * j]], offset + j);
         sum[2 * j]++;
         for (int i = 0; i < num_qubits - 1 - j; ++i) {
-            cp(&qft->seq[qft->used_layer + 2 * j + i + 1][sum[2 * j + i + 1]], j, j + i + 1, M_PI / pow(2, i + 1));
+            cp(&qft->seq[qft->used_layer + 2 * j + i + 1][sum[2 * j + i + 1]], offset + j, offset + j + i + 1, M_PI / pow(2, i + 1));
             sum[2 * j + i + 1]++;
         }
     }
@@ -252,6 +254,8 @@ sequence_t *QFT(sequence_t *qft, int num_qubits) {
 }
 
 sequence_t *QFT_inverse(sequence_t *qft, int num_qubits) {
+    int offset = INTEGERSIZE - num_qubits;
+    
     // determine the number of gates per layer for the qft
     num_t sum[2 * num_qubits - 1];
     memset(sum, 0, (2 * num_qubits - 1) * sizeof(num_t));
@@ -275,10 +279,10 @@ sequence_t *QFT_inverse(sequence_t *qft, int num_qubits) {
     for (int j = 0; j < num_qubits; ++j) {
         for (int i = 0; i < num_qubits - 1 - j; ++i) {
             num_t layer = qft->used_layer + 2 * num_qubits - 1 - (2 * j + i + 1) - 1;
-            cp(&qft->seq[layer][qft->gates_per_layer[layer]++], j, j + i + 1, - M_PI / pow(2, i + 1));
+            cp(&qft->seq[layer][qft->gates_per_layer[layer]++], offset + j, offset + (j + i + 1), - M_PI / pow(2, i + 1));
         }
         num_t layer = qft->used_layer + 2 * num_qubits - 1 - 2 * j - 1;
-        h(&qft->seq[layer][qft->gates_per_layer[layer]++], j);
+        h(&qft->seq[layer][qft->gates_per_layer[layer]++], offset + j);
     }
     qft->used_layer += 2 * num_qubits - 1;
 

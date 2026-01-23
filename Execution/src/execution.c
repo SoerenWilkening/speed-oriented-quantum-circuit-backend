@@ -31,7 +31,7 @@ void run_instruction(sequence_t *res, const qubit_t qubit_array[], int invert, c
     if (res == NULL) return;
     int direction = (invert) ? -1 : 1;
     
-    printf("%d %d\n", direction, invert);
+//    printf("%d %d\n", direction, invert);
     
     for (int layer_index = 0; layer_index < res->used_layer; ++layer_index) {
         layer_t layer = invert * res->used_layer + direction * layer_index - invert;

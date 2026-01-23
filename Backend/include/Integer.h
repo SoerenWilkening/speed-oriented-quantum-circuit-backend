@@ -28,17 +28,17 @@ sequence_t *cCQ_mul();
 sequence_t *cQQ_mul();
 
 sequence_t *CC_add();
-sequence_t *CQ_add();
+sequence_t *CQ_add(int bits);
 sequence_t *QQ_add();
-sequence_t *cCQ_add();
+sequence_t *cCQ_add(int bits);
 sequence_t *cQQ_add();
 
 sequence_t *P_add();
 
 extern sequence_t *precompiled_QQ_add;
 extern sequence_t *precompiled_cQQ_add;
-extern sequence_t *precompiled_CQ_add;
-extern sequence_t *precompiled_cCQ_add;
+extern sequence_t *precompiled_CQ_add[64];
+extern sequence_t *precompiled_cCQ_add[64];
 
 extern sequence_t *precompiled_QQ_mul;
 extern sequence_t *precompiled_cQQ_mul;

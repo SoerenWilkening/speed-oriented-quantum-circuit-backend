@@ -16,13 +16,6 @@ sources_circuit = [
 	os.path.join("..", "Backend", "src", "IntegerComparison.c"),
 	os.path.join("..", "Backend", "src", "IntegerMultiplication.c"),
 	os.path.join("..", "Backend", "src", "LogicOperations.c"),
-	os.path.join("..", "Assembly", "src", "AssemblyBasics.c"),
-	os.path.join("..", "Assembly", "src", "AssemblyComparison.c"),
-	os.path.join("..", "Assembly", "src", "AssemblyIntegerAddition.c"),
-	os.path.join("..", "Assembly", "src", "AssemblyIntegerDivision.c"),
-	os.path.join("..", "Assembly", "src", "AssemblyIntegerMultiplication.c"),
-	os.path.join("..", "Assembly", "src", "AssemblyLogic.c"),
-	os.path.join("..", "Assembly", "src", "AssemblyReader.c"),
 	os.path.join("..", "Execution", "src", "execution.c"),
 ]
 
@@ -33,7 +26,6 @@ extensions = [
 		language = "c", extra_compile_args = compiler_args,
 		include_dirs = [
 			os.path.join("..", "Backend", "include"),
-			os.path.join("..", "Assembly", "include"),
 			os.path.join("..", "Execution", "include"),
 		]
 	)

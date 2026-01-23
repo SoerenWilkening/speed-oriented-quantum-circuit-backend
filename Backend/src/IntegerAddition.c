@@ -5,36 +5,39 @@
 
 #include "Integer.h"
 
+
 sequence_t *precompiled_QQ_add = NULL;
 sequence_t *precompiled_cQQ_add = NULL;
-sequence_t *precompiled_CQ_add = NULL;
-sequence_t *precompiled_cCQ_add = NULL;
+sequence_t *precompiled_CQ_add[64] = {NULL};
+sequence_t *precompiled_cCQ_add[64] = {NULL};
 
 sequence_t *CC_add() {
 	*(QPU_state->R0) += *(QPU_state->R1);
 	return NULL;
 }
-sequence_t *CQ_add() {
+sequence_t *CQ_add(int bits) {
+    int offset = INTEGERSIZE - bits;
+    
 	// Compute rotation angles
 	int NonZeroCount = 0;
-	int *bin = two_complement(*(QPU_state->R0), INTEGERSIZE);
+	int *bin = two_complement(*(QPU_state->R0), bits);
 
 	// Compute rotations for addition
-	double *rotations = calloc(INTEGERSIZE, sizeof(double));
-	for (int i = 0; i < INTEGERSIZE; ++i) {
-		for (int j = 0; j < INTEGERSIZE - i; ++j) {
-			rotations[j + i] += bin[INTEGERSIZE - i - 1] * 2 * M_PI / (pow(2, j + 1));
+	double *rotations = calloc(bits, sizeof(double));
+	for (int i = 0; i < bits; ++i) {
+		for (int j = 0; j < bits - i; ++j) {
+			rotations[j + i] += bin[bits - i - 1] * 2 * M_PI / (pow(2, j + 1));
 		}
 		if (rotations[i] != 0) NonZeroCount++;
 	}
 	free(bin);
-	int start_layer = INTEGERSIZE;
+	int start_layer = bits;
 
-	if (precompiled_CQ_add != NULL) {
-		sequence_t *add = precompiled_CQ_add;
+	if (precompiled_CQ_add[bits] != NULL) {
+		sequence_t *add = precompiled_CQ_add[bits];
 
-		for (int i = 0; i < INTEGERSIZE; ++i) {
-			add->seq[start_layer + i][add->gates_per_layer[start_layer + i] - 1].GateValue = rotations[INTEGERSIZE - i - 1];
+		for (int i = 0; i < bits; ++i) {
+			add->seq[start_layer + i][add->gates_per_layer[start_layer + i] - 1].GateValue = rotations[bits - i - 1];
 		}
 		free(rotations);
 		return add;
@@ -43,22 +46,22 @@ sequence_t *CQ_add() {
 	sequence_t *add = malloc(sizeof(sequence_t));
 	// allocate exact number of layer and enough gates per layer
 	add->used_layer = 0;
-	add->num_layer = 4 * INTEGERSIZE - 1;
+	add->num_layer = 4 * bits - 1;
     add->gates_per_layer = calloc(add->num_layer, sizeof(num_t));
     memset(add->gates_per_layer, 0, add->num_layer * sizeof(num_t));
     add->seq = calloc(add->num_layer, sizeof(gate_t *));
-    for (int i = 0; i < add->num_layer; ++i) add->seq[i] = calloc(2 * INTEGERSIZE, sizeof(gate_t));
-	QFT(add, INTEGERSIZE);
+    for (int i = 0; i < add->num_layer; ++i) add->seq[i] = calloc(2 * bits, sizeof(gate_t));
+	QFT(add, bits);
 
-	for (int i = 0; i < INTEGERSIZE; ++i) {
-		p(&add->seq[start_layer + i][add->gates_per_layer[start_layer + i]++], i, rotations[INTEGERSIZE - i - 1]);
+	for (int i = 0; i < bits; ++i) {
+		p(&add->seq[start_layer + i][add->gates_per_layer[start_layer + i]++], offset + i, rotations[bits - i - 1]);
 	}
 	free(rotations);
 	add->used_layer++;
 
-	QFT_inverse(add, INTEGERSIZE);
+	QFT_inverse(add, bits);
 
-	precompiled_CQ_add = add;
+	precompiled_CQ_add[bits] = add;
 	return add;
 }
 sequence_t *QQ_add() {
@@ -104,26 +107,27 @@ sequence_t *QQ_add() {
 
 	return add;
 }
-sequence_t *cCQ_add() {
+sequence_t *cCQ_add(int bits) {
+    int offset = INTEGERSIZE - bits;
 	// Compute rotation angles
 	int NonZeroCount = 0;
-	int *bin = two_complement(*(QPU_state->R0), INTEGERSIZE);
+	int *bin = two_complement(*(QPU_state->R0), bits);
 
 	// Compute rotations for addition
-	double *rotations = calloc(INTEGERSIZE, sizeof(double));
-	for (int i = 0; i < INTEGERSIZE; ++i) {
-		for (int j = 0; j < INTEGERSIZE - i; ++j) {
-			rotations[j + i] += bin[INTEGERSIZE - i - 1] * 2 * M_PI / (pow(2, j + 1));
+	double *rotations = calloc(bits, sizeof(double));
+	for (int i = 0; i < bits; ++i) {
+		for (int j = 0; j < bits - i; ++j) {
+			rotations[j + i] += bin[bits - i - 1] * 2 * M_PI / (pow(2, j + 1));
 		}
 		if (rotations[i] != 0) NonZeroCount++;
 	}
 	free(bin);
-	int start_layer = INTEGERSIZE;
+	int start_layer = bits;
 
-	if (precompiled_cCQ_add) {
-		sequence_t *add = precompiled_cCQ_add;
+	if (precompiled_cCQ_add[bits]) {
+		sequence_t *add = precompiled_cCQ_add[bits];
 
-		for (int i = 0; i < INTEGERSIZE; ++i) {
+		for (int i = 0; i < bits; ++i) {
 			add->seq[start_layer + i][add->gates_per_layer[start_layer + i] - 1].GateValue = rotations[i];
 		}
 		free(rotations);
@@ -133,24 +137,24 @@ sequence_t *cCQ_add() {
 	sequence_t *add = malloc(sizeof(sequence_t));
 	// allocate exact number of layer and enough gates per layer
 	add->used_layer = 0;
-	add->num_layer = 4 * INTEGERSIZE - 1;
+	add->num_layer = 4 * bits - 1;
     add->gates_per_layer = calloc(add->num_layer, sizeof(num_t));
     memset(add->gates_per_layer, 0, add->num_layer * sizeof(num_t));
     add->seq = calloc(add->num_layer, sizeof(gate_t *));
     for (int i = 0; i < add->num_layer; ++i) {
-        add->seq[i] = calloc(2 * INTEGERSIZE, sizeof(gate_t));
+        add->seq[i] = calloc(2 * bits, sizeof(gate_t));
     }
-	QFT(add, INTEGERSIZE);
+	QFT(add, bits);
 
-	for (int i = 0; i < INTEGERSIZE; ++i) {
-		cp(&add->seq[start_layer + i][add->gates_per_layer[start_layer + i]++], i, 2 * INTEGERSIZE - 1, rotations[INTEGERSIZE - i - 1]);
+	for (int i = 0; i < bits; ++i) {
+		cp(&add->seq[start_layer + i][add->gates_per_layer[start_layer + i]++], offset + i, 2 * INTEGERSIZE - 1, rotations[bits - i - 1]);
 	}
 	free(rotations);
 	add->used_layer++;
 
-	QFT_inverse(add, INTEGERSIZE);
+	QFT_inverse(add, bits);
 
-	precompiled_cCQ_add = add;
+	precompiled_cCQ_add[bits] = add;
 	return add;
 }
 sequence_t *cQQ_add() {

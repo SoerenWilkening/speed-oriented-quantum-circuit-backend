@@ -29,7 +29,7 @@ int main(int argc, char *argv[]) {
         QPU_state->R0 = malloc(sizeof(int));
         *QPU_state->R0 = 3;
         
-        seq = CQ_add();
+        seq = qq_or_seq();
 		
         // ._execute
 		circuit_t *circ = init_circuit();
@@ -39,8 +39,6 @@ int main(int argc, char *argv[]) {
         run_instruction(seq, qubit_array, true, circ);
 		print_circuit(circ);
         
-        run_instruction(seq, qubit_array, false, circ);
-        print_circuit(circ);
 		printf("%f\n", (double) (clock() - t1) / CLOCKS_PER_SEC);
 	}else{
 		printf("%f\n", (double) (t2 - t1) / CLOCKS_PER_SEC);
