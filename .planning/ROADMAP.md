@@ -13,7 +13,7 @@ This roadmap transforms Quantum Assembly from a mid-restructuring prototype into
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Testing Foundation** - Establish characterization tests before any refactoring
-- [ ] **Phase 2: C Layer Cleanup** - Eliminate global state and fix critical memory bugs
+- [x] **Phase 2: C Layer Cleanup** - Eliminate global state and fix critical memory bugs
 - [ ] **Phase 3: Memory Architecture** - Centralize qubit allocation and establish ownership model
 - [ ] **Phase 4: Module Separation** - Split QPU.c god object into focused modules
 - [ ] **Phase 5: Variable-Width Integers** - Enable arbitrary bit-width quantum integers
@@ -54,9 +54,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 02-01-PLAN.md - Fix sizeof() bugs and uninitialized sequence structures
-- [ ] 02-02-PLAN.md - Add NULL checks after all malloc/calloc operations
-- [ ] 02-03-PLAN.md - Eliminate global state and document memory ownership
+- [x] 02-01-PLAN.md - Fix sizeof() bugs and uninitialized sequence structures
+- [x] 02-02-PLAN.md - Add NULL checks after all malloc/calloc operations
+- [x] 02-03-PLAN.md - Eliminate global state and document memory ownership
 
 ### Phase 3: Memory Architecture
 **Goal**: Centralize qubit lifecycle management and establish clear ownership between circuit and quantum types
@@ -193,7 +193,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Testing Foundation | 3/3 | Complete | 2026-01-26 |
-| 2. C Layer Cleanup | 0/3 | Planned | - |
+| 2. C Layer Cleanup | 3/3 | Complete | 2026-01-26 |
 | 3. Memory Architecture | 0/0 | Not started | - |
 | 4. Module Separation | 0/0 | Not started | - |
 | 5. Variable-Width Integers | 0/0 | Not started | - |

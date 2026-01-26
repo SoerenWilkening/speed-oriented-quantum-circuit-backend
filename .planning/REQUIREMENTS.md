@@ -9,11 +9,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Foundation
 
-- [ ] **FOUND-01**: Functions that modify circuit state accept explicit circuit_t* context (sequence-returning functions remain stateless)
-- [ ] **FOUND-02**: Memory ownership documented at every allocation point
-- [ ] **FOUND-03**: All sizeof() usage corrected (use sizeof(type) not sizeof(pointer))
-- [ ] **FOUND-04**: All structure fields initialized before use
-- [ ] **FOUND-05**: NULL checks after all malloc/calloc operations
+- [x] **FOUND-01**: Functions that modify circuit state accept explicit circuit_t* context (sequence-returning functions remain stateless)
+- [x] **FOUND-02**: Memory ownership documented at every allocation point
+- [x] **FOUND-03**: All sizeof() usage corrected (use sizeof(type) not sizeof(pointer))
+- [x] **FOUND-04**: All structure fields initialized before use
+- [x] **FOUND-05**: NULL checks after all malloc/calloc operations
 - [ ] **FOUND-06**: Qubit allocator centralizes qubit lifecycle management
 - [ ] **FOUND-07**: qint/qbool borrow qubits from circuit with tracked ownership
 - [ ] **FOUND-08**: Ancilla qubit allocation is trackable without significant performance overhead
@@ -115,11 +115,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOUND-01 | Phase 2 | Pending |
-| FOUND-02 | Phase 2 | Pending |
-| FOUND-03 | Phase 2 | Pending |
-| FOUND-04 | Phase 2 | Pending |
-| FOUND-05 | Phase 2 | Pending |
+| FOUND-01 | Phase 2 | Complete |
+| FOUND-02 | Phase 2 | Complete |
+| FOUND-03 | Phase 2 | Complete |
+| FOUND-04 | Phase 2 | Complete |
+| FOUND-05 | Phase 2 | Complete |
 | FOUND-06 | Phase 3 | Pending |
 | FOUND-07 | Phase 3 | Pending |
 | FOUND-08 | Phase 3 | Pending |
@@ -165,4 +165,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-01-25*
-*Last updated: 2026-01-26 after Phase 1 completion*
+*Last updated: 2026-01-26 after Phase 2 completion*
