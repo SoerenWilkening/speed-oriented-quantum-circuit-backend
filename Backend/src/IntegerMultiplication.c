@@ -68,15 +68,44 @@ sequence_t *CC_mul() {
 }
 sequence_t *CQ_mul() {
     int *bin = two_complement(*(QPU_state->R0), INTEGERSIZE);
+    if (bin == NULL) {
+        return NULL;
+    }
 
     sequence_t *mul = malloc(sizeof(sequence_t));
+    if (mul == NULL) {
+        free(bin);
+        return NULL;
+    }
     mul->used_layer = 0;
     mul->num_layer = INTEGERSIZE * (2 * INTEGERSIZE + 6) - 1;
     mul->gates_per_layer = calloc(mul->num_layer, sizeof(num_t));
+    if (mul->gates_per_layer == NULL) {
+        free(bin);
+        free(mul);
+        return NULL;
+    }
     memset(mul->gates_per_layer, 0, mul->num_layer * sizeof(num_t));
     mul->seq = calloc(mul->num_layer, sizeof(gate_t *));
-    for (int i = 0; i < mul->num_layer; ++i)
+    if (mul->seq == NULL) {
+        free(mul->gates_per_layer);
+        free(bin);
+        free(mul);
+        return NULL;
+    }
+    for (int i = 0; i < mul->num_layer; ++i) {
         mul->seq[i] = calloc(2 * INTEGERSIZE, sizeof(gate_t));
+        if (mul->seq[i] == NULL) {
+            for (int j = 0; j < i; ++j) {
+                free(mul->seq[j]);
+            }
+            free(mul->seq);
+            free(mul->gates_per_layer);
+            free(bin);
+            free(mul);
+            return NULL;
+        }
+    }
 
     QFT(mul, INTEGERSIZE);
     num_t layer = 2 * INTEGERSIZE - 1;
@@ -114,14 +143,36 @@ sequence_t *QQ_mul() {
         return precompiled_QQ_mul;
 
     sequence_t *mul = malloc(sizeof(sequence_t));
+    if (mul == NULL) {
+        return NULL;
+    }
 
     mul->used_layer = 0;
     mul->num_layer = INTEGERSIZE * (2 * INTEGERSIZE + 6) - 1;
     mul->gates_per_layer = calloc(mul->num_layer, sizeof(num_t));
+    if (mul->gates_per_layer == NULL) {
+        free(mul);
+        return NULL;
+    }
     memset(mul->gates_per_layer, 0, mul->num_layer * sizeof(num_t));
     mul->seq = calloc(mul->num_layer, sizeof(gate_t *));
-    for (int i = 0; i < mul->num_layer; ++i)
+    if (mul->seq == NULL) {
+        free(mul->gates_per_layer);
+        free(mul);
+        return NULL;
+    }
+    for (int i = 0; i < mul->num_layer; ++i) {
         mul->seq[i] = calloc(2 * INTEGERSIZE, sizeof(gate_t));
+        if (mul->seq[i] == NULL) {
+            for (int j = 0; j < i; ++j) {
+                free(mul->seq[j]);
+            }
+            free(mul->seq);
+            free(mul->gates_per_layer);
+            free(mul);
+            return NULL;
+        }
+    }
 
     QFT(mul, INTEGERSIZE);
     num_t layer = INTEGERSIZE;
@@ -166,15 +217,44 @@ sequence_t *QQ_mul() {
 }
 sequence_t *cCQ_mul() {
     int *bin = two_complement(*(QPU_state->R0), INTEGERSIZE);
+    if (bin == NULL) {
+        return NULL;
+    }
 
     sequence_t *mul = malloc(sizeof(sequence_t));
+    if (mul == NULL) {
+        free(bin);
+        return NULL;
+    }
     mul->used_layer = 0;
     mul->num_layer = INTEGERSIZE * (2 * INTEGERSIZE + 6) - 1;
     mul->gates_per_layer = calloc(mul->num_layer, sizeof(num_t));
+    if (mul->gates_per_layer == NULL) {
+        free(bin);
+        free(mul);
+        return NULL;
+    }
     memset(mul->gates_per_layer, 0, mul->num_layer * sizeof(num_t));
     mul->seq = calloc(mul->num_layer, sizeof(gate_t *));
-    for (int i = 0; i < mul->num_layer; ++i)
+    if (mul->seq == NULL) {
+        free(mul->gates_per_layer);
+        free(bin);
+        free(mul);
+        return NULL;
+    }
+    for (int i = 0; i < mul->num_layer; ++i) {
         mul->seq[i] = calloc(2 * INTEGERSIZE, sizeof(gate_t));
+        if (mul->seq[i] == NULL) {
+            for (int j = 0; j < i; ++j) {
+                free(mul->seq[j]);
+            }
+            free(mul->seq);
+            free(mul->gates_per_layer);
+            free(bin);
+            free(mul);
+            return NULL;
+        }
+    }
 
     QFT(mul, INTEGERSIZE);
 
@@ -242,15 +322,37 @@ sequence_t *cQQ_mul() {
         return precompiled_cQQ_mul;
 
     sequence_t *mul = malloc(sizeof(sequence_t));
+    if (mul == NULL) {
+        return NULL;
+    }
 
     mul->used_layer = 0;
     //	mul->num_layer = 20 * INTEGERSIZE * (2 * INTEGERSIZE + 6) - 1;
     mul->num_layer = MAXLAYERINSEQUENCE;
     mul->gates_per_layer = calloc(mul->num_layer, sizeof(num_t));
+    if (mul->gates_per_layer == NULL) {
+        free(mul);
+        return NULL;
+    }
     memset(mul->gates_per_layer, 0, mul->num_layer * sizeof(num_t));
     mul->seq = calloc(mul->num_layer, sizeof(gate_t *));
-    for (int i = 0; i < mul->num_layer; ++i)
+    if (mul->seq == NULL) {
+        free(mul->gates_per_layer);
+        free(mul);
+        return NULL;
+    }
+    for (int i = 0; i < mul->num_layer; ++i) {
         mul->seq[i] = calloc(2 * INTEGERSIZE, sizeof(gate_t));
+        if (mul->seq[i] == NULL) {
+            for (int j = 0; j < i; ++j) {
+                free(mul->seq[j]);
+            }
+            free(mul->seq);
+            free(mul->gates_per_layer);
+            free(mul);
+            return NULL;
+        }
+    }
 
     QFT(mul, INTEGERSIZE);
     // start after qft

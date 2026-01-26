@@ -13,10 +13,17 @@ sequence_t *CQ_equal() {
     int ancilla = 2 * INTEGERSIZE; // reference
 
     sequence_t *seq = malloc(sizeof(sequence_t));
+    if (seq == NULL) {
+        return NULL;
+    }
 
     int factor = INTEGERSIZE;
 
     int *bin = two_complement(*(QPU_state->R0), INTEGERSIZE);
+    if (bin == NULL) {
+        free(seq);
+        return NULL;
+    }
     int Zeros = 0;
     for (int i = 0; i < INTEGERSIZE; ++i)
         Zeros += (1 - bin[i]);
@@ -25,9 +32,30 @@ sequence_t *CQ_equal() {
     int num_layers = (int)ceil(log2(Zeros + 1)) + 10;
     seq->num_layer = num_layers;
     seq->gates_per_layer = calloc(num_layers, sizeof(num_t));
+    if (seq->gates_per_layer == NULL) {
+        free(bin);
+        free(seq);
+        return NULL;
+    }
     seq->seq = calloc(num_layers, sizeof(gate_t *));
+    if (seq->seq == NULL) {
+        free(seq->gates_per_layer);
+        free(bin);
+        free(seq);
+        return NULL;
+    }
     for (int i = 0; i < num_layers; ++i) {
         seq->seq[i] = calloc(INTEGERSIZE, sizeof(gate_t));
+        if (seq->seq[i] == NULL) {
+            for (int j = 0; j < i; ++j) {
+                free(seq->seq[j]);
+            }
+            free(seq->seq);
+            free(seq->gates_per_layer);
+            free(bin);
+            free(seq);
+            return NULL;
+        }
     }
     memset(seq->gates_per_layer, 0, ceil(log2(Zeros + 1)) * sizeof(num_t));
 
@@ -109,10 +137,17 @@ sequence_t *cCQ_equal() {
     int ancilla = 3 * INTEGERSIZE; // reference
 
     sequence_t *seq = malloc(sizeof(sequence_t));
+    if (seq == NULL) {
+        return NULL;
+    }
 
     int factor = INTEGERSIZE;
 
     int *bin = two_complement(*(QPU_state->R0), INTEGERSIZE);
+    if (bin == NULL) {
+        free(seq);
+        return NULL;
+    }
     int Zeros = 0;
     for (int i = 0; i < INTEGERSIZE; ++i)
         Zeros += (1 - bin[i]);
@@ -121,9 +156,30 @@ sequence_t *cCQ_equal() {
     int num_layers = (int)ceil(log2(Zeros + 1) + 2) + 10;
     seq->num_layer = num_layers;
     seq->gates_per_layer = calloc(num_layers, sizeof(num_t));
+    if (seq->gates_per_layer == NULL) {
+        free(bin);
+        free(seq);
+        return NULL;
+    }
     seq->seq = calloc(num_layers, sizeof(gate_t *));
+    if (seq->seq == NULL) {
+        free(seq->gates_per_layer);
+        free(bin);
+        free(seq);
+        return NULL;
+    }
     for (int i = 0; i < num_layers; ++i) {
         seq->seq[i] = calloc(INTEGERSIZE, sizeof(gate_t));
+        if (seq->seq[i] == NULL) {
+            for (int j = 0; j < i; ++j) {
+                free(seq->seq[j]);
+            }
+            free(seq->seq);
+            free(seq->gates_per_layer);
+            free(bin);
+            free(seq);
+            return NULL;
+        }
     }
     memset(seq->gates_per_layer, 0, ceil(log2(Zeros + 1) + 2) * sizeof(num_t));
 
