@@ -5,6 +5,7 @@
 #include "QPU.h"
 
 circuit_t *init_circuit() {
+    // OWNERSHIP: Caller owns returned circuit_t*, must call free_circuit() when done
     circuit_t *circ = malloc(sizeof(circuit_t));
     if (circ == NULL) {
         return NULL;

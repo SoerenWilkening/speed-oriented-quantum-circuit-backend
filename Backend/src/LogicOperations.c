@@ -5,16 +5,20 @@
 #include "LogicOperations.h"
 
 sequence_t *void_seq() {
+    // OWNERSHIP: No sequence returned
     return NULL;
 }
 
 sequence_t *jmp_seq() {
+    // OWNERSHIP: No sequence returned (performs control flow only)
+    // READS: QPU_state->R0 for jump condition
     if (*QPU_state->R0 == 0)
         QPU_state = QPU_state->next_instruction;
     return NULL;
 }
 
 sequence_t *branch_seq() {
+    // OWNERSHIP: Caller owns returned sequence_t*, must free gates_per_layer, seq arrays, and seq
     sequence_t *seq = malloc(sizeof(sequence_t));
     if (seq == NULL) {
         return NULL;
@@ -48,6 +52,7 @@ sequence_t *branch_seq() {
     return seq;
 }
 sequence_t *ctrl_branch_seq() {
+    // OWNERSHIP: Caller owns returned sequence_t*, must free gates_per_layer, seq arrays, and seq
     sequence_t *seq = malloc(sizeof(sequence_t));
     if (seq == NULL) {
         return NULL;
@@ -83,10 +88,12 @@ sequence_t *ctrl_branch_seq() {
 }
 
 sequence_t *not_seq() {
+    // OWNERSHIP: No sequence returned (performs classical computation only)
     *(QPU_state->R0) = !(*(QPU_state->R0));
     return NULL;
 }
 sequence_t *q_not_seq() {
+    // OWNERSHIP: Caller owns returned sequence_t*, must free gates_per_layer, seq arrays, and seq
     //	int number = QPU_state->Q0->MSB + 1;
 
     sequence_t *seq = malloc(sizeof(sequence_t));

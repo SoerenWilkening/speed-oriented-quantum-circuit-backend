@@ -6,7 +6,6 @@
 
 instruction_t instruction_list[MAXINSTRUCTIONS];
 instruction_t *QPU_state = &instruction_list[0];
-circuit_t *circuit = NULL;
 int instruction_counter = 0;
 
 layer_t smallest_layer_below_comp(circuit_t *circ, qubit_t qubit, layer_t compar) {

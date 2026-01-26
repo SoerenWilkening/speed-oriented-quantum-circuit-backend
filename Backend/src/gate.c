@@ -260,6 +260,8 @@ sequence_t *ccx_gate() {
 }
 
 sequence_t *QFT(sequence_t *qft, int num_qubits) {
+    // OWNERSHIP: Modifies and returns the passed sequence_t* (does not allocate new sequence)
+    // Caller retains ownership of the sequence
     int offset = INTEGERSIZE - num_qubits;
 
     num_t sum[2 * num_qubits - 1];
@@ -323,6 +325,8 @@ sequence_t *QFT(sequence_t *qft, int num_qubits) {
 }
 
 sequence_t *QFT_inverse(sequence_t *qft, int num_qubits) {
+    // OWNERSHIP: Modifies and returns the passed sequence_t* (does not allocate new sequence)
+    // Caller retains ownership of the sequence
     int offset = INTEGERSIZE - num_qubits;
 
     // determine the number of gates per layer for the qft

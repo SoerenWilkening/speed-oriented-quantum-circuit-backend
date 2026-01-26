@@ -5,10 +5,13 @@
 #include "IntegerComparison.h"
 
 sequence_t *CC_equal() {
+    // OWNERSHIP: No sequence returned (performs classical computation only)
     *(QPU_state->R0) = *(QPU_state->R1) == *(QPU_state->R2);
     return NULL;
 }
 sequence_t *CQ_equal() {
+    // OWNERSHIP: Caller owns returned sequence_t*, must free gates_per_layer, seq arrays, and seq
+    // READS: QPU_state->R0 for classical value
     // the ancilla count starts at 2 * INTEGERSIZE
     int ancilla = 2 * INTEGERSIZE; // reference
 
@@ -133,6 +136,8 @@ sequence_t *CQ_equal() {
     return seq;
 }
 sequence_t *cCQ_equal() {
+    // OWNERSHIP: Caller owns returned sequence_t*, must free gates_per_layer, seq arrays, and seq
+    // READS: QPU_state->R0 for classical value
     // the ancilla count starts at 2 * INTEGERSIZE
     int ancilla = 3 * INTEGERSIZE; // reference
 

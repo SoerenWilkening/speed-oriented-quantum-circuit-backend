@@ -63,10 +63,13 @@ void all_rot_final_block(sequence_t *mul, num_t *layer, int rounds, num_t contro
                          double multiplyer, int inverted) {}
 
 sequence_t *CC_mul() {
+    // OWNERSHIP: No sequence returned (performs classical computation only)
     *(QPU_state->R0) = *(QPU_state->R1) * *(QPU_state->R2);
     return NULL;
 }
 sequence_t *CQ_mul() {
+    // OWNERSHIP: Caller owns returned sequence_t*, must free gates_per_layer, seq arrays, and seq
+    // READS: QPU_state->R0 for classical value
     int *bin = two_complement(*(QPU_state->R0), INTEGERSIZE);
     if (bin == NULL) {
         return NULL;
@@ -139,6 +142,8 @@ sequence_t *CQ_mul() {
     return mul;
 }
 sequence_t *QQ_mul() {
+    // OWNERSHIP: Returns cached sequence (precompiled_QQ_mul) - DO NOT FREE
+    // The precompiled sequence is reused across calls for performance
     if (precompiled_QQ_mul != NULL)
         return precompiled_QQ_mul;
 
@@ -216,6 +221,8 @@ sequence_t *QQ_mul() {
     return mul;
 }
 sequence_t *cCQ_mul() {
+    // OWNERSHIP: Caller owns returned sequence_t*, must free gates_per_layer, seq arrays, and seq
+    // READS: QPU_state->R0 for classical value
     int *bin = two_complement(*(QPU_state->R0), INTEGERSIZE);
     if (bin == NULL) {
         return NULL;
@@ -317,6 +324,8 @@ sequence_t *cCQ_mul() {
     return mul;
 }
 sequence_t *cQQ_mul() {
+    // OWNERSHIP: Returns cached sequence (precompiled_cQQ_mul) - DO NOT FREE
+    // The precompiled sequence is reused across calls for performance
 
     if (precompiled_cQQ_mul != NULL)
         return precompiled_cQQ_mul;

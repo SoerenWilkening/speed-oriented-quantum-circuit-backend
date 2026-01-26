@@ -10,10 +10,14 @@ sequence_t *precompiled_CQ_add[64] = {NULL};
 sequence_t *precompiled_cCQ_add[64] = {NULL};
 
 sequence_t *CC_add() {
+    // OWNERSHIP: No sequence returned (performs classical computation only)
     *(QPU_state->R0) += *(QPU_state->R1);
     return NULL;
 }
 sequence_t *CQ_add(int bits) {
+    // OWNERSHIP: Returns cached sequence (precompiled_CQ_add[bits]) - DO NOT FREE
+    // READS: QPU_state->R0 for classical value
+    // The precompiled sequence is reused across calls for performance
     int offset = INTEGERSIZE - bits;
 
     // Compute rotation angles
@@ -100,6 +104,8 @@ sequence_t *CQ_add(int bits) {
     return add;
 }
 sequence_t *QQ_add() {
+    // OWNERSHIP: Returns cached sequence (precompiled_QQ_add) - DO NOT FREE
+    // The precompiled sequence is reused across calls for performance
     //    printf("check\n");
     //    fflush(stdout);
     if (precompiled_QQ_add != NULL)
@@ -165,6 +171,9 @@ sequence_t *QQ_add() {
     return add;
 }
 sequence_t *cCQ_add(int bits) {
+    // OWNERSHIP: Returns cached sequence (precompiled_cCQ_add[bits]) - DO NOT FREE
+    // READS: QPU_state->R0 for classical value
+    // The precompiled sequence is reused across calls for performance
     int offset = INTEGERSIZE - bits;
     // Compute rotation angles
     int NonZeroCount = 0;
@@ -250,6 +259,8 @@ sequence_t *cCQ_add(int bits) {
     return add;
 }
 sequence_t *cQQ_add() {
+    // OWNERSHIP: Returns cached sequence (precompiled_cQQ_add) - DO NOT FREE
+    // The precompiled sequence is reused across calls for performance
     if (precompiled_cQQ_add != NULL)
         return precompiled_cQQ_add;
 
@@ -342,6 +353,8 @@ sequence_t *cQQ_add() {
 }
 
 sequence_t *P_add() {
+    // OWNERSHIP: Caller owns returned sequence_t*, must free gates_per_layer, seq arrays, and seq
+    // READS: QPU_state->R0 for phase value
     sequence_t *seq = malloc(sizeof(sequence_t));
     if (seq == NULL) {
         return NULL;
@@ -356,6 +369,8 @@ sequence_t *P_add() {
     return seq;
 }
 sequence_t *cP_add() {
+    // OWNERSHIP: Caller owns returned sequence_t*, must free gates_per_layer, seq arrays, and seq
+    // READS: QPU_state->R0 for phase value
     sequence_t *seq = malloc(sizeof(sequence_t));
     if (seq == NULL) {
         return NULL;
