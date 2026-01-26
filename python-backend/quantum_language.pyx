@@ -896,6 +896,60 @@ cdef class qint(circuit):
 		# self >= other is equivalent to NOT (self < other)
 		return ~(self < other)
 
+	def __floordiv__(self, divisor):
+		"""Floor division: self // divisor
+
+		Implements via repeated subtraction (restoring division algorithm)
+		per arXiv:1809.09732 approach at Python level.
+
+		Args:
+			divisor: int or qint divisor
+
+		Returns:
+			qint quotient
+
+		Raises:
+			ZeroDivisionError: If divisor is zero (classical only)
+			TypeError: If divisor is not int or qint
+		"""
+		# Classical divisor case
+		if type(divisor) == int:
+			if divisor == 0:
+				raise ZeroDivisionError("Division by zero")
+			if divisor < 0:
+				raise NotImplementedError("Negative divisor not yet supported")
+
+			# Allocate quotient and remainder
+			quotient = qint(0, width=self.bits)
+			remainder = qint(0, width=self.bits)
+
+			# Copy self to remainder via XOR (remainder starts at 0)
+			remainder ^= self
+
+			# Special case: power of 2 division (just right shift)
+			# For Phase 7, use general algorithm - optimization later
+
+			# Restoring division: try subtracting divisor * 2^bit for each bit position
+			for bit_pos in range(self.bits - 1, -1, -1):
+				# Try subtracting divisor << bit_pos
+				trial_value = divisor << bit_pos
+
+				# Check if remainder >= trial_value
+				can_subtract = remainder >= trial_value
+
+				# Conditional subtraction and quotient bit set
+				with can_subtract:
+					remainder -= trial_value
+					quotient |= (1 << bit_pos)
+
+			return quotient
+
+		elif type(divisor) == qint:
+			# Quantum divisor - delegate to quantum division method
+			return self._floordiv_quantum(divisor)
+		else:
+			raise TypeError("Divisor must be int or qint")
+
 
 
 cdef class qbool(qint):
