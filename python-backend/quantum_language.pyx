@@ -235,15 +235,14 @@ cdef class qint(circuit):
 
 		if type(other) == int:
 			# value is a classical integer
-			QPU_state[0].R0[0] = other
 			if _controlled:
 				# Control qubit from qbool (last element)
 				qubit_array[start: start + 1] = (<qbool> _control_bool).qubits[63:64]
 				qubit_array[start + 1: start + 1 + NUMANCILLY] = ancilla
-				seq = cCQ_add(self.bits)
+				seq = cCQ_add(self.bits, other)
 			else:
 				qubit_array[start: start + NUMANCILLY] = ancilla
-				seq = CQ_add(self.bits)
+				seq = CQ_add(self.bits, other)
 
 
 			arr = qubit_array
@@ -341,15 +340,14 @@ cdef class qint(circuit):
 
 			if type(other) == int:
 				# value is a classical integer
-				QPU_state[0].R0[0] = other
 				if _controlled:
 					# Control qubit from qbool (last element)
 					qubit_array[start: start + 1] = (<qbool> _control_bool).qubits[63:64]
 					qubit_array[start + 1: start + 1 + NUMANCILLY] = ancilla
-					seq = cCQ_mul()
+					seq = cCQ_mul(other)
 				else:
 					qubit_array[start: start + NUMANCILLY] = ancilla
-					seq = CQ_mul()
+					seq = CQ_mul(other)
 
 				arr = qubit_array
 				run_instruction(seq, &arr[0], False, _circuit)
