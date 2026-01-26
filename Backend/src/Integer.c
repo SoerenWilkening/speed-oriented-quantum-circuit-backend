@@ -5,84 +5,58 @@
 #include "qubit_allocator.h"
 #include <stdint.h>
 
-quantum_int_t *QBOOL(circuit_t *circ) {
+quantum_int_t *QINT(circuit_t *circ, int width) {
     // OWNERSHIP: Caller owns returned quantum_int_t*, must call free_element() when done
     // Qubits are borrowed from circuit's allocator
     if (circ == NULL || circ->allocator == NULL) {
         return NULL;
     }
+
+    // Validate width: must be 1-64 bits
+    if (width < 1 || width > 64) {
+        return NULL;
+    }
+
     quantum_int_t *integer = malloc(sizeof(quantum_int_t));
     if (integer == NULL) {
         return NULL;
     }
 
-    // Allocate 1 qubit through circuit's allocator (is_ancilla=true for QBOOL)
-    qubit_t start = allocator_alloc(circ->allocator, 1, true);
+    // Allocate 'width' qubits through circuit's allocator (is_ancilla=true)
+    qubit_t start = allocator_alloc(circ->allocator, width, true);
     if (start == (qubit_t)-1) {
         free(integer);
         return NULL; // Allocation failed (hit limit)
     }
 
-    integer->MSB = INTEGERSIZE - 1;
-    integer->q_address[INTEGERSIZE - 1] = start;
+    // Store width explicitly in struct
+    integer->width = (unsigned char)width;
 
-#ifdef DEBUG_OWNERSHIP
-    // Track ownership for debugging
-    static int qbool_counter = 0;
-    char tag[32];
-    snprintf(tag, sizeof(tag), "qbool_%d", ++qbool_counter);
-    allocator_set_owner(circ->allocator, start, tag);
-#endif
-
-    // Keep backward compat tracking (remove in later phase)
-    // IMPORTANT: Match existing pattern - increment both by 1 for QBOOL
-    circ->ancilla += 1;
-    circ->used_qubit_indices += 1;
-
-    return integer;
-}
-
-quantum_int_t *QINT(circuit_t *circ) {
-    // OWNERSHIP: Caller owns returned quantum_int_t*, must call free_element() when done
-    // Qubits are borrowed from circuit's allocator
-    if (circ == NULL || circ->allocator == NULL) {
-        return NULL;
-    }
-    quantum_int_t *integer = malloc(sizeof(quantum_int_t));
-    if (integer == NULL) {
-        return NULL;
-    }
-
-    // Allocate INTEGERSIZE qubits through circuit's allocator (is_ancilla=true for QINT ancillas)
-    qubit_t start = allocator_alloc(circ->allocator, INTEGERSIZE, true);
-    if (start == (qubit_t)-1) {
-        free(integer);
-        return NULL; // Allocation failed (hit limit)
-    }
-
-    integer->MSB = 0;
-    for (int i = 0; i < INTEGERSIZE; ++i) {
-        integer->q_address[i] = start + i;
+    // Right-align in q_address array: indices [64-width] through [63]
+    integer->MSB = 64 - width; // Points to first used element
+    for (int i = 0; i < width; ++i) {
+        integer->q_address[64 - width + i] = start + i;
     }
 
 #ifdef DEBUG_OWNERSHIP
     static int qint_counter = 0;
     char tag[32];
-    snprintf(tag, sizeof(tag), "qint_%d", ++qint_counter);
-    for (int i = 0; i < INTEGERSIZE; ++i) {
+    snprintf(tag, sizeof(tag), "qint_%d_w%d", ++qint_counter, width);
+    for (int i = 0; i < width; ++i) {
         allocator_set_owner(circ->allocator, start + i, tag);
     }
 #endif
 
     // Keep backward compat tracking (remove in later phase)
-    // IMPORTANT: Match existing pattern - ancilla += INTEGERSIZE, used_qubit_indices increments per
-    // loop
-    circ->ancilla += INTEGERSIZE;
-    // Note: existing code does used_qubit_indices++ inside the loop (INTEGERSIZE times)
-    // We replicate that effect here:
-    circ->used_qubit_indices += INTEGERSIZE;
+    circ->ancilla += width;
+    circ->used_qubit_indices += width;
 
     return integer;
+}
+
+quantum_int_t *QBOOL(circuit_t *circ) {
+    // QBOOL is simply a 1-bit quantum integer
+    return QINT(circ, 1);
 }
 
 quantum_int_t *INT(int64_t intg) {
@@ -136,9 +110,10 @@ void free_element(circuit_t *circ, quantum_int_t *el1) {
         return;
     }
 
-    // Determine width based on MSB (QBOOL has MSB=INTEGERSIZE-1, QINT has MSB=0)
-    int width = (el1->MSB == INTEGERSIZE - 1) ? 1 : INTEGERSIZE;
-    qubit_t start = el1->q_address[el1->MSB];
+    // Read width from struct (stored explicitly since Phase 5)
+    int width = el1->width;
+    // Calculate start from the first used element in right-aligned array
+    qubit_t start = el1->q_address[64 - width];
 
     // Return qubits to allocator
     if (circ->allocator != NULL) {
@@ -149,7 +124,7 @@ void free_element(circuit_t *circ, quantum_int_t *el1) {
     // IMPORTANT: The EXISTING code decrements both by 1 regardless of width!
     // This appears to be a bug in the original code, but we maintain it for now
     // to avoid behavioral changes during this migration.
-    // TODO(Phase 3): Fix this when removing backward compat tracking
+    // TODO(Phase 5 follow-up): Fix this when removing backward compat tracking
     circ->ancilla--;
     circ->used_qubit_indices--;
 
