@@ -940,7 +940,7 @@ cdef class qint(circuit):
 				# Conditional subtraction and quotient bit set
 				with can_subtract:
 					remainder -= trial_value
-					quotient |= (1 << bit_pos)
+					quotient += (1 << bit_pos)
 
 			return quotient
 
@@ -1112,7 +1112,7 @@ cdef class qint(circuit):
 				# Conditional subtraction and quotient bit set
 				with can_subtract:
 					remainder -= trial_value
-					quotient |= (1 << bit_pos)
+					quotient += (1 << bit_pos)
 
 			return (quotient, remainder)
 
