@@ -6,6 +6,7 @@
 #define CQ_BACKEND_IMPROVED_QPU_H
 
 #include "gate.h"
+#include "qubit_allocator.h"
 
 // functionality to store the circuit structure
 // ========================================================================
@@ -40,6 +41,8 @@ typedef struct {
     size_t used;
     decompose_toffoli_t toff_decomp;
 
+    qubit_allocator_t *allocator; // Centralized qubit allocation
+    // TODO(Phase 3): Remove qubit_indices/ancilla after migration
     qubit_t qubit_indices[MAXQUBITS]; // allow at most MAXQUBITS qubits
     qubit_t used_qubit_indices;
     qubit_t *ancilla;

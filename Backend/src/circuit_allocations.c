@@ -5,7 +5,8 @@
 #include "QPU.h"
 
 circuit_t *init_circuit() {
-    // OWNERSHIP: Caller owns returned circuit_t*, must call free_circuit() when done
+    // OWNERSHIP: Caller owns returned circuit_t*, must call free_circuit() when done.
+    // Circuit owns its allocator.
     circuit_t *circ = malloc(sizeof(circuit_t));
     if (circ == NULL) {
         return NULL;
@@ -14,16 +15,25 @@ circuit_t *init_circuit() {
     circ->used_layer = 0;
     circ->toff_decomp = DONTDECOMPOSETOFFOLI;
 
+    // Create allocator for qubit management
+    circ->allocator = allocator_create(QUBIT_BLOCK);
+    if (circ->allocator == NULL) {
+        free(circ);
+        return NULL;
+    }
+
     // allocate sequence structures
     circ->allocated_layer = LAYER_BLOCK;
     circ->used_gates_per_layer = calloc(LAYER_BLOCK, sizeof(num_t));
     if (circ->used_gates_per_layer == NULL) {
+        allocator_destroy(circ->allocator);
         free(circ);
         return NULL;
     }
     circ->allocated_gates_per_layer = malloc(LAYER_BLOCK * sizeof(num_t));
     if (circ->allocated_gates_per_layer == NULL) {
         free(circ->used_gates_per_layer);
+        allocator_destroy(circ->allocator);
         free(circ);
         return NULL;
     }
@@ -34,6 +44,7 @@ circuit_t *init_circuit() {
     if (circ->sequence == NULL) {
         free(circ->allocated_gates_per_layer);
         free(circ->used_gates_per_layer);
+        allocator_destroy(circ->allocator);
         free(circ);
         return NULL;
     }
@@ -46,6 +57,7 @@ circuit_t *init_circuit() {
             free(circ->sequence);
             free(circ->allocated_gates_per_layer);
             free(circ->used_gates_per_layer);
+            allocator_destroy(circ->allocator);
             free(circ);
             return NULL;
         }
@@ -59,6 +71,7 @@ circuit_t *init_circuit() {
         free(circ->sequence);
         free(circ->allocated_gates_per_layer);
         free(circ->used_gates_per_layer);
+        allocator_destroy(circ->allocator);
         free(circ);
         return NULL;
     }
@@ -75,6 +88,7 @@ circuit_t *init_circuit() {
             free(circ->sequence);
             free(circ->allocated_gates_per_layer);
             free(circ->used_gates_per_layer);
+            allocator_destroy(circ->allocator);
             free(circ);
             return NULL;
         }
@@ -94,6 +108,7 @@ circuit_t *init_circuit() {
         free(circ->sequence);
         free(circ->allocated_gates_per_layer);
         free(circ->used_gates_per_layer);
+        allocator_destroy(circ->allocator);
         free(circ);
         return NULL;
     }
@@ -110,6 +125,7 @@ circuit_t *init_circuit() {
         free(circ->sequence);
         free(circ->allocated_gates_per_layer);
         free(circ->used_gates_per_layer);
+        allocator_destroy(circ->allocator);
         free(circ);
         return NULL;
     }
@@ -128,6 +144,7 @@ circuit_t *init_circuit() {
         free(circ->sequence);
         free(circ->allocated_gates_per_layer);
         free(circ->used_gates_per_layer);
+        allocator_destroy(circ->allocator);
         free(circ);
         return NULL;
     }
@@ -150,6 +167,7 @@ circuit_t *init_circuit() {
             free(circ->sequence);
             free(circ->allocated_gates_per_layer);
             free(circ->used_gates_per_layer);
+            allocator_destroy(circ->allocator);
             free(circ);
             return NULL;
         }
@@ -171,6 +189,11 @@ circuit_t *init_circuit() {
 }
 
 void free_circuit(circuit_t *circ) {
+    // Destroy allocator first
+    if (circ->allocator != NULL) {
+        allocator_destroy(circ->allocator);
+    }
+
     for (int i = 0; i < circ->allocated_layer; ++i) {
         free(circ->sequence[i]);
         free(circ->gate_index_of_layer_and_qubits[i]);
