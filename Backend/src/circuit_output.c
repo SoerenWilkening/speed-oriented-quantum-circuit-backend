@@ -1,8 +1,11 @@
 //
-// Created by Sören Wilkening on 27.09.25.
+// circuit_output.c - Circuit visualization and export implementation
+// Dependencies: circuit_output.h, QPU.h (for circuit_t definition), gate.h
 //
 
+#include "circuit_output.h"
 #include "QPU.h"
+#include "gate.h"
 
 // Printing functionality
 
