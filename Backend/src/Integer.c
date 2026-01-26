@@ -60,30 +60,44 @@ quantum_int_t *QBOOL(circuit_t *circ) {
 }
 
 quantum_int_t *INT(int64_t intg) {
+    // Classical integer (no qubits allocated)
+    (void)intg; // Unused for now (classical value handling TBD)
     quantum_int_t *integer = malloc(sizeof(quantum_int_t));
     if (integer == NULL) {
         return NULL;
     }
-    //    integer->c_address = malloc(sizeof(int64_t));
-    //    *integer->c_address = intg;
+    integer->width = 64; // Classical integers default to 64-bit
+    integer->MSB = 0;    // For consistency with 64-bit layout
     return integer;
 }
+
 quantum_int_t *BOOL(bool intg) {
+    // Classical boolean (no qubits allocated)
+    (void)intg; // Unused for now (classical value handling TBD)
     quantum_int_t *integer = malloc(sizeof(quantum_int_t));
     if (integer == NULL) {
         return NULL;
     }
-    //    integer->c_address = malloc(sizeof(int64_t));
-    //    *integer->c_address = intg;
+    integer->width = 1; // Classical bools are 1-bit
+    integer->MSB = 63;  // Last element in right-aligned array
     return integer;
 }
+
 quantum_int_t *bit_of_int(quantum_int_t *el1, int bit) {
+    // Create a 1-bit reference to a specific bit of an integer
+    // bit: bit index within the original integer (0 = LSB)
+    if (el1 == NULL) {
+        return NULL;
+    }
     quantum_int_t *b = malloc(sizeof(quantum_int_t));
     if (b == NULL) {
         return NULL;
     }
-    b->MSB = INTEGERSIZE - 1;
-    b->q_address[INTEGERSIZE - 1] = el1->q_address[bit];
+    b->width = 1;
+    b->MSB = 63; // Last element in right-aligned array (for 1-bit)
+    // Access the bit from the source integer's right-aligned array
+    // Source bit 0 is at index [64 - el1->width], source bit (width-1) is at [63]
+    b->q_address[63] = el1->q_address[64 - el1->width + bit];
     return b;
 }
 
