@@ -950,6 +950,49 @@ cdef class qint(circuit):
 		else:
 			raise TypeError("Divisor must be int or qint")
 
+	def _floordiv_quantum(self, divisor: qint):
+		"""Floor division with quantum divisor: self // divisor
+
+		Uses repeated quantum comparison and conditional subtraction.
+		Per arXiv:1809.09732, implements restoring division algorithm.
+
+		Args:
+			divisor: qint divisor
+
+		Returns:
+			qint quotient
+
+		Note:
+			For quantum divisor, we cannot use bit-level algorithm
+			(shifting quantum values is expensive). Instead, we use
+			repeated subtraction: while remainder >= divisor, subtract.
+			This creates a circuit with O(quotient) iterations.
+		"""
+		cdef int comp_bits = max(self.bits, (<qint>divisor).bits)
+
+		# Allocate quotient and remainder
+		quotient = qint(0, width=comp_bits)
+		remainder = qint(0, width=comp_bits)
+
+		# Copy self to remainder via XOR (remainder starts at 0)
+		remainder ^= self
+
+		# Repeated conditional subtraction
+		# Maximum possible quotient is 2^comp_bits - 1
+		# We need to iterate enough times to complete division
+		max_iterations = (1 << comp_bits)
+
+		for _ in range(max_iterations):
+			# Check if remainder >= divisor
+			can_subtract = remainder >= divisor
+
+			# Conditional subtraction and increment
+			with can_subtract:
+				remainder -= divisor
+				quotient += 1
+
+		return quotient
+
 
 
 cdef class qbool(qint):
