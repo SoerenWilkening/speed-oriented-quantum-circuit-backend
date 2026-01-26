@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 4 of 10 (Module Separation)
-Plan: 2 of 4 in current phase
+Plan: 3 of 4 in current phase
 Status: In progress
-Last activity: 2026-01-26 - Completed 04-02-PLAN.md (Extract optimizer module)
+Last activity: 2026-01-26 - Completed 04-03-PLAN.md (Create main API header)
 
-Progress: [███░░░░░░░] 36%
+Progress: [████░░░░░░] 39%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
-- Average duration: 5.5 min
-- Total execution time: 1.0 hours
+- Total plans completed: 12
+- Average duration: 5.3 min
+- Total execution time: 1.1 hours
 
 **By Phase:**
 
@@ -30,11 +30,11 @@ Progress: [███░░░░░░░] 36%
 | 01 - Testing Foundation | 3 | 18 min | 6 min |
 | 02 - C Layer Cleanup | 3 | 18 min | 6 min |
 | 03 - Memory Architecture | 3 | 22 min | 7.3 min |
-| 04 - Module Separation | 2 | 8 min | 4 min |
+| 04 - Module Separation | 3 | 12 min | 4 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-02 (2 min), 03-03 (15 min), 04-01 (3 min), 04-02 (5 min)
-- Trend: Phase 4 maintaining efficient pace, 04-02 at 5 min (module extraction with deviations)
+- Last 5 plans: 03-03 (15 min), 04-01 (3 min), 04-02 (5 min), 04-03 (4 min)
+- Trend: Phase 4 maintaining excellent pace at 4 min average (API header creation)
 
 *Updated after each plan completion*
 
@@ -78,6 +78,10 @@ Recent decisions affecting current work:
 - optimizer.c module extraction: Gate optimization logic separated from QPU.c, reducing god object from 201 to 18 lines (04-02)
 - Instruction state scope clarified: Globals kept only for sequence generation (CQ_add, CC_mul), not gate optimization (04-02)
 - circuit_t typedef uses named struct: struct circuit_s pattern for forward declaration compatibility (04-02)
+- circuit.h as main API header: Consolidates types, gates, optimizer, output, allocator into single user-facing include (04-03)
+- circuit_output.h/c module: Separated print_circuit and circuit_to_opanqasm into dedicated module (04-03)
+- QPU.h as backward compat wrapper: Now includes circuit.h, preserves instruction_t for sequence generation (04-03)
+- Fixed filename typo: ciruict_outputs.c → circuit_output.c for consistency and professionalism (04-03)
 
 ### Pending Todos
 
@@ -107,5 +111,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Completed 04-02-PLAN.md - optimizer.c module extracted, QPU.c reduced from god object, all tests pass
+Stopped at: Completed 04-03-PLAN.md - circuit.h main API header created, circuit_output module separated, filename typo fixed, all tests pass
 Resume file: None
