@@ -51,6 +51,28 @@ cdef class circuit:
 		global _num_qubits
 		_num_qubits += qubits
 
+	def visualize(self):
+		"""Print circuit visualization to stdout.
+
+		Shows horizontal layout with:
+		- Qubit indices on left (q0, q1, ...)
+		- Layer numbers on top
+		- Gate symbols (H, X, Z, P, +, @)
+		- Vertical lines connecting multi-qubit gates
+
+		Examples:
+			>>> c = circuit()
+			>>> a = qint(5, width=4)
+			>>> b = qint(3, width=4)
+			>>> _ = a + b
+			>>> c.visualize()
+			     0        5        10
+			q0   ---H--@-------P--...
+			q1   ------+--H--------...
+			...
+		"""
+		circuit_visualize(<circuit_t*>_circuit)
+
 	# def __str__(self):
 	# 	print_circuit(_circuit)
 	# 	return ""

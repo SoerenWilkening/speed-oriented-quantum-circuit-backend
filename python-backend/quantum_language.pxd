@@ -62,6 +62,9 @@ cdef extern from "QPU.h":
 	void print_circuit(circuit_t *circ);
 	void free_circuit(circuit_t *circ);
 
+cdef extern from "circuit_output.h":
+	void circuit_visualize(circuit_t *circ);
+
 cdef extern from "execution.h":
 	void qubit_mapping(unsigned int qubit_arrray[], circuit_t *circ);
 	void run_instruction(sequence_t *res, const unsigned int qubit_array[], int invert, circuit_t *circ);
