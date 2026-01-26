@@ -1,6 +1,6 @@
 //
 // circuit.h - Main public API for Quantum Assembly circuits
-// Dependencies: types.h, gate.h, optimizer.h, circuit_output.h, qubit_allocator.h
+// Dependencies: types.h, gate.h, optimizer.h, circuit_output.h, circuit_stats.h, qubit_allocator.h
 //
 // This is the primary header for users of the library.
 // Include this header to access all circuit functionality.
@@ -10,6 +10,7 @@
 //   gate.h          - Gate creation functions (x, cx, h, p, etc.)
 //   optimizer.h     - Gate placement and optimization (add_gate)
 //   circuit_output.h - Visualization and export
+//   circuit_stats.h - Circuit statistics and metrics
 //   qubit_allocator.h - Qubit lifecycle management
 //
 
@@ -90,5 +91,8 @@ void allocate_more_indices_per_qubit(circuit_t *circ, int loc);
 
 // Import output functions
 #include "circuit_output.h"
+
+// Import statistics functions
+#include "circuit_stats.h"
 
 #endif // QUANTUM_CIRCUIT_H

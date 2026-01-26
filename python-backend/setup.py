@@ -12,6 +12,7 @@ sources_circuit = [
     os.path.join("..", "Backend", "src", "qubit_allocator.c"),
     os.path.join("..", "Backend", "src", "circuit_allocations.c"),
     os.path.join("..", "Backend", "src", "circuit_output.c"),
+    os.path.join("..", "Backend", "src", "circuit_stats.c"),
     os.path.join("..", "Backend", "src", "gate.c"),
     os.path.join("..", "Backend", "src", "Integer.c"),
     os.path.join("..", "Backend", "src", "IntegerAddition.c"),
