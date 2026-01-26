@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 Phase: 5 of 10 (Variable-Width Integers) - COMPLETE
 Plan: 4 of 4 in current phase
 Status: Phase Complete
-Last activity: 2026-01-26 - Completed 05-04-PLAN.md (Variable-width tests)
+Last activity: 2026-01-26 - Completed quick task 001: CQ operations refactor
 
 Progress: [██████░░░░] 55%
 
@@ -104,6 +104,7 @@ Recent decisions affecting current work:
 - TestPhase5SuccessCriteria for explicit verification: Maps directly to ROADMAP.md success criteria (05-04)
 - Fixed CQ_add/cCQ_add offset for variable-width: Changed from INTEGERSIZE-bits to 0 (05-04)
 - Fixed QFT/QFT_inverse offset for variable-width: Same fix pattern (05-04)
+- CQ_add/cCQ_add/CQ_mul/cCQ_mul take explicit int64_t value parameter: Eliminated QPU_state->R0 global dependency (quick-001)
 
 ### Pending Todos
 
@@ -126,6 +127,12 @@ None yet.
 - IntegerComparison.c uses conservative +10 buffer for layer allocation - may need precise calculation in future (02-01)
 - Logic operations (and, or, invert) still use INTEGERSIZE layout - Python bindings adapted (05-03)
 - All 125 tests pass with variable-width arithmetic and comprehensive test coverage
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 001 | CQ operations refactored to take value parameter | 2026-01-26 | 7f3cd62 | [001-refactor-cq-operations](./quick/001-refactor-cq-operations-to-take-value-par/) |
 
 ## Session Continuity
 
