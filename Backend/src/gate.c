@@ -262,7 +262,10 @@ sequence_t *ccx_gate() {
 sequence_t *QFT(sequence_t *qft, int num_qubits) {
     // OWNERSHIP: Modifies and returns the passed sequence_t* (does not allocate new sequence)
     // Caller retains ownership of the sequence
-    int offset = INTEGERSIZE - num_qubits;
+    //
+    // Qubit layout for QFT(num_qubits):
+    // - Qubits [0, num_qubits-1]: Target operands for QFT transform
+    int offset = 0; // Variable-width support: qubits start at index 0
 
     num_t sum[2 * num_qubits - 1];
     memset(sum, 0, (2 * num_qubits - 1) * sizeof(num_t));
@@ -327,7 +330,10 @@ sequence_t *QFT(sequence_t *qft, int num_qubits) {
 sequence_t *QFT_inverse(sequence_t *qft, int num_qubits) {
     // OWNERSHIP: Modifies and returns the passed sequence_t* (does not allocate new sequence)
     // Caller retains ownership of the sequence
-    int offset = INTEGERSIZE - num_qubits;
+    //
+    // Qubit layout for QFT_inverse(num_qubits):
+    // - Qubits [0, num_qubits-1]: Target operands for inverse QFT transform
+    int offset = 0; // Variable-width support: qubits start at index 0
 
     // determine the number of gates per layer for the qft
     num_t sum[2 * num_qubits - 1];

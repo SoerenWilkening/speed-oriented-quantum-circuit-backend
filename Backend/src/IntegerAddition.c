@@ -19,11 +19,23 @@ sequence_t *CC_add() {
     *(QPU_state->R0) += *(QPU_state->R1);
     return NULL;
 }
+// Width-parameterized precompiled caches for CQ_add (index 0 unused, 1-64 valid)
+sequence_t *precompiled_CQ_add_width[65] = {NULL};
+sequence_t *precompiled_cCQ_add_width[65] = {NULL};
+
 sequence_t *CQ_add(int bits) {
-    // OWNERSHIP: Returns cached sequence (precompiled_CQ_add[bits]) - DO NOT FREE
+    // OWNERSHIP: Returns cached sequence (precompiled_CQ_add_width[bits]) - DO NOT FREE
     // READS: QPU_state->R0 for classical value
     // The precompiled sequence is reused across calls for performance
-    int offset = INTEGERSIZE - bits;
+    //
+    // Qubit layout for CQ_add(bits):
+    // - Qubits [0, bits-1]: Target operand (modified in place)
+    // Classical value comes from QPU_state->R0
+
+    // Bounds check: valid widths are 1-64
+    if (bits < 1 || bits > 64) {
+        return NULL;
+    }
 
     // Compute rotation angles
     int NonZeroCount = 0;
@@ -48,8 +60,9 @@ sequence_t *CQ_add(int bits) {
     free(bin);
     int start_layer = bits;
 
-    if (precompiled_CQ_add[bits] != NULL) {
-        sequence_t *add = precompiled_CQ_add[bits];
+    // Check cache for this width (use width-parameterized cache)
+    if (precompiled_CQ_add_width[bits] != NULL) {
+        sequence_t *add = precompiled_CQ_add_width[bits];
 
         for (int i = 0; i < bits; ++i) {
             add->seq[start_layer + i][add->gates_per_layer[start_layer + i] - 1].GateValue =
@@ -96,8 +109,9 @@ sequence_t *CQ_add(int bits) {
     }
     QFT(add, bits);
 
+    // Phase rotation gates: target qubits are at indices [0, bits-1]
     for (int i = 0; i < bits; ++i) {
-        p(&add->seq[start_layer + i][add->gates_per_layer[start_layer + i]++], offset + i,
+        p(&add->seq[start_layer + i][add->gates_per_layer[start_layer + i]++], i,
           rotations[bits - i - 1]);
     }
     free(rotations);
@@ -105,7 +119,14 @@ sequence_t *CQ_add(int bits) {
 
     QFT_inverse(add, bits);
 
-    precompiled_CQ_add[bits] = add;
+    // Cache the sequence
+    precompiled_CQ_add_width[bits] = add;
+
+    // Backward compatibility: set legacy global for INTEGERSIZE
+    if (bits == INTEGERSIZE) {
+        precompiled_CQ_add[bits] = add;
+    }
+
     return add;
 }
 sequence_t *QQ_add(int bits) {
@@ -184,10 +205,20 @@ sequence_t *QQ_add(int bits) {
     return add;
 }
 sequence_t *cCQ_add(int bits) {
-    // OWNERSHIP: Returns cached sequence (precompiled_cCQ_add[bits]) - DO NOT FREE
+    // OWNERSHIP: Returns cached sequence (precompiled_cCQ_add_width[bits]) - DO NOT FREE
     // READS: QPU_state->R0 for classical value
     // The precompiled sequence is reused across calls for performance
-    int offset = INTEGERSIZE - bits;
+    //
+    // Qubit layout for cCQ_add(bits):
+    // - Qubits [0, bits-1]: Target operand (modified in place)
+    // - Qubit [bits]: Conditional control qubit
+    // Classical value comes from QPU_state->R0
+
+    // Bounds check: valid widths are 1-64
+    if (bits < 1 || bits > 64) {
+        return NULL;
+    }
+
     // Compute rotation angles
     int NonZeroCount = 0;
     int *bin = two_complement(*(QPU_state->R0), bits);
@@ -211,8 +242,9 @@ sequence_t *cCQ_add(int bits) {
     free(bin);
     int start_layer = bits;
 
-    if (precompiled_cCQ_add[bits]) {
-        sequence_t *add = precompiled_cCQ_add[bits];
+    // Check cache for this width (use width-parameterized cache)
+    if (precompiled_cCQ_add_width[bits] != NULL) {
+        sequence_t *add = precompiled_cCQ_add_width[bits];
 
         for (int i = 0; i < bits; ++i) {
             add->seq[start_layer + i][add->gates_per_layer[start_layer + i] - 1].GateValue =
@@ -259,16 +291,24 @@ sequence_t *cCQ_add(int bits) {
     }
     QFT(add, bits);
 
+    // Controlled phase rotation gates: target at [0, bits-1], control at [bits]
     for (int i = 0; i < bits; ++i) {
-        cp(&add->seq[start_layer + i][add->gates_per_layer[start_layer + i]++], offset + i,
-           2 * INTEGERSIZE - 1, rotations[bits - i - 1]);
+        cp(&add->seq[start_layer + i][add->gates_per_layer[start_layer + i]++], i, bits,
+           rotations[bits - i - 1]);
     }
     free(rotations);
     add->used_layer++;
 
     QFT_inverse(add, bits);
 
-    precompiled_cCQ_add[bits] = add;
+    // Cache the sequence
+    precompiled_cCQ_add_width[bits] = add;
+
+    // Backward compatibility: set legacy global for INTEGERSIZE
+    if (bits == INTEGERSIZE) {
+        precompiled_cCQ_add[bits] = add;
+    }
+
     return add;
 }
 sequence_t *cQQ_add(int bits) {
