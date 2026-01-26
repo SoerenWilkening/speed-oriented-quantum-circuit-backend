@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 3 of 10 (Memory Architecture)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-01-26 - Completed 03-01-PLAN.md
+Last activity: 2026-01-26 - Completed 03-02-PLAN.md
 
-Progress: [██░░░░░░░░] 23%
+Progress: [██░░░░░░░░] 26%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
-- Average duration: 5.6 min
+- Total plans completed: 8
+- Average duration: 5.1 min
 - Total execution time: 0.7 hours
 
 **By Phase:**
@@ -29,11 +29,11 @@ Progress: [██░░░░░░░░] 23%
 |-------|-------|-------|----------|
 | 01 - Testing Foundation | 3 | 18 min | 6 min |
 | 02 - C Layer Cleanup | 3 | 18 min | 6 min |
-| 03 - Memory Architecture | 1 | 5 min | 5 min |
+| 03 - Memory Architecture | 2 | 7 min | 3.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-01 (4 min), 02-02 (9 min), 02-03 (5 min), 03-01 (5 min)
-- Trend: Phase 3 started strong (5 min), maintaining consistent ~5-6 min velocity
+- Last 5 plans: 02-02 (9 min), 02-03 (5 min), 03-01 (5 min), 03-02 (2 min)
+- Trend: Phase 3 accelerating (5 min → 2 min), excellent velocity on focused tasks
 
 *Updated after each plan completion*
 
@@ -65,6 +65,9 @@ Recent decisions affecting current work:
 - Freed stack only reuses single-qubit allocations initially: Simplified implementation, multi-qubit reuse can be added later (03-01)
 - DEBUG_OWNERSHIP conditional compilation: Zero runtime overhead in production, enables ownership tracking for debugging (03-01)
 - circuit_get_allocator() accessor for Python bindings: Follows C API pattern for opaque structs (03-01)
+- QINT/QBOOL use allocator_alloc() with is_ancilla=true flag: Enables ancilla tracking, matches semantic meaning (03-02)
+- free_element determines width from MSB: Enables correct allocator_free(start, width) for both QINT and QBOOL (03-02)
+- Backward compat tracking maintained with documented quirk: Original decrement-by-1 behavior preserved during migration (03-02)
 
 ### Pending Todos
 
@@ -86,12 +89,12 @@ None yet.
 - Existing codebase has 65+ Ruff violations (bare except, tabs vs spaces) that need cleanup (01-01)
 - Fixed critical C compilation issues in Integer.c and QPU.c (missing stdint.h) (01-02)
 - IntegerComparison.c uses conservative +10 buffer for layer allocation - may need precise calculation in future (02-01)
-- Phase 3 Plan 1 complete - allocator established, ready for Plan 2 (ownership tracking migration)
-- Allocator not yet used by QINT/QBOOL - Plan 2 will migrate to use allocator
-- qubit_indices/ancilla still in circuit_t for backward compatibility - TODO for Plan 2 removal
+- Phase 3 Plan 2 complete - QINT/QBOOL now use allocator, borrow semantics established
+- Backward compat tracking (ancilla/used_qubit_indices) still exists with documented decrement-by-1 quirk - will fix in Plan 3
+- qubit_indices/ancilla in circuit_t ready for removal once all quantum types migrate to allocator
 
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Completed 03-01-PLAN.md - Qubit allocator module created and integrated
+Stopped at: Completed 03-02-PLAN.md - QINT/QBOOL integrated with qubit allocator
 Resume file: None
