@@ -1,38 +1,12 @@
 //
-// Created by Sören Wilkening on 05.11.24.
+// gate.h - Gate creation and manipulation functions
+// Dependencies: types.h
 //
 
 #ifndef CQ_BACKEND_IMPROVED_GATE_H
 #define CQ_BACKEND_IMPROVED_GATE_H
 
-#include "definition.h"
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#define MAXLAYERINSEQUENCE 10000
-#define MAXGATESPERLAYER INTEGERSIZE
-
-typedef enum { X, Y, Z, R, H, Rx, Ry, Rz, P, M } Standardgate_t;
-
-typedef struct {
-    qubit_t Control[MAXCONTROLS];
-    qubit_t *large_control;
-    num_t NumControls;
-    Standardgate_t Gate;
-    double GateValue;
-    qubit_t Target;
-    num_t NumBasisGates;
-    // store range of multiqubit gates
-} gate_t;
-
-typedef struct {
-    gate_t **seq;
-    num_t num_layer;
-    num_t used_layer;
-    num_t *gates_per_layer;
-} sequence_t;
+#include "types.h"
 
 void print_dash(int k);
 void print_empty(int k);
