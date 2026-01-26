@@ -102,11 +102,13 @@ Plans:
   3. Arithmetic operations validate width compatibility and handle errors gracefully
   4. Mixed-width integer operations work correctly (e.g., 8-bit + 32-bit)
   5. Addition and subtraction operations work for all variable-width integers
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 05-01: TBD
-- [ ] 05-02: TBD
+- [ ] 05-01-PLAN.md - Extend quantum_int_t struct with width field and update QINT/QBOOL
+- [ ] 05-02-PLAN.md - Parameterize QQ_add and cQQ_add for variable-width arithmetic
+- [ ] 05-03-PLAN.md - Update Python qint class with width parameter and validation
+- [ ] 05-04-PLAN.md - Add comprehensive tests for variable-width integers
 
 ### Phase 6: Bit Operations
 **Goal**: Add bitwise operations for quantum integers with Python operator overloading
@@ -199,7 +201,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 2. C Layer Cleanup | 3/3 | Complete | 2026-01-26 |
 | 3. Memory Architecture | 3/3 | Complete | 2026-01-26 |
 | 4. Module Separation | 4/4 | Complete | 2026-01-26 |
-| 5. Variable-Width Integers | 0/0 | Not started | - |
+| 5. Variable-Width Integers | 0/4 | Planned | - |
 | 6. Bit Operations | 0/0 | Not started | - |
 | 7. Extended Arithmetic | 0/0 | Not started | - |
 | 8. Circuit Optimization | 0/0 | Not started | - |
