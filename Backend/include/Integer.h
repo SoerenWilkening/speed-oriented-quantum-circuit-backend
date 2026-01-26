@@ -29,15 +29,15 @@ void free_element(circuit_t *circ, quantum_int_t *el1);
 
 // implementation of Integer operations gate sequences
 sequence_t *CC_mul();
-sequence_t *CQ_mul();
+sequence_t *CQ_mul(int64_t value);
 sequence_t *QQ_mul();
-sequence_t *cCQ_mul();
+sequence_t *cCQ_mul(int64_t value);
 sequence_t *cQQ_mul();
 
 sequence_t *CC_add();
-sequence_t *CQ_add(int bits);
+sequence_t *CQ_add(int bits, int64_t value);
 sequence_t *QQ_add(int bits);
-sequence_t *cCQ_add(int bits);
+sequence_t *cCQ_add(int bits, int64_t value);
 sequence_t *cQQ_add(int bits);
 
 sequence_t *P_add();

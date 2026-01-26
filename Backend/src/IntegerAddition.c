@@ -23,14 +23,13 @@ sequence_t *CC_add() {
 sequence_t *precompiled_CQ_add_width[65] = {NULL};
 sequence_t *precompiled_cCQ_add_width[65] = {NULL};
 
-sequence_t *CQ_add(int bits) {
+sequence_t *CQ_add(int bits, int64_t value) {
     // OWNERSHIP: Returns cached sequence (precompiled_CQ_add_width[bits]) - DO NOT FREE
-    // READS: QPU_state->R0 for classical value
     // The precompiled sequence is reused across calls for performance
     //
     // Qubit layout for CQ_add(bits):
     // - Qubits [0, bits-1]: Target operand (modified in place)
-    // Classical value comes from QPU_state->R0
+    // Classical value comes from value parameter
 
     // Bounds check: valid widths are 1-64
     if (bits < 1 || bits > 64) {
@@ -39,7 +38,7 @@ sequence_t *CQ_add(int bits) {
 
     // Compute rotation angles
     int NonZeroCount = 0;
-    int *bin = two_complement(*(QPU_state->R0), bits);
+    int *bin = two_complement(value, bits);
     if (bin == NULL) {
         return NULL;
     }
@@ -204,15 +203,14 @@ sequence_t *QQ_add(int bits) {
 
     return add;
 }
-sequence_t *cCQ_add(int bits) {
+sequence_t *cCQ_add(int bits, int64_t value) {
     // OWNERSHIP: Returns cached sequence (precompiled_cCQ_add_width[bits]) - DO NOT FREE
-    // READS: QPU_state->R0 for classical value
     // The precompiled sequence is reused across calls for performance
     //
     // Qubit layout for cCQ_add(bits):
     // - Qubits [0, bits-1]: Target operand (modified in place)
     // - Qubit [bits]: Conditional control qubit
-    // Classical value comes from QPU_state->R0
+    // Classical value comes from value parameter
 
     // Bounds check: valid widths are 1-64
     if (bits < 1 || bits > 64) {
@@ -221,7 +219,7 @@ sequence_t *cCQ_add(int bits) {
 
     // Compute rotation angles
     int NonZeroCount = 0;
-    int *bin = two_complement(*(QPU_state->R0), bits);
+    int *bin = two_complement(value, bits);
     if (bin == NULL) {
         return NULL;
     }

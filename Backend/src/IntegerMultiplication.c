@@ -67,10 +67,9 @@ sequence_t *CC_mul() {
     *(QPU_state->R0) = *(QPU_state->R1) * *(QPU_state->R2);
     return NULL;
 }
-sequence_t *CQ_mul() {
+sequence_t *CQ_mul(int64_t value) {
     // OWNERSHIP: Caller owns returned sequence_t*, must free gates_per_layer, seq arrays, and seq
-    // READS: QPU_state->R0 for classical value
-    int *bin = two_complement(*(QPU_state->R0), INTEGERSIZE);
+    int *bin = two_complement(value, INTEGERSIZE);
     if (bin == NULL) {
         return NULL;
     }
@@ -220,10 +219,9 @@ sequence_t *QQ_mul() {
     precompiled_QQ_mul = mul;
     return mul;
 }
-sequence_t *cCQ_mul() {
+sequence_t *cCQ_mul(int64_t value) {
     // OWNERSHIP: Caller owns returned sequence_t*, must free gates_per_layer, seq arrays, and seq
-    // READS: QPU_state->R0 for classical value
-    int *bin = two_complement(*(QPU_state->R0), INTEGERSIZE);
+    int *bin = two_complement(value, INTEGERSIZE);
     if (bin == NULL) {
         return NULL;
     }
