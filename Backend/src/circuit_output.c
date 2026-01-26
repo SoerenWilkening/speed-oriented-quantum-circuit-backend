@@ -170,6 +170,107 @@ void print_circuit(circuit_t *circ) {
     }
 }
 
+void circuit_visualize(circuit_t *circ) {
+    if (circ == NULL) {
+        printf("Circuit is NULL\n");
+        return;
+    }
+
+    // Print summary header
+    printf("Circuit: %zu gates, %u layers, %d qubits\n\n", circ->used, circ->used_layer,
+           circ->used_qubits + 1);
+
+    if (circ->used == 0) {
+        printf("(empty circuit)\n");
+        return;
+    }
+
+    // Limit display for very wide circuits
+    int max_display_layers = circ->used_layer > 60 ? 60 : circ->used_layer;
+    if (circ->used_layer > 60) {
+        printf("(showing first 60 of %u layers)\n\n", circ->used_layer);
+    }
+
+    // Print layer number header
+    printf("     "); // Space for qubit labels
+    for (int layer = 0; layer < max_display_layers; layer++) {
+        if (layer % 5 == 0) {
+            printf("%-3d", layer);
+        } else {
+            printf("   ");
+        }
+    }
+    printf("\n");
+
+    // Print each qubit row
+    for (int qubit = 0; qubit <= circ->used_qubits; qubit++) {
+        if (circ->used_occupation_indices_per_qubit[qubit] == 0) {
+            continue; // Skip unused qubits
+        }
+
+        printf("q%-3d ", qubit); // Qubit label
+
+        for (int layer = 0; layer < max_display_layers; layer++) {
+            // Check if this qubit has a gate in this layer
+            int gate_idx = circ->gate_index_of_layer_and_qubits[layer][qubit];
+
+            if (gate_idx >= 0) {
+                gate_t *g = &circ->sequence[layer][gate_idx];
+
+                // Check if this qubit is the target or a control
+                if (g->Target == qubit) {
+                    // Print gate symbol
+                    switch (g->Gate) {
+                    case X:
+                        printf(g->NumControls > 0 ? " + " : " X ");
+                        break;
+                    case H:
+                        printf(" H ");
+                        break;
+                    case Z:
+                        printf(" Z ");
+                        break;
+                    case Y:
+                        printf(" Y ");
+                        break;
+                    case P:
+                        printf(" P ");
+                        break;
+                    case M:
+                        printf(" M ");
+                        break;
+                    default:
+                        printf(" ? ");
+                        break;
+                    }
+                } else {
+                    // This is a control qubit
+                    printf(" @ ");
+                }
+            } else {
+                // Check if wire passes through (between control and target)
+                bool is_between = false;
+                for (int gi = 0; gi < circ->used_gates_per_layer[layer]; gi++) {
+                    gate_t *g = &circ->sequence[layer][gi];
+                    int min_q = min_qubit(g);
+                    int max_q = max_qubit(g);
+                    if (qubit > min_q && qubit < max_q) {
+                        is_between = true;
+                        break;
+                    }
+                }
+                if (is_between) {
+                    printf(" | "); // Vertical connection
+                } else {
+                    printf("---"); // Wire continues
+                }
+            }
+        }
+        printf("\n");
+    }
+    printf("\n");
+}
+
 void circuit_to_opanqasm(circuit_t *circ, char *path) {
     char p[512];
     sprintf(p, "%s/circuit.qasm", path);
