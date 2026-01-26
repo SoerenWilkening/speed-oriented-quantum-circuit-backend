@@ -16,12 +16,30 @@ sequence_t *jmp_seq() {
 
 sequence_t *branch_seq() {
     sequence_t *seq = malloc(sizeof(sequence_t));
+    if (seq == NULL) {
+        return NULL;
+    }
 
     seq->used_layer = 1;
     seq->num_layer = 1;
     seq->gates_per_layer = calloc(1, sizeof(num_t));
+    if (seq->gates_per_layer == NULL) {
+        free(seq);
+        return NULL;
+    }
     seq->seq = calloc(1, sizeof(gate_t *));
+    if (seq->seq == NULL) {
+        free(seq->gates_per_layer);
+        free(seq);
+        return NULL;
+    }
     seq->seq[0] = calloc(1, sizeof(gate_t));
+    if (seq->seq[0] == NULL) {
+        free(seq->seq);
+        free(seq->gates_per_layer);
+        free(seq);
+        return NULL;
+    }
     seq->gates_per_layer[0] = 1;
 
     seq->seq[0][0].Gate = H;
@@ -31,12 +49,30 @@ sequence_t *branch_seq() {
 }
 sequence_t *ctrl_branch_seq() {
     sequence_t *seq = malloc(sizeof(sequence_t));
+    if (seq == NULL) {
+        return NULL;
+    }
 
     seq->used_layer = 1;
     seq->num_layer = 1;
     seq->gates_per_layer = calloc(1, sizeof(num_t));
+    if (seq->gates_per_layer == NULL) {
+        free(seq);
+        return NULL;
+    }
     seq->seq = calloc(1, sizeof(gate_t *));
+    if (seq->seq == NULL) {
+        free(seq->gates_per_layer);
+        free(seq);
+        return NULL;
+    }
     seq->seq[0] = calloc(1, sizeof(gate_t));
+    if (seq->seq[0] == NULL) {
+        free(seq->seq);
+        free(seq->gates_per_layer);
+        free(seq);
+        return NULL;
+    }
     seq->gates_per_layer[0] = 1;
 
     seq->seq[0][0].Gate = H;
@@ -54,10 +90,28 @@ sequence_t *q_not_seq() {
     //	int number = QPU_state->Q0->MSB + 1;
 
     sequence_t *seq = malloc(sizeof(sequence_t));
+    if (seq == NULL) {
+        return NULL;
+    }
 
     seq->gates_per_layer = calloc(1, sizeof(num_t));
+    if (seq->gates_per_layer == NULL) {
+        free(seq);
+        return NULL;
+    }
     seq->seq = calloc(1, sizeof(gate_t *));
+    if (seq->seq == NULL) {
+        free(seq->gates_per_layer);
+        free(seq);
+        return NULL;
+    }
     seq->seq[0] = calloc(1, sizeof(gate_t));
+    if (seq->seq[0] == NULL) {
+        free(seq->seq);
+        free(seq->gates_per_layer);
+        free(seq);
+        return NULL;
+    }
 
     seq->gates_per_layer[0] = 1;
     seq->used_layer = 1;
@@ -72,10 +126,28 @@ sequence_t *cq_not_seq() {
     //	int number = QPU_state->Q0->MSB + 1;
 
     sequence_t *seq = malloc(sizeof(sequence_t));
+    if (seq == NULL) {
+        return NULL;
+    }
 
     seq->gates_per_layer = calloc(1, sizeof(num_t));
+    if (seq->gates_per_layer == NULL) {
+        free(seq);
+        return NULL;
+    }
     seq->seq = calloc(1, sizeof(gate_t *));
+    if (seq->seq == NULL) {
+        free(seq->gates_per_layer);
+        free(seq);
+        return NULL;
+    }
     seq->seq[0] = calloc(1, sizeof(gate_t));
+    if (seq->seq[0] == NULL) {
+        free(seq->seq);
+        free(seq->gates_per_layer);
+        free(seq);
+        return NULL;
+    }
 
     for (int i = 0; i < 1; ++i)
         seq->gates_per_layer[i] = 0;
@@ -100,13 +172,38 @@ sequence_t *q_and_seq() {
     int number = QPU_state->Q0->MSB + 1;
 
     int *bin = two_complement(*(QPU_state->R0), INTEGERSIZE);
+    if (bin == NULL) {
+        return NULL;
+    }
 
     sequence_t *seq = malloc(sizeof(sequence_t));
+    if (seq == NULL) {
+        free(bin);
+        return NULL;
+    }
     seq->used_layer = 1;
     seq->num_layer = 1;
     seq->gates_per_layer = calloc(1, sizeof(num_t));
+    if (seq->gates_per_layer == NULL) {
+        free(bin);
+        free(seq);
+        return NULL;
+    }
     seq->seq = calloc(1, sizeof(gate_t *));
+    if (seq->seq == NULL) {
+        free(seq->gates_per_layer);
+        free(bin);
+        free(seq);
+        return NULL;
+    }
     seq->seq[0] = calloc(INTEGERSIZE, sizeof(gate_t));
+    if (seq->seq[0] == NULL) {
+        free(seq->seq);
+        free(seq->gates_per_layer);
+        free(bin);
+        free(seq);
+        return NULL;
+    }
     for (int i = 0; i < INTEGERSIZE; ++i)
         seq->gates_per_layer[i] = 0;
 
@@ -124,6 +221,9 @@ sequence_t *q_and_seq() {
 sequence_t *qq_and_seq() {
     // pure quantum
     sequence_t *seq = malloc(sizeof(sequence_t));
+    if (seq == NULL) {
+        return NULL;
+    }
 
     //	int number = QPU_state->Q0->MSB + 1;
     //	printf("%d\n", number);
@@ -131,8 +231,23 @@ sequence_t *qq_and_seq() {
     seq->used_layer = 1;
     seq->num_layer = 1;
     seq->gates_per_layer = calloc(1, sizeof(num_t));
+    if (seq->gates_per_layer == NULL) {
+        free(seq);
+        return NULL;
+    }
     seq->seq = calloc(1, sizeof(gate_t *));
+    if (seq->seq == NULL) {
+        free(seq->gates_per_layer);
+        free(seq);
+        return NULL;
+    }
     seq->seq[0] = calloc(1, sizeof(gate_t));
+    if (seq->seq[0] == NULL) {
+        free(seq->seq);
+        free(seq->gates_per_layer);
+        free(seq);
+        return NULL;
+    }
 
     seq->gates_per_layer[0] = 1;
     int counter = 0;
@@ -148,14 +263,42 @@ sequence_t *cq_and_seq() {
     int number = QPU_state->Q0->MSB + 1;
 
     int *bin = two_complement(*(QPU_state->R0), INTEGERSIZE);
+    if (bin == NULL) {
+        return NULL;
+    }
 
     sequence_t *seq = malloc(sizeof(sequence_t));
+    if (seq == NULL) {
+        free(bin);
+        return NULL;
+    }
     seq->used_layer = 0;
     seq->num_layer = INTEGERSIZE;
     seq->gates_per_layer = calloc(INTEGERSIZE, sizeof(num_t));
+    if (seq->gates_per_layer == NULL) {
+        free(bin);
+        free(seq);
+        return NULL;
+    }
     seq->seq = calloc(INTEGERSIZE, sizeof(gate_t *));
+    if (seq->seq == NULL) {
+        free(seq->gates_per_layer);
+        free(bin);
+        free(seq);
+        return NULL;
+    }
     for (int i = 0; i < INTEGERSIZE; ++i) {
         seq->seq[i] = calloc(1, sizeof(gate_t));
+        if (seq->seq[i] == NULL) {
+            for (int j = 0; j < i; ++j) {
+                free(seq->seq[j]);
+            }
+            free(seq->seq);
+            free(seq->gates_per_layer);
+            free(bin);
+            free(seq);
+            return NULL;
+        }
     }
 
     for (int i = 0; i < INTEGERSIZE; ++i)
@@ -174,15 +317,36 @@ sequence_t *cq_and_seq() {
 sequence_t *cqq_and_seq() {
     // pure quantum
     sequence_t *seq = malloc(sizeof(sequence_t));
+    if (seq == NULL) {
+        return NULL;
+    }
 
     int number = QPU_state->Q0->MSB + 1;
 
     seq->used_layer = 0;
     seq->num_layer = 3 * INTEGERSIZE;
     seq->gates_per_layer = calloc(3 * INTEGERSIZE, sizeof(num_t));
+    if (seq->gates_per_layer == NULL) {
+        free(seq);
+        return NULL;
+    }
     seq->seq = calloc(3 * INTEGERSIZE, sizeof(gate_t *));
+    if (seq->seq == NULL) {
+        free(seq->gates_per_layer);
+        free(seq);
+        return NULL;
+    }
     for (int i = 0; i < 3 * INTEGERSIZE; ++i) {
         seq->seq[i] = calloc(1, sizeof(gate_t));
+        if (seq->seq[i] == NULL) {
+            for (int j = 0; j < i; ++j) {
+                free(seq->seq[j]);
+            }
+            free(seq->seq);
+            free(seq->gates_per_layer);
+            free(seq);
+            return NULL;
+        }
     }
 
     for (int i = 0; i < 3 * INTEGERSIZE; ++i)
@@ -215,13 +379,38 @@ sequence_t *q_xor_seq() {
     int number = QPU_state->Q0->MSB + 1;
 
     int *bin = two_complement(*(QPU_state->R0), INTEGERSIZE);
+    if (bin == NULL) {
+        return NULL;
+    }
 
     sequence_t *seq = malloc(sizeof(sequence_t));
+    if (seq == NULL) {
+        free(bin);
+        return NULL;
+    }
     seq->used_layer = 1;
     seq->num_layer = 1;
     seq->gates_per_layer = calloc(1, sizeof(num_t));
+    if (seq->gates_per_layer == NULL) {
+        free(bin);
+        free(seq);
+        return NULL;
+    }
     seq->seq = calloc(1, sizeof(gate_t *));
+    if (seq->seq == NULL) {
+        free(seq->gates_per_layer);
+        free(bin);
+        free(seq);
+        return NULL;
+    }
     seq->seq[0] = calloc(INTEGERSIZE, sizeof(gate_t));
+    if (seq->seq[0] == NULL) {
+        free(seq->seq);
+        free(seq->gates_per_layer);
+        free(bin);
+        free(seq);
+        return NULL;
+    }
 
     seq->gates_per_layer[0] = 0;
     for (int i = number - 1; i < INTEGERSIZE; ++i) {
@@ -239,14 +428,42 @@ sequence_t *cq_xor_seq() {
 
     int number = QPU_state->Q0->MSB + 1;
     int *bin = two_complement(*(QPU_state->R0), INTEGERSIZE);
+    if (bin == NULL) {
+        return NULL;
+    }
 
     sequence_t *seq = malloc(sizeof(sequence_t));
+    if (seq == NULL) {
+        free(bin);
+        return NULL;
+    }
     seq->used_layer = 0;
     seq->num_layer = INTEGERSIZE;
     seq->gates_per_layer = calloc(INTEGERSIZE, sizeof(num_t));
+    if (seq->gates_per_layer == NULL) {
+        free(bin);
+        free(seq);
+        return NULL;
+    }
     seq->seq = calloc(INTEGERSIZE, sizeof(gate_t *));
+    if (seq->seq == NULL) {
+        free(seq->gates_per_layer);
+        free(bin);
+        free(seq);
+        return NULL;
+    }
     for (int i = 0; i < INTEGERSIZE; ++i) {
         seq->seq[i] = calloc(1, sizeof(gate_t));
+        if (seq->seq[i] == NULL) {
+            for (int j = 0; j < i; ++j) {
+                free(seq->seq[j]);
+            }
+            free(seq->seq);
+            free(seq->gates_per_layer);
+            free(bin);
+            free(seq);
+            return NULL;
+        }
     }
 
     for (int i = 0; i < INTEGERSIZE; ++i)
@@ -265,14 +482,32 @@ sequence_t *cq_xor_seq() {
 sequence_t *qq_xor_seq() {
     // pure quantum
     sequence_t *seq = malloc(sizeof(sequence_t));
+    if (seq == NULL) {
+        return NULL;
+    }
 
     int number = QPU_state->Q0->MSB + 1;
 
     seq->used_layer = 1;
     seq->num_layer = 1;
     seq->gates_per_layer = calloc(1, sizeof(num_t));
+    if (seq->gates_per_layer == NULL) {
+        free(seq);
+        return NULL;
+    }
     seq->seq = calloc(1, sizeof(gate_t *));
+    if (seq->seq == NULL) {
+        free(seq->gates_per_layer);
+        free(seq);
+        return NULL;
+    }
     seq->seq[0] = calloc(INTEGERSIZE, sizeof(gate_t));
+    if (seq->seq[0] == NULL) {
+        free(seq->seq);
+        free(seq->gates_per_layer);
+        free(seq);
+        return NULL;
+    }
 
     seq->gates_per_layer[0] = INTEGERSIZE - number + 1;
     int counter = 0;
@@ -284,15 +519,36 @@ sequence_t *qq_xor_seq() {
 sequence_t *cqq_xor_seq() {
     // pure quantum
     sequence_t *seq = malloc(sizeof(sequence_t));
+    if (seq == NULL) {
+        return NULL;
+    }
 
     int number = QPU_state->Q0->MSB + 1;
 
     seq->used_layer = 0;
     seq->num_layer = INTEGERSIZE;
     seq->gates_per_layer = calloc(INTEGERSIZE, sizeof(num_t));
+    if (seq->gates_per_layer == NULL) {
+        free(seq);
+        return NULL;
+    }
     seq->seq = calloc(INTEGERSIZE, sizeof(gate_t *));
+    if (seq->seq == NULL) {
+        free(seq->gates_per_layer);
+        free(seq);
+        return NULL;
+    }
     for (int i = 0; i < INTEGERSIZE; ++i) {
         seq->seq[i] = calloc(1, sizeof(gate_t));
+        if (seq->seq[i] == NULL) {
+            for (int j = 0; j < i; ++j) {
+                free(seq->seq[j]);
+            }
+            free(seq->seq);
+            free(seq->gates_per_layer);
+            free(seq);
+            return NULL;
+        }
     }
 
     for (int i = 0; i < INTEGERSIZE; ++i) {
@@ -316,13 +572,38 @@ sequence_t *q_or_seq() {
 
     int number = QPU_state->Q0->MSB + 1;
     int *bin = two_complement(*(QPU_state->R0), INTEGERSIZE);
+    if (bin == NULL) {
+        return NULL;
+    }
 
     sequence_t *seq = malloc(sizeof(sequence_t));
+    if (seq == NULL) {
+        free(bin);
+        return NULL;
+    }
     seq->used_layer = 1;
     seq->num_layer = 1;
     seq->gates_per_layer = calloc(3, sizeof(num_t));
+    if (seq->gates_per_layer == NULL) {
+        free(bin);
+        free(seq);
+        return NULL;
+    }
     seq->seq = calloc(1, sizeof(gate_t *));
+    if (seq->seq == NULL) {
+        free(seq->gates_per_layer);
+        free(bin);
+        free(seq);
+        return NULL;
+    }
     seq->seq[0] = calloc(2 * INTEGERSIZE, sizeof(gate_t));
+    if (seq->seq[0] == NULL) {
+        free(seq->seq);
+        free(seq->gates_per_layer);
+        free(bin);
+        free(seq);
+        return NULL;
+    }
 
     seq->gates_per_layer[0] = 0;
     seq->gates_per_layer[1] = 0;
@@ -350,12 +631,33 @@ sequence_t *qq_or_seq() {
     //	int number = QPU_state->Q0->MSB + 1;
 
     sequence_t *seq = malloc(sizeof(sequence_t));
+    if (seq == NULL) {
+        return NULL;
+    }
     seq->used_layer = 3;
     seq->num_layer = 3;
     seq->gates_per_layer = calloc(3, sizeof(num_t));
+    if (seq->gates_per_layer == NULL) {
+        free(seq);
+        return NULL;
+    }
     seq->seq = calloc(3, sizeof(gate_t *));
+    if (seq->seq == NULL) {
+        free(seq->gates_per_layer);
+        free(seq);
+        return NULL;
+    }
     for (int i = 0; i < 3; ++i) {
         seq->seq[i] = calloc(1, sizeof(gate_t));
+        if (seq->seq[i] == NULL) {
+            for (int j = 0; j < i; ++j) {
+                free(seq->seq[j]);
+            }
+            free(seq->seq);
+            free(seq->gates_per_layer);
+            free(seq);
+            return NULL;
+        }
     }
 
     seq->gates_per_layer[0] = 0;
@@ -385,14 +687,42 @@ sequence_t *cq_or_seq() {
     int number = QPU_state->Q0->MSB + 1;
 
     int *bin = two_complement(*(QPU_state->R0), INTEGERSIZE);
+    if (bin == NULL) {
+        return NULL;
+    }
 
     sequence_t *seq = malloc(sizeof(sequence_t));
+    if (seq == NULL) {
+        free(bin);
+        return NULL;
+    }
     seq->num_layer = INTEGERSIZE;
     seq->used_layer = 0;
     seq->gates_per_layer = calloc(INTEGERSIZE, sizeof(num_t));
+    if (seq->gates_per_layer == NULL) {
+        free(bin);
+        free(seq);
+        return NULL;
+    }
     seq->seq = calloc(INTEGERSIZE, sizeof(gate_t *));
+    if (seq->seq == NULL) {
+        free(seq->gates_per_layer);
+        free(bin);
+        free(seq);
+        return NULL;
+    }
     for (int i = 0; i < INTEGERSIZE; ++i) {
         seq->seq[i] = calloc(1, sizeof(gate_t));
+        if (seq->seq[i] == NULL) {
+            for (int j = 0; j < i; ++j) {
+                free(seq->seq[j]);
+            }
+            free(seq->seq);
+            free(seq->gates_per_layer);
+            free(bin);
+            free(seq);
+            return NULL;
+        }
     }
 
     for (int i = 0; i < INTEGERSIZE; ++i)
@@ -422,12 +752,33 @@ sequence_t *cqq_or_seq() {
     int number = QPU_state->Q0->MSB + 1;
 
     sequence_t *seq = malloc(sizeof(sequence_t));
+    if (seq == NULL) {
+        return NULL;
+    }
     seq->used_layer = 0;
     seq->num_layer = 5 * INTEGERSIZE;
     seq->gates_per_layer = calloc(5 * INTEGERSIZE, sizeof(num_t));
+    if (seq->gates_per_layer == NULL) {
+        free(seq);
+        return NULL;
+    }
     seq->seq = calloc(5 * INTEGERSIZE, sizeof(gate_t *));
+    if (seq->seq == NULL) {
+        free(seq->gates_per_layer);
+        free(seq);
+        return NULL;
+    }
     for (int i = 0; i < 5 * INTEGERSIZE; ++i) {
         seq->seq[i] = calloc(1, sizeof(gate_t));
+        if (seq->seq[i] == NULL) {
+            for (int j = 0; j < i; ++j) {
+                free(seq->seq[j]);
+            }
+            free(seq->seq);
+            free(seq->gates_per_layer);
+            free(seq);
+            return NULL;
+        }
     }
 
     for (int i = 0; i < 5 * INTEGERSIZE; ++i) {

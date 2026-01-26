@@ -198,12 +198,30 @@ void ccx(gate_t *g, qubit_t target, qubit_t control1, qubit_t control2) {
 
 sequence_t *cx_gate() {
     sequence_t *seq = malloc(sizeof(sequence_t));
+    if (seq == NULL) {
+        return NULL;
+    }
 
     seq->used_layer = 1;
     seq->num_layer = 1;
     seq->gates_per_layer = calloc(1, sizeof(num_t));
+    if (seq->gates_per_layer == NULL) {
+        free(seq);
+        return NULL;
+    }
     seq->seq = calloc(1, sizeof(gate_t *));
+    if (seq->seq == NULL) {
+        free(seq->gates_per_layer);
+        free(seq);
+        return NULL;
+    }
     seq->seq[0] = calloc(1, sizeof(gate_t));
+    if (seq->seq[0] == NULL) {
+        free(seq->seq);
+        free(seq->gates_per_layer);
+        free(seq);
+        return NULL;
+    }
     seq->gates_per_layer[0] = 1;
     cx(&seq->seq[0][0], INTEGERSIZE - 1, 2 * INTEGERSIZE - 1);
 
@@ -211,12 +229,30 @@ sequence_t *cx_gate() {
 }
 sequence_t *ccx_gate() {
     sequence_t *seq = malloc(sizeof(sequence_t));
+    if (seq == NULL) {
+        return NULL;
+    }
 
     seq->used_layer = 1;
     seq->num_layer = 1;
     seq->gates_per_layer = calloc(1, sizeof(num_t));
+    if (seq->gates_per_layer == NULL) {
+        free(seq);
+        return NULL;
+    }
     seq->seq = calloc(1, sizeof(gate_t *));
+    if (seq->seq == NULL) {
+        free(seq->gates_per_layer);
+        free(seq);
+        return NULL;
+    }
     seq->seq[0] = calloc(1, sizeof(gate_t));
+    if (seq->seq[0] == NULL) {
+        free(seq->seq);
+        free(seq->gates_per_layer);
+        free(seq);
+        return NULL;
+    }
     seq->gates_per_layer[0] = 1;
     ccx(&seq->seq[0][0], INTEGERSIZE - 1, 2 * INTEGERSIZE - 1, 3 * INTEGERSIZE - 1);
 
@@ -236,13 +272,34 @@ sequence_t *QFT(sequence_t *qft, int num_qubits) {
     }
     if (qft == NULL) {
         qft = malloc(sizeof(sequence_t));
+        if (qft == NULL) {
+            return NULL;
+        }
         qft->gates_per_layer = calloc(2 * num_qubits - 1, sizeof(num_t));
+        if (qft->gates_per_layer == NULL) {
+            free(qft);
+            return NULL;
+        }
         qft->seq = calloc(2 * num_qubits - 1, sizeof(gate_t *));
+        if (qft->seq == NULL) {
+            free(qft->gates_per_layer);
+            free(qft);
+            return NULL;
+        }
         for (int i = 0; i < 2 * num_qubits - 1; ++i) {
             if (i < num_qubits)
                 qft->seq[i] = calloc(i + 1, sizeof(gate_t));
             else
                 qft->seq[i] = calloc(2 * num_qubits - i, sizeof(gate_t));
+            if (qft->seq[i] == NULL) {
+                for (int j = 0; j < i; ++j) {
+                    free(qft->seq[j]);
+                }
+                free(qft->seq);
+                free(qft->gates_per_layer);
+                free(qft);
+                return NULL;
+            }
         }
         qft->used_layer = 0;
         qft->num_layer = 2 * num_qubits - 1;
@@ -278,13 +335,34 @@ sequence_t *QFT_inverse(sequence_t *qft, int num_qubits) {
     }
     if (qft == NULL) {
         qft = malloc(sizeof(sequence_t));
+        if (qft == NULL) {
+            return NULL;
+        }
         qft->gates_per_layer = calloc(2 * num_qubits - 1, sizeof(num_t));
+        if (qft->gates_per_layer == NULL) {
+            free(qft);
+            return NULL;
+        }
         qft->seq = calloc(2 * num_qubits - 1, sizeof(gate_t *));
+        if (qft->seq == NULL) {
+            free(qft->gates_per_layer);
+            free(qft);
+            return NULL;
+        }
         for (int i = 0; i < 2 * num_qubits - 1; ++i) {
             if (i < num_qubits)
                 qft->seq[i] = calloc(i + 1, sizeof(gate_t));
             else
                 qft->seq[i] = calloc(2 * num_qubits - i, sizeof(gate_t));
+            if (qft->seq[i] == NULL) {
+                for (int j = 0; j < i; ++j) {
+                    free(qft->seq[j]);
+                }
+                free(qft->seq);
+                free(qft->gates_per_layer);
+                free(qft);
+                return NULL;
+            }
         }
         qft->used_layer = 0;
         qft->num_layer = 2 * num_qubits - 1;
