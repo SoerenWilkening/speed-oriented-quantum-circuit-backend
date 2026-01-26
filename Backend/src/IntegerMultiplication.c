@@ -170,7 +170,9 @@ sequence_t *QQ_mul(int bits) {
     }
 
     mul->used_layer = 0;
-    mul->num_layer = bits * (2 * bits + 6) - 1;
+    // Use MAXLAYERINSEQUENCE like cQQ_mul - the original formula bits*(2*bits+6)-1
+    // underestimates the actual layer requirements for the QQ_mul algorithm
+    mul->num_layer = MAXLAYERINSEQUENCE;
     mul->gates_per_layer = calloc(mul->num_layer, sizeof(num_t));
     if (mul->gates_per_layer == NULL) {
         free(mul);
