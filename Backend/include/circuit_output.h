@@ -20,6 +20,15 @@ typedef struct circuit_s circuit_t;
 // Shows gate count, layer count, qubit count, and ASCII diagram
 void print_circuit(circuit_t *circ);
 
+// Enhanced circuit visualization with horizontal layout
+// Shows:
+// - Qubit indices on left
+// - Layer numbers on top
+// - Compact gate symbols (H, X, Z, P, etc.)
+// - Control connections with vertical lines (| and @)
+// - Time flows left-to-right
+void circuit_visualize(circuit_t *circ);
+
 // Export circuit to OpenQASM 3.0 format
 // Creates file at: {path}/circuit.qasm
 void circuit_to_opanqasm(circuit_t *circ, char *path);
