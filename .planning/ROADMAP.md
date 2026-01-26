@@ -137,12 +137,15 @@ Plans:
   3. Division and modulo operations are implemented and work correctly
   4. Modular arithmetic operations (add/sub/mul mod N) are implemented
   5. All arithmetic operations generate optimized quantum circuits
-**Plans**: TBD
+**Plans**: 6 plans
 
 Plans:
-- [ ] 07-01: TBD
-- [ ] 07-02: TBD
-- [ ] 07-03: TBD
+- [x] 07-01-PLAN.md - Width-parameterized multiplication in C layer (wave 1)
+- [x] 07-02-PLAN.md - Improved comparison operators with equality optimization (wave 1)
+- [x] 07-03-PLAN.md - Python multiplication operators with variable width (wave 2)
+- [x] 07-04-PLAN.md - Division and modulo operations at Python level (wave 3)
+- [x] 07-05-PLAN.md - qint_mod type and comprehensive test suite (wave 4)
+- [ ] 07-06-PLAN.md - Fix QQ_mul segfault (gap closure) (wave 5)
 
 ### Phase 8: Circuit Optimization
 **Goal**: Add automatic circuit optimization, visualization, and statistics
@@ -205,7 +208,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 4. Module Separation | 4/4 | Complete | 2026-01-26 |
 | 5. Variable-Width Integers | 4/4 | Complete | 2026-01-26 |
 | 6. Bit Operations | 4/4 | Complete | 2026-01-26 |
-| 7. Extended Arithmetic | 0/0 | Not started | - |
+| 7. Extended Arithmetic | 5/6 | Gap closure ready | - |
 | 8. Circuit Optimization | 0/0 | Not started | - |
 | 9. Code Organization | 0/0 | Not started | - |
 | 10. Documentation and API Polish | 0/0 | Not started | - |
