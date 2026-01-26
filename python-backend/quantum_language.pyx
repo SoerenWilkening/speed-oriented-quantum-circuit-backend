@@ -73,6 +73,81 @@ cdef class circuit:
 		"""
 		circuit_visualize(<circuit_t*>_circuit)
 
+	@property
+	def gate_count(self):
+		"""Total number of gates in circuit.
+
+		Returns:
+			int: Number of gates
+
+		Examples:
+			>>> c = circuit()
+			>>> a = qint(5)
+			>>> b = qint(3)
+			>>> c = a + b
+			>>> circuit().gate_count
+			42
+		"""
+		return circuit_gate_count(<circuit_s*>_circuit)
+
+	@property
+	def depth(self):
+		"""Circuit depth (number of layers).
+
+		Each layer can execute in parallel on quantum hardware.
+
+		Returns:
+			int: Number of layers
+
+		Examples:
+			>>> c = circuit()
+			>>> a = qint(5)
+			>>> circuit().depth
+			12
+		"""
+		return circuit_depth(<circuit_s*>_circuit)
+
+	@property
+	def qubit_count(self):
+		"""Number of qubits used in circuit.
+
+		Returns:
+			int: Number of qubits
+
+		Examples:
+			>>> c = circuit()
+			>>> a = qint(5, width=8)
+			>>> circuit().qubit_count
+			8
+		"""
+		return circuit_qubit_count(<circuit_s*>_circuit)
+
+	@property
+	def gate_counts(self):
+		"""Breakdown of gate types in circuit.
+
+		Returns:
+			dict: Gate type -> count mapping
+			Keys: 'X', 'Y', 'Z', 'H', 'P', 'CNOT', 'CCX', 'other'
+
+		Examples:
+			>>> c = circuit()
+			>>> a = qint(5)
+			>>> circuit().gate_counts
+			{'X': 3, 'H': 8, 'CNOT': 12, ...}
+		"""
+		cdef gate_counts_t counts = circuit_gate_counts(<circuit_s*>_circuit)
+		return {
+			'X': counts.x_gates,
+			'Y': counts.y_gates,
+			'Z': counts.z_gates,
+			'H': counts.h_gates,
+			'P': counts.p_gates,
+			'CNOT': counts.cx_gates,
+			'CCX': counts.ccx_gates,
+			'other': counts.other_gates
+		}
+
 	# def __str__(self):
 	# 	print_circuit(_circuit)
 	# 	return ""
