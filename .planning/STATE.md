@@ -10,29 +10,29 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 2 of 10 (C Layer Cleanup)
-Plan: 1 of 3 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-01-26 - Completed 02-01-PLAN.md (sizeof bugs and sequence initialization)
+Last activity: 2026-01-26 - Completed 02-02-PLAN.md (NULL check coverage)
 
-Progress: [█░░░░░░░░░] 13%
+Progress: [██░░░░░░░░] 17%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 5.5 min
-- Total execution time: 0.4 hours
+- Total plans completed: 5
+- Average duration: 5.8 min
+- Total execution time: 0.5 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 - Testing Foundation | 3 | 18 min | 6 min |
-| 02 - C Layer Cleanup | 1 | 4 min | 4 min |
+| 02 - C Layer Cleanup | 2 | 13 min | 6.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (4 min), 01-02 (11 min), 01-03 (3 min), 02-01 (4 min)
-- Trend: Consistent execution, efficient bug fixes
+- Last 5 plans: 01-02 (11 min), 01-03 (3 min), 02-01 (4 min), 02-02 (9 min)
+- Trend: Consistent velocity, comprehensive coverage work takes longer than targeted fixes
 
 *Updated after each plan completion*
 
@@ -54,6 +54,9 @@ Recent decisions affecting current work:
 - Auto-detect compiler in Makefile: Search for gcc/clang/cc rather than hardcoding (01-03)
 - Use calloc for sequence_t array allocations: Ensures zero-initialization and prevents undefined behavior (02-01)
 - Standard sequence_t initialization pattern: Allocate gates_per_layer and seq arrays immediately after malloc(sizeof(sequence_t)) (02-01)
+- Cleanup-on-error pattern for complex allocations: Free in reverse order on any allocation failure (02-02)
+- Temp pointer pattern for realloc: Preserves original pointer on failure (02-02)
+- Return NULL from all allocation functions: Enables error propagation to callers (02-02)
 
 ### Pending Todos
 
@@ -75,9 +78,10 @@ None yet.
 - Existing codebase has 65+ Ruff violations (bare except, tabs vs spaces) that need cleanup (01-01)
 - Fixed critical C compilation issues in Integer.c and QPU.c (missing stdint.h) (01-02)
 - IntegerComparison.c uses conservative +10 buffer for layer allocation - may need precise calculation in future (02-01)
+- Functions now return NULL on allocation failure but callers may not check return values - needs verification in 02-03 (02-02)
 
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Completed 02-01-PLAN.md - Fixed sizeof bugs and sequence initialization
+Stopped at: Completed 02-02-PLAN.md - Added NULL checks for all allocations
 Resume file: None
