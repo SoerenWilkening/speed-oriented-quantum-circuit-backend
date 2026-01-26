@@ -119,6 +119,9 @@ void append_gate(circuit_t *circ, gate_t *g, layer_t min_possible_layer) {
 
 gate_t **colliding_gates(circuit_t *circ, gate_t *g, layer_t min_possible_layer, int *gate_index) {
     gate_t **coll = malloc(3 * sizeof(gate_t *));
+    if (coll == NULL) {
+        return NULL;
+    }
     coll[0] = NULL;
     coll[1] = NULL;
     coll[2] = NULL;
