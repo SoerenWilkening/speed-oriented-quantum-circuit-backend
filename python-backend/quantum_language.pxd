@@ -12,10 +12,10 @@ cdef extern from "Integer.h":
 		pass
 
 	sequence_t *CC_mul();
-	sequence_t *CQ_mul(long long value);
-	sequence_t *QQ_mul();
-	sequence_t *cCQ_mul(long long value);
-	sequence_t *cQQ_mul();
+	sequence_t *CQ_mul(int bits, long long value);
+	sequence_t *QQ_mul(int bits);
+	sequence_t *cCQ_mul(int bits, long long value);
+	sequence_t *cQQ_mul(int bits);
 
 	sequence_t *CC_add();
 	sequence_t *CQ_add(int bits, long long value);

@@ -344,10 +344,10 @@ cdef class qint(circuit):
 					# Control qubit from qbool (last element)
 					qubit_array[start: start + 1] = (<qbool> _control_bool).qubits[63:64]
 					qubit_array[start + 1: start + 1 + NUMANCILLY] = ancilla
-					seq = cCQ_mul(other)
+					seq = cCQ_mul(self.bits, other)
 				else:
 					qubit_array[start: start + NUMANCILLY] = ancilla
-					seq = CQ_mul(other)
+					seq = CQ_mul(self.bits, other)
 
 				arr = qubit_array
 				run_instruction(seq, &arr[0], False, _circuit)
