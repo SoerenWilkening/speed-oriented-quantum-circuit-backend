@@ -993,6 +993,85 @@ cdef class qint(circuit):
 
 		return quotient
 
+	def __mod__(self, divisor):
+		"""Modulo operation: self % divisor
+
+		Computes remainder efficiently using restoring division.
+		More efficient than computing quotient separately.
+
+		Args:
+			divisor: int or qint divisor
+
+		Returns:
+			qint remainder
+
+		Raises:
+			ZeroDivisionError: If divisor is zero (classical only)
+			TypeError: If divisor is not int or qint
+		"""
+		# Classical divisor case
+		if type(divisor) == int:
+			if divisor == 0:
+				raise ZeroDivisionError("Modulo by zero")
+			if divisor < 0:
+				raise NotImplementedError("Negative divisor not yet supported")
+
+			# Allocate remainder
+			remainder = qint(0, width=self.bits)
+
+			# Copy self to remainder via XOR (remainder starts at 0)
+			remainder ^= self
+
+			# Efficient modulo: just compute remainder, no quotient needed
+			# Use same restoring division but only track remainder
+			for bit_pos in range(self.bits - 1, -1, -1):
+				trial_value = divisor << bit_pos
+
+				# Check if remainder >= trial_value
+				can_subtract = remainder >= trial_value
+
+				# Conditional subtraction (no quotient tracking)
+				with can_subtract:
+					remainder -= trial_value
+
+			return remainder
+
+		elif type(divisor) == qint:
+			# Quantum divisor - use quantum modulo
+			return self._mod_quantum(divisor)
+		else:
+			raise TypeError("Divisor must be int or qint")
+
+	def _mod_quantum(self, divisor: qint):
+		"""Modulo with quantum divisor: self % divisor
+
+		Args:
+			divisor: qint divisor
+
+		Returns:
+			qint remainder
+		"""
+		cdef int comp_bits = max(self.bits, (<qint>divisor).bits)
+
+		# Allocate remainder
+		remainder = qint(0, width=comp_bits)
+
+		# Copy self to remainder via XOR
+		remainder ^= self
+
+		# Repeated conditional subtraction (same as division but no quotient)
+		max_iterations = (1 << comp_bits)
+
+		for _ in range(max_iterations):
+			# Check if remainder >= divisor
+			can_subtract = remainder >= divisor
+
+			# Conditional subtraction
+			with can_subtract:
+				remainder -= divisor
+
+		return remainder
+
 
 
 cdef class qbool(qint):
