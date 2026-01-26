@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 5 of 10 (Variable-Width Integers)
-Plan: 2 of 3 in current phase
+Plan: 3 of 4 in current phase
 Status: In progress
-Last activity: 2026-01-26 - Completed 05-02-PLAN.md (Width-aware arithmetic)
+Last activity: 2026-01-26 - Completed 05-03-PLAN.md (Python qint width support)
 
-Progress: [████░░░░░░] 48%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15
-- Average duration: 5.1 min
-- Total execution time: 1.3 hours
+- Total plans completed: 16
+- Average duration: 5.4 min
+- Total execution time: 1.5 hours
 
 **By Phase:**
 
@@ -31,11 +31,11 @@ Progress: [████░░░░░░] 48%
 | 02 - C Layer Cleanup | 3 | 18 min | 6 min |
 | 03 - Memory Architecture | 3 | 22 min | 7.3 min |
 | 04 - Module Separation | 4 | 15 min | 3.8 min |
-| 05 - Variable-Width Integers | 2 | 10 min | 5 min |
+| 05 - Variable-Width Integers | 3 | 21 min | 7 min |
 
 **Recent Trend:**
-- Last 5 plans: 04-03 (4 min), 04-04 (3 min), 05-01 (4 min), 05-02 (6 min)
-- Trend: Consistent execution, Phase 5 progressing well
+- Last 5 plans: 04-04 (3 min), 05-01 (4 min), 05-02 (6 min), 05-03 (11 min)
+- Trend: 05-03 took longer due to debugging qubit array compatibility
 
 *Updated after each plan completion*
 
@@ -95,6 +95,11 @@ Recent decisions affecting current work:
 - cQQ_add(int bits) signature: Width-parameterized controlled addition (05-02)
 - precompiled_XX_add_width[65] caches: Index 0 unused, 1-64 valid for width-specific caching (05-02)
 - Legacy globals auto-populated: precompiled_QQ_add set when bits == INTEGERSIZE (05-02)
+- width parameter primary with bits alias: Clean API, backward compat maintained (05-03)
+- Default width 8 bits: Matches INTEGERSIZE constant (05-03)
+- UserWarning for overflow, not error: Per CONTEXT.md, modular arithmetic expected (05-03)
+- qbool unsigned 1-bit [0,1]: True=1 should not warn (05-03)
+- Extract used qubits from right-aligned: C backend expects compact arrays (05-03)
 
 ### Pending Todos
 
@@ -103,8 +108,8 @@ None yet.
 ### Blockers/Concerns
 
 **Critical Path Dependencies:**
-- Phase 5 plans 01-02 complete - width metadata and arithmetic foundation established
-- Phase 5 plan 03 ready (Python bindings update)
+- Phase 5 plans 01-03 complete - width metadata, arithmetic, Python API
+- Phase 5 plan 04 ready (multiplication operations)
 - Phase 5 and Phase 6 can run in parallel
 
 **Research Flags:**
@@ -117,25 +122,28 @@ None yet.
 - Existing codebase has 65+ Ruff violations (bare except, tabs vs spaces) that need cleanup (01-01)
 - Fixed critical C compilation issues in Integer.c and QPU.c (missing stdint.h) (01-02, 05-01)
 - IntegerComparison.c uses conservative +10 buffer for layer allocation - may need precise calculation in future (02-01)
+- Logic operations (and, or, invert) still use INTEGERSIZE layout - Python bindings adapted (05-03)
 - All 59 tests pass with variable-width arithmetic
 
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Completed 05-02-PLAN.md - Width-aware arithmetic complete
+Stopped at: Completed 05-03-PLAN.md - Python qint width support complete
 Resume file: None
 
 ## Phase 5 Progress
 
 **Plan 01 Complete** - Width metadata foundation established
 **Plan 02 Complete** - Width-aware arithmetic operations
+**Plan 03 Complete** - Python qint width support
 
-**What was built in 05-02:**
-- QQ_add(int bits) generates variable-width addition circuits
-- cQQ_add(int bits) generates variable-width controlled addition
-- precompiled_QQ_add_width[65] and precompiled_cQQ_add_width[65] caches
-- Python bindings pass self.bits to parameterized functions
-- Layer count scales correctly: 5*bits-2 for QQ_add
+**What was built in 05-03:**
+- qint(value, width=N) creates N-bit quantum integers
+- qint.width property (read-only)
+- Width validation (ValueError for < 1 or > 64)
+- Overflow warnings when value exceeds width range
+- qbool as syntactic sugar for qint(width=1)
+- Fixed qubit array extraction for C backend
 
 **Next steps:**
-- 05-03: Python bindings update for remaining variable-width operations
+- 05-04: Multiplication and remaining variable-width operations
