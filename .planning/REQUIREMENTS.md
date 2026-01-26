@@ -45,11 +45,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Bit Operations
 
-- [ ] **BITOP-01**: Bitwise AND on quantum integers
-- [ ] **BITOP-02**: Bitwise OR on quantum integers
-- [ ] **BITOP-03**: Bitwise XOR on quantum integers
-- [ ] **BITOP-04**: Bitwise NOT on quantum integers
-- [ ] **BITOP-05**: Python operator overloading for bitwise ops (&, |, ^, ~)
+- [x] **BITOP-01**: Bitwise AND on quantum integers
+- [x] **BITOP-02**: Bitwise OR on quantum integers
+- [x] **BITOP-03**: Bitwise XOR on quantum integers
+- [x] **BITOP-04**: Bitwise NOT on quantum integers
+- [x] **BITOP-05**: Python operator overloading for bitwise ops (&, |, ^, ~)
 
 ### Circuit Output
 
@@ -139,11 +139,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ARTH-05 | Phase 7 | Pending |
 | ARTH-06 | Phase 7 | Pending |
 | ARTH-07 | Phase 7 | Pending |
-| BITOP-01 | Phase 6 | Pending |
-| BITOP-02 | Phase 6 | Pending |
-| BITOP-03 | Phase 6 | Pending |
-| BITOP-04 | Phase 6 | Pending |
-| BITOP-05 | Phase 6 | Pending |
+| BITOP-01 | Phase 6 | Complete |
+| BITOP-02 | Phase 6 | Complete |
+| BITOP-03 | Phase 6 | Complete |
+| BITOP-04 | Phase 6 | Complete |
+| BITOP-05 | Phase 6 | Complete |
 | CIRC-01 | Phase 8 | Pending |
 | CIRC-02 | Phase 8 | Pending |
 | CIRC-03 | Phase 8 | Pending |
@@ -165,4 +165,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-01-25*
-*Last updated: 2026-01-26 after Phase 5 completion*
+*Last updated: 2026-01-26 after Phase 6 completion*
