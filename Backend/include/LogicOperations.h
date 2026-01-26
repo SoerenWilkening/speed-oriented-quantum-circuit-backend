@@ -47,4 +47,8 @@ sequence_t *cq_or_seq();
 sequence_t *qq_or_seq();
 sequence_t *cqq_or_seq();
 
+// Width-parameterized OR operations (Phase 6)
+sequence_t *Q_or(int bits);
+sequence_t *CQ_or(int bits, int64_t value);
+
 #endif // CQ_BACKEND_IMPROVED_LOGICOPERATIONS_H

@@ -1155,3 +1155,171 @@ sequence_t *CQ_and(int bits, int64_t value) {
     free(bin);
     return seq;
 }
+
+// ======================================================
+// Width-Parameterized OR Operations
+// ======================================================
+
+sequence_t *Q_or(int bits) {
+    // OWNERSHIP: Caller owns returned sequence_t*, must free gates_per_layer, seq arrays, and seq
+    //
+    // Width-parameterized quantum-quantum OR operation.
+    // Uses the identity: A OR B = (A XOR B) XOR (A AND B)
+    //                          = A XOR B XOR (A AND B)
+    //
+    // Circuit pattern (from existing qq_or_seq):
+    // Layer 0: CNOT from A to output (copies A to output)
+    // Layer 1: CNOT from B to output (XORs B into output, giving A XOR B)
+    // Layer 2: Toffoli from A,B to output (adds A AND B)
+    // Result: A XOR B XOR (A AND B) = A OR B
+    //
+    // Qubit layout:
+    // - [0, bits-1]: Output ancilla (pre-initialized to |0>)
+    // - [bits, 2*bits-1]: Operand A
+    // - [2*bits, 3*bits-1]: Operand B
+    //
+    // Result: output[i] = A[i] OR B[i] for each bit i
+
+    // Bounds check: valid widths are 1-64
+    if (bits < 1 || bits > 64) {
+        return NULL;
+    }
+
+    sequence_t *seq = malloc(sizeof(sequence_t));
+    if (seq == NULL) {
+        return NULL;
+    }
+
+    // 3 layers: CNOT from A, CNOT from B, Toffoli from A and B
+    seq->used_layer = 3;
+    seq->num_layer = 3;
+    seq->gates_per_layer = calloc(3, sizeof(num_t));
+    if (seq->gates_per_layer == NULL) {
+        free(seq);
+        return NULL;
+    }
+    seq->seq = calloc(3, sizeof(gate_t *));
+    if (seq->seq == NULL) {
+        free(seq->gates_per_layer);
+        free(seq);
+        return NULL;
+    }
+    for (int i = 0; i < 3; ++i) {
+        seq->seq[i] = calloc(bits, sizeof(gate_t));
+        if (seq->seq[i] == NULL) {
+            for (int j = 0; j < i; ++j) {
+                free(seq->seq[j]);
+            }
+            free(seq->seq);
+            free(seq->gates_per_layer);
+            free(seq);
+            return NULL;
+        }
+    }
+
+    seq->gates_per_layer[0] = bits;
+    seq->gates_per_layer[1] = bits;
+    seq->gates_per_layer[2] = bits;
+
+    // Layer 0: CNOT from A to output (output = A)
+    for (int i = 0; i < bits; i++) {
+        // target = i (output bit)
+        // control = bits + i (operand A bit)
+        cx(&seq->seq[0][i], i, bits + i);
+    }
+
+    // Layer 1: CNOT from B to output (output = A XOR B)
+    for (int i = 0; i < bits; i++) {
+        // target = i (output bit)
+        // control = 2*bits + i (operand B bit)
+        cx(&seq->seq[1][i], i, 2 * bits + i);
+    }
+
+    // Layer 2: Toffoli from A and B to output (output = A XOR B XOR (A AND B) = A OR B)
+    for (int i = 0; i < bits; i++) {
+        // target = i (output bit)
+        // control1 = bits + i (operand A bit)
+        // control2 = 2*bits + i (operand B bit)
+        ccx(&seq->seq[2][i], i, bits + i, 2 * bits + i);
+    }
+
+    return seq;
+}
+
+sequence_t *CQ_or(int bits, int64_t value) {
+    // OWNERSHIP: Caller owns returned sequence_t*, must free gates_per_layer, seq arrays, and seq
+    //
+    // Width-parameterized classical-quantum OR operation.
+    // For each bit:
+    // - If classical bit is 1: output is always 1 (X gate sets to |1>)
+    // - If classical bit is 0: output equals quantum bit (CNOT copies)
+    //
+    // Qubit layout:
+    // - [0, bits-1]: Output ancilla (pre-initialized to |0>)
+    // - [bits, 2*bits-1]: Quantum operand
+    //
+    // Result: output[i] = classical_bit[i] OR quantum_bit[i]
+
+    // Bounds check: valid widths are 1-64
+    if (bits < 1 || bits > 64) {
+        return NULL;
+    }
+
+    // Convert classical value to binary
+    int *bin = two_complement(value, bits);
+    if (bin == NULL) {
+        return NULL;
+    }
+
+    sequence_t *seq = malloc(sizeof(sequence_t));
+    if (seq == NULL) {
+        free(bin);
+        return NULL;
+    }
+
+    // Single layer: X gates for classical 1s, CNOT for classical 0s
+    seq->used_layer = 1;
+    seq->num_layer = 1;
+    seq->gates_per_layer = calloc(1, sizeof(num_t));
+    if (seq->gates_per_layer == NULL) {
+        free(bin);
+        free(seq);
+        return NULL;
+    }
+    seq->seq = calloc(1, sizeof(gate_t *));
+    if (seq->seq == NULL) {
+        free(seq->gates_per_layer);
+        free(bin);
+        free(seq);
+        return NULL;
+    }
+    // Allocate enough gates for all bits
+    seq->seq[0] = calloc(bits, sizeof(gate_t));
+    if (seq->seq[0] == NULL) {
+        free(seq->seq);
+        free(seq->gates_per_layer);
+        free(bin);
+        free(seq);
+        return NULL;
+    }
+
+    seq->gates_per_layer[0] = 0;
+
+    // Apply gates based on classical bit values
+    for (int i = 0; i < bits; i++) {
+        if (bin[i] == 1) {
+            // Classical 1: output is always 1 (1 OR x = 1)
+            // Apply X gate to set output to |1>
+            x(&seq->seq[0][seq->gates_per_layer[0]++], i);
+        } else {
+            // Classical 0: output equals quantum bit (0 OR x = x)
+            // Apply CNOT to copy quantum bit to output
+            // target = i (output bit)
+            // control = bits + i (quantum operand bit)
+            cx(&seq->seq[0][seq->gates_per_layer[0]++], i, bits + i);
+        }
+    }
+
+    free(bin);
+    return seq;
+}
