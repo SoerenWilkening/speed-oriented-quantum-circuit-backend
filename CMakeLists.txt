@@ -23,7 +23,8 @@ add_executable(CQ_backend_improved main.c
         Assembly/src/AssemblyIntegerMultiplication.c
         Assembly/src/AssemblyIntegerDivision.c
         Backend/src/circuit_allocations.c
-        Backend/src/ciruict_outputs.c)
+        Backend/src/ciruict_outputs.c
+        Backend/src/qubit_allocator.c)
 
 target_compile_options(CQ_backend_improved PRIVATE -O3)
 
