@@ -37,11 +37,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **ARTH-01**: Addition works for variable-width integers
 - [x] **ARTH-02**: Subtraction works for variable-width integers
-- [ ] **ARTH-03**: Multiplication works for any integer size (not just fixed)
-- [ ] **ARTH-04**: Comparisons (>, <, ==, >=, <=) work for variable-width integers
-- [ ] **ARTH-05**: Division operation implemented
-- [ ] **ARTH-06**: Modulo operation implemented
-- [ ] **ARTH-07**: Modular arithmetic (add/sub/mul mod N) implemented
+- [x] **ARTH-03**: Multiplication works for any integer size (not just fixed)
+- [x] **ARTH-04**: Comparisons (>, <, ==, >=, <=) work for variable-width integers
+- [x] **ARTH-05**: Division operation implemented
+- [x] **ARTH-06**: Modulo operation implemented
+- [x] **ARTH-07**: Modular arithmetic (add/sub/mul mod N) implemented
 
 ### Bit Operations
 
@@ -134,11 +134,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VINT-04 | Phase 5 | Complete |
 | ARTH-01 | Phase 5 | Complete |
 | ARTH-02 | Phase 5 | Complete |
-| ARTH-03 | Phase 7 | Pending |
-| ARTH-04 | Phase 7 | Pending |
-| ARTH-05 | Phase 7 | Pending |
-| ARTH-06 | Phase 7 | Pending |
-| ARTH-07 | Phase 7 | Pending |
+| ARTH-03 | Phase 7 | Complete |
+| ARTH-04 | Phase 7 | Complete |
+| ARTH-05 | Phase 7 | Complete |
+| ARTH-06 | Phase 7 | Complete |
+| ARTH-07 | Phase 7 | Complete |
 | BITOP-01 | Phase 6 | Complete |
 | BITOP-02 | Phase 6 | Complete |
 | BITOP-03 | Phase 6 | Complete |
@@ -165,4 +165,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-01-25*
-*Last updated: 2026-01-26 after Phase 6 completion*
+*Last updated: 2026-01-26 after Phase 7 completion*

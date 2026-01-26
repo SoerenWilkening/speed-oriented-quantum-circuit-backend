@@ -18,7 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 4: Module Separation** - Split QPU.c god object into focused modules
 - [x] **Phase 5: Variable-Width Integers** - Enable arbitrary bit-width quantum integers
 - [x] **Phase 6: Bit Operations** - Add bitwise operations for quantum integers
-- [ ] **Phase 7: Extended Arithmetic** - Complete multiplication, add division and modular operations
+- [x] **Phase 7: Extended Arithmetic** - Complete multiplication, add division and modular operations
 - [ ] **Phase 8: Circuit Optimization** - Add gate merging, visualization, and statistics
 - [ ] **Phase 9: Code Organization** - Reorganize operations into category-based modules
 - [ ] **Phase 10: Documentation and API Polish** - Comprehensive docs and Python API stabilization
@@ -145,7 +145,7 @@ Plans:
 - [x] 07-03-PLAN.md - Python multiplication operators with variable width (wave 2)
 - [x] 07-04-PLAN.md - Division and modulo operations at Python level (wave 3)
 - [x] 07-05-PLAN.md - qint_mod type and comprehensive test suite (wave 4)
-- [ ] 07-06-PLAN.md - Fix QQ_mul segfault (gap closure) (wave 5)
+- [x] 07-06-PLAN.md - Fix QQ_mul segfault (gap closure) (wave 5)
 
 ### Phase 8: Circuit Optimization
 **Goal**: Add automatic circuit optimization, visualization, and statistics
@@ -208,7 +208,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 4. Module Separation | 4/4 | Complete | 2026-01-26 |
 | 5. Variable-Width Integers | 4/4 | Complete | 2026-01-26 |
 | 6. Bit Operations | 4/4 | Complete | 2026-01-26 |
-| 7. Extended Arithmetic | 5/6 | Gap closure ready | - |
+| 7. Extended Arithmetic | 6/6 | Complete | 2026-01-26 |
 | 8. Circuit Optimization | 0/0 | Not started | - |
 | 9. Code Organization | 0/0 | Not started | - |
 | 10. Documentation and API Polish | 0/0 | Not started | - |
