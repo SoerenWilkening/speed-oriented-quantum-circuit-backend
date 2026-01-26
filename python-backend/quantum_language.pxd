@@ -95,4 +95,20 @@ cdef extern from "qubit_allocator.h":
 	# Note: C signature uses struct circuit_s*, but circuit_t* works due to cast in C
 	qubit_allocator_t *circuit_get_allocator(circuit_s *circ)
 
+cdef extern from "circuit_stats.h":
+	ctypedef struct gate_counts_t:
+		size_t x_gates
+		size_t y_gates
+		size_t z_gates
+		size_t h_gates
+		size_t p_gates
+		size_t cx_gates
+		size_t ccx_gates
+		size_t other_gates
+
+	size_t circuit_gate_count(circuit_s *circ)
+	unsigned int circuit_depth(circuit_s *circ)
+	unsigned int circuit_qubit_count(circuit_s *circ)
+	gate_counts_t circuit_gate_counts(circuit_s *circ)
+
 
