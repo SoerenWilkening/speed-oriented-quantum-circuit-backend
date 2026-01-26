@@ -111,4 +111,13 @@ cdef extern from "circuit_stats.h":
 	unsigned int circuit_qubit_count(circuit_s *circ)
 	gate_counts_t circuit_gate_counts(circuit_s *circ)
 
+cdef extern from "circuit_optimizer.h":
+	ctypedef enum opt_pass_t:
+		OPT_PASS_MERGE
+		OPT_PASS_CANCEL_INVERSE
+
+	circuit_s *circuit_optimize(circuit_s *circ)
+	circuit_s *circuit_optimize_pass(circuit_s *circ, opt_pass_t pass_type)
+	int circuit_can_optimize(circuit_s *circ)
+
 
