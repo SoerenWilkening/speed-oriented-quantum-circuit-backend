@@ -175,10 +175,13 @@ Plans:
   2. Comparison operations are organized in dedicated module (>, <, ==, >=, <=)
   3. Logic operations are organized in dedicated module (AND, OR, XOR, NOT for qbool)
   4. Module structure follows consistent patterns across operation categories
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 09-01: TBD
+- [ ] 09-01-PLAN.md - Create arithmetic_ops.h umbrella header (wave 1)
+- [ ] 09-02-PLAN.md - Create comparison_ops.h header (wave 1)
+- [ ] 09-03-PLAN.md - Create bitwise_ops.h header (wave 1)
+- [ ] 09-04-PLAN.md - Update module docs and verify integration (wave 2)
 
 ### Phase 10: Documentation and API Polish
 **Goal**: Comprehensive documentation and stabilized Python API ready for release
@@ -213,5 +216,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 | 6. Bit Operations | 4/4 | Complete | 2026-01-26 |
 | 7. Extended Arithmetic | 6/6 | Complete | 2026-01-26 |
 | 8. Circuit Optimization | 5/5 | Complete | 2026-01-26 |
-| 9. Code Organization | 0/0 | Not started | - |
+| 9. Code Organization | 0/4 | Planned | - |
 | 10. Documentation and API Polish | 0/0 | Not started | - |
