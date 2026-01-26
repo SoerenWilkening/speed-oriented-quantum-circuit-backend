@@ -1154,6 +1154,63 @@ cdef class qint(circuit):
 
 		return (quotient, remainder)
 
+	def __rfloordiv__(self, other):
+		"""Reverse floor division: other // self
+
+		Called when left operand doesn't support //, e.g. int // qint
+
+		Args:
+			other: int dividend
+
+		Returns:
+			qint quotient
+		"""
+		# Convert int to qint and perform division
+		if type(other) == int:
+			other_qint = qint(other, width=self.bits)
+			return other_qint // self
+		else:
+			# For qint // qint, __floordiv__ should be called, not __rfloordiv__
+			raise TypeError("Reverse floor division requires int divisor")
+
+	def __rmod__(self, other):
+		"""Reverse modulo: other % self
+
+		Called when left operand doesn't support %, e.g. int % qint
+
+		Args:
+			other: int dividend
+
+		Returns:
+			qint remainder
+		"""
+		# Convert int to qint and perform modulo
+		if type(other) == int:
+			other_qint = qint(other, width=self.bits)
+			return other_qint % self
+		else:
+			# For qint % qint, __mod__ should be called, not __rmod__
+			raise TypeError("Reverse modulo requires int divisor")
+
+	def __rdivmod__(self, other):
+		"""Reverse divmod: divmod(other, self)
+
+		Called when left operand doesn't support divmod, e.g. divmod(int, qint)
+
+		Args:
+			other: int dividend
+
+		Returns:
+			tuple (quotient, remainder) where both are qint
+		"""
+		# Convert int to qint and perform divmod
+		if type(other) == int:
+			other_qint = qint(other, width=self.bits)
+			return divmod(other_qint, self)
+		else:
+			# For qint divmod qint, __divmod__ should be called
+			raise TypeError("Reverse divmod requires int divisor")
+
 
 
 cdef class qbool(qint):
