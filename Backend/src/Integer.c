@@ -156,46 +156,7 @@ void free_element(circuit_t *circ, quantum_int_t *el1) {
     free(el1);
 }
 
-sequence_t *setting_seq() {
-    int *bin = two_complement(*QPU_state->R0, INTEGERSIZE);
-    if (bin == NULL) {
-        return NULL;
-    }
-    sequence_t *seq;
-    seq = malloc(sizeof(sequence_t));
-    if (seq == NULL) {
-        free(bin);
-        return NULL;
-    }
-    seq->used_layer = 1;
-    seq->num_layer = 1;
-    seq->gates_per_layer = calloc(1, sizeof(num_t));
-    if (seq->gates_per_layer == NULL) {
-        free(bin);
-        free(seq);
-        return NULL;
-    }
-    seq->seq = calloc(1, sizeof(gate_t *));
-    if (seq->seq == NULL) {
-        free(seq->gates_per_layer);
-        free(bin);
-        free(seq);
-        return NULL;
-    }
-    seq->seq[0] = calloc(INTEGERSIZE, sizeof(gate_t));
-    if (seq->seq[0] == NULL) {
-        free(seq->seq);
-        free(seq->gates_per_layer);
-        free(bin);
-        free(seq);
-        return NULL;
-    }
-    seq->gates_per_layer[0] = 0;
-    for (int i = QPU_state->Q0->MSB; i < INTEGERSIZE; ++i) {
-        if (bin[i])
-            x(&seq->seq[0][seq->gates_per_layer[0]++], i);
-    }
-
-    free(bin);
-    return seq;
-}
+// TODO(Phase 4): setting_seq() removed during global state cleanup
+// This function used QPU_state global which was eliminated in 04-02
+// Function was not called from Python bindings (verified via grep)
+// If needed in future, should be refactored to accept circuit_t* parameter

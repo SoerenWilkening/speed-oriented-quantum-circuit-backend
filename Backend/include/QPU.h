@@ -1,12 +1,15 @@
 //
-// QPU.h - Circuit management and gate adding
-// Dependencies: types.h, gate.h, qubit_allocator.h
+// QPU.h - Circuit management
+// Dependencies: types.h, gate.h, qubit_allocator.h, optimizer.h
+//
+// Note: Gate adding functionality moved to optimizer.h
 //
 
 #ifndef CQ_BACKEND_IMPROVED_QPU_H
 #define CQ_BACKEND_IMPROVED_QPU_H
 
 #include "gate.h"
+#include "optimizer.h"
 #include "qubit_allocator.h"
 #include "types.h"
 
@@ -77,18 +80,14 @@ typedef struct instruction_t {
     struct instruction_t *next_instruction; // used for jumps
 } instruction_t;
 
-extern instruction_t instruction_list[MAXINSTRUCTIONS];
-extern int instruction_counter;
-extern instruction_t *QPU_state;
-
+// Circuit management functions
 circuit_t *init_circuit();
 void allocate_more_qubits(circuit_t *circ, gate_t *g);
 void allocate_more_layer(circuit_t *circ, layer_t min_possible_layer);
 void allocate_more_gates_per_layer(circuit_t *circ, layer_t layer, layer_t pos);
 void allocate_more_indices_per_qubit(circuit_t *circ, int loc);
 
-void add_gate(circuit_t *circ, gate_t *g);
-
+// Circuit output functions
 void print_circuit(circuit_t *circ);
 void free_circuit(circuit_t *circ);
 void circuit_to_opanqasm(circuit_t *circ, char *path);
