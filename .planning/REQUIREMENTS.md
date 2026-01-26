@@ -20,11 +20,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Testing Infrastructure
 
-- [ ] **TEST-01**: Characterization test suite captures current behavior before refactoring
+- [x] **TEST-01**: Characterization test suite captures current behavior before refactoring
 - [ ] **TEST-02**: C backend unit tests cover core functions
 - [ ] **TEST-03**: Python API unit tests cover qint/qbool operations
-- [ ] **TEST-04**: Valgrind/ASan memory testing integrated into development workflow
-- [ ] **TEST-05**: Pre-commit hooks enforce code quality (Ruff, linting)
+- [x] **TEST-04**: Valgrind/ASan memory testing integrated into development workflow
+- [x] **TEST-05**: Pre-commit hooks enforce code quality (Ruff, linting)
 
 ### Variable-Width Integers
 
@@ -123,11 +123,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FOUND-06 | Phase 3 | Pending |
 | FOUND-07 | Phase 3 | Pending |
 | FOUND-08 | Phase 3 | Pending |
-| TEST-01 | Phase 1 | Pending |
+| TEST-01 | Phase 1 | Complete |
 | TEST-02 | Phase 10 | Pending |
 | TEST-03 | Phase 10 | Pending |
-| TEST-04 | Phase 1 | Pending |
-| TEST-05 | Phase 1 | Pending |
+| TEST-04 | Phase 1 | Complete |
+| TEST-05 | Phase 1 | Complete |
 | VINT-01 | Phase 5 | Pending |
 | VINT-02 | Phase 5 | Pending |
 | VINT-03 | Phase 5 | Pending |
@@ -165,4 +165,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-01-25*
-*Last updated: 2026-01-25 after roadmap creation*
+*Last updated: 2026-01-26 after Phase 1 completion*
