@@ -4,10 +4,15 @@
 
 #include "Integer.h"
 
+// Legacy globals for backward compatibility (point to INTEGERSIZE versions)
 sequence_t *precompiled_QQ_add = NULL;
 sequence_t *precompiled_cQQ_add = NULL;
 sequence_t *precompiled_CQ_add[64] = {NULL};
 sequence_t *precompiled_cCQ_add[64] = {NULL};
+
+// Width-parameterized precompiled caches (index 0 unused, 1-64 valid)
+sequence_t *precompiled_QQ_add_width[65] = {NULL};
+sequence_t *precompiled_cQQ_add_width[65] = {NULL};
 
 sequence_t *CC_add() {
     // OWNERSHIP: No sequence returned (performs classical computation only)
@@ -103,15 +108,22 @@ sequence_t *CQ_add(int bits) {
     precompiled_CQ_add[bits] = add;
     return add;
 }
-sequence_t *QQ_add() {
-    // OWNERSHIP: Returns cached sequence (precompiled_QQ_add) - DO NOT FREE
+sequence_t *QQ_add(int bits) {
+    // OWNERSHIP: Returns cached sequence (precompiled_QQ_add_width[bits]) - DO NOT FREE
     // The precompiled sequence is reused across calls for performance
-    //    printf("check\n");
-    //    fflush(stdout);
-    if (precompiled_QQ_add != NULL)
-        return precompiled_QQ_add;
-    //	printf("not precompiled\n");
-    //    fflush(stdout);
+    //
+    // Qubit layout for QQ_add(bits):
+    // - Qubits [0, bits-1]: First operand (target, modified in place)
+    // - Qubits [bits, 2*bits-1]: Second operand (control)
+
+    // Bounds check: valid widths are 1-64
+    if (bits < 1 || bits > 64) {
+        return NULL;
+    }
+
+    // Check cache for this width
+    if (precompiled_QQ_add_width[bits] != NULL)
+        return precompiled_QQ_add_width[bits];
 
     sequence_t *add = malloc(sizeof(sequence_t));
     if (add == NULL) {
@@ -120,7 +132,7 @@ sequence_t *QQ_add() {
 
     // allocate exact number of layer and enough gates per layer
     add->used_layer = 0;
-    add->num_layer = 5 * INTEGERSIZE - 2;
+    add->num_layer = 5 * bits - 2;
     add->gates_per_layer = calloc(add->num_layer, sizeof(num_t));
     if (add->gates_per_layer == NULL) {
         free(add);
@@ -134,7 +146,7 @@ sequence_t *QQ_add() {
         return NULL;
     }
     for (int i = 0; i < add->num_layer; ++i) {
-        add->seq[i] = calloc(2 * INTEGERSIZE, sizeof(gate_t));
+        add->seq[i] = calloc(2 * bits, sizeof(gate_t));
         if (add->seq[i] == NULL) {
             for (int j = 0; j < i; ++j) {
                 free(add->seq[j]);
@@ -145,28 +157,29 @@ sequence_t *QQ_add() {
             return NULL;
         }
     }
-    QFT(add, INTEGERSIZE);
+    QFT(add, bits);
     int rounds = 0;
-    for (int bit = (int)INTEGERSIZE - 1; bit >= 0; --bit) {
-        for (int i = 0; i < INTEGERSIZE - rounds; ++i) {
-            num_t layer = 2 * INTEGERSIZE + i + 2 * rounds - 1;
-            num_t target = INTEGERSIZE - i - 1 - rounds;
-            num_t control = INTEGERSIZE + bit;
+    for (int bit = (int)bits - 1; bit >= 0; --bit) {
+        for (int i = 0; i < bits - rounds; ++i) {
+            num_t layer = 2 * bits + i + 2 * rounds - 1;
+            num_t target = bits - i - 1 - rounds;
+            num_t control = bits + bit;
             double value = 2 * M_PI / (pow(2, i + 1));
             gate_t *g = &add->seq[layer][add->gates_per_layer[layer]++];
             cp(g, target, control, value);
         }
         rounds++;
     }
-    //	printf("build\n");
-    //    fflush(stdout);
-    add->used_layer += INTEGERSIZE;
-    QFT_inverse(add, INTEGERSIZE);
-    //	printf("qft inverted\n");
-    //    fflush(stdout);
-    precompiled_QQ_add = add;
-    //	printf("stored\n");
-    //    fflush(stdout);
+    add->used_layer += bits;
+    QFT_inverse(add, bits);
+
+    // Cache the sequence
+    precompiled_QQ_add_width[bits] = add;
+
+    // Backward compatibility: set legacy global for INTEGERSIZE
+    if (bits == INTEGERSIZE) {
+        precompiled_QQ_add = add;
+    }
 
     return add;
 }
@@ -258,11 +271,23 @@ sequence_t *cCQ_add(int bits) {
     precompiled_cCQ_add[bits] = add;
     return add;
 }
-sequence_t *cQQ_add() {
-    // OWNERSHIP: Returns cached sequence (precompiled_cQQ_add) - DO NOT FREE
+sequence_t *cQQ_add(int bits) {
+    // OWNERSHIP: Returns cached sequence (precompiled_cQQ_add_width[bits]) - DO NOT FREE
     // The precompiled sequence is reused across calls for performance
-    if (precompiled_cQQ_add != NULL)
-        return precompiled_cQQ_add;
+    //
+    // Qubit layout for cQQ_add(bits):
+    // - Qubits [0, bits-1]: First operand (target, modified in place)
+    // - Qubits [bits, 2*bits-1]: Second operand (control)
+    // - Qubit [3*bits-1]: Conditional control qubit
+
+    // Bounds check: valid widths are 1-64
+    if (bits < 1 || bits > 64) {
+        return NULL;
+    }
+
+    // Check cache for this width
+    if (precompiled_cQQ_add_width[bits] != NULL)
+        return precompiled_cQQ_add_width[bits];
 
     sequence_t *add = malloc(sizeof(sequence_t));
     if (add == NULL) {
@@ -271,8 +296,7 @@ sequence_t *cQQ_add() {
 
     // allocate exact number of layer and enough gates per layer
     add->used_layer = 0;
-    add->num_layer =
-        INTEGERSIZE * (INTEGERSIZE + 1) / 2 * 4 + 4 * INTEGERSIZE - 2 - INTEGERSIZE / 4 * 4 + 3;
+    add->num_layer = bits * (bits + 1) / 2 * 4 + 4 * bits - 2 - bits / 4 * 4 + 3;
     add->gates_per_layer = calloc(add->num_layer, sizeof(num_t));
     if (add->gates_per_layer == NULL) {
         free(add);
@@ -286,7 +310,7 @@ sequence_t *cQQ_add() {
         return NULL;
     }
     for (int i = 0; i < add->num_layer; ++i) {
-        add->seq[i] = calloc(2 * INTEGERSIZE, sizeof(gate_t));
+        add->seq[i] = calloc(2 * bits, sizeof(gate_t));
         if (add->seq[i] == NULL) {
             for (int j = 0; j < i; ++j) {
                 free(add->seq[j]);
@@ -298,16 +322,16 @@ sequence_t *cQQ_add() {
         }
     }
 
-    QFT(add, INTEGERSIZE);
+    QFT(add, bits);
 
-    int control = 3 * INTEGERSIZE - 1;
+    int control = 3 * bits - 1;
     int rounds;
-    int layer = 2 * INTEGERSIZE - 1;
+    int layer = 2 * bits - 1;
 
     // block 1
-    for (int bit = (int)INTEGERSIZE - 1; bit >= 0; --bit) {
+    for (int bit = (int)bits - 1; bit >= 0; --bit) {
         double value = 0;
-        for (int i = 0; i < INTEGERSIZE - bit; ++i) {
+        for (int i = 0; i < bits - bit; ++i) {
             value += 2 * M_PI / (pow(2, i + 1)) / 2;
         }
         gate_t *g = &add->seq[layer][add->gates_per_layer[layer]++];
@@ -317,37 +341,44 @@ sequence_t *cQQ_add() {
 
     // block 2
     rounds = 0;
-    for (int bit = (int)INTEGERSIZE - 1; bit >= 0; --bit) {
+    for (int bit = (int)bits - 1; bit >= 0; --bit) {
         gate_t *g = &add->seq[layer][add->gates_per_layer[layer]++];
-        cx(g, control, INTEGERSIZE + bit);
+        cx(g, control, bits + bit);
         layer++;
-        for (int i = 0; i < INTEGERSIZE - rounds; ++i) {
+        for (int i = 0; i < bits - rounds; ++i) {
             double value = 2 * M_PI / (pow(2, i + 1)) / 2;
             g = &add->seq[layer][add->gates_per_layer[layer]++];
             cp(g, bit - i, control, -value);
             layer++;
         }
         g = &add->seq[layer][add->gates_per_layer[layer]++];
-        cx(g, control, INTEGERSIZE + bit);
+        cx(g, control, bits + bit);
         layer++;
         rounds++;
     }
 
     // block 3
     rounds = 0;
-    for (int bit = (int)INTEGERSIZE - 1; bit >= 0; --bit) {
-        for (int i = 0; i < INTEGERSIZE - rounds; ++i) {
+    for (int bit = (int)bits - 1; bit >= 0; --bit) {
+        for (int i = 0; i < bits - rounds; ++i) {
             double value = 2 * M_PI / (pow(2, i + 1)) / 2;
             gate_t *g = &add->seq[layer][add->gates_per_layer[layer]++];
-            cp(g, bit - i, INTEGERSIZE + bit, value);
+            cp(g, bit - i, bits + bit, value);
             layer++;
         }
-        layer -= INTEGERSIZE - rounds;
+        layer -= bits - rounds;
         rounds++;
     }
     add->used_layer = layer + 1;
-    QFT_inverse(add, INTEGERSIZE);
-    precompiled_cQQ_add = add;
+    QFT_inverse(add, bits);
+
+    // Cache the sequence
+    precompiled_cQQ_add_width[bits] = add;
+
+    // Backward compatibility: set legacy global for INTEGERSIZE
+    if (bits == INTEGERSIZE) {
+        precompiled_cQQ_add = add;
+    }
 
     return add;
 }
