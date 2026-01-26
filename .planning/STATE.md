@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 8 of 10 (Circuit Optimization)
-Plan: 2 of 5 in current phase - COMPLETE
+Plan: 4 of 5 in current phase - COMPLETE
 Status: In progress
-Last activity: 2026-01-26 - Completed 08-02-PLAN.md: Python circuit statistics API
+Last activity: 2026-01-26 - Completed 08-04-PLAN.md: Circuit optimization passes
 
-Progress: [█████████░] 97%
+Progress: [█████████░] 98%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 28
-- Average duration: 5.5 min
-- Total execution time: 2.5 hours
+- Total plans completed: 29
+- Average duration: 5.3 min
+- Total execution time: 2.6 hours
 
 **By Phase:**
 
@@ -34,11 +34,11 @@ Progress: [█████████░] 97%
 | 05 - Variable-Width Integers | 4 | 28 min | 7 min |
 | 06 - Bitwise Operations | 4 | 23 min | 5.75 min |
 | 07 - Extended Arithmetic | 6 | 41 min | 6.8 min |
-| 08 - Circuit Optimization | 2 | 7 min | 3.5 min |
+| 08 - Circuit Optimization | 4 | 12 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 08-01 (4 min), 08-02 (3 min)
-- Trend: API binding tasks execute quickly, C-layer implementations vary
+- Last 5 plans: 08-01 (4 min), 08-02 (3 min), 08-03 (5 min), 08-04 (3 min)
+- Trend: Phase 8 executing efficiently - small focused modules average 3-4 min
 
 *Updated after each plan completion*
 
@@ -146,6 +146,9 @@ Recent decisions affecting current work:
 - Statistics exposed as @property methods: circuit.gate_count, circuit.depth, circuit.qubit_count, circuit.gate_counts (08-02)
 - gate_counts returns dict with keys X, Y, Z, H, P, CNOT, CCX, other: Matches C gate_counts_t struct fields (08-02)
 - circuit_s* cast pattern in Cython: Matches forward declaration from qubit_allocator usage (08-02)
+- Reuse add_gate's inverse cancellation for post-construction optimization: Clean implementation without duplicating logic (08-04)
+- copy_circuit rebuilds via add_gate: Automatic optimization during circuit reconstruction (08-04)
+- circuit_can_optimize simple heuristic: Returns 1 if gates exist, real scan would be expensive (08-04)
 
 ### Pending Todos
 
@@ -177,9 +180,9 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Completed 08-02-PLAN.md - Python circuit statistics API
+Stopped at: Completed 08-04-PLAN.md - Circuit optimization passes
 Resume file: None
-Note: Phase 8 in progress (2 of 5 plans complete)
+Note: Phase 8 in progress (4 of 5 plans complete)
 
 ## Phase 7 Summary
 
