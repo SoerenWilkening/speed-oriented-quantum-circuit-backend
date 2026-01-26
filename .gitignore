@@ -1,7 +1,7 @@
 cmake-build-debug
 benchmark/CQ_inprov_qtf.csv
 .idea
-*/DS_Store
+.DS_Store
 assembly*.pqsm
 circuit.qasm
 .venv
@@ -15,3 +15,6 @@ circuit-gen-results/qsharp/*
 build
 python-backend/quantum_language.c
 python-backend/quantum_language.cpython-311-darwin.so
+python-backend/quantum_language.cpython-*-linux-gnu.so
+__pycache__/
+*.egg-info/
