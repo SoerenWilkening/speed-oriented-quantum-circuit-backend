@@ -5,10 +5,10 @@
 #ifndef CQ_BACKEND_IMPROVED_INTEGER_H
 #define CQ_BACKEND_IMPROVED_INTEGER_H
 
-#include <math.h>
+#include "QPU.h"
 #include "definition.h"
 #include "gate.h"
-#include "QPU.h"
+#include <math.h>
 
 int *two_complement(int64_t x, int n);
 
@@ -43,4 +43,4 @@ extern sequence_t *precompiled_cCQ_add[64];
 extern sequence_t *precompiled_QQ_mul;
 extern sequence_t *precompiled_cQQ_mul;
 
-#endif //CQ_BACKEND_IMPROVED_INTEGER_H
+#endif // CQ_BACKEND_IMPROVED_INTEGER_H

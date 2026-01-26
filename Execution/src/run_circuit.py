@@ -3,15 +3,11 @@ from time import time
 # from qutip_qip.qasm import read_qasm
 # qc = read_qasm("../../circuit.qasm")
 # print(qc)
-
 import qiskit.qasm3
-from qiskit import QuantumCircuit, transpile
-
-from qiskit import Aer
-from qiskit import execute
+from qiskit import Aer, QuantumCircuit, execute, transpile
 
 # Use the Aer simulator
-simulator = Aer.get_backend('aer_simulator')
+simulator = Aer.get_backend("aer_simulator")
 
 read = qiskit.qasm3.load("circuit.qasm")
 n = len(read.qubits)
@@ -26,8 +22,8 @@ print(circuit.num_qubits)
 job = execute(circuit, backend=simulator, shots=1024)
 result = job.result().get_counts()
 for i in result:
-    print(result[i], end = " ")
+    print(result[i], end=" ")
     i = i[::-1]
-    print(i[0], i[1], end = " ")
+    print(i[0], i[1], end=" ")
     i = i[2:]
     print(i[:8], int(i[:8], 2), i[8:16], int(i[8:16], 2))

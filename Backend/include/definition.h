@@ -21,7 +21,8 @@
 #define Qu 0
 #define Cl 1
 
-// desired functionality for storing all the gates and operations ======================================================
+// desired functionality for storing all the gates and operations
+// ======================================================
 #define MAXCONTROLS 2
 
 #define INVERTED 1
@@ -35,4 +36,4 @@ typedef unsigned int qubit_t;
 typedef size_t layer_t;
 typedef unsigned int num_t;
 
-#endif //CQ_BACKEND_IMPROVED_DEFINITION_H
+#endif // CQ_BACKEND_IMPROVED_DEFINITION_H

@@ -5,10 +5,10 @@
 #ifndef CQ_BACKEND_IMPROVED_LOGICOPERATIONS_H
 #define CQ_BACKEND_IMPROVED_LOGICOPERATIONS_H
 
+#include "Integer.h"
+#include "QPU.h"
 #include "definition.h"
 #include "gate.h"
-#include "QPU.h"
-#include "Integer.h"
 
 sequence_t *void_seq();
 sequence_t *jmp_seq();
@@ -35,4 +35,4 @@ sequence_t *cq_or_seq();
 sequence_t *qq_or_seq();
 sequence_t *cqq_or_seq();
 
-#endif //CQ_BACKEND_IMPROVED_LOGICOPERATIONS_H
+#endif // CQ_BACKEND_IMPROVED_LOGICOPERATIONS_H

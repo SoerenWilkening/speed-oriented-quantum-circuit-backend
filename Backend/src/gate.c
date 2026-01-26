@@ -4,13 +4,13 @@
 
 #include "gate.h"
 
-void print_dash(int k){
+void print_dash(int k) {
     for (int i = 0; i < k; ++i) {
         printf("\u2500");
-//	    printf("-");
+        //	    printf("-");
     }
 }
-void print_empty(int k){
+void print_empty(int k) {
     for (int i = 0; i < k; ++i) {
         printf(" ");
     }
@@ -34,64 +34,67 @@ qubit_t max_qubit(gate_t *g) {
     return max;
 }
 void print_sequence(sequence_t *seq) {
-    if (seq == NULL) return;
+    if (seq == NULL)
+        return;
     int count = 0;
     for (int layer = 0; layer < seq->used_layer; ++layer) {
         count += seq->gates_per_layer[layer];
     }
     printf("cycles = %d\n", seq->used_layer);
     printf("gates = %d\n", count);
-    if (seq->used_layer > 300) return;
-
+    if (seq->used_layer > 300)
+        return;
 
     int width[count];
     int counter = 0;
     for (int layer_index = 0; layer_index < seq->used_layer; ++layer_index) {
         for (int gate_index = 0; gate_index < seq->gates_per_layer[layer_index]; ++gate_index) {
-            if (seq->seq[layer_index][gate_index].Gate == P){
+            if (seq->seq[layer_index][gate_index].Gate == P) {
                 width[counter++] = 8;
-            }else{
+            } else {
                 width[counter++] = 3;
             }
         }
     }
 
-
     for (int qubit = 0; qubit < 4 * INTEGERSIZE + 2; ++qubit) {
-	    printf("%3d ", qubit + 1);
+        printf("%3d ", qubit + 1);
         counter = 0;
         for (int layer = 0; layer < seq->used_layer; ++layer) {
             for (int gate = 0; gate < seq->gates_per_layer[layer]; ++gate) {
                 int skip_dash = 0;
                 gate_t *g = &seq->seq[layer][gate];
-                if ((g->NumControls > 0) && g->Control[0] == qubit || (g->NumControls > 1) && g->Control[1] == qubit) {
+                if ((g->NumControls > 0) && g->Control[0] == qubit ||
+                    (g->NumControls > 1) && g->Control[1] == qubit) {
                     printf("@");
                 } else if (g->Target == qubit) {
                     switch (g->Gate) {
-                        case X:
-                            printf("X");
-                            break;
-                        case H:
-                            printf("H");
-                            break;
-                        case P:
-                            printf("P%5.1f", g->GateValue);
-                            print_dash(1);
-                            skip_dash = 1;
-                            break;
-                        case Z:
-                            printf("Z");
-                            break;
-                        case M:
-                            printf("M");
-                            break;
+                    case X:
+                        printf("X");
+                        break;
+                    case H:
+                        printf("H");
+                        break;
+                    case P:
+                        printf("P%5.1f", g->GateValue);
+                        print_dash(1);
+                        skip_dash = 1;
+                        break;
+                    case Z:
+                        printf("Z");
+                        break;
+                    case M:
+                        printf("M");
+                        break;
                     }
                 } else if (qubit > min_qubit(g) && qubit < max_qubit(g)) {
                     printf("\xE2\x94\x82");
-                }
-                else print_dash(1);
-                if (width[counter] == 3) print_dash(1);
-                else if(skip_dash == 0) print_dash(6);
+                } else
+                    print_dash(1);
+                if (width[counter] == 3)
+                    print_dash(1);
+                else if (skip_dash == 0)
+                    print_dash(6);
                 counter++;
             }
             printf("\u250A");
@@ -100,28 +103,28 @@ void print_sequence(sequence_t *seq) {
     }
 }
 
-
-void print_gate(gate_t *g){
-    if (g == NULL) return;
+void print_gate(gate_t *g) {
+    if (g == NULL)
+        return;
     switch (g->Gate) {
-        case X:
-            printf("X->");
-            break;
-        case Y:
-            printf("Y->");
-            break;
-        case H:
-            printf("H->");
-            break;
-        case P:
-            printf("P(%.1f)->", g->GateValue);
-            break;
-        case Z:
-            printf("Z->");
-            break;
-        case M:
-            printf("M->");
-            break;
+    case X:
+        printf("X->");
+        break;
+    case Y:
+        printf("Y->");
+        break;
+    case H:
+        printf("H->");
+        break;
+    case P:
+        printf("P(%.1f)->", g->GateValue);
+        break;
+    case Z:
+        printf("Z->");
+        break;
+    case M:
+        printf("M->");
+        break;
     }
     printf("(%d,", g->Target);
     for (int i = 0; i < g->NumControls; ++i) {
@@ -130,28 +133,27 @@ void print_gate(gate_t *g){
     printf(")\n");
 }
 
-
 void y(gate_t *g, qubit_t target) {
-	g->Gate = Y;
-	g->Target = target;
-	g->NumControls = 0;
+    g->Gate = Y;
+    g->Target = target;
+    g->NumControls = 0;
 }
 void cy(gate_t *g, qubit_t target, qubit_t control) {
-	g->Gate = Y;
-	g->Target = target;
-	g->NumControls = 1;
-	g->Control[0] = control;
+    g->Gate = Y;
+    g->Target = target;
+    g->NumControls = 1;
+    g->Control[0] = control;
 }
 void z(gate_t *g, qubit_t target) {
-	g->Gate = Z;
-	g->Target = target;
-	g->NumControls = 0;
+    g->Gate = Z;
+    g->Target = target;
+    g->NumControls = 0;
 }
 void cz(gate_t *g, qubit_t target, qubit_t control) {
-	g->Gate = Z;
-	g->Target = target;
-	g->NumControls = 1;
-	g->Control[0] = control;
+    g->Gate = Z;
+    g->Target = target;
+    g->NumControls = 1;
+    g->Control[0] = control;
 }
 void h(gate_t *g, qubit_t target) {
     g->Gate = H;
@@ -166,17 +168,17 @@ void p(gate_t *g, qubit_t target, double value) {
     g->NumControls = 0;
 }
 void cp(gate_t *g, qubit_t target, qubit_t control, double value) {
-	g->Gate = P;
-	g->GateValue = value;
-	g->Target = target;
-	g->NumControls = 1;
-	g->Control[0] = control;
+    g->Gate = P;
+    g->GateValue = value;
+    g->Target = target;
+    g->NumControls = 1;
+    g->Control[0] = control;
 }
 void x(gate_t *g, qubit_t target) {
-	g->Gate = X;
-	g->Target = target;
+    g->Gate = X;
+    g->Target = target;
     g->GateValue = 1;
-	g->NumControls = 0;
+    g->NumControls = 0;
 }
 void cx(gate_t *g, qubit_t target, qubit_t control) {
     g->Gate = X;
@@ -205,34 +207,37 @@ sequence_t *cx_gate() {
     return seq;
 }
 sequence_t *ccx_gate() {
-	sequence_t *seq = malloc(sizeof(sequence_t *));
+    sequence_t *seq = malloc(sizeof(sequence_t *));
 
-	seq->used_layer = 1;
-	seq->num_layer = 1;
-	seq->gates_per_layer[0] = 1;
-	ccx(&seq->seq[0][0], INTEGERSIZE - 1, 2 * INTEGERSIZE - 1, 3 * INTEGERSIZE - 1);
+    seq->used_layer = 1;
+    seq->num_layer = 1;
+    seq->gates_per_layer[0] = 1;
+    ccx(&seq->seq[0][0], INTEGERSIZE - 1, 2 * INTEGERSIZE - 1, 3 * INTEGERSIZE - 1);
 
-	return seq;
+    return seq;
 }
 
 sequence_t *QFT(sequence_t *qft, int num_qubits) {
     int offset = INTEGERSIZE - num_qubits;
-    
+
     num_t sum[2 * num_qubits - 1];
     memset(sum, 0, (2 * num_qubits - 1) * sizeof(num_t));
     // determine the number of gates per layer for the qft
     for (int j = 0; j < num_qubits; ++j) {
         sum[2 * j]++; // for the hadamards
-        for (int i = 0; i < num_qubits - 1 - j; ++i) sum[2 * j + i + 1]++;
+        for (int i = 0; i < num_qubits - 1 - j; ++i)
+            sum[2 * j + i + 1]++;
     }
     if (qft == NULL) {
         qft = malloc(sizeof(sequence_t));
-		qft->gates_per_layer = calloc(2 * num_qubits - 1, sizeof(num_t));
-		qft->seq = calloc(2 * num_qubits - 1, sizeof(gate_t *));
-	    for (int i = 0; i < 2 * num_qubits - 1; ++i) {
-			if (i < num_qubits) qft->seq[i] = calloc(i + 1, sizeof(gate_t));
-			else qft->seq[i] = calloc(2 * num_qubits - i, sizeof(gate_t));
-	    }
+        qft->gates_per_layer = calloc(2 * num_qubits - 1, sizeof(num_t));
+        qft->seq = calloc(2 * num_qubits - 1, sizeof(gate_t *));
+        for (int i = 0; i < 2 * num_qubits - 1; ++i) {
+            if (i < num_qubits)
+                qft->seq[i] = calloc(i + 1, sizeof(gate_t));
+            else
+                qft->seq[i] = calloc(2 * num_qubits - i, sizeof(gate_t));
+        }
         qft->used_layer = 0;
         qft->num_layer = 2 * num_qubits - 1;
         memset(qft->gates_per_layer, 0, qft->num_layer * sizeof(num_t));
@@ -244,7 +249,8 @@ sequence_t *QFT(sequence_t *qft, int num_qubits) {
         h(&qft->seq[qft->used_layer + 2 * j][sum[2 * j]], offset + j);
         sum[2 * j]++;
         for (int i = 0; i < num_qubits - 1 - j; ++i) {
-            cp(&qft->seq[qft->used_layer + 2 * j + i + 1][sum[2 * j + i + 1]], offset + j, offset + j + i + 1, M_PI / pow(2, i + 1));
+            cp(&qft->seq[qft->used_layer + 2 * j + i + 1][sum[2 * j + i + 1]], offset + j,
+               offset + j + i + 1, M_PI / pow(2, i + 1));
             sum[2 * j + i + 1]++;
         }
     }
@@ -255,22 +261,25 @@ sequence_t *QFT(sequence_t *qft, int num_qubits) {
 
 sequence_t *QFT_inverse(sequence_t *qft, int num_qubits) {
     int offset = INTEGERSIZE - num_qubits;
-    
+
     // determine the number of gates per layer for the qft
     num_t sum[2 * num_qubits - 1];
     memset(sum, 0, (2 * num_qubits - 1) * sizeof(num_t));
     for (int j = 0; j < num_qubits; ++j) {
         sum[2 * j]++; // for the hadamards
-        for (int i = 0; i < num_qubits - 1 - j; ++i) sum[2 * j + i + 1]++;
+        for (int i = 0; i < num_qubits - 1 - j; ++i)
+            sum[2 * j + i + 1]++;
     }
     if (qft == NULL) {
         qft = malloc(sizeof(sequence_t));
-	    qft->gates_per_layer = calloc(2 * num_qubits - 1, sizeof(num_t));
-	    qft->seq = calloc(2 * num_qubits - 1, sizeof(gate_t *));
-	    for (int i = 0; i < 2 * num_qubits - 1; ++i) {
-		    if (i < num_qubits) qft->seq[i] = calloc(i + 1, sizeof(gate_t));
-		    else qft->seq[i] = calloc(2 * num_qubits - i, sizeof(gate_t));
-	    }
+        qft->gates_per_layer = calloc(2 * num_qubits - 1, sizeof(num_t));
+        qft->seq = calloc(2 * num_qubits - 1, sizeof(gate_t *));
+        for (int i = 0; i < 2 * num_qubits - 1; ++i) {
+            if (i < num_qubits)
+                qft->seq[i] = calloc(i + 1, sizeof(gate_t));
+            else
+                qft->seq[i] = calloc(2 * num_qubits - i, sizeof(gate_t));
+        }
         qft->used_layer = 0;
         qft->num_layer = 2 * num_qubits - 1;
         memset(qft->gates_per_layer, 0, qft->num_layer * sizeof(num_t));
@@ -279,7 +288,8 @@ sequence_t *QFT_inverse(sequence_t *qft, int num_qubits) {
     for (int j = 0; j < num_qubits; ++j) {
         for (int i = 0; i < num_qubits - 1 - j; ++i) {
             num_t layer = qft->used_layer + 2 * num_qubits - 1 - (2 * j + i + 1) - 1;
-            cp(&qft->seq[layer][qft->gates_per_layer[layer]++], offset + j, offset + (j + i + 1), - M_PI / pow(2, i + 1));
+            cp(&qft->seq[layer][qft->gates_per_layer[layer]++], offset + j, offset + (j + i + 1),
+               -M_PI / pow(2, i + 1));
         }
         num_t layer = qft->used_layer + 2 * num_qubits - 1 - 2 * j - 1;
         h(&qft->seq[layer][qft->gates_per_layer[layer]++], offset + j);
@@ -290,37 +300,56 @@ sequence_t *QFT_inverse(sequence_t *qft, int num_qubits) {
 }
 
 bool gates_are_inverse(gate_t *G1, gate_t *G2) {
-    if (G2 == NULL) return false;
-    if (G1->Target != G2->Target) return false;
-    if (G1->NumControls != G2->NumControls) return false;
-    if (G1->Gate != G2->Gate) return false;
-	if (G1->Gate == P) { if (G1->GateValue != -G2->GateValue) return false; }
-	else if (G1->GateValue != G2->GateValue) return false;
-	for (int i = 0; i < G1->NumControls; ++i) if (G1->Control[i] != G2->Control[i]) return false;
+    if (G2 == NULL)
+        return false;
+    if (G1->Target != G2->Target)
+        return false;
+    if (G1->NumControls != G2->NumControls)
+        return false;
+    if (G1->Gate != G2->Gate)
+        return false;
+    if (G1->Gate == P) {
+        if (G1->GateValue != -G2->GateValue)
+            return false;
+    } else if (G1->GateValue != G2->GateValue)
+        return false;
+    for (int i = 0; i < G1->NumControls; ++i)
+        if (G1->Control[i] != G2->Control[i])
+            return false;
 
     return true;
 }
 
 bool gates_commute(gate_t *g1, gate_t *g2) {
-    if (g2 == NULL) return true;
-    if (g1->NumControls > 0 && g2->NumControls > 0 && g1->Target != g2->Target) return true;
+    if (g2 == NULL)
+        return true;
+    if (g1->NumControls > 0 && g2->NumControls > 0 && g1->Target != g2->Target)
+        return true;
     switch (g1->Gate) {
-        case P: if (g2->Gate == P) return true;
-            if (g2->Gate == Z) return true;
-            if (g2->Gate == X && g1->Target != g2->Target) return true; // does only apply, when targets dont overlap
-            break;
-        case X:
-            if (g2->Gate == X && g1->Target == g2->Target)
-                return true; // does not apply, when target and control overlap
-            break;
-        case H:
-            if (g2->Gate == H && g1->Target == g2->Target)
-                return true; // does not apply, when target and control overlap
-            break;
-        case Z: if (g2->Gate == P) return true;
-            if (g2->Gate == Z) return true;
-            if (g2->Gate == X && g1->Target != g2->Target) return true; // it connect to one of the controls
-            break;
+    case P:
+        if (g2->Gate == P)
+            return true;
+        if (g2->Gate == Z)
+            return true;
+        if (g2->Gate == X && g1->Target != g2->Target)
+            return true; // does only apply, when targets dont overlap
+        break;
+    case X:
+        if (g2->Gate == X && g1->Target == g2->Target)
+            return true; // does not apply, when target and control overlap
+        break;
+    case H:
+        if (g2->Gate == H && g1->Target == g2->Target)
+            return true; // does not apply, when target and control overlap
+        break;
+    case Z:
+        if (g2->Gate == P)
+            return true;
+        if (g2->Gate == Z)
+            return true;
+        if (g2->Gate == X && g1->Target != g2->Target)
+            return true; // it connect to one of the controls
+        break;
     }
     return false;
 }

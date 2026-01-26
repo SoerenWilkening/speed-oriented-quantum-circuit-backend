@@ -5,18 +5,16 @@
 #ifndef CQ_BACKEND_IMPROVED_GATE_H
 #define CQ_BACKEND_IMPROVED_GATE_H
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <math.h>
 #include "definition.h"
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define MAXLAYERINSEQUENCE 10000
 #define MAXGATESPERLAYER INTEGERSIZE
 
-typedef enum {
-    X, Y, Z, R, H, Rx, Ry, Rz, P, M
-} Standardgate_t;
+typedef enum { X, Y, Z, R, H, Rx, Ry, Rz, P, M } Standardgate_t;
 
 typedef struct {
     qubit_t Control[MAXCONTROLS];
@@ -28,7 +26,6 @@ typedef struct {
     num_t NumBasisGates;
     // store range of multiqubit gates
 } gate_t;
-
 
 typedef struct {
     gate_t **seq;
@@ -69,4 +66,4 @@ bool gates_commute(gate_t *g1, gate_t *g2);
 qubit_t max_qubit(gate_t *g);
 qubit_t min_qubit(gate_t *g);
 
-#endif //CQ_BACKEND_IMPROVED_GATE_H
+#endif // CQ_BACKEND_IMPROVED_GATE_H
