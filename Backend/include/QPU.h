@@ -75,7 +75,6 @@ typedef struct instruction_t {
 extern instruction_t instruction_list[MAXINSTRUCTIONS];
 extern int instruction_counter;
 extern instruction_t *QPU_state;
-extern circuit_t *circuit;
 
 circuit_t *init_circuit();
 void allocate_more_qubits(circuit_t *circ, gate_t *g);

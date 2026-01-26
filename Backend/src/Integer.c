@@ -4,32 +4,40 @@
 #include "QPU.h"
 #include <stdint.h>
 
-quantum_int_t *QBOOL() {
+quantum_int_t *QBOOL(circuit_t *circ) {
+    // OWNERSHIP: Caller owns returned quantum_int_t*, must free when done
+    if (circ == NULL) {
+        return NULL;
+    }
     quantum_int_t *integer = malloc(sizeof(quantum_int_t));
     if (integer == NULL) {
         return NULL;
     }
 
     integer->MSB = INTEGERSIZE - 1;
-    integer->q_address[INTEGERSIZE - 1] = circuit->used_qubit_indices;
+    integer->q_address[INTEGERSIZE - 1] = circ->used_qubit_indices;
 
-    circuit->ancilla += 1;
-    circuit->used_qubit_indices += 1;
+    circ->ancilla += 1;
+    circ->used_qubit_indices += 1;
     return integer;
 }
 
-quantum_int_t *QINT() {
+quantum_int_t *QINT(circuit_t *circ) {
+    // OWNERSHIP: Caller owns returned quantum_int_t*, must free when done
+    if (circ == NULL) {
+        return NULL;
+    }
     quantum_int_t *integer = malloc(sizeof(quantum_int_t));
     if (integer == NULL) {
         return NULL;
     }
 
     integer->MSB = 0;
-    circuit->ancilla += INTEGERSIZE;
+    circ->ancilla += INTEGERSIZE;
 
     for (int i = 0; i < INTEGERSIZE; ++i) {
-        integer->q_address[i] = circuit->used_qubit_indices;
-        circuit->used_qubit_indices++;
+        integer->q_address[i] = circ->used_qubit_indices;
+        circ->used_qubit_indices++;
     }
     return integer;
 }
@@ -79,9 +87,14 @@ int *two_complement(int64_t x, int n) {
     return bin;
 }
 
-void free_element(quantum_int_t *el1) {
-    circuit->ancilla--;
-    circuit->used_qubit_indices--;
+void free_element(circuit_t *circ, quantum_int_t *el1) {
+    // OWNERSHIP: Frees the quantum_int_t, updates circuit tracking
+    if (circ == NULL || el1 == NULL) {
+        return;
+    }
+    circ->ancilla--;
+    circ->used_qubit_indices--;
+    free(el1);
 }
 
 sequence_t *setting_seq() {
