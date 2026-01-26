@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 4 of 10 (Module Separation)
-Plan: 1 of 4 in current phase
+Plan: 2 of 4 in current phase
 Status: In progress
-Last activity: 2026-01-26 - Completed 04-01-PLAN.md (Create types.h foundation)
+Last activity: 2026-01-26 - Completed 04-02-PLAN.md (Extract optimizer module)
 
-Progress: [███░░░░░░░] 33%
+Progress: [███░░░░░░░] 36%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
+- Total plans completed: 11
 - Average duration: 5.5 min
-- Total execution time: 0.9 hours
+- Total execution time: 1.0 hours
 
 **By Phase:**
 
@@ -30,11 +30,11 @@ Progress: [███░░░░░░░] 33%
 | 01 - Testing Foundation | 3 | 18 min | 6 min |
 | 02 - C Layer Cleanup | 3 | 18 min | 6 min |
 | 03 - Memory Architecture | 3 | 22 min | 7.3 min |
-| 04 - Module Separation | 1 | 3 min | 3 min |
+| 04 - Module Separation | 2 | 8 min | 4 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-01 (5 min), 03-02 (2 min), 03-03 (15 min), 04-01 (3 min)
-- Trend: Phase 4 started, 04-01 efficient at 3 min (pure refactoring, no feature additions)
+- Last 5 plans: 03-02 (2 min), 03-03 (15 min), 04-01 (3 min), 04-02 (5 min)
+- Trend: Phase 4 maintaining efficient pace, 04-02 at 5 min (module extraction with deviations)
 
 *Updated after each plan completion*
 
@@ -75,6 +75,9 @@ Recent decisions affecting current work:
 - types.h as foundation module: Single source of truth for shared types (qubit_t, gate_t, sequence_t) with zero dependencies (04-01)
 - definition.h as backward compatibility wrapper: Enables gradual migration from old code (04-01)
 - Dependency comments in headers: Makes include hierarchy explicit and maintainable (04-01)
+- optimizer.c module extraction: Gate optimization logic separated from QPU.c, reducing god object from 201 to 18 lines (04-02)
+- Instruction state scope clarified: Globals kept only for sequence generation (CQ_add, CC_mul), not gate optimization (04-02)
+- circuit_t typedef uses named struct: struct circuit_s pattern for forward declaration compatibility (04-02)
 
 ### Pending Todos
 
@@ -104,5 +107,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Completed 04-01-PLAN.md - types.h foundation module created, clean header hierarchy established
+Stopped at: Completed 04-02-PLAN.md - optimizer.c module extracted, QPU.c reduced from god object, all tests pass
 Resume file: None
