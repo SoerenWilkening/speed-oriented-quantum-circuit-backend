@@ -22,7 +22,13 @@ sequence_t *CQ_equal() {
         Zeros += (1 - bin[i]);
 
     seq->used_layer = 0;
-    seq->num_layer = 1;
+    int num_layers = (int)ceil(log2(Zeros + 1)) + 10;
+    seq->num_layer = num_layers;
+    seq->gates_per_layer = calloc(num_layers, sizeof(num_t));
+    seq->seq = calloc(num_layers, sizeof(gate_t *));
+    for (int i = 0; i < num_layers; ++i) {
+        seq->seq[i] = calloc(INTEGERSIZE, sizeof(gate_t));
+    }
     memset(seq->gates_per_layer, 0, ceil(log2(Zeros + 1)) * sizeof(num_t));
 
     for (int i = 0; i < INTEGERSIZE; ++i) {
@@ -112,7 +118,13 @@ sequence_t *cCQ_equal() {
         Zeros += (1 - bin[i]);
 
     seq->used_layer = 0;
-    seq->num_layer = 1;
+    int num_layers = (int)ceil(log2(Zeros + 1) + 2) + 10;
+    seq->num_layer = num_layers;
+    seq->gates_per_layer = calloc(num_layers, sizeof(num_t));
+    seq->seq = calloc(num_layers, sizeof(gate_t *));
+    for (int i = 0; i < num_layers; ++i) {
+        seq->seq[i] = calloc(INTEGERSIZE, sizeof(gate_t));
+    }
     memset(seq->gates_per_layer, 0, ceil(log2(Zeros + 1) + 2) * sizeof(num_t));
 
     for (int i = 0; i < INTEGERSIZE; ++i) {
