@@ -3,73 +3,84 @@
 //
 #include "Integer.h"
 
+// Legacy globals for backward compatibility (point to INTEGERSIZE versions)
 sequence_t *precompiled_QQ_mul = NULL;
 sequence_t *precompiled_cQQ_mul = NULL;
 
+// Width-parameterized precompiled caches (index 0 unused, 1-64 valid)
+sequence_t *precompiled_QQ_mul_width[65] = {NULL};
+sequence_t *precompiled_cQQ_mul_width[65] = {NULL};
+
 void CP_sequence(sequence_t *mul, num_t *layer, int rounds, num_t control, double multiplyer,
-                 int inverted) {
-    int l1 = 0, l2 = INTEGERSIZE - rounds;
+                 int inverted, int bits) {
+    int l1 = 0, l2 = bits - rounds;
     int fac = 1;
     if (inverted) {
-        l1 = INTEGERSIZE - 1;
+        l1 = bits - 1;
         l2 = 0;
         fac = -1;
     }
     for (int i = l1; i < l2; i += fac) {
-        num_t target = INTEGERSIZE - i - 1 - rounds;
+        num_t target = bits - i - 1 - rounds;
         double value = M_PI / (pow(2, i + 1)) * multiplyer;
         gate_t *g = &mul->seq[*layer][mul->gates_per_layer[*layer]++];
         cp(g, target, control, value);
         (*layer)++;
     }
 }
-void CX_sequence(sequence_t *mul, num_t *layer, int bit_int2) {
-    for (int bit = INTEGERSIZE - 1; bit >= 0; --bit) {
-        num_t control = INTEGERSIZE + bit;
+void CX_sequence(sequence_t *mul, num_t *layer, int bit_int2, int bits) {
+    for (int bit = bits - 1; bit >= 0; --bit) {
+        num_t control = bits + bit;
         gate_t *g = &mul->seq[*layer][mul->gates_per_layer[*layer]++];
-        cx(g, control, 3 * INTEGERSIZE + bit_int2 - 1);
+        cx(g, control, 3 * bits + bit_int2 - 1);
         (*layer)++;
     }
 }
-void CX2_sequence(sequence_t *mul, num_t *layer, int bit_int2) {
-    for (int bit = INTEGERSIZE - 1; bit >= 0; --bit) {
-        num_t control = 2 * INTEGERSIZE + bit;
+void CX2_sequence(sequence_t *mul, num_t *layer, int bit_int2, int bits) {
+    for (int bit = bits - 1; bit >= 0; --bit) {
+        num_t control = 2 * bits + bit;
         gate_t *g = &mul->seq[*layer][mul->gates_per_layer[*layer]++];
-        cx(g, control, 3 * INTEGERSIZE + bit_int2 - 1);
+        cx(g, control, 3 * bits + bit_int2 - 1);
         (*layer)++;
     }
 }
-void CCX_sequence(sequence_t *mul, num_t *layer, int bit_int2) {
-    for (int bit = INTEGERSIZE - 1; bit >= 0; --bit) {
-        num_t control = INTEGERSIZE + bit;
+void CCX_sequence(sequence_t *mul, num_t *layer, int bit_int2, int bits) {
+    for (int bit = bits - 1; bit >= 0; --bit) {
+        num_t control = bits + bit;
         gate_t *g = &mul->seq[*layer][mul->gates_per_layer[*layer]++];
-        ccx(g, control, 3 * INTEGERSIZE + bit_int2 - 1, 4 * INTEGERSIZE - 1);
+        ccx(g, control, 3 * bits + bit_int2 - 1, 4 * bits - 1);
         (*layer)++;
     }
 }
-void all_rot(sequence_t *mul, num_t *layer, int inverted, double multiplyer) {
+void all_rot(sequence_t *mul, num_t *layer, int inverted, double multiplyer, int bits) {
     int rounds = 0;
-    for (int bit = INTEGERSIZE - 1; bit >= 0; --bit) {
-        num_t control = INTEGERSIZE + bit;
-        //        CP_sequence(mul, layer, rounds, control, -(pow(2, INTEGERSIZE) - 1) / 2 *
-        //        multiplyer, inverted);
-        CP_sequence(mul, layer, rounds, control, -multiplyer / 2, inverted);
-        *layer -= INTEGERSIZE - rounds;
+    for (int bit = bits - 1; bit >= 0; --bit) {
+        num_t control = bits + bit;
+        //        CP_sequence(mul, layer, rounds, control, -(pow(2, bits) - 1) / 2 *
+        //        multiplyer, inverted, bits);
+        CP_sequence(mul, layer, rounds, control, -multiplyer / 2, inverted, bits);
+        *layer -= bits - rounds;
         rounds++;
     }
-    *layer += INTEGERSIZE;
+    *layer += bits;
 }
 void all_rot_final_block(sequence_t *mul, num_t *layer, int rounds, num_t control,
-                         double multiplyer, int inverted) {}
+                         double multiplyer, int inverted, int bits) {}
 
 sequence_t *CC_mul() {
     // OWNERSHIP: No sequence returned (performs classical computation only)
     *(QPU_state->R0) = *(QPU_state->R1) * *(QPU_state->R2);
     return NULL;
 }
-sequence_t *CQ_mul(int64_t value) {
+sequence_t *CQ_mul(int bits, int64_t value) {
     // OWNERSHIP: Caller owns returned sequence_t*, must free gates_per_layer, seq arrays, and seq
-    int *bin = two_complement(value, INTEGERSIZE);
+
+    // Bounds check: valid widths are 1-64
+    if (bits < 1 || bits > 64) {
+        return NULL;
+    }
+
+    int *bin = two_complement(value, bits);
     if (bin == NULL) {
         return NULL;
     }
@@ -80,7 +91,7 @@ sequence_t *CQ_mul(int64_t value) {
         return NULL;
     }
     mul->used_layer = 0;
-    mul->num_layer = INTEGERSIZE * (2 * INTEGERSIZE + 6) - 1;
+    mul->num_layer = bits * (2 * bits + 6) - 1;
     mul->gates_per_layer = calloc(mul->num_layer, sizeof(num_t));
     if (mul->gates_per_layer == NULL) {
         free(bin);
@@ -96,7 +107,7 @@ sequence_t *CQ_mul(int64_t value) {
         return NULL;
     }
     for (int i = 0; i < mul->num_layer; ++i) {
-        mul->seq[i] = calloc(2 * INTEGERSIZE, sizeof(gate_t));
+        mul->seq[i] = calloc(2 * bits, sizeof(gate_t));
         if (mul->seq[i] == NULL) {
             for (int j = 0; j < i; ++j) {
                 free(mul->seq[j]);
@@ -109,23 +120,22 @@ sequence_t *CQ_mul(int64_t value) {
         }
     }
 
-    QFT(mul, INTEGERSIZE);
-    num_t layer = 2 * INTEGERSIZE - 1;
+    QFT(mul, bits);
+    num_t layer = 2 * bits - 1;
     int rounds = 0;
 
     // all the CP block of the first decomp step can be merged
-    for (int bit = INTEGERSIZE - 1; bit >= 0; --bit) {
-        layer = 2 * INTEGERSIZE + 2 * rounds - 1;
-        num_t control = INTEGERSIZE + bit;
-        for (int i = 0; i < INTEGERSIZE - rounds; ++i) {
-            num_t target = INTEGERSIZE - i - 1 - rounds;
+    for (int bit = bits - 1; bit >= 0; --bit) {
+        layer = 2 * bits + 2 * rounds - 1;
+        num_t control = bits + bit;
+        for (int i = 0; i < bits - rounds; ++i) {
+            num_t target = bits - i - 1 - rounds;
 
             double value = 0;
-            for (int bit_int2 = 0; bit_int2 < INTEGERSIZE; ++bit_int2) {
-                value +=
-                    bin[bit_int2] * 2 * M_PI / (pow(2, i + 1)) * pow(2, INTEGERSIZE - bit_int2 - 1);
+            for (int bit_int2 = 0; bit_int2 < bits; ++bit_int2) {
+                value += bin[bit_int2] * 2 * M_PI / (pow(2, i + 1)) * pow(2, bits - bit_int2 - 1);
                 //				printf("%d %f ", bit_int2, 2 * M_PI / (pow(2, i +
-                // 1)) * pow(2, INTEGERSIZE - bit_int2 - 1));
+                // 1)) * pow(2, bits - bit_int2 - 1));
             }
             //			printf("\n");
             gate_t *g = &mul->seq[layer][mul->gates_per_layer[layer]++];
@@ -136,15 +146,23 @@ sequence_t *CQ_mul(int64_t value) {
     }
 
     mul->used_layer = layer;
-    QFT_inverse(mul, INTEGERSIZE);
+    QFT_inverse(mul, bits);
 
+    free(bin);
     return mul;
 }
-sequence_t *QQ_mul() {
-    // OWNERSHIP: Returns cached sequence (precompiled_QQ_mul) - DO NOT FREE
+sequence_t *QQ_mul(int bits) {
+    // OWNERSHIP: Returns cached sequence (precompiled_QQ_mul_width[bits]) - DO NOT FREE
     // The precompiled sequence is reused across calls for performance
-    if (precompiled_QQ_mul != NULL)
-        return precompiled_QQ_mul;
+
+    // Bounds check: valid widths are 1-64
+    if (bits < 1 || bits > 64) {
+        return NULL;
+    }
+
+    // Check cache for this width
+    if (precompiled_QQ_mul_width[bits] != NULL)
+        return precompiled_QQ_mul_width[bits];
 
     sequence_t *mul = malloc(sizeof(sequence_t));
     if (mul == NULL) {
@@ -152,7 +170,7 @@ sequence_t *QQ_mul() {
     }
 
     mul->used_layer = 0;
-    mul->num_layer = INTEGERSIZE * (2 * INTEGERSIZE + 6) - 1;
+    mul->num_layer = bits * (2 * bits + 6) - 1;
     mul->gates_per_layer = calloc(mul->num_layer, sizeof(num_t));
     if (mul->gates_per_layer == NULL) {
         free(mul);
@@ -166,7 +184,7 @@ sequence_t *QQ_mul() {
         return NULL;
     }
     for (int i = 0; i < mul->num_layer; ++i) {
-        mul->seq[i] = calloc(2 * INTEGERSIZE, sizeof(gate_t));
+        mul->seq[i] = calloc(2 * bits, sizeof(gate_t));
         if (mul->seq[i] == NULL) {
             for (int j = 0; j < i; ++j) {
                 free(mul->seq[j]);
@@ -178,45 +196,52 @@ sequence_t *QQ_mul() {
         }
     }
 
-    QFT(mul, INTEGERSIZE);
-    num_t layer = INTEGERSIZE;
+    QFT(mul, bits);
+    num_t layer = bits;
 
     // block 1
     int rounds = 0;
     // First blocks of CCP decompositions
     // all the CP block of the first decomp step can be merged
-    for (int bit = INTEGERSIZE - 1; bit >= 0; --bit) {
-        layer = 2 * INTEGERSIZE + 2 * rounds - 1;
-        CP_sequence(mul, &layer, rounds, INTEGERSIZE + bit, pow(2, INTEGERSIZE) - 1, false);
+    for (int bit = bits - 1; bit >= 0; --bit) {
+        layer = 2 * bits + 2 * rounds - 1;
+        CP_sequence(mul, &layer, rounds, bits + bit, pow(2, bits) - 1, false, bits);
         rounds++;
     }
     layer++;
 
     // block 2
     // intermediate step, C1X0 C0P_2(value/2)C1X0
-    for (int bit_int2 = 0; bit_int2 < INTEGERSIZE; ++bit_int2) {
-        layer -= INTEGERSIZE;
-        CX_sequence(mul, &layer, -bit_int2);
+    for (int bit_int2 = 0; bit_int2 < bits; ++bit_int2) {
+        layer -= bits;
+        CX_sequence(mul, &layer, -bit_int2, bits);
 
-        all_rot(mul, &layer, false, pow(2, 1 + bit_int2));
+        all_rot(mul, &layer, false, pow(2, 1 + bit_int2), bits);
 
-        CX_sequence(mul, &layer, -bit_int2);
+        CX_sequence(mul, &layer, -bit_int2, bits);
 
-        for (int i = 0; i < INTEGERSIZE; ++i) {
+        for (int i = 0; i < bits; ++i) {
             gate_t *g = &mul->seq[layer][mul->gates_per_layer[layer]++];
             //		    printf("%d %d %f %f\n", bit_int2, i, pow(2, i + 1) - 1, pow(2,
             // bit_int2));
             double value = pow(2, -i - 1) * M_PI * (pow(2, i + 1) - 1) * pow(2, bit_int2);
-            cp(g, INTEGERSIZE - i - 1, 3 * INTEGERSIZE - bit_int2 - 1, value);
+            cp(g, bits - i - 1, 3 * bits - bit_int2 - 1, value);
             layer++;
         }
     }
     layer++;
-    //	layer -= INTEGERSIZE - 1;
+    //	layer -= bits - 1;
     mul->used_layer = layer - 1;
-    QFT_inverse(mul, INTEGERSIZE);
+    QFT_inverse(mul, bits);
 
-    precompiled_QQ_mul = mul;
+    // Cache the sequence
+    precompiled_QQ_mul_width[bits] = mul;
+
+    // Backward compatibility: set legacy global for INTEGERSIZE
+    if (bits == INTEGERSIZE) {
+        precompiled_QQ_mul = mul;
+    }
+
     return mul;
 }
 sequence_t *cCQ_mul(int64_t value) {
