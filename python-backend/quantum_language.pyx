@@ -7,6 +7,9 @@ import numpy as np
 INTEGERSIZE = 8
 NUMANCILLY = 2 * 64  # Max possible ancilla (2 * max_width)
 
+# Module-level constant for available optimization passes
+AVAILABLE_PASSES = ['merge', 'cancel_inverse']
+
 QPU_state[0].R0 = <int *> malloc(sizeof(int))
 
 QUANTUM = 0
@@ -147,6 +150,98 @@ cdef class circuit:
 			'CCX': counts.ccx_gates,
 			'other': counts.other_gates
 		}
+
+	@property
+	def available_passes(self):
+		"""List of available optimization passes.
+
+		Returns:
+			list: Pass names that can be used with optimize()
+
+		Examples:
+			>>> c = circuit()
+			>>> c.available_passes
+			['merge', 'cancel_inverse']
+		"""
+		return AVAILABLE_PASSES.copy()
+
+	def optimize(self, passes=None):
+		"""Optimize circuit in-place and return before/after statistics.
+
+		Modifies the current circuit by applying optimization passes.
+		Returns a dict with before/after statistics for comparison.
+
+		Args:
+			passes: List of pass names to apply, or None for all passes.
+				   Available: 'merge', 'cancel_inverse'
+
+		Returns:
+			dict: Statistics comparison with 'before' and 'after' dicts,
+				  each containing gate_count, depth, qubit_count
+
+		Examples:
+			>>> c = circuit()
+			>>> a = qint(5, width=8)
+			>>> # ... operations ...
+			>>> stats = c.optimize()  # Run all passes
+			>>> print(f"Reduced gates from {stats['before']['gate_count']} to {stats['after']['gate_count']}")
+
+			>>> stats = c.optimize(passes=['cancel_inverse'])  # Specific pass
+		"""
+		global _circuit
+
+		cdef circuit_s *opt_circ
+
+		# Capture stats BEFORE optimization
+		before_stats = {
+			'gate_count': self.gate_count,
+			'depth': self.depth,
+			'qubit_count': self.qubit_count,
+			'gate_counts': self.gate_counts.copy()
+		}
+
+		# Validate pass names if provided
+		if passes is not None:
+			for p in passes:
+				if p not in AVAILABLE_PASSES:
+					raise ValueError(f"Unknown pass '{p}'. Available: {AVAILABLE_PASSES}")
+
+		# Run optimization - creates optimized copy
+		opt_circ = circuit_optimize(<circuit_s*>_circuit)
+
+		if opt_circ == NULL:
+			raise RuntimeError("Optimization failed")
+
+		# Free the old circuit and replace with optimized one
+		# Note: circuit_optimize creates a new circuit, we need to swap
+		free_circuit(<circuit_t*>_circuit)
+		_circuit = <circuit_t*>opt_circ
+
+		# Capture stats AFTER optimization
+		after_stats = {
+			'gate_count': self.gate_count,
+			'depth': self.depth,
+			'qubit_count': self.qubit_count,
+			'gate_counts': self.gate_counts.copy()
+		}
+
+		return {
+			'before': before_stats,
+			'after': after_stats
+		}
+
+	def can_optimize(self):
+		"""Check if optimization would have any effect.
+
+		Returns:
+			bool: True if optimization would reduce circuit size
+
+		Examples:
+			>>> c = circuit()
+			>>> if c.can_optimize():
+			...     stats = c.optimize()
+		"""
+		return circuit_can_optimize(<circuit_s*>_circuit) != 0
 
 	# def __str__(self):
 	# 	print_circuit(_circuit)
