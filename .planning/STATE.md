@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-01-25)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** Phase 5 Complete - Ready for Phase 6 (Bitwise Operations)
+**Current focus:** Phase 6 (Bitwise Operations) - Plan 01 Complete
 
 ## Current Position
 
-Phase: 5 of 10 (Variable-Width Integers) - COMPLETE
-Plan: 4 of 4 in current phase
-Status: Phase Complete
-Last activity: 2026-01-26 - Completed quick task 001: CQ operations refactor
+Phase: 6 of 10 (Bitwise Operations)
+Plan: 1 of 4 in current phase
+Status: In progress
+Last activity: 2026-01-26 - Completed 06-01-PLAN.md: Width-parameterized NOT and XOR
 
-Progress: [██████░░░░] 55%
+Progress: [██████░░░░] 58%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 17
-- Average duration: 5.4 min
-- Total execution time: 1.6 hours
+- Total plans completed: 18
+- Average duration: 5.3 min
+- Total execution time: 1.7 hours
 
 **By Phase:**
 
@@ -32,10 +32,11 @@ Progress: [██████░░░░] 55%
 | 03 - Memory Architecture | 3 | 22 min | 7.3 min |
 | 04 - Module Separation | 4 | 15 min | 3.8 min |
 | 05 - Variable-Width Integers | 4 | 28 min | 7 min |
+| 06 - Bitwise Operations | 1 | 3 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 05-01 (4 min), 05-02 (6 min), 05-03 (11 min), 05-04 (7 min)
-- Trend: Consistent 7 min average for Phase 5
+- Last 5 plans: 05-02 (6 min), 05-03 (11 min), 05-04 (7 min), 06-01 (3 min)
+- Trend: Fast execution for straightforward C implementations
 
 *Updated after each plan completion*
 
@@ -105,6 +106,8 @@ Recent decisions affecting current work:
 - Fixed CQ_add/cCQ_add offset for variable-width: Changed from INTEGERSIZE-bits to 0 (05-04)
 - Fixed QFT/QFT_inverse offset for variable-width: Same fix pattern (05-04)
 - CQ_add/cCQ_add/CQ_mul/cCQ_mul take explicit int64_t value parameter: Eliminated QPU_state->R0 global dependency (quick-001)
+- Q_not/cQ_not parallel/sequential X/CX gates for width-parameterized NOT (06-01)
+- Q_xor/cQ_xor parallel/sequential CNOT/Toffoli gates for width-parameterized XOR (06-01)
 
 ### Pending Todos
 
@@ -113,8 +116,8 @@ None yet.
 ### Blockers/Concerns
 
 **Critical Path Dependencies:**
-- Phase 5 COMPLETE - all 4 plans executed
-- Ready to proceed to Phase 6 (Bitwise Operations)
+- Phase 6 Plan 01 COMPLETE - NOT and XOR implemented
+- Next: Phase 6 Plan 02 (AND and OR operations)
 
 **Research Flags:**
 - Phase 6: Medium priority - quantum bit shift/rotate circuits
@@ -137,29 +140,23 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Completed 05-04-PLAN.md - Phase 5 complete with all tests passing
+Stopped at: Completed 06-01-PLAN.md - NOT and XOR width-parameterized operations
 Resume file: None
 
-## Phase 5 Summary
+## Phase 6 Summary
 
-**ALL PLANS COMPLETE**
+**IN PROGRESS**
 
-- **Plan 01:** Width metadata foundation (quantum_int_t.width, right-aligned array)
-- **Plan 02:** Width-aware arithmetic (QQ_add(bits), cQQ_add(bits))
-- **Plan 03:** Python qint width support (width parameter, validation, warnings)
-- **Plan 04:** Comprehensive test suite (66 tests, all Phase 5 success criteria verified)
+- **Plan 01:** Width-parameterized NOT and XOR (Q_not, cQ_not, Q_xor, cQ_xor) - COMPLETE
+- **Plan 02:** Width-parameterized AND and OR - TODO
+- **Plan 03:** Python bindings for bitwise operations - TODO
+- **Plan 04:** Bitwise operations test suite - TODO
 
 **Key Achievements:**
-- Variable-width quantum integers from 1-64 bits
-- Dynamic qubit allocation based on width
-- Mixed-width arithmetic operations
-- Backward compatibility with bits= parameter
-- 125 total tests passing
-
-**Critical Bug Fixed:**
-- Segfault in variable-width addition >8 bits
-- Root cause: INTEGERSIZE-based offset calculation in C layer
-- Fixed in CQ_add, cCQ_add, QFT, QFT_inverse
+- Q_not(bits): Parallel X gates for bitwise NOT (O(1) depth)
+- cQ_not(bits): Controlled NOT with sequential CX gates (O(bits) depth)
+- Q_xor(bits): Parallel CNOT for in-place XOR (O(1) depth)
+- cQ_xor(bits): Controlled XOR with Toffoli gates (O(bits) depth)
 
 **Next steps:**
-- Phase 6: Bitwise Operations (shift, rotate)
+- Plan 02: Implement AND and OR (require ancilla allocation)
