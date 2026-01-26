@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-01-25)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** Phase 6 (Bitwise Operations) - Plan 01 Complete
+**Current focus:** Phase 6 (Bitwise Operations) - Plan 02 Complete
 
 ## Current Position
 
 Phase: 6 of 10 (Bitwise Operations)
-Plan: 1 of 4 in current phase
+Plan: 2 of 4 in current phase
 Status: In progress
-Last activity: 2026-01-26 - Completed 06-01-PLAN.md: Width-parameterized NOT and XOR
+Last activity: 2026-01-26 - Completed 06-02-PLAN.md: Width-parameterized AND and OR
 
-Progress: [██████░░░░] 58%
+Progress: [██████░░░░] 61%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 18
+- Total plans completed: 19
 - Average duration: 5.3 min
-- Total execution time: 1.7 hours
+- Total execution time: 1.8 hours
 
 **By Phase:**
 
@@ -32,10 +32,10 @@ Progress: [██████░░░░] 58%
 | 03 - Memory Architecture | 3 | 22 min | 7.3 min |
 | 04 - Module Separation | 4 | 15 min | 3.8 min |
 | 05 - Variable-Width Integers | 4 | 28 min | 7 min |
-| 06 - Bitwise Operations | 1 | 3 min | 3 min |
+| 06 - Bitwise Operations | 2 | 9 min | 4.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 05-02 (6 min), 05-03 (11 min), 05-04 (7 min), 06-01 (3 min)
+- Last 5 plans: 05-03 (11 min), 05-04 (7 min), 06-01 (3 min), 06-02 (6 min)
 - Trend: Fast execution for straightforward C implementations
 
 *Updated after each plan completion*
@@ -108,6 +108,10 @@ Recent decisions affecting current work:
 - CQ_add/cCQ_add/CQ_mul/cCQ_mul take explicit int64_t value parameter: Eliminated QPU_state->R0 global dependency (quick-001)
 - Q_not/cQ_not parallel/sequential X/CX gates for width-parameterized NOT (06-01)
 - Q_xor/cQ_xor parallel/sequential CNOT/Toffoli gates for width-parameterized XOR (06-01)
+- Q_and uses single layer of parallel Toffoli gates (06-02)
+- Q_or uses A XOR B XOR (A AND B) = A OR B identity with 3 layers (06-02)
+- CQ_and: CNOT for 1s, skip for 0s (0 AND x = 0) (06-02)
+- CQ_or: X for 1s (1 OR x = 1), CNOT for 0s (0 OR x = x) (06-02)
 
 ### Pending Todos
 
@@ -116,8 +120,8 @@ None yet.
 ### Blockers/Concerns
 
 **Critical Path Dependencies:**
-- Phase 6 Plan 01 COMPLETE - NOT and XOR implemented
-- Next: Phase 6 Plan 02 (AND and OR operations)
+- Phase 6 Plan 02 COMPLETE - AND and OR implemented
+- Next: Phase 6 Plan 03 (Python bindings for bitwise operations)
 
 **Research Flags:**
 - Phase 6: Medium priority - quantum bit shift/rotate circuits
@@ -128,7 +132,6 @@ None yet.
 - Existing codebase has 65+ Ruff violations (bare except, tabs vs spaces) that need cleanup (01-01)
 - Fixed critical C compilation issues in Integer.c and QPU.c (missing stdint.h) (01-02, 05-01)
 - IntegerComparison.c uses conservative +10 buffer for layer allocation - may need precise calculation in future (02-01)
-- Logic operations (and, or, invert) still use INTEGERSIZE layout - Python bindings adapted (05-03)
 - All 125 tests pass with variable-width arithmetic and comprehensive test coverage
 
 ### Quick Tasks Completed
@@ -140,7 +143,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Completed 06-01-PLAN.md - NOT and XOR width-parameterized operations
+Stopped at: Completed 06-02-PLAN.md - AND and OR width-parameterized operations
 Resume file: None
 
 ## Phase 6 Summary
@@ -148,7 +151,7 @@ Resume file: None
 **IN PROGRESS**
 
 - **Plan 01:** Width-parameterized NOT and XOR (Q_not, cQ_not, Q_xor, cQ_xor) - COMPLETE
-- **Plan 02:** Width-parameterized AND and OR - TODO
+- **Plan 02:** Width-parameterized AND and OR (Q_and, CQ_and, Q_or, CQ_or) - COMPLETE
 - **Plan 03:** Python bindings for bitwise operations - TODO
 - **Plan 04:** Bitwise operations test suite - TODO
 
@@ -157,6 +160,10 @@ Resume file: None
 - cQ_not(bits): Controlled NOT with sequential CX gates (O(bits) depth)
 - Q_xor(bits): Parallel CNOT for in-place XOR (O(1) depth)
 - cQ_xor(bits): Controlled XOR with Toffoli gates (O(bits) depth)
+- Q_and(bits): Parallel Toffoli gates for AND (O(1) depth)
+- CQ_and(bits, value): CNOT gates for classical-quantum AND
+- Q_or(bits): 3-layer CNOT+Toffoli for OR (O(3) depth)
+- CQ_or(bits, value): X/CNOT gates for classical-quantum OR
 
 **Next steps:**
-- Plan 02: Implement AND and OR (require ancilla allocation)
+- Plan 03: Python bindings for bitwise operator overloading
