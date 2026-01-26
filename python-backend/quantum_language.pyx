@@ -1,10 +1,11 @@
 import sys
+import warnings
 
 import numpy as np
 # cimport numpy as np
 
 INTEGERSIZE = 8
-NUMANCILLY = 2 * INTEGERSIZE
+NUMANCILLY = 2 * 64  # Max possible ancilla (2 * max_width)
 
 QPU_state[0].R0 = <int *> malloc(sizeof(int))
 
@@ -24,7 +25,7 @@ cdef unsigned int _smallest_allocated_qubit = 0
 
 # cdef unsigned int * qubit_array = <unsigned int *> malloc(6 * INTEGERSIZE)
 
-qubit_array = np.ndarray(4 * INTEGERSIZE + NUMANCILLY, dtype = np.uint32)
+qubit_array = np.ndarray(4 * 64 + NUMANCILLY, dtype = np.uint32)  # Max width support
 ancilla = np.ndarray(NUMANCILLY, dtype = np.uint32)
 for i in range(NUMANCILLY):
 	ancilla[i] = i
@@ -66,35 +67,78 @@ cdef class qint(circuit):
 	cdef bint allocated_qubits
 	cdef unsigned int allocated_start  # Starting qubit index from allocator
 
-	def __init__(self, value = 0, bits = INTEGERSIZE, classical = False, create_new = True, bit_list = None):
+	def __init__(self, value = 0, width = None, bits = None, classical = False, create_new = True, bit_list = None):
+		"""Create a quantum integer.
+
+		Args:
+			value: Initial value (default 0)
+			width: Bit width (1-64, default 8) - primary parameter
+			bits: Bit width alias for backward compatibility
+			classical: Whether this is a classical integer
+			create_new: Whether to allocate new qubits
+			bit_list: External qubit list (when create_new=False)
+
+		Raises:
+			ValueError: If width < 1 or width > 64
+
+		Examples:
+			qint(5)          - 8-bit quantum integer with value 5 (default)
+			qint(5, width=16) - 16-bit quantum integer with value 5
+			qint(5, bits=16)  - backward compatible alias for width
+		"""
 		global _controlled, _control_bool, _int_counter, _smallest_allocated_qubit, ancilla
 		global _num_qubits
 		cdef qubit_allocator_t *alloc
 		cdef unsigned int start
+		cdef int actual_width
 
 		super().__init__()
+
+		# Handle width/bits parameter (width takes precedence, bits for backward compat)
+		if width is None and bits is None:
+			actual_width = INTEGERSIZE  # Default 8 bits
+		elif width is not None:
+			actual_width = width
+		else:
+			actual_width = bits  # Backward compatibility
+
+		# Width validation
+		if actual_width < 1 or actual_width > 64:
+			raise ValueError(f"Width must be 1-64, got {actual_width}")
 
 		if create_new:
 			_int_counter += 1
 			self.counter = _int_counter
-			self.bits : int = bits
-			self.value: int | bool = value
+			self.bits = actual_width
+			self.value = value
 
-			_num_qubits += bits
+			# Warn if value exceeds width (two's complement range)
+			if value != 0:
+				max_positive = (1 << (actual_width - 1)) - 1
+				min_negative = -(1 << (actual_width - 1))
+				if value > max_positive or value < min_negative:
+					warnings.warn(
+						f"Value {value} exceeds {actual_width}-bit signed range [{min_negative}, {max_positive}]. "
+						f"Value will wrap (modular arithmetic).",
+						UserWarning
+					)
 
-			self.qubits = np.ndarray(INTEGERSIZE, dtype = np.uint32)
+			_num_qubits += actual_width
+
+			self.qubits = np.ndarray(64, dtype = np.uint32)  # Max width support
 
 			# NEW: Allocate qubits through circuit's allocator
 			alloc = circuit_get_allocator(<circuit_s*>_circuit)
 			if alloc == NULL:
 				raise RuntimeError("Circuit allocator not initialized")
 
-			start = allocator_alloc(alloc, bits, True)  # is_ancilla=True
+			start = allocator_alloc(alloc, actual_width, True)  # is_ancilla=True
 			if start == <unsigned int>-1:
 				raise MemoryError("Qubit allocation failed - limit exceeded")
 
-			for i in range(bits):
-				self.qubits[INTEGERSIZE - bits + i] = start + i
+			# Right-aligned qubit storage: indices [64-width] through [63]
+			for i in range(actual_width):
+				self.qubits[64 - actual_width + i] = start + i
 
 			self.allocated_start = start  # Track for deallocation
 			self.allocated_qubits = True
@@ -102,12 +146,26 @@ cdef class qint(circuit):
 			# Keep backward compat tracking (deprecated, remove later)
 			# Note: _smallest_allocated_qubit and ancilla numpy array still updated
 			# for any code that might still use them
-			_smallest_allocated_qubit += bits
-			ancilla += bits
+			_smallest_allocated_qubit += actual_width
+			ancilla += actual_width
 		else:
-			self.bits = bits
+			self.bits = actual_width
 			self.qubits = bit_list
 			self.allocated_qubits = False
+
+	@property
+	def width(self):
+		"""Get the bit width of this quantum integer (read-only).
+
+		Returns:
+			int: Bit width (1-64)
+
+		Examples:
+			>>> a = qint(5, width=16)
+			>>> a.width
+			16
+		"""
+		return self.bits
 
 	def print_circuit(self):
 		print_circuit(_circuit)
@@ -155,18 +213,21 @@ cdef class qint(circuit):
 		global _controlled, _control_bool, qubit_array
 		cdef sequence_t *seq
 		cdef unsigned int[:] arr
+		cdef int result_bits
+		cdef int other_bits
 
 		start = 0
 
-		qubit_array[:INTEGERSIZE] = self.qubits
-		start += INTEGERSIZE
+		# Copy self qubits (right-aligned in 64-element array)
+		qubit_array[:64] = self.qubits
+		start += 64
 
 		if type(other) == int:
-			# value is a quantum integer
+			# value is a classical integer
 			QPU_state[0].R0[0] = other
 			if _controlled:
-				qubit_array[start: start + INTEGERSIZE] = (<qbool> _control_bool).qubits
-				qubit_array[start + INTEGERSIZE: start + INTEGERSIZE + NUMANCILLY] = ancilla
+				qubit_array[start: start + 64] = (<qbool> _control_bool).qubits
+				qubit_array[start + 64: start + 64 + NUMANCILLY] = ancilla
 				seq = cCQ_add(self.bits)
 			else:
 				qubit_array[start: start + NUMANCILLY] = ancilla
@@ -181,32 +242,43 @@ cdef class qint(circuit):
 			raise ValueError()
 
 
-		# other type is qint as well
-		qubit_array[start: start + INTEGERSIZE] = (<qint> other).qubits
-		start += INTEGERSIZE
+		# other type is qint as well - determine result width
+		other_bits = (<qint> other).bits
+		result_bits = max(self.bits, other_bits)
+
+		qubit_array[start: start + 64] = (<qint> other).qubits
+		start += 64
 
 
 		if _controlled:
-			qubit_array[2 * INTEGERSIZE: 3 * INTEGERSIZE] = (<qbool> _control_bool).qubits
-			qubit_array[3 * INTEGERSIZE: 3 * INTEGERSIZE + NUMANCILLY] = ancilla
-			seq = cQQ_add(self.bits)
+			qubit_array[2 * 64: 3 * 64] = (<qbool> _control_bool).qubits
+			qubit_array[3 * 64: 3 * 64 + NUMANCILLY] = ancilla
+			seq = cQQ_add(result_bits)
 		else:
-			qubit_array[2 * INTEGERSIZE: 2 * INTEGERSIZE + NUMANCILLY] = ancilla
-			seq = QQ_add(self.bits)
+			qubit_array[2 * 64: 2 * 64 + NUMANCILLY] = ancilla
+			seq = QQ_add(result_bits)
 
 		arr = qubit_array
 		run_instruction(seq, &arr[0], invert, _circuit)
 		return self
 
 	def __add__(self, other: qint | int):
-		# out of place addition
-		a = qint(value = self.value, bits = self.bits)
+		# out of place addition - result width is max of operands
+		if type(other) == qint:
+			result_width = max(self.bits, (<qint>other).bits)
+		else:
+			result_width = self.bits
+		a = qint(value = self.value, width = result_width)
 		a += other
 		return a
 
 	def __radd__(self, other: qint | int):
-		# out of place addition
-		a = qint(value = self.value, bits = self.bits)
+		# out of place addition - result width is max of operands
+		if type(other) == qint:
+			result_width = max(self.bits, (<qint>other).bits)
+		else:
+			result_width = self.bits
+		a = qint(value = self.value, width = result_width)
 		a += other
 		return a
 
@@ -215,8 +287,12 @@ cdef class qint(circuit):
 		return self.addition_inplace(other)
 
 	def __sub__(self, other: qint | int):
-		# in place addition
-		a = qint(value = self.value, bits = self.bits)
+		# out of place subtraction - result width is max of operands
+		if type(other) == qint:
+			result_width = max(self.bits, (<qint>other).bits)
+		else:
+			result_width = self.bits
+		a = qint(value = self.value, width = result_width)
 		a -= other
 		return a
 
@@ -229,22 +305,24 @@ cdef class qint(circuit):
 			global _controlled, _control_bool, qubit_array
 			cdef sequence_t *seq
 			cdef unsigned int[:] arr
+			cdef int result_bits
+			cdef int other_bits
 
 			start = 0
 
-			qubit_array[INTEGERSIZE: 2 * INTEGERSIZE] = self.qubits
-			start += INTEGERSIZE
+			qubit_array[64: 2 * 64] = self.qubits
+			start += 64
 
 			if type(other) == int:
-				# value is a quantum integer
+				# value is a classical integer
 				QPU_state[0].R0[0] = other
-				qubit_array[: INTEGERSIZE] = (<qint> ret).qubits
+				qubit_array[: 64] = (<qint> ret).qubits
 				if _controlled:
-					qubit_array[2 * INTEGERSIZE: 3 * INTEGERSIZE] = (<qbool> _control_bool).qubits
-					qubit_array[3 * INTEGERSIZE: 3 * INTEGERSIZE + NUMANCILLY] = ancilla
+					qubit_array[2 * 64: 3 * 64] = (<qbool> _control_bool).qubits
+					qubit_array[3 * 64: 3 * 64 + NUMANCILLY] = ancilla
 					seq = cCQ_mul()
 				else:
-					qubit_array[2 * INTEGERSIZE: 2 * INTEGERSIZE + NUMANCILLY] = ancilla
+					qubit_array[2 * 64: 2 * 64 + NUMANCILLY] = ancilla
 					seq = CQ_mul()
 
 				arr = qubit_array
@@ -255,18 +333,22 @@ cdef class qint(circuit):
 			if type(other) != qint:
 				raise ValueError()
 
-			qubit_array[start + INTEGERSIZE: start + 2 * INTEGERSIZE] = (<qint> other).qubits
-			start += INTEGERSIZE
+			# Quantum-quantum multiplication - determine result width
+			other_bits = (<qint> other).bits
+			result_bits = max(self.bits, other_bits)
+
+			qubit_array[start + 64: start + 2 * 64] = (<qint> other).qubits
+			start += 64
 
 			# value is a quantum integer
 
 			if _controlled:
-				qubit_array[2 * INTEGERSIZE: 3 * INTEGERSIZE] = (<qbool> _control_bool).qubits
-				qubit_array[3 * INTEGERSIZE: 3 * INTEGERSIZE + NUMANCILLY] = ancilla
-				seq = cQQ_add(self.bits)
+				qubit_array[2 * 64: 3 * 64] = (<qbool> _control_bool).qubits
+				qubit_array[3 * 64: 3 * 64 + NUMANCILLY] = ancilla
+				seq = cQQ_add(result_bits)
 			else:
-				qubit_array[2 * INTEGERSIZE: 2 * INTEGERSIZE + NUMANCILLY] = ancilla
-				seq = QQ_add(self.bits)
+				qubit_array[2 * 64: 2 * 64 + NUMANCILLY] = ancilla
+				seq = QQ_add(result_bits)
 
 			arr = qubit_array
 			run_instruction(seq, &arr[0], False, _circuit)
@@ -286,9 +368,9 @@ cdef class qint(circuit):
 		cdef sequence_t *seq;
 		cdef unsigned int[:] arr
 
-		qubit_array[: INTEGERSIZE] = (<qbool> ret).qubits
-		qubit_array[INTEGERSIZE: 2 * INTEGERSIZE] = self.qubits
-		qubit_array[2 * INTEGERSIZE: 3 * INTEGERSIZE] = (<qbool> other).qubits
+		qubit_array[: 64] = (<qbool> ret).qubits
+		qubit_array[64: 2 * 64] = self.qubits
+		qubit_array[2 * 64: 3 * 64] = (<qbool> other).qubits
 
 		seq = qq_and_seq()
 
@@ -318,9 +400,9 @@ cdef class qint(circuit):
 		cdef sequence_t *seq;
 		cdef unsigned int[:] arr
 
-		qubit_array[: INTEGERSIZE] = a.qubits
-		qubit_array[INTEGERSIZE: 2 * INTEGERSIZE] = self.qubits
-		qubit_array[2 * INTEGERSIZE: 3 * INTEGERSIZE] = (<qbool> other).qubits
+		qubit_array[: 64] = a.qubits
+		qubit_array[64: 2 * 64] = self.qubits
+		qubit_array[2 * 64: 3 * 64] = (<qbool> other).qubits
 
 		seq = qq_or_seq()
 
@@ -353,11 +435,11 @@ cdef class qint(circuit):
 		cdef unsigned int[:] arr
 
 		if _controlled:
-			qubit_array[INTEGERSIZE: 2 * INTEGERSIZE] = (<qbool> _control_bool).qubits
-			qubit_array[: INTEGERSIZE] = self.qubits
+			qubit_array[64: 2 * 64] = (<qbool> _control_bool).qubits
+			qubit_array[: 64] = self.qubits
 			seq = cq_not_seq()
 		else:
-			qubit_array[: INTEGERSIZE] = self.qubits
+			qubit_array[: 64] = self.qubits
 			seq = q_not_seq()
 
 		arr = qubit_array
@@ -369,14 +451,14 @@ cdef class qint(circuit):
 		return self
 
 	def __getitem__(self, item: int):
-		bit_list = np.zeros(INTEGERSIZE)
+		bit_list = np.zeros(64)
 		bit_list[-1] = self.qubits[item]
 		a = qbool(create_new = False, bit_list = bit_list)
 		return a
 
 	def __gt__(self, other):
 		global _smallest_allocated_qubit, ancilla
-		a = self[INTEGERSIZE - self.bits]
+		a = self[64 - self.bits]  # MSB is at index (64 - width)
 		self.addition_inplace(other, True)
 		c = qbool()
 		c = ~c
@@ -392,7 +474,7 @@ cdef class qint(circuit):
 
 	def __lt__(self, other):
 		global _smallest_allocated_qubit, ancilla
-		a = self[INTEGERSIZE - self.bits]
+		a = self[64 - self.bits]  # MSB is at index (64 - width)
 		self.addition_inplace(other, True)
 		c = qbool()
 		with a:
