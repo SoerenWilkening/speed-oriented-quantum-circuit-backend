@@ -66,9 +66,13 @@ typedef struct circuit_s {
 } circuit_t;
 
 // Quantum integer structure
+// - width: Bit width of this integer (1-64)
+// - MSB: Most significant bit index (legacy, kept for backward compat)
+// - q_address: Array of qubit indices, right-aligned (use indices [64-width] through [63])
 typedef struct {
     char MSB;
-    qubit_t q_address[INTEGERSIZE];
+    unsigned char width;   // Bit width of this integer (1-64)
+    qubit_t q_address[64]; // Max width for static allocation (right-aligned)
 } quantum_int_t;
 
 // Circuit lifecycle
