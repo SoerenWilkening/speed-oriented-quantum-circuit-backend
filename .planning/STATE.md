@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-01-25)
 ## Current Position
 
 Phase: 8 of 10 (Circuit Optimization)
-Plan: 4 of 5 in current phase - COMPLETE
-Status: In progress
-Last activity: 2026-01-26 - Completed 08-04-PLAN.md: Circuit optimization passes
+Plan: 5 of 5 in current phase - COMPLETE
+Status: Phase complete
+Last activity: 2026-01-26 - Completed 08-05-PLAN.md: Python optimization API
 
-Progress: [█████████░] 98%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 29
-- Average duration: 5.3 min
+- Total plans completed: 30
+- Average duration: 5.2 min
 - Total execution time: 2.6 hours
 
 **By Phase:**
@@ -34,11 +34,11 @@ Progress: [█████████░] 98%
 | 05 - Variable-Width Integers | 4 | 28 min | 7 min |
 | 06 - Bitwise Operations | 4 | 23 min | 5.75 min |
 | 07 - Extended Arithmetic | 6 | 41 min | 6.8 min |
-| 08 - Circuit Optimization | 4 | 12 min | 3 min |
+| 08 - Circuit Optimization | 5 | 17 min | 3.4 min |
 
 **Recent Trend:**
-- Last 5 plans: 08-01 (4 min), 08-02 (3 min), 08-03 (5 min), 08-04 (3 min)
-- Trend: Phase 8 executing efficiently - small focused modules average 3-4 min
+- Last 5 plans: 08-02 (3 min), 08-03 (5 min), 08-04 (3 min), 08-05 (5 min)
+- Trend: Phase 8 complete - consistent 3-5 min execution per plan
 
 *Updated after each plan completion*
 
@@ -149,6 +149,10 @@ Recent decisions affecting current work:
 - Reuse add_gate's inverse cancellation for post-construction optimization: Clean implementation without duplicating logic (08-04)
 - copy_circuit rebuilds via add_gate: Automatic optimization during circuit reconstruction (08-04)
 - circuit_can_optimize simple heuristic: Returns 1 if gates exist, real scan would be expensive (08-04)
+- optimize() returns stats dict not circuit: Shows before/after comparison, circuit modified in-place (08-05)
+- In-place optimization via free-and-replace: Global _circuit freed, replaced with optimized circuit (08-05)
+- AVAILABLE_PASSES module constant: ['merge', 'cancel_inverse'] accessible before circuit creation (08-05)
+- Pass name validation: ValueError raised for unknown pass names (08-05)
 
 ### Pending Todos
 
@@ -180,9 +184,43 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-26
-Stopped at: Completed 08-04-PLAN.md - Circuit optimization passes
+Stopped at: Completed 08-05-PLAN.md - Python optimization API
 Resume file: None
-Note: Phase 8 in progress (4 of 5 plans complete)
+Note: Phase 8 COMPLETE (5 of 5 plans complete)
+
+## Phase 8 Summary
+
+**COMPLETE**
+
+- **Plan 01:** Circuit statistics C layer - COMPLETE
+- **Plan 02:** Python statistics API - COMPLETE
+- **Plan 03:** Circuit visualization enhancement - COMPLETE
+- **Plan 04:** Circuit optimization passes - COMPLETE
+- **Plan 05:** Python optimization API - COMPLETE
+
+**Plan 05 Achievements (Python Optimization API):**
+- Added optimize() method returning stats dict with before/after comparison
+- Added available_passes property: ['merge', 'cancel_inverse']
+- Added can_optimize() boolean check
+- In-place optimization via free-and-replace pattern (no memory leak)
+- Stats dict contains gate_count, depth, qubit_count, gate_counts
+- Pass name validation raises ValueError for unknown passes
+- 18 Phase 8 tests passing (6 stats + 7 optimization + 5 success criteria)
+
+**All Phase 8 Success Criteria Met:**
+1. Text-based circuit visualization shows circuit structure
+2. Automatic gate merging optimization available
+3. Inverse gate cancellation available
+4. Circuit statistics available programmatically
+5. Optimization passes can be enabled/disabled independently
+
+**Test Results:**
+- Phase 8 test suite: 18 passed
+- All success criteria verified through explicit tests
+- Manual workflow test confirms API functionality
+
+**Next Phase:**
+- Phase 9: Advanced Quantum Operations (or Phase 10 final polish)
 
 ## Phase 7 Summary
 
