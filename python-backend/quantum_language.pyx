@@ -391,37 +391,78 @@ cdef class qint(circuit):
 		self.multiplication_inplace(other, a)
 		return a
 
-	cdef and_functionality(self, other, ret):
-		cdef sequence_t *seq;
-		cdef unsigned int[:] arr
-
-		# Logic operations use INTEGERSIZE layout - qubits at position INTEGERSIZE-1
-		# For qbool (width=1), the qubit is at self.qubits[63] (last element)
-		qubit_array[INTEGERSIZE - 1] = (<qbool> ret).qubits[63]
-		qubit_array[2 * INTEGERSIZE - 1] = self.qubits[63]
-		qubit_array[3 * INTEGERSIZE - 1] = (<qbool> other).qubits[63]
-
-		seq = qq_and_seq()
-
-		arr = qubit_array
-		run_instruction(seq, &arr[0], False, _circuit)
-		free(seq)
-
 	def measure(self):
 		return self.value
 
 	def __and__(self, other):
-		a = qbool()
-		# print("and")
-		# TODO: include quantum functionality
-		self.and_functionality(other, a)
-		return a
+		"""Bitwise AND operation. Returns NEW qint.
+
+		For qint & qint: result width = max(self.width, other.width)
+		For qint & int: result width = max(self.width, value.bit_length())
+		"""
+		global _controlled, _control_bool, qubit_array
+		cdef sequence_t *seq
+		cdef unsigned int[:] arr
+		cdef int result_bits
+		cdef int self_offset, result_offset, other_offset
+		cdef int classical_width
+
+		# Determine result width
+		if type(other) == int:
+			classical_width = other.bit_length() if other > 0 else 1
+			result_bits = max(self.bits, classical_width)
+		elif type(other) == qint or type(other) == qbool:
+			result_bits = max(self.bits, (<qint>other).bits)
+		else:
+			raise TypeError("Operand must be qint or int")
+
+		# Allocate result (ancilla qubits)
+		result = qint(width=result_bits)
+
+		# Build qubit array: [output:N], [self:N], [other:N]
+		# Q_and expects: [0:bits] = output, [bits:2*bits] = A, [2*bits:3*bits] = B
+		self_offset = 64 - self.bits
+		result_offset = 64 - result_bits
+
+		# Output qubits (result) - at position 0
+		qubit_array[:result_bits] = result.qubits[result_offset:64]
+		# Self qubits (zero-extended if smaller) - at position result_bits
+		qubit_array[result_bits:result_bits + self.bits] = self.qubits[self_offset:64]
+
+		if type(other) == int:
+			# Classical-quantum AND
+			# CQ_and expects: [0:bits] = output, [bits:2*bits] = quantum operand
+			if _controlled:
+				raise NotImplementedError("Controlled classical-quantum AND not yet supported")
+			else:
+				seq = CQ_and(result_bits, other)
+		else:
+			# Quantum-quantum AND
+			other_offset = 64 - (<qint>other).bits
+			qubit_array[2*result_bits:2*result_bits + (<qint>other).bits] = (<qint>other).qubits[other_offset:64]
+
+			if _controlled:
+				raise NotImplementedError("Controlled quantum-quantum AND not yet supported")
+			else:
+				seq = Q_and(result_bits)
+
+		arr = qubit_array
+		run_instruction(seq, &arr[0], False, _circuit)
+
+		return result
 
 	def __iand__(self, other):
-		a = qbool()
-		print("iand")
-		self.and_functionality(other, a)
-		return a
+		"""In-place AND: a &= b. Allocates result, swaps qubit references."""
+		result = self & other
+		# Swap qubit arrays (Python-level swap)
+		self.qubits, result.qubits = result.qubits, self.qubits
+		self.allocated_start, result.allocated_start = result.allocated_start, self.allocated_start
+		self.bits = result.bits
+		return self
+
+	def __rand__(self, other):
+		"""Reverse AND for int & qint."""
+		return self & other
 
 	def __or__(self, other):
 		global _smallest_allocated_qubit, ancilla
