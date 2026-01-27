@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-01-27)
 ## Current Position
 
 Phase: Phase 11 - Global State Removal
-Plan: 11-03 of 5 (Legacy Logic Parameterization)
+Plan: 11-04 of 5 (Global State Infrastructure Removal)
 Status: Completed
-Last activity: 2026-01-27 — Completed 11-03-PLAN.md
+Last activity: 2026-01-27 — Completed 11-04-PLAN.md
 
-Progress: ███░░░░░░░ 3/5 plans (60%)
+Progress: ████░░░░░░ 4/5 plans (80%)
 
 ## Performance Metrics
 
@@ -26,8 +26,8 @@ Progress: ███░░░░░░░ 3/5 plans (60%)
 - Requirements shipped: 37/37
 
 **v1.1 Progress:**
-- Total plans completed: 3
-- Average duration: 4 min
+- Total plans completed: 4
+- Average duration: 4.6 min
 - Phases complete: 0/5
 - Requirements shipped: 0/9
 
@@ -43,6 +43,8 @@ Progress: ███░░░░░░░ 3/5 plans (60%)
 | DEC-11-02-02 | Fix memory allocation bugs in phase gate functions | Original functions had missing calloc calls | All new parameterized functions have correct memory management | 11 |
 | DEC-11-03-01 | Parameterize legacy semi-classical functions without backward compatibility wrappers | Modern alternatives exist (Q_and, Q_xor, Q_or), no need for deprecated wrappers | Callers will migrate to explicit parameters or modern functions | 11 |
 | DEC-11-03-02 | Selectively parameterize only functions reading QPU_state | qq_and_seq and qq_or_seq have commented-out reads, don't need changes | Avoids unnecessary refactoring of functions already independent of global state | 11 |
+| DEC-11-04-01 | Removed deprecated QPU_state wrapper functions | Functions still referenced QPU_state which was being removed, blocking compilation | Callers must use parameterized versions (_param or _width suffix) | 11 |
+| DEC-11-04-02 | Added M_PI definition for portability | M_PI availability varies across platforms and compilers | Portable compilation on all platforms without math constant issues | 11 |
 
 See also: PROJECT.md Key Decisions table for project-wide decisions.
 
@@ -57,9 +59,11 @@ None.
 - Memory bugs fixed (sizeof, NULL checks, initialization)
 - QQ_mul segfault fixed via MAXLAYERINSEQUENCE allocation
 
+**Resolved in v1.1:**
+- QPU_state completely removed (Phase 11-04) — C backend is now stateless
+
 **Active in v1.1:**
-- QPU_state (R0-R3 registers) — removing global dependency (Phase 11)
-- Comparison functions using global state — refactoring to explicit parameters (Phase 12)
+- Comparison functions parameterization (Phase 12)
 
 **Known limitations (acceptable):**
 - qint_mod * qint_mod raises NotImplementedError (by design)
@@ -74,9 +78,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-27
-Stopped at: Completed 11-03-PLAN.md (Legacy Logic Parameterization)
-Resume file: .planning/phases/11-global-state-removal/11-03-SUMMARY.md
-Note: Plans 11-01, 11-02, 11-03 complete. Ready for Plan 11-04 (Comparison Function Refactoring).
+Stopped at: Completed 11-04-PLAN.md (Global State Infrastructure Removal)
+Resume file: .planning/phases/11-global-state-removal/11-04-SUMMARY.md
+Note: Plans 11-01, 11-02, 11-03, 11-04 complete. Ready for Plan 11-05 (final phase 11 plan).
 
 ---
 
