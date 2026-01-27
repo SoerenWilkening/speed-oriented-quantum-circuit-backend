@@ -1649,7 +1649,7 @@ cdef class qint(circuit):
 			# a > b means (b - a) is negative
 			# Subtract self from other (in-place on other, then restore)
 			other -= self
-			msb = other[64 - other.bits]
+			msb = other[64 - (<qint>other).bits]
 			result = qbool()
 			result ^= msb
 			# Restore operand
