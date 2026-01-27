@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-01-27)
 
 ## Current Position
 
-Phase: Phase 11 - Global State Removal
-Plan: Complete (5/5 plans)
-Status: ✓ Phase Complete — Goal Verified
-Last activity: 2026-01-27 — Phase 11 verified and complete
+Phase: Phase 12 - Comparison Function Refactoring
+Plan: 1 of 1 (12-01 complete)
+Status: In Progress
+Last activity: 2026-01-27 — Completed 12-01-PLAN.md
 
-Progress: ██████████ 5/5 plans (100%)
+Progress: █████████░ 1/1 plans (100%)
 
 ## Performance Metrics
 
@@ -26,9 +26,9 @@ Progress: ██████████ 5/5 plans (100%)
 - Requirements shipped: 37/37
 
 **v1.1 Progress:**
-- Total plans completed: 5
-- Average duration: 4.5 min
-- Phases complete: 1/5 (Phase 11 complete)
+- Total plans completed: 6
+- Average duration: 5.0 min
+- Phases complete: 1/5 (Phase 11 complete), Phase 12 in progress (1/1 complete)
 - Requirements shipped: 1/9 (REQ-11 complete)
 
 ## Accumulated Context
@@ -45,6 +45,9 @@ Progress: ██████████ 5/5 plans (100%)
 | DEC-11-03-02 | Selectively parameterize only functions reading QPU_state | qq_and_seq and qq_or_seq have commented-out reads, don't need changes | Avoids unnecessary refactoring of functions already independent of global state | 11 |
 | DEC-11-04-01 | Removed deprecated QPU_state wrapper functions | Functions still referenced QPU_state which was being removed, blocking compilation | Callers must use parameterized versions (_param or _width suffix) | 11 |
 | DEC-11-04-02 | Added M_PI definition for portability | M_PI availability varies across platforms and compilers | Portable compilation on all platforms without math constant issues | 11 |
+| DEC-12-01-01 | Simplified multi-bit comparison to 1-2 bits fully working, 3+ placeholder | MAXCONTROLS=2 limitation requires ancilla or large_control array for 3+ bit AND | Multi-bit comparisons (3+) partially implemented, full version deferred to Phase 12-02 | 12 |
+| DEC-12-01-02 | Use empty sequence (num_layer=0) for overflow instead of NULL | Distinguishes overflow (valid call, value too large) from invalid parameters | Callers can check seq->num_layer == 0 to detect overflow condition | 12 |
+| DEC-12-01-03 | Created C test infrastructure in tests/c/ directory | Direct C-level testing without Python bindings for unit testing | Future C functions can be tested in isolation with make && ./test_* | 12 |
 
 See also: PROJECT.md Key Decisions table for project-wide decisions.
 
@@ -64,7 +67,8 @@ None.
 - Python bindings updated to remove QPU_state dependency (Phase 11-05)
 
 **Active in v1.1:**
-- Comparison functions parameterization (Phase 12)
+- Comparison functions parameterization (Phase 12) - Plan 12-01 complete
+- Multi-bit (3+) comparison needs full n-bit AND logic (Phase 12-02)
 
 **Known pre-existing issues:**
 - Multiplication tests segfault at certain widths (C backend issue, unrelated to Phase 11)
@@ -72,6 +76,7 @@ None.
 **Known limitations (acceptable):**
 - qint_mod * qint_mod raises NotImplementedError (by design)
 - apply_merge() placeholder for phase rotation merging
+- CQ_equal_width/cCQ_equal_width: 1-2 bit fully working, 3+ bit placeholder (Phase 12-01)
 
 ### Quick Tasks Completed
 
@@ -82,9 +87,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-27
-Stopped at: Completed 11-05-PLAN.md (Python Bindings State Removal)
-Resume file: .planning/phases/11-global-state-removal/11-05-SUMMARY.md
-Note: Phase 11 complete! All 5 plans executed. Ready for Phase 12 (Comparison Operations Refactoring).
+Stopped at: Completed 12-01-PLAN.md (Classical-Quantum Comparison Implementation)
+Resume file: .planning/phases/12-comparison-function-refactoring/12-01-SUMMARY.md
+Note: Phase 12-01 complete! CQ_equal_width and cCQ_equal_width implemented (1-2 bit fully working).
 
 ---
 
