@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A quantum programming framework that enables writing quantum algorithms using standard programming constructs — operator overloading on quantum integers (qint) and quantum booleans (qbool), with Python's `with` statement implementing quantum conditionals. Operations compile to optimized quantum circuits via a C backend with Cython bindings.
+A quantum programming framework that enables writing quantum algorithms using standard programming constructs — operator overloading on variable-width quantum integers (qint, 1-64 bits) and quantum booleans (qbool), with Python's `with` statement implementing quantum conditionals. Operations compile to optimized quantum circuits via a C backend with Cython bindings. Includes circuit optimization, visualization, and statistics.
 
 ## Core Value
 
@@ -12,60 +12,78 @@ Write quantum algorithms in natural programming style that compiles to efficient
 
 ### Validated
 
-- ✓ Basic arithmetic (+, - for same-size integers) — existing
-- ✓ Multiplication (fixed integer size) — existing
-- ✓ Comparisons (<=, ==, >= via subtraction + MSB check, fixed size) — existing
-- ✓ Logical operations for qbool (AND, OR, XOR, NOT) — existing
-- ✓ Python operator overloading for qint/qbool — existing
-- ✓ Quantum conditionals via `with` statement — existing
-- ✓ Circuit generation and OpenQASM output — existing
-- ✓ Performance benchmarks (QFT up to 2000 variables) — existing in circuit-gen-results/
+- ✓ Basic arithmetic (+, - for variable-width integers) — v1.0
+- ✓ Multiplication (variable integer size, 1-64 bits) — v1.0
+- ✓ Division and modulo operations — v1.0
+- ✓ Modular arithmetic (add/sub/mul mod N) — v1.0
+- ✓ Comparisons (<=, ==, >=, <, >, !=) for variable-width integers — v1.0
+- ✓ Bitwise operations (AND, OR, XOR, NOT) for qint — v1.0
+- ✓ Python operator overloading for all qint/qbool operations — v1.0
+- ✓ Quantum conditionals via `with` statement — v1.0
+- ✓ Circuit generation and OpenQASM output — v1.0
+- ✓ Circuit optimization (gate merging, inverse cancellation) — v1.0
+- ✓ Circuit statistics (depth, gate count, qubit usage) — v1.0
+- ✓ Clean C layer with centralized memory management — v1.0
+- ✓ Comprehensive documentation (Python docstrings, C headers, README) — v1.0
+- ✓ Test infrastructure (pytest, pre-commit, characterization tests) — v1.0
+- ✓ Performance benchmarks (QFT up to 2000 variables) — existing
 
 ### Active
 
-- [ ] Clean C layer — remove dead code, fix memory bugs, simplify globals
-- [ ] Proper memory allocation — classical data structures and qubit management
-- [ ] Variable integer size support for all arithmetic operations
-- [ ] Complete multiplication for variable integer sizes
-- [ ] Complete comparisons for variable integer sizes
-- [ ] Bit operations for qint (AND, OR, XOR, NOT at integer level)
-- [ ] Separate multi-purpose functions (qint vs qbool handling)
-- [ ] Unit tests for C backend
-- [ ] Unit tests for Python API
-- [ ] Documentation (API reference, usage guide)
+(Fresh requirements for next milestone — define with `/gsd:new-milestone`)
 
 ### Out of Scope
 
-- Direct/immediate execution mode — future direction, not current scope
-- Hardware integration — future, keep circuit compilation approach
-- Real-time simulator integration — future consideration
+- Direct/immediate execution mode — future direction, keep circuit compilation approach
+- Hardware integration — OpenQASM export handles most cases
+- ML framework integration — requires stable API first, complex integration
+- Real-time debugging — complex infrastructure requirement
+- GUI interface — programmatic API sufficient
+- Direct quantum state access — violates no-cloning theorem
+- Automatic qubit cloning — physically impossible
 
 ## Context
 
 **Architecture:** Three-layer design — C backend (gate primitives, circuit management, integer operations) → Cython bindings → Python frontend (qint/qbool classes, operator overloading).
 
-**Current state:** Mid-restructuring. C code contains remnants from before Python integration. Memory management inconsistent (incorrect sizeof, missing frees, uninitialized structures). Global state management is messy. Operations work but many are constrained to fixed integer sizes (INTEGERSIZE constant).
+**Current state:** v1.0 shipped. Clean modular C backend with types.h, circuit.h, arithmetic_ops.h, comparison_ops.h, bitwise_ops.h. Centralized qubit allocator with ownership tracking. Variable-width quantum integers (1-64 bits) with complete arithmetic and bitwise operations.
+
+**Codebase:**
+- ~67,600 lines of code (Python, Cython, C)
+- Version 0.1.0
+- Tech stack: Python 3.11+, Cython, C backend
 
 **Performance:** Benchmarks in `circuit-gen-results/` demonstrate speed and memory superiority over Qiskit, Cirq, PennyLane, and other backends for QFT circuits up to 2000 variables.
 
-**Codebase map:** Detailed analysis in `.planning/codebase/` documents architecture, concerns, and tech debt.
+**Documentation:**
+- README.md with Quick Start, API Reference, Examples
+- NumPy-style Python docstrings
+- Doxygen-style C header documentation
+- Codebase analysis in `.planning/codebase/`
 
 **Target audience:** Open source quantum computing community.
 
+**Known limitations:**
+- qint_mod * qint_mod raises NotImplementedError (by design)
+- apply_merge() placeholder for future phase rotation merging
+
 ## Constraints
 
-- **Approach**: Clean C layer first, then build up — bottom-up restructuring
-- **Preserve**: Benchmark results in `circuit-gen-results/` must remain intact
 - **Architecture**: Keep `add_gate` circuit-building approach; direct execution is future work
-- **Compatibility**: Maintain Python API compatibility where possible during restructuring
+- **Compatibility**: Maintain Python API compatibility in future versions
+- **Performance**: Circuit generation must remain efficient for large circuits
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Bottom-up restructuring (C first) | Foundation must be solid before adding features | — Pending |
-| Open source release target | Requires clean code, docs, tests | — Pending |
-| Keep circuit compilation model | Direct execution is future; current approach works | — Pending |
+| Bottom-up restructuring (C first) | Foundation must be solid before adding features | ✓ Good — clean modular C backend |
+| Open source release target | Requires clean code, docs, tests | ✓ Good — v1.0 shipped |
+| Keep circuit compilation model | Direct execution is future; current approach works | ✓ Good — works well |
+| types.h as foundation module | Single source of truth for shared types | ✓ Good — clean dependencies |
+| Right-aligned qubit array layout | Supports variable-width with minimal changes | ✓ Good — 1-64 bits work |
+| MAXLAYERINSEQUENCE for QQ_mul | Original formula underestimated layer needs | ⚠️ Revisit — may need optimization |
+| Single README format | GitHub-rendered, accessible without build | ✓ Good — easy to maintain |
 
 ---
-*Last updated: 2026-01-25 after initialization*
+*Last updated: 2026-01-27 after v1.0 milestone*
