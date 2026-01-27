@@ -1569,6 +1569,8 @@ cdef class qint(circuit):
 	def __gt__(self, other):
 		"""Greater-than comparison: self > other
 
+		Uses in-place subtraction on other operand or delegates to <= for ints.
+
 		Parameters
 		----------
 		other : qint or int
@@ -1585,19 +1587,46 @@ cdef class qint(circuit):
 		>>> b = qint(3, width=8)
 		>>> result = (a > b)
 		>>> # result is qbool representing |True>
+
+		Notes
+		-----
+		Phase 14: Refactored to use in-place pattern for qint operands.
+		For int operands, uses NOT(self <= other) for efficiency.
 		"""
-		# self > other is equivalent to other < self (swap operands)
-		# For int type, create qint and swap
+		# Self-comparison optimization
+		if self is other:
+			return qbool(False)  # x > x is always false
+
+		# Handle qint operand
+		if type(other) == qint:
+			# a > b means (b - a) is negative
+			# Subtract self from other (in-place on other, then restore)
+			other -= self
+			msb = other[64 - other.bits]
+			result = qbool()
+			result ^= msb
+			# Restore operand
+			other += self
+			return result
+
+		# Handle int operand
 		if type(other) == int:
-			other_qint = qint(other, width=self.bits)
-			return other_qint < self
-		elif type(other) == qint:
-			return other < self
-		else:
-			raise TypeError("Comparison requires qint or int")
+			# Classical overflow checks
+			max_val = (1 << self.bits) - 1 if self.bits < 64 else (1 << 63) - 1
+			if other < 0:
+				return qbool(True)  # qint always >= 0, so qint > negative is true
+			if other > max_val:
+				return qbool(False)  # qint always < large value, so not >
+
+			# For int: a > b is NOT(a <= b)
+			return ~(self <= other)
+
+		raise TypeError("Comparison requires qint or int")
 
 	def __le__(self, other):
 		"""Less-than-or-equal comparison: self <= other
+
+		Uses in-place subtraction to check if result is negative or zero.
 
 		Parameters
 		----------
@@ -1615,15 +1644,55 @@ cdef class qint(circuit):
 		>>> b = qint(5, width=8)
 		>>> result = (a <= b)
 		>>> # result is qbool representing |True>
+
+		Notes
+		-----
+		Phase 14: Refactored to use in-place subtract-add-back pattern.
+		a <= b means (a - b) is negative OR zero.
 		"""
-		# self <= other is equivalent to NOT (other < self)
+		# Self-comparison optimization
+		if self is other:
+			return qbool(True)  # x <= x is always true
+
+		# Handle qint operand
+		if type(other) == qint:
+			self -= other
+			# Check MSB (negative)
+			is_negative = self[64 - self.bits]
+			# Check zero using Phase 13 pattern
+			is_zero = (self == 0)
+			# OR combination: result = is_negative | is_zero
+			result = qbool()
+			result ^= is_negative
+			temp_zero = qbool()
+			temp_zero ^= is_zero
+			result |= temp_zero
+			# Restore operand
+			self += other
+			return result
+
+		# Handle int operand
 		if type(other) == int:
-			other_qint = qint(other, width=self.bits)
-			return ~(other_qint < self)
-		elif type(other) == qint:
-			return ~(other < self)
-		else:
-			raise TypeError("Comparison requires qint or int")
+			# Classical overflow checks
+			max_val = (1 << self.bits) - 1 if self.bits < 64 else (1 << 63) - 1
+			if other < 0:
+				return qbool(False)  # qint >= 0, so qint <= negative is false
+			if other > max_val:
+				return qbool(True)  # qint always <= large value
+
+			self -= other
+			is_negative = self[64 - self.bits]
+			is_zero = (self == 0)
+			result = qbool()
+			result ^= is_negative
+			temp_zero = qbool()
+			temp_zero ^= is_zero
+			result |= temp_zero
+			# Restore operand
+			self += other
+			return result
+
+		raise TypeError("Comparison requires qint or int")
 
 	def __ge__(self, other):
 		"""Greater-than-or-equal comparison: self >= other
@@ -1644,7 +1713,15 @@ cdef class qint(circuit):
 		>>> b = qint(3, width=8)
 		>>> result = (a >= b)
 		>>> # result is qbool representing |True>
+
+		Notes
+		-----
+		Phase 14: Added self-comparison optimization.
+		Delegates to NOT(self < other) which uses in-place pattern.
 		"""
+		# Self-comparison optimization
+		if self is other:
+			return qbool(True)  # x >= x is always true
 		# self >= other is equivalent to NOT (self < other)
 		return ~(self < other)
 
