@@ -1,10 +1,13 @@
-//
-// comparison_ops.h - Comparison Operations Module
-// Dependencies: types.h
-//
-// This header provides comparison operations (==, <, >, <=, >=).
-// Part of CODE-04 reorganization to establish clear module boundaries.
-//
+/**
+ * @file comparison_ops.h
+ * @brief Width-parameterized comparison operations for quantum integers.
+ *
+ * This header provides comparison operations (==, <, >, <=, >=).
+ * Supports variable-width quantum integers (1-64 bits).
+ *
+ * Dependencies: types.h
+ * Part of CODE-04 reorganization to establish clear module boundaries.
+ */
 
 #ifndef QUANTUM_COMPARISON_OPS_H
 #define QUANTUM_COMPARISON_OPS_H
@@ -16,58 +19,100 @@
 // Legacy Comparison Operations (INTEGERSIZE-based)
 // ======================================================
 
-// OWNERSHIP: Returns NULL (performs classical computation only via QPU_state)
+/**
+ * @brief Classical-classical equality (performs classical computation only).
+ *
+ * Compares classical values from QPU_state, stores result in QPU_state.
+ * No quantum gates generated.
+ *
+ * @return NULL (performs classical computation only)
+ *
+ * OWNERSHIP: Returns NULL (performs classical computation only via QPU_state)
+ */
 sequence_t *CC_equal();
 
-// OWNERSHIP: Caller owns returned sequence_t*, must free gates_per_layer, seq arrays, and seq
-// READS: QPU_state->R0 for classical value
+/**
+ * @brief Classical-quantum equality (legacy INTEGERSIZE-based).
+ *
+ * Compares quantum register with classical value from QPU_state->R0.
+ *
+ * @return Sequence for equality comparison
+ *
+ * OWNERSHIP: Caller owns returned sequence_t*, must free gates_per_layer, seq arrays, and seq
+ * READS: QPU_state->R0 for classical value
+ */
 sequence_t *CQ_equal();
 
-// OWNERSHIP: Caller owns returned sequence_t*, must free gates_per_layer, seq arrays, and seq
-// READS: QPU_state->R0 for classical value
+/**
+ * @brief Controlled classical-quantum equality (legacy INTEGERSIZE-based).
+ *
+ * Conditional comparison controlled by a qubit. Reads QPU_state->R0.
+ *
+ * @return Sequence for controlled equality comparison
+ *
+ * OWNERSHIP: Caller owns returned sequence_t*, must free gates_per_layer, seq arrays, and seq
+ * READS: QPU_state->R0 for classical value
+ */
 sequence_t *cCQ_equal();
 
 // ======================================================
 // Width-Parameterized Comparison Operations (Phase 7)
 // ======================================================
 
-// OWNERSHIP: Returns cached sequence - DO NOT FREE
-// Qubit layout: [0] = result qbool, [1:bits+1] = ancilla,
-//               [bits+1:2*bits+1] = operand A, [2*bits+1:3*bits+1] = operand B
-
 /**
- * Optimized equality comparison: A == B
- * Uses XOR-based circuit (O(n) gates) instead of subtraction (O(n^2) gates)
+ * @brief Optimized equality comparison: A == B.
+ *
+ * Uses XOR-based circuit (O(n) gates) instead of subtraction (O(n^2) gates).
+ * Much more efficient than subtraction-based approach.
  *
  * @param bits Width of operands (1-64)
- * @return Sequence for equality comparison, NULL if invalid bits
+ * @return Cached sequence, NULL if invalid bits - DO NOT FREE
+ *
+ * Qubit layout: [0] = result qbool, [1:bits+1] = ancilla,
+ *               [bits+1:2*bits+1] = operand A, [2*bits+1:3*bits+1] = operand B
+ *
+ * OWNERSHIP: Returns cached sequence - DO NOT FREE
  */
 sequence_t *QQ_equal(int bits);
 
 /**
- * Less-than comparison: A < B
- * Uses subtraction and MSB check
+ * @brief Less-than comparison: A < B.
+ *
+ * Uses subtraction and MSB check to determine if A < B.
+ * Result is stored in a quantum boolean (single qubit).
  *
  * @param bits Width of operands (1-64)
- * @return Sequence for less-than comparison, NULL if invalid bits
+ * @return Cached sequence, NULL if invalid bits - DO NOT FREE
+ *
+ * OWNERSHIP: Returns cached sequence - DO NOT FREE
  */
 sequence_t *QQ_less_than(int bits);
 
 /**
- * Classical-quantum equality: A == value
+ * @brief Classical-quantum equality: A == value.
+ *
+ * Compares quantum register with classical integer value.
+ * Width-parameterized for variable-width integers.
  *
  * @param bits Width of quantum operand (1-64)
  * @param value Classical value to compare against
  * @return Sequence for equality comparison
+ *
+ * OWNERSHIP: Caller owns returned sequence_t*
  */
 sequence_t *CQ_equal_width(int bits, int64_t value);
 
 /**
- * Classical-quantum less-than: A < value
+ * @brief Classical-quantum less-than: A < value.
+ *
+ * Compares quantum register with classical integer value.
+ * Width-parameterized for variable-width integers.
  *
  * @param bits Width of quantum operand (1-64)
  * @param value Classical value to compare against
  * @return Sequence for comparison
+ *
+ * OWNERSHIP: Caller owns returned sequence_t*
  */
 sequence_t *CQ_less_than(int bits, int64_t value);
 
