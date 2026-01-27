@@ -145,8 +145,10 @@ qint_mod(value=0, N=None)
 ```python
 # Modular exponentiation for Shor's algorithm
 x = qint_mod(5, N=17)
-result = x * x * x  # (5^3) mod 17 = 6
+result = x * 5 * 5  # (5^3) mod 17 = 6
 ```
+
+> **Note:** Currently supports `qint_mod * int`. Support for `qint_mod * qint_mod` requires C-layer enhancements and will be added in a future release.
 
 ### circuit
 
@@ -280,7 +282,7 @@ N = 15  # Number to factor
 a = 7   # Coprime to N
 
 x = qint_mod(a, N=N)
-result = x * x * x * x  # (7^4) mod 15
+result = x * 7 * 7 * 7  # (7^4) mod 15 using classical multipliers
 
 print(f"Modular exponentiation: {c.gate_count} gates")
 ```
