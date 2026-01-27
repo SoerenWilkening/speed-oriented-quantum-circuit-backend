@@ -4,6 +4,9 @@ import warnings
 import numpy as np
 # cimport numpy as np
 
+# Module version
+__version__ = "0.1.0"
+
 INTEGERSIZE = 8
 NUMANCILLY = 2 * 64  # Max possible ancilla (2 * max_width)
 
@@ -22,7 +25,7 @@ cdef int _num_qubits = 0
 cdef bint _controlled = False
 cdef object _control_bool = None
 cdef int _int_counter = 0
-cdef object list_of_constrols = []
+cdef object _list_of_controls = []
 
 cdef unsigned int _smallest_allocated_qubit = 0
 
@@ -518,7 +521,7 @@ cdef class qint(circuit):
 			_control_bool = self
 		else:
 			# TODO: and operation of self and qint._control_bool
-			list_of_constrols.append(_control_bool)
+			_list_of_controls.append(_control_bool)
 			_control_bool &= self
 			pass
 		_controlled = True
