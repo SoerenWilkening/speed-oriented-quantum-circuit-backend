@@ -364,12 +364,12 @@ sequence_t *cQ_xor(int bits) {
 
 // and_seq removed (Phase 11) - purely classical, no quantum gate generation
 
-sequence_t *q_and_seq() {
+sequence_t *q_and_seq(int bits, int classical_value) {
     // semiclassical and
     // -> GRP2 always has to be the quantum element
-    int number = QPU_state->Q0->MSB + 1;
+    int number = bits;
 
-    int *bin = two_complement(*(QPU_state->R0), INTEGERSIZE);
+    int *bin = two_complement(classical_value, INTEGERSIZE);
     if (bin == NULL) {
         return NULL;
     }
@@ -455,12 +455,12 @@ sequence_t *qq_and_seq() {
 
     return seq;
 }
-sequence_t *cq_and_seq() {
+sequence_t *cq_and_seq(int bits, int classical_value) {
     // semiclassical and
     // -> GRP2 always has to be the quantum element
-    int number = QPU_state->Q0->MSB + 1;
+    int number = bits;
 
-    int *bin = two_complement(*(QPU_state->R0), INTEGERSIZE);
+    int *bin = two_complement(classical_value, INTEGERSIZE);
     if (bin == NULL) {
         return NULL;
     }
@@ -512,14 +512,14 @@ sequence_t *cq_and_seq() {
     free(bin);
     return seq;
 }
-sequence_t *cqq_and_seq() {
+sequence_t *cqq_and_seq(int bits) {
     // pure quantum
     sequence_t *seq = malloc(sizeof(sequence_t));
     if (seq == NULL) {
         return NULL;
     }
 
-    int number = QPU_state->Q0->MSB + 1;
+    int number = bits;
 
     seq->used_layer = 0;
     seq->num_layer = 3 * INTEGERSIZE;
