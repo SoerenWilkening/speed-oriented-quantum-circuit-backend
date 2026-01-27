@@ -2,13 +2,13 @@
 
 ## Milestones
 
-- ✅ **v1.0 Initial Release** - Phases 1-10 (shipped 2026-01-27)
-- 🚧 **v1.1 QPU State Removal & Comparison Refactoring** - Phases 11-15 (in progress)
+- v1.0 Initial Release - Phases 1-10 (shipped 2026-01-27)
+- v1.1 QPU State Removal & Comparison Refactoring - Phases 11-15 (in progress)
 
 ## Phases
 
 <details>
-<summary>✅ v1.0 Initial Release (Phases 1-10) - SHIPPED 2026-01-27</summary>
+<summary>v1.0 Initial Release (Phases 1-10) - SHIPPED 2026-01-27</summary>
 
 See `.planning/milestones/v1.0-ROADMAP.md` for full milestone details.
 
@@ -28,12 +28,12 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full milestone details.
 
 </details>
 
-### 🚧 v1.1 QPU State Removal & Comparison Refactoring (In Progress)
+### v1.1 QPU State Removal & Comparison Refactoring (In Progress)
 
 **Milestone Goal:** Remove global state dependency (QPU_state R0-R3 registers) and refactor comparison operations for cleaner architecture and efficient implementation.
 
 - [x] **Phase 11: Global State Removal** - Remove QPU_state global dependency
-- [ ] **Phase 12: Comparison Function Refactoring** - Refactor comparison functions to pass values explicitly
+- [ ] **Phase 12: Comparison Function Refactoring** - Implement comparison functions with explicit parameters
 - [ ] **Phase 13: Equality Comparison** - Implement qint == int and qint == qint
 - [ ] **Phase 14: Ordering Comparisons** - Refactor <= and >= for efficiency
 - [ ] **Phase 15: Classical Initialization** - Initialize qint with classical values
@@ -43,7 +43,7 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full milestone details.
 ### Phase 11: Global State Removal
 **Goal:** Remove QPU_state global dependency from C backend, eliminating the last remnant of global state
 **Depends on:** Nothing (first phase of v1.1)
-**Requirements:** GLOB-01
+**Requirements:** GLOB-01, GLOB-04 (CC_equal removal completed here)
 **Success Criteria** (what must be TRUE):
   1. QPU_state global variable and R0-R3 registers are completely removed from C backend
   2. All C functions that previously used QPU_state now use local variables or parameters
@@ -52,26 +52,25 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full milestone details.
 **Plans:** 5 plans in 4 waves
 
 Plans:
-- [x] 11-01-PLAN.md — Remove purely classical functions (CC_add, CC_mul, CC_equal, etc.)
-- [x] 11-02-PLAN.md — Refactor P_add/cP_add to take explicit phase parameter
-- [x] 11-03-PLAN.md — Refactor legacy logic functions to take explicit width/value parameters
-- [x] 11-04-PLAN.md — Remove QPU_state global, instruction_t type, and infrastructure
-- [x] 11-05-PLAN.md — Update Python bindings and verify full test suite
+- [x] 11-01-PLAN.md - Remove purely classical functions (CC_add, CC_mul, CC_equal, etc.)
+- [x] 11-02-PLAN.md - Refactor P_add/cP_add to take explicit phase parameter
+- [x] 11-03-PLAN.md - Refactor legacy logic functions to take explicit width/value parameters
+- [x] 11-04-PLAN.md - Remove QPU_state global, instruction_t type, and infrastructure
+- [x] 11-05-PLAN.md - Update Python bindings and verify full test suite
 
 ### Phase 12: Comparison Function Refactoring
 **Goal:** Implement CQ_equal_width and cCQ_equal_width to generate quantum gate sequences for classical-quantum comparison
 **Depends on:** Phase 11
-**Requirements:** GLOB-02, GLOB-03, GLOB-04
+**Requirements:** GLOB-02, GLOB-03
 **Success Criteria** (what must be TRUE):
   1. CQ_equal_width(bits, value) generates quantum gates comparing quantum register to classical value
   2. cCQ_equal_width(bits, value) generates controlled comparison gates
-  3. CC_equal is verified removed from codebase (completed in Phase 11)
-  4. All existing comparison operations continue to work correctly
-  5. Tests verify comparison functions work with explicit parameters
+  3. Functions return empty sequence for overflow (value >= 2^bits), NULL for invalid width
+  4. C-level tests verify function behavior directly (no Python dependency)
 **Plans:** 1 plan in 1 wave
 
 Plans:
-- [ ] 12-01-PLAN.md — Implement CQ_equal_width, cCQ_equal_width, and add unit tests
+- [ ] 12-01-PLAN.md - Implement CQ_equal_width, cCQ_equal_width, and add C-level unit tests
 
 ### Phase 13: Equality Comparison
 **Goal:** Implement efficient equality comparison for qint == int and qint == qint using refactored functions
@@ -80,7 +79,7 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. User can compare qint == int and get correct quantum boolean result
   2. User can compare qint == qint and get correct result using (qint - qint) == 0 pattern
-  3. Equality comparisons use refactored CQ_equal/cCQ_equal with explicit parameters
+  3. Equality comparisons use CQ_equal_width with explicit parameters
   4. Python operator overloading (__eq__) works correctly for both cases
   5. Tests verify equality comparisons for various bit widths and values
 **Plans:** TBD
@@ -104,12 +103,12 @@ Plans:
 - [ ] TBD during plan-phase
 
 ### Phase 15: Classical Initialization
-**Goal:** Initialize qint with classical value by setting qubits to |1⟩ based on binary representation
+**Goal:** Initialize qint with classical value by setting qubits to |1> based on binary representation
 **Depends on:** Phase 11 (independent of comparison refactoring)
 **Requirements:** INIT-01
 **Success Criteria** (what must be TRUE):
   1. User can create qint with classical initial value (e.g., qint(5, 3) creates 3-bit qint initialized to 5)
-  2. Initialization sets qubits to |1⟩ via Q_not based on binary representation
+  2. Initialization sets qubits to |1> via Q_not based on binary representation
   3. Initialized qint can be used in arithmetic and comparison operations
   4. Tests verify correct initialization for various bit widths and values
 **Plans:** TBD
@@ -120,15 +119,15 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 11 → 12 → 13 → 14 → 15
+Phases execute in numeric order: 11 -> 12 -> 13 -> 14 -> 15
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 11. Global State Removal | v1.1 | 5/5 | ✓ Complete | 2026-01-27 |
+| 11. Global State Removal | v1.1 | 5/5 | Complete | 2026-01-27 |
 | 12. Comparison Function Refactoring | v1.1 | 0/1 | Planned | - |
 | 13. Equality Comparison | v1.1 | 0/TBD | Not started | - |
 | 14. Ordering Comparisons | v1.1 | 0/TBD | Not started | - |
 | 15. Classical Initialization | v1.1 | 0/TBD | Not started | - |
 
 ---
-*Last updated: 2026-01-27 - Phase 12 planned (1 plan, 1 wave)*
+*Last updated: 2026-01-27 - Phase 12 plan revised based on checker feedback*

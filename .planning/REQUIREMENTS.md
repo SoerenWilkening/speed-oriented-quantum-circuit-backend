@@ -10,20 +10,20 @@ Requirements for QPU State Removal & Comparison Refactoring milestone.
 ### Global State Removal
 
 - [x] **GLOB-01**: Remove QPU_state global dependency from C backend
-- [ ] **GLOB-02**: Refactor `CQ_equal` to take classical value as parameter
-- [ ] **GLOB-03**: Refactor `cCQ_equal` to take classical value as parameter
-- [ ] **GLOB-04**: Remove `CC_equal` (purely classical, not needed)
+- [ ] **GLOB-02**: Implement `CQ_equal_width` to take classical value and width as parameters (replaces removed CQ_equal)
+- [ ] **GLOB-03**: Implement `cCQ_equal_width` to take classical value and width as parameters (replaces removed cCQ_equal)
+- [x] **GLOB-04**: Remove `CC_equal` (purely classical, not needed) - *Completed in Phase 11-01*
 
 ### Comparison Refactoring
 
-- [ ] **COMP-01**: Implement qint == int using refactored `CQ_equal`/`cCQ_equal`
+- [ ] **COMP-01**: Implement qint == int using `CQ_equal_width` in Python bindings
 - [ ] **COMP-02**: Implement qint == qint as `(qint - qint) == 0`
 - [ ] **COMP-03**: Refactor <= to use in-place subtraction/addition (no temp qint)
 - [ ] **COMP-04**: Refactor >= to use in-place subtraction/addition (no temp qint)
 
 ### Initialization
 
-- [ ] **INIT-01**: Initialize qint with classical value by setting qubits to |1⟩ via Q_not based on binary representation
+- [ ] **INIT-01**: Initialize qint with classical value by setting qubits to |1> via Q_not based on binary representation
 
 ## Future Requirements
 
@@ -52,7 +52,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GLOB-01 | Phase 11 | Complete |
 | GLOB-02 | Phase 12 | Pending |
 | GLOB-03 | Phase 12 | Pending |
-| GLOB-04 | Phase 12 | Pending |
+| GLOB-04 | Phase 11 | Complete (CC_equal removed in 11-01) |
 | COMP-01 | Phase 13 | Pending |
 | COMP-02 | Phase 13 | Pending |
 | COMP-03 | Phase 14 | Pending |
@@ -64,8 +64,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 - Mapped to phases: 9
 - Unmapped: 0
 
-✓ 100% requirement coverage validated
+**Note:** GLOB-02 and GLOB-03 updated to reflect actual work needed (implement new functions, not refactor removed ones). The original CQ_equal/cCQ_equal functions were removed in Phase 11-04 as part of QPU_state cleanup.
 
 ---
 *Requirements defined: 2026-01-27*
-*Last updated: 2026-01-27 after roadmap creation*
+*Last updated: 2026-01-27 after Phase 12 plan revision*
