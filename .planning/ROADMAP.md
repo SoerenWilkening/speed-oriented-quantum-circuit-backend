@@ -99,10 +99,11 @@ Plans:
   3. Ordering comparisons use in-place arithmetic operations for efficiency
   4. Python operator overloading (__le__, __ge__) works correctly
   5. Tests verify memory efficiency (no temp qint allocation during comparison)
-**Plans:** TBD
+**Plans:** 2 plans in 2 waves
 
 Plans:
-- [ ] TBD during plan-phase
+- [ ] 14-01-PLAN.md - Refactor __lt__, __gt__, __le__, __ge__ to use in-place subtract-add-back pattern
+- [ ] 14-02-PLAN.md - Add comprehensive ordering comparison tests
 
 ### Phase 15: Classical Initialization
 **Goal:** Initialize qint with classical value by setting qubits to |1> based on binary representation
@@ -128,8 +129,8 @@ Phases execute in numeric order: 11 -> 12 -> 13 -> 14 -> 15
 | 11. Global State Removal | v1.1 | 5/5 | Complete | 2026-01-27 |
 | 12. Comparison Function Refactoring | v1.1 | 2/2 | Complete | 2026-01-27 |
 | 13. Equality Comparison | v1.1 | 2/2 | Complete | 2026-01-27 |
-| 14. Ordering Comparisons | v1.1 | 0/TBD | Ready | - |
+| 14. Ordering Comparisons | v1.1 | 0/2 | Planned | - |
 | 15. Classical Initialization | v1.1 | 0/TBD | Not started | - |
 
 ---
-*Last updated: 2026-01-27 — Phase 13 complete*
+*Last updated: 2026-01-27 — Phase 14 planned*
