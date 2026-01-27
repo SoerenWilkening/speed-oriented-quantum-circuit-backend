@@ -112,4 +112,4 @@ See `.planning/milestones/v1.0-REQUIREMENTS.md` for archived requirements.
 - Comprehensive documentation and test coverage
 
 **Next Steps:**
-- `/gsd:discuss-phase 12` or `/gsd:plan-phase 12` to begin Comparison Function Refactoring
+- `/gsd:discuss-phase 13` or `/gsd:plan-phase 13` to begin Equality Comparison

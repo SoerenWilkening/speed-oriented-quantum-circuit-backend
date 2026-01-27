@@ -33,7 +33,7 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full milestone details.
 **Milestone Goal:** Remove global state dependency (QPU_state R0-R3 registers) and refactor comparison operations for cleaner architecture and efficient implementation.
 
 - [x] **Phase 11: Global State Removal** - Remove QPU_state global dependency
-- [ ] **Phase 12: Comparison Function Refactoring** - Implement comparison functions with explicit parameters
+- [x] **Phase 12: Comparison Function Refactoring** - Implement comparison functions with explicit parameters
 - [ ] **Phase 13: Equality Comparison** - Implement qint == int and qint == qint
 - [ ] **Phase 14: Ordering Comparisons** - Refactor <= and >= for efficiency
 - [ ] **Phase 15: Classical Initialization** - Initialize qint with classical values
@@ -71,7 +71,7 @@ Plans:
 
 Plans:
 - [x] 12-01-PLAN.md - Implement CQ_equal_width, cCQ_equal_width, and add C-level unit tests
-- [ ] 12-02-PLAN.md - Close gap: implement proper n-bit AND for 3+ bit comparisons (gap closure)
+- [x] 12-02-PLAN.md - Close gap: implement proper n-bit AND for 3+ bit comparisons (gap closure)
 
 ### Phase 13: Equality Comparison
 **Goal:** Implement efficient equality comparison for qint == int and qint == qint using refactored functions
@@ -125,10 +125,10 @@ Phases execute in numeric order: 11 -> 12 -> 13 -> 14 -> 15
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 11. Global State Removal | v1.1 | 5/5 | Complete | 2026-01-27 |
-| 12. Comparison Function Refactoring | v1.1 | 0/1 | Planned | - |
+| 12. Comparison Function Refactoring | v1.1 | 2/2 | Complete | 2026-01-27 |
 | 13. Equality Comparison | v1.1 | 0/TBD | Not started | - |
 | 14. Ordering Comparisons | v1.1 | 0/TBD | Not started | - |
 | 15. Classical Initialization | v1.1 | 0/TBD | Not started | - |
 
 ---
-*Last updated: 2026-01-27 - Phase 12 plan revised based on checker feedback*
+*Last updated: 2026-01-27 — Phase 12 complete*

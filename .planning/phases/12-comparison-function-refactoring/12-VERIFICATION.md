@@ -1,30 +1,27 @@
 ---
 phase: 12-comparison-function-refactoring
-verified: 2026-01-27T19:09:44Z
-status: gaps_found
-score: 3/4 must-haves verified
-gaps:
-  - truth: "CQ_equal_width(bits, value) returns valid gate sequence for valid inputs"
-    status: partial
-    reason: "Implementation works for 1-2 bit widths, but 3+ bits are placeholder"
-    artifacts:
-      - path: "Backend/src/IntegerComparison.c"
-        issue: "Lines 169-179: Multi-bit (3+) comparison uses placeholder CCX instead of proper n-bit AND"
-      - path: "Backend/src/IntegerComparison.c"
-        issue: "Lines 325-333: Controlled multi-bit (3+) comparison uses placeholder CCX"
-    missing:
-      - "Proper multi-controlled X gate implementation for 3+ bits using ancilla qubits"
-      - "OR large_control array support for >2 control qubits (MAXCONTROLS=2 limitation)"
-      - "Full n-bit AND logic with cascaded Toffoli gates or ancilla-based decomposition"
+verified: 2026-01-27T19:29:36Z
+status: passed
+score: 4/4 must-haves verified
+re_verification:
+  previous_status: gaps_found
+  previous_score: 3/4
+  previous_date: 2026-01-27T19:09:44Z
+  gaps_closed:
+    - "CQ_equal_width(bits, value) returns valid gate sequence for ALL valid widths (1-64 bits)"
+    - "Multi-bit (3+) comparisons use proper n-controlled X gate with large_control array"
+    - "cCQ_equal_width(bits, value) works correctly for all bit widths including 3+"
+  gaps_remaining: []
+  regressions: []
 ---
 
 # Phase 12: Comparison Function Refactoring Verification Report
 
 **Phase Goal:** Implement CQ_equal_width and cCQ_equal_width to generate quantum gate sequences for classical-quantum comparison
 
-**Verified:** 2026-01-27T19:09:44Z
-**Status:** gaps_found
-**Re-verification:** No — initial verification
+**Verified:** 2026-01-27T19:29:36Z
+**Status:** PASSED
+**Re-verification:** Yes — after gap closure (Plan 12-02)
 
 ## Goal Achievement
 
@@ -32,79 +29,171 @@ gaps:
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| 1 | CQ_equal_width(bits, value) returns valid gate sequence for valid inputs | ⚠️ PARTIAL | Works for 1-2 bits (test_valid_small_widths passes), placeholder for 3+ bits (lines 169-179) |
+| 1 | CQ_equal_width(bits, value) returns valid gate sequence for valid inputs | ✓ VERIFIED | Works for ALL bit widths 1-64: mcx() used for 3+ bits (line 186), tests pass for 3, 4, 8 bits |
 | 2 | CQ_equal_width returns empty sequence (num_layer=0) when value overflows bit width | ✓ VERIFIED | test_cq_equal_overflow and test_cq_equal_negative_overflow pass, lines 68-79 return empty sequence |
 | 3 | CQ_equal_width returns NULL for invalid width (<=0 or >64) | ✓ VERIFIED | test_cq_equal_invalid_width passes, line 44-46 returns NULL |
-| 4 | cCQ_equal_width includes control qubit at expected position | ✓ VERIFIED | Line 293: control_qubit = bits + 1, used in ccx gates at lines 309, 319, 328 |
+| 4 | cCQ_equal_width includes control qubit at expected position | ✓ VERIFIED | Line 305: control_qubit = bits + 1, used in controlled gates for all bit widths |
 
-**Score:** 3/4 truths verified (1 partial)
+**Score:** 4/4 truths verified (all truths now fully verified)
+
+### Gap Closure Verification
+
+**Previous Gap (from 12-VERIFICATION.md 2026-01-27T19:09:44Z):**
+- Truth #1 was PARTIAL: Multi-bit (3+) comparison used placeholder implementation
+- Lines 169-179 and 325-333 had TODO comments and placeholder CCX logic
+- Only 1-2 bit comparisons fully working
+
+**Gap Closure Actions (Plan 12-02):**
+1. Implemented mcx() function in Backend/src/Gate.c (lines 198-229)
+2. Updated CQ_equal_width to use mcx() for 3+ bits (line 186)
+3. Updated cCQ_equal_width to use mcx() for 2+ bits (lines 328, 350)
+4. Added test_multibit_comparison() and test_controlled_multibit_comparison()
+5. Updated free_sequence() to free large_control arrays (test_comparison.c lines 15-19)
+
+**Verification of Gap Closure:**
+
+✓ **mcx() implementation exists and is substantive:**
+- File: Backend/src/Gate.c, lines 198-229 (32 lines)
+- Handles num_controls <= 2: uses Control[0], Control[1] static array
+- Handles num_controls > 2: allocates large_control dynamic array
+- Backward compatible: copies first 2 controls to Control[] array
+- Memory safety: initializes large_control to NULL when not needed
+
+✓ **CQ_equal_width uses mcx() for 3+ bits:**
+- Line 169-191: Full n-controlled X implementation
+- Allocates control array with all operand qubits [1..bits]
+- Calls mcx(&gate, 0, controls, bits) at line 186
+- Proper cleanup: frees controls array, handles malloc failure
+- NO TODO/FIXME patterns remain (previous TODOs removed)
+
+✓ **cCQ_equal_width uses mcx() for 2+ bits:**
+- 2-bit case (line 328): uses mcx with 3 controls (control_qubit, qubit[1], qubit[2])
+- 3+ bit case (line 350): uses mcx with bits+1 controls (control_qubit + all operand qubits)
+- Proper memory management: allocates and frees control arrays
+- NO TODO/FIXME patterns remain
+
+✓ **Tests verify multi-bit correctness:**
+- test_multibit_comparison() tests 3, 4, 8 bit widths
+- Verifies NumControls == 3 for 3-bit comparison (confirms mcx gate present)
+- test_controlled_multibit_comparison() verifies NumControls == 4 for 3-bit controlled
+- free_sequence() properly frees large_control arrays (lines 15-19)
+- ALL TESTS PASS (8/8 tests pass)
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| `Backend/src/IntegerComparison.c` | CQ_equal_width and cCQ_equal_width implementations | ⚠️ PARTIAL | 366 lines, substantive, exports both functions, but 3+ bit logic incomplete (TODOs at lines 178, 323, 332) |
-| `Backend/include/comparison_ops.h` | Function declarations | ✓ VERIFIED | 104 lines, declares both functions (lines 72, 88), properly documented |
-| `tests/c/test_comparison.c` | C-level unit tests (min 80 lines) | ✓ VERIFIED | 238 lines, comprehensive tests, all pass, includes overflow/invalid/negative tests |
+| `Backend/src/IntegerComparison.c` | CQ_equal_width and cCQ_equal_width implementations | ✓ VERIFIED | 370 lines, fully implemented for all bit widths, no TODOs, uses mcx() for 3+ bits |
+| `Backend/include/comparison_ops.h` | Function declarations | ✓ VERIFIED | 104 lines, declares CQ_equal_width (line 72) and cCQ_equal_width (line 88) |
+| `Backend/include/gate.h` | mcx() function declaration | ✓ VERIFIED | Line 41: void mcx(gate_t *g, qubit_t target, qubit_t *controls, num_t num_controls) |
+| `Backend/src/Gate.c` | mcx() implementation | ✓ VERIFIED | Lines 198-229: 32-line substantive implementation with large_control support |
+| `tests/c/test_comparison.c` | C-level unit tests (min 280 lines per plan) | ✓ VERIFIED | 300 lines, 8 tests all passing, includes multi-bit verification tests |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 |------|-----|-----|--------|---------|
-| Backend/src/IntegerComparison.c | Backend/include/comparison_ops.h | function declarations | ✓ WIRED | Functions declared in header (lines 72, 88), implemented in source (lines 35, 195) |
-| tests/c/test_comparison.c | Backend/src/IntegerComparison.c | direct C function calls | ✓ WIRED | 38 calls to CQ_equal_width/cCQ_equal_width, tests compile and run successfully |
+| Backend/src/IntegerComparison.c | Backend/include/gate.h | #include "gate.h" | ✓ WIRED | Include at line 9, mcx() declared in header line 41 |
+| Backend/src/IntegerComparison.c | Backend/src/Gate.c | mcx() function call | ✓ WIRED | 3 calls to mcx(): lines 186, 328, 350 |
+| tests/c/test_comparison.c | Backend/src/IntegerComparison.c | CQ_equal_width/cCQ_equal_width calls | ✓ WIRED | Direct C function calls, all tests compile and run successfully |
+| Backend/src/Gate.c | gate_t.large_control | dynamic allocation | ✓ WIRED | Line 218: allocates large_control for >2 controls, copies control qubits |
+| tests/c/test_comparison.c | gate_t.large_control | free in free_sequence() | ✓ WIRED | Lines 17-18: frees large_control when NumControls > 2 |
 
 ### Requirements Coverage
 
-| Requirement | Status | Blocking Issue |
-|-------------|--------|----------------|
-| GLOB-02: Implement CQ_equal_width | ⚠️ PARTIAL | Multi-bit (3+) comparison incomplete - placeholder implementation |
-| GLOB-03: Implement cCQ_equal_width | ⚠️ PARTIAL | Controlled multi-bit (3+) comparison incomplete - placeholder implementation |
+| Requirement | Status | Evidence |
+|-------------|--------|----------|
+| GLOB-02: Implement CQ_equal_width | ✓ SATISFIED | Full implementation for all bit widths (1-64), tests pass for 1, 2, 3, 4, 8 bits |
+| GLOB-03: Implement cCQ_equal_width | ✓ SATISFIED | Full implementation for all bit widths (1-64), controlled tests pass |
 
 ### Anti-Patterns Found
 
 | File | Line | Pattern | Severity | Impact |
 |------|------|---------|----------|--------|
-| Backend/src/IntegerComparison.c | 178 | TODO(Phase 12-02): Implement proper n-bit AND | ⚠️ Warning | 3+ bit comparisons use simplified logic, not full AND |
-| Backend/src/IntegerComparison.c | 323 | TODO(Phase 12-02): Add proper 3-controlled gate decomposition | ⚠️ Warning | Controlled 2-bit comparison incomplete |
-| Backend/src/IntegerComparison.c | 332 | TODO(Phase 12-02): Implement proper n-bit controlled AND | ⚠️ Warning | Controlled 3+ bit comparisons incomplete |
-| Backend/src/IntegerComparison.c | 170 | Placeholder implementation comment | ⚠️ Warning | Multi-bit logic acknowledged as partial |
-| Backend/src/IntegerComparison.c | 325 | Placeholder implementation comment | ⚠️ Warning | Controlled multi-bit logic acknowledged as partial |
+| None | - | - | - | All previous TODOs resolved |
 
-**Severity breakdown:**
-- 🛑 Blockers: 0
-- ⚠️ Warnings: 5 (all related to multi-bit 3+ implementation)
-- ℹ️ Info: 0
+**Previous anti-patterns (from first verification):**
+- ~~TODO(Phase 12-02) at lines 178, 323, 332~~ - **RESOLVED**: Proper mcx() implementation added
+- ~~Placeholder implementation comments~~ - **RESOLVED**: Comments replaced with substantive code
+- ~~Multi-bit logic incomplete (CCX on first 2 bits only)~~ - **RESOLVED**: mcx() uses all operand bits
 
-### Gaps Summary
+### Test Results
 
-**Core Issue:** Multi-bit (3+ bits) comparison is only partially implemented due to MAXCONTROLS=2 limitation in gate_t structure.
+**C-level tests (tests/c/test_comparison):**
 
-**What Works:**
-- 1-bit and 2-bit comparisons fully working (both CQ_equal_width and cCQ_equal_width)
-- Overflow detection and validation working for all widths
-- Empty sequence returns for overflow (distinguishes from NULL invalid width)
-- C-level test infrastructure established and all tests pass
-- Proper qubit layout with control at position bits+1
+```
+Starting test program...
+Running comparison function tests...
 
-**What's Missing:**
-- Multi-controlled X gate for 3+ operand bits (requires n-bit AND of all operand qubits)
-- Proper ancilla qubit allocation for cascaded Toffoli decomposition
-- OR support for large_control array to bypass MAXCONTROLS=2 limitation
-- Cascaded Toffoli implementation to build n-controlled gates from 2-controlled CCX
+Testing invalid width handling...
+PASS: test_cq_equal_invalid_width
+PASS: test_ccq_equal_invalid_width
 
-**Impact:**
-- Requirements GLOB-02 and GLOB-03 only partially satisfied (1-2 bits vs advertised 1-64 bits)
-- Python-level comparison operations will continue using conversion-based approach for 3+ bit comparisons
-- Phase 13 (Equality Comparison) may be blocked for 3+ bit qints
+Testing overflow handling...
+PASS: test_cq_equal_overflow
+PASS: test_ccq_equal_overflow
+PASS: test_cq_equal_negative_overflow
 
-**Root Cause:**
-The gate_t structure has MAXCONTROLS=2, limiting CCX gates to 2 control qubits. Proper n-bit equality comparison requires AND of n qubits (all operand bits must be |1>). Current implementation applies CCX only to first two operand bits for 3+ bit widths, which checks partial equality, not full equality.
+Testing valid sequence generation (1-2 bit widths)...
+PASS: test_valid_small_widths
 
-**Acknowledged:**
-SUMMARY.md explicitly documents this limitation as Decision DEC-12-01-01 and notes follow-up tasks for Phase 12-02.
+Testing multi-bit (3+) comparison implementation...
+PASS: test_multibit_comparison
+PASS: test_controlled_multibit_comparison
+
+===  ALL TESTS PASSED ===
+Functions correctly handle: invalid width, overflow detection, sequence generation
+Multi-bit (3+) comparison logic now fully implemented using mcx gates.
+```
+
+**Total: 8/8 tests pass (100% pass rate)**
+
+**Build verification:**
+- Python extension builds without errors
+- C compilation successful (warnings pre-existing, not from Phase 12 changes)
+- No new compilation warnings from mcx() or comparison functions
+
+### Re-Verification Summary
+
+**Comparison with Previous Verification:**
+
+| Metric | Previous (2026-01-27T19:09:44Z) | Current (2026-01-27T19:29:36Z) | Change |
+|--------|--------------------------------|-------------------------------|--------|
+| Status | gaps_found | **passed** | ✓ Gap closed |
+| Score | 3/4 truths | **4/4 truths** | +1 truth verified |
+| Truth #1 | ⚠️ PARTIAL | **✓ VERIFIED** | Multi-bit now complete |
+| GLOB-02 | ⚠️ PARTIAL | **✓ SATISFIED** | Full 1-64 bit support |
+| GLOB-03 | ⚠️ PARTIAL | **✓ SATISFIED** | Full 1-64 bit support |
+| Anti-patterns | 5 warnings (TODOs) | **0 warnings** | All TODOs resolved |
+
+**Gap Closure Confirmation:**
+
+✓ All gaps from previous verification have been closed:
+- mcx() function implemented with large_control array support
+- CQ_equal_width works for all bit widths (1-64), not just 1-2
+- cCQ_equal_width works for all bit widths (1-64), not just 1
+- Multi-bit tests added and passing
+- No placeholder implementations remain
+- No TODO comments remain in comparison functions
+
+✓ No regressions detected:
+- All previously passing tests still pass
+- No new anti-patterns introduced
+- Memory management properly updated (free_sequence handles large_control)
+
+**Phase Goal Achievement:**
+
+✓ **GOAL ACHIEVED**: CQ_equal_width and cCQ_equal_width generate quantum gate sequences for classical-quantum comparison for ALL bit widths (1-64 bits), with proper n-controlled X gates using large_control array.
+
+**Success Criteria Verification:**
+
+1. ✓ CQ_equal_width(bits, value) generates quantum gates comparing quantum register to classical value — **VERIFIED** for all bit widths
+2. ✓ cCQ_equal_width(bits, value) generates controlled comparison gates — **VERIFIED** for all bit widths
+3. ✓ Functions return empty sequence for overflow (value >= 2^bits), NULL for invalid width — **VERIFIED** by tests
+4. ✓ C-level tests verify function behavior directly (no Python dependency) — **VERIFIED**: 8 tests pass, 300 lines of tests
 
 ---
 
-_Verified: 2026-01-27T19:09:44Z_
+_Verified: 2026-01-27T19:29:36Z_
 _Verifier: Claude (gsd-verifier)_
+_Re-verification after gap closure (Plan 12-02)_

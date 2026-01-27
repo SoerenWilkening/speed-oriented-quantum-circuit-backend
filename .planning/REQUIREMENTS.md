@@ -10,8 +10,8 @@ Requirements for QPU State Removal & Comparison Refactoring milestone.
 ### Global State Removal
 
 - [x] **GLOB-01**: Remove QPU_state global dependency from C backend
-- [ ] **GLOB-02**: Implement `CQ_equal_width` to take classical value and width as parameters (replaces removed CQ_equal)
-- [ ] **GLOB-03**: Implement `cCQ_equal_width` to take classical value and width as parameters (replaces removed cCQ_equal)
+- [x] **GLOB-02**: Implement `CQ_equal_width` to take classical value and width as parameters (replaces removed CQ_equal)
+- [x] **GLOB-03**: Implement `cCQ_equal_width` to take classical value and width as parameters (replaces removed cCQ_equal)
 - [x] **GLOB-04**: Remove `CC_equal` (purely classical, not needed) - *Completed in Phase 11-01*
 
 ### Comparison Refactoring
@@ -50,8 +50,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | GLOB-01 | Phase 11 | Complete |
-| GLOB-02 | Phase 12 | Pending |
-| GLOB-03 | Phase 12 | Pending |
+| GLOB-02 | Phase 12 | Complete |
+| GLOB-03 | Phase 12 | Complete |
 | GLOB-04 | Phase 11 | Complete (CC_equal removed in 11-01) |
 | COMP-01 | Phase 13 | Pending |
 | COMP-02 | Phase 13 | Pending |
@@ -68,4 +68,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-01-27*
-*Last updated: 2026-01-27 after Phase 12 plan revision*
+*Last updated: 2026-01-27 — Phase 12 complete (GLOB-02, GLOB-03 satisfied)*
