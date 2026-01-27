@@ -9,13 +9,7 @@ sequence_t *void_seq() {
     return NULL;
 }
 
-sequence_t *jmp_seq() {
-    // OWNERSHIP: No sequence returned (performs control flow only)
-    // READS: QPU_state->R0 for jump condition
-    if (*QPU_state->R0 == 0)
-        QPU_state = QPU_state->next_instruction;
-    return NULL;
-}
+// jmp_seq removed (Phase 11) - manipulated QPU_state pointer for control flow that's no longer used
 
 sequence_t *branch_seq() {
     // OWNERSHIP: Caller owns returned sequence_t*, must free gates_per_layer, seq arrays, and seq
@@ -87,11 +81,8 @@ sequence_t *ctrl_branch_seq() {
     return seq;
 }
 
-sequence_t *not_seq() {
-    // OWNERSHIP: No sequence returned (performs classical computation only)
-    *(QPU_state->R0) = !(*(QPU_state->R0));
-    return NULL;
-}
+// not_seq removed (Phase 11) - purely classical, no quantum gate generation
+
 sequence_t *q_not_seq() {
     // OWNERSHIP: Caller owns returned sequence_t*, must free gates_per_layer, seq arrays, and seq
     //	int number = QPU_state->Q0->MSB + 1;
@@ -371,11 +362,8 @@ sequence_t *cQ_xor(int bits) {
     return seq;
 }
 
-sequence_t *and_seq() {
-    // classical and
-    *(QPU_state->R0) = *(QPU_state->R1) & *(QPU_state->R2);
-    return NULL;
-}
+// and_seq removed (Phase 11) - purely classical, no quantum gate generation
+
 sequence_t *q_and_seq() {
     // semiclassical and
     // -> GRP2 always has to be the quantum element
@@ -579,10 +567,8 @@ sequence_t *cqq_and_seq() {
     return seq;
 }
 
-sequence_t *xor_seq() {
-    *(QPU_state->R0) = *(QPU_state->R1) ^ *(QPU_state->R2);
-    return NULL;
-}
+// xor_seq removed (Phase 11) - purely classical, no quantum gate generation
+
 sequence_t *q_xor_seq() {
     // pure quantum
 
@@ -773,10 +759,8 @@ sequence_t *cqq_xor_seq() {
     return seq;
 }
 
-sequence_t *or_seq() {
-    *(QPU_state->R0) = *(QPU_state->R1) | *(QPU_state->R2);
-    return NULL;
-}
+// or_seq removed (Phase 11) - purely classical, no quantum gate generation
+
 sequence_t *q_or_seq() {
     // pure quantum
 
