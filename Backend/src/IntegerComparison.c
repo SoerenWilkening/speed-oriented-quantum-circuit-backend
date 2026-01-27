@@ -49,11 +49,8 @@ sequence_t *CQ_less_than(int bits, int64_t value) {
 // Legacy Comparison Operations (INTEGERSIZE-based)
 // ======================================================
 
-sequence_t *CC_equal() {
-    // OWNERSHIP: No sequence returned (performs classical computation only)
-    *(QPU_state->R0) = *(QPU_state->R1) == *(QPU_state->R2);
-    return NULL;
-}
+// CC_equal removed (Phase 11) - purely classical, no quantum gate generation
+
 sequence_t *CQ_equal() {
     // OWNERSHIP: Caller owns returned sequence_t*, must free gates_per_layer, seq arrays, and seq
     // READS: QPU_state->R0 for classical value

@@ -67,11 +67,8 @@ void all_rot(sequence_t *mul, num_t *layer, int inverted, double multiplyer, int
 void all_rot_final_block(sequence_t *mul, num_t *layer, int rounds, num_t control,
                          double multiplyer, int inverted, int bits) {}
 
-sequence_t *CC_mul() {
-    // OWNERSHIP: No sequence returned (performs classical computation only)
-    *(QPU_state->R0) = *(QPU_state->R1) * *(QPU_state->R2);
-    return NULL;
-}
+// CC_mul removed (Phase 11) - purely classical, no quantum gate generation
+
 sequence_t *CQ_mul(int bits, int64_t value) {
     // OWNERSHIP: Caller owns returned sequence_t*, must free gates_per_layer, seq arrays, and seq
 
