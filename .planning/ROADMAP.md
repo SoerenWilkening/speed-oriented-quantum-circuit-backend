@@ -32,7 +32,7 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full milestone details.
 
 **Milestone Goal:** Remove global state dependency (QPU_state R0-R3 registers) and refactor comparison operations for cleaner architecture and efficient implementation.
 
-- [ ] **Phase 11: Global State Removal** - Remove QPU_state global dependency
+- [x] **Phase 11: Global State Removal** - Remove QPU_state global dependency
 - [ ] **Phase 12: Comparison Function Refactoring** - Refactor comparison functions to pass values explicitly
 - [ ] **Phase 13: Equality Comparison** - Implement qint == int and qint == qint
 - [ ] **Phase 14: Ordering Comparisons** - Refactor <= and >= for efficiency
@@ -52,11 +52,11 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full milestone details.
 **Plans:** 5 plans in 4 waves
 
 Plans:
-- [ ] 11-01-PLAN.md — Remove purely classical functions (CC_add, CC_mul, CC_equal, etc.)
-- [ ] 11-02-PLAN.md — Refactor P_add/cP_add to take explicit phase parameter
-- [ ] 11-03-PLAN.md — Refactor legacy logic functions to take explicit width/value parameters
-- [ ] 11-04-PLAN.md — Remove QPU_state global, instruction_t type, and infrastructure
-- [ ] 11-05-PLAN.md — Update Python bindings and verify full test suite
+- [x] 11-01-PLAN.md — Remove purely classical functions (CC_add, CC_mul, CC_equal, etc.)
+- [x] 11-02-PLAN.md — Refactor P_add/cP_add to take explicit phase parameter
+- [x] 11-03-PLAN.md — Refactor legacy logic functions to take explicit width/value parameters
+- [x] 11-04-PLAN.md — Remove QPU_state global, instruction_t type, and infrastructure
+- [x] 11-05-PLAN.md — Update Python bindings and verify full test suite
 
 ### Phase 12: Comparison Function Refactoring
 **Goal:** Refactor comparison functions to take classical values as parameters instead of using global state
@@ -124,11 +124,11 @@ Phases execute in numeric order: 11 → 12 → 13 → 14 → 15
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 11. Global State Removal | v1.1 | 0/5 | Planned | - |
+| 11. Global State Removal | v1.1 | 5/5 | ✓ Complete | 2026-01-27 |
 | 12. Comparison Function Refactoring | v1.1 | 0/TBD | Not started | - |
 | 13. Equality Comparison | v1.1 | 0/TBD | Not started | - |
 | 14. Ordering Comparisons | v1.1 | 0/TBD | Not started | - |
 | 15. Classical Initialization | v1.1 | 0/TBD | Not started | - |
 
 ---
-*Last updated: 2026-01-27 - Phase 11 planned (5 plans in 4 waves)*
+*Last updated: 2026-01-27 - Phase 11 complete (5 plans, 4 waves)*

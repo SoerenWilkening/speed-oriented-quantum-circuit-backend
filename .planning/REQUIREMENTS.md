@@ -9,7 +9,7 @@ Requirements for QPU State Removal & Comparison Refactoring milestone.
 
 ### Global State Removal
 
-- [ ] **GLOB-01**: Remove QPU_state global dependency from C backend
+- [x] **GLOB-01**: Remove QPU_state global dependency from C backend
 - [ ] **GLOB-02**: Refactor `CQ_equal` to take classical value as parameter
 - [ ] **GLOB-03**: Refactor `cCQ_equal` to take classical value as parameter
 - [ ] **GLOB-04**: Remove `CC_equal` (purely classical, not needed)
@@ -49,7 +49,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GLOB-01 | Phase 11 | Pending |
+| GLOB-01 | Phase 11 | Complete |
 | GLOB-02 | Phase 12 | Pending |
 | GLOB-03 | Phase 12 | Pending |
 | GLOB-04 | Phase 12 | Pending |
