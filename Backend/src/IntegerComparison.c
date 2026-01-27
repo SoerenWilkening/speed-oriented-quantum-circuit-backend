@@ -197,6 +197,163 @@ sequence_t *CQ_equal_width(int bits, int64_t value) {
     return seq;
 }
 
+sequence_t *cCQ_equal_width(int bits, int64_t value) {
+    // Controlled classical-quantum equality comparison
+    // Qubit layout: [0] = result qbool, [1:bits+1] = quantum operand, [bits+1] = control
+    // Same algorithm as CQ_equal_width but with controlled gates (CX instead of X)
+    // Control qubit at position bits+1 gates the entire operation
+
+    // Validate input parameters
+    if (bits <= 0 || bits > 64) {
+        return NULL; // Invalid bit width
+    }
+
+    // Check for overflow (same as CQ_equal_width)
+    uint64_t max_val = (bits == 64) ? UINT64_MAX : ((1ULL << bits) - 1);
+    if (value < 0) {
+        int64_t min_val = -(1LL << (bits - 1));
+        if (value < min_val) {
+            // Overflow: return empty sequence
+            sequence_t *seq = malloc(sizeof(sequence_t));
+            if (seq == NULL)
+                return NULL;
+            seq->num_layer = 0;
+            seq->used_layer = 0;
+            seq->gates_per_layer = NULL;
+            seq->seq = NULL;
+            return seq;
+        }
+    } else {
+        if ((uint64_t)value > max_val) {
+            // Overflow: return empty sequence
+            sequence_t *seq = malloc(sizeof(sequence_t));
+            if (seq == NULL)
+                return NULL;
+            seq->num_layer = 0;
+            seq->used_layer = 0;
+            seq->gates_per_layer = NULL;
+            seq->seq = NULL;
+            return seq;
+        }
+    }
+
+    // Convert value to binary
+    int *bin = two_complement(value, bits);
+    if (bin == NULL) {
+        return NULL;
+    }
+
+    // Count how many bits are 0 in classical value (need CX gates for those)
+    int num_cx_gates = 0;
+    for (int i = 0; i < bits; i++) {
+        if (bin[i] == 0) {
+            num_cx_gates++;
+        }
+    }
+
+    // Calculate number of layers (same structure as uncontrolled version)
+    int num_layers = num_cx_gates + (bits > 1 ? bits - 1 : 1) + num_cx_gates;
+
+    // Allocate sequence structure
+    sequence_t *seq = malloc(sizeof(sequence_t));
+    if (seq == NULL) {
+        free(bin);
+        return NULL;
+    }
+
+    seq->num_layer = num_layers;
+    seq->used_layer = 0;
+    seq->gates_per_layer = calloc(num_layers, sizeof(num_t));
+    if (seq->gates_per_layer == NULL) {
+        free(bin);
+        free(seq);
+        return NULL;
+    }
+
+    seq->seq = calloc(num_layers, sizeof(gate_t *));
+    if (seq->seq == NULL) {
+        free(seq->gates_per_layer);
+        free(bin);
+        free(seq);
+        return NULL;
+    }
+
+    // Allocate gate arrays for each layer
+    for (int i = 0; i < num_layers; i++) {
+        seq->seq[i] = calloc(bits + 2, sizeof(gate_t)); // bits+2 for result, operand, control
+        if (seq->seq[i] == NULL) {
+            // Cleanup on failure
+            for (int j = 0; j < i; j++) {
+                free(seq->seq[j]);
+            }
+            free(seq->seq);
+            free(seq->gates_per_layer);
+            free(bin);
+            free(seq);
+            return NULL;
+        }
+    }
+
+    int current_layer = 0;
+    int control_qubit = bits + 1; // Control qubit position
+
+    // Phase 1: Apply controlled X (CX) gates to qubits where classical bit is 0
+    for (int i = 0; i < bits; i++) {
+        if (bin[i] == 0) {
+            // Controlled X: target is qubit i+1, control is control_qubit
+            cx(&seq->seq[current_layer][seq->gates_per_layer[current_layer]], i + 1, control_qubit);
+            seq->gates_per_layer[current_layer]++;
+            current_layer++;
+            seq->used_layer++;
+        }
+    }
+
+    // Phase 2: Controlled multi-controlled X to set result qubit
+    // This requires using the control qubit as an additional control
+    // For simplicity with ccx gates, we need to construct multi-controlled gates
+    if (bits == 1) {
+        // Single bit: CCX with control_qubit and qubit[1] controlling qubit[0]
+        ccx(&seq->seq[current_layer][seq->gates_per_layer[current_layer]], 0, control_qubit, 1);
+        seq->gates_per_layer[current_layer]++;
+        current_layer++;
+        seq->used_layer++;
+    } else {
+        // Multi-bit: cascaded Toffoli with control qubit
+        // First Toffoli needs to include control_qubit
+        for (int i = 0; i < bits - 1; i++) {
+            if (i == 0) {
+                // First Toffoli: control_qubit and qubit[1] control qubit[0]
+                ccx(&seq->seq[current_layer][seq->gates_per_layer[current_layer]], 0, control_qubit,
+                    1);
+                seq->gates_per_layer[current_layer]++;
+                current_layer++;
+                seq->used_layer++;
+                // Then qubit[0] and qubit[2] control qubit[0]
+                ccx(&seq->seq[current_layer][seq->gates_per_layer[current_layer]], 0, 0, 2);
+            } else {
+                // Subsequent Toffoli: qubit[0] and qubit[i+2] control qubit[0]
+                ccx(&seq->seq[current_layer][seq->gates_per_layer[current_layer]], 0, 0, i + 2);
+            }
+            seq->gates_per_layer[current_layer]++;
+            current_layer++;
+            seq->used_layer++;
+        }
+    }
+
+    // Phase 3: Uncompute - reverse the controlled X gates
+    for (int i = 0; i < bits; i++) {
+        if (bin[i] == 0) {
+            cx(&seq->seq[current_layer][seq->gates_per_layer[current_layer]], i + 1, control_qubit);
+            seq->gates_per_layer[current_layer]++;
+            current_layer++;
+            seq->used_layer++;
+        }
+    }
+
+    free(bin);
+    return seq;
+}
+
 sequence_t *CQ_less_than(int bits, int64_t value) {
     // Stub: Returns NULL, Python converts value to qint and uses QQ pattern
     (void)bits;

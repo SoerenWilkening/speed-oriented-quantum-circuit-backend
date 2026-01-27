@@ -72,6 +72,22 @@ sequence_t *QQ_less_than(int bits);
 sequence_t *CQ_equal_width(int bits, int64_t value);
 
 /**
+ * @brief Controlled classical-quantum equality: A == value (controlled).
+ *
+ * Compares quantum register with classical integer value, controlled by a qubit.
+ * Comparison gates only applied when control qubit is |1>.
+ *
+ * @param bits Width of quantum operand (1-64)
+ * @param value Classical value to compare against
+ * @return Sequence for controlled equality comparison, NULL if invalid bits
+ *
+ * Qubit layout: [0] = result qbool, [1:bits+1] = operand, [bits+1] = control
+ *
+ * OWNERSHIP: Caller owns returned sequence_t*
+ */
+sequence_t *cCQ_equal_width(int bits, int64_t value);
+
+/**
  * @brief Classical-quantum less-than: A < value.
  *
  * Compares quantum register with classical integer value.
