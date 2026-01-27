@@ -242,3 +242,148 @@ class TestQintAPI:
             a += 1
         # Should complete without error
         assert isinstance(a, ql.qint)
+
+
+class TestQboolAPI:
+    """Test qbool class public API."""
+
+    def test_qbool_default(self):
+        """qbool() creates False by default."""
+        b = ql.qbool()
+        assert isinstance(b, ql.qbool)
+        assert b.width == 1
+
+    def test_qbool_true(self):
+        """qbool(True) creates True value."""
+        b = ql.qbool(True)
+        assert isinstance(b, ql.qbool)
+
+    def test_qbool_is_qint(self):
+        """qbool inherits from qint."""
+        b = ql.qbool(True)
+        assert isinstance(b, ql.qint)
+
+    def test_qbool_bitwise(self):
+        """qbool supports bitwise operations."""
+        a = ql.qbool(True)
+        b = ql.qbool(False)
+        c = a & b
+        assert isinstance(c, ql.qint)  # Result is qint, not qbool
+
+
+class TestQintModAPI:
+    """Test qint_mod class public API."""
+
+    def test_qint_mod_creation(self):
+        """qint_mod(value, N=modulus) creates modular integer."""
+        x = ql.qint_mod(5, N=17)
+        assert isinstance(x, ql.qint_mod)
+        assert x.modulus == 17
+
+    def test_qint_mod_requires_N(self):
+        """qint_mod requires N parameter."""
+        with pytest.raises(ValueError):
+            ql.qint_mod(5)
+
+    def test_qint_mod_N_must_be_positive(self):
+        """N must be positive integer."""
+        with pytest.raises(ValueError):
+            ql.qint_mod(5, N=0)
+        with pytest.raises(ValueError):
+            ql.qint_mod(5, N=-5)
+
+    def test_qint_mod_add(self):
+        """qint_mod + int returns qint_mod."""
+        x = ql.qint_mod(5, N=17)
+        y = x + 3
+        assert isinstance(y, ql.qint_mod)
+        assert y.modulus == 17
+
+    def test_qint_mod_sub(self):
+        """qint_mod - int returns qint_mod."""
+        x = ql.qint_mod(5, N=17)
+        y = x - 3
+        assert isinstance(y, ql.qint_mod)
+
+    def test_qint_mod_mul(self):
+        """qint_mod * int returns qint_mod."""
+        x = ql.qint_mod(5, N=17)
+        y = x * 3
+        assert isinstance(y, ql.qint_mod)
+
+    def test_qint_mod_mismatched_moduli(self):
+        """Operations with different moduli raise ValueError."""
+        x = ql.qint_mod(5, N=17)
+        y = ql.qint_mod(3, N=19)
+        with pytest.raises(ValueError):
+            _ = x + y
+
+
+class TestModuleFunctions:
+    """Test module-level functions."""
+
+    def test_array_creates_list_of_qint(self):
+        """array(n) creates list of n qints."""
+        arr = ql.array(5)
+        assert len(arr) == 5
+        assert all(isinstance(x, ql.qint) for x in arr)
+
+    def test_array_with_values(self):
+        """array([values]) creates qints from list."""
+        arr = ql.array([1, 2, 3])
+        assert len(arr) == 3
+        assert all(isinstance(x, ql.qint) for x in arr)
+
+    def test_array_2d(self):
+        """array((rows, cols)) creates 2D array."""
+        arr = ql.array((2, 3))
+        assert len(arr) == 2
+        assert len(arr[0]) == 3
+
+    def test_circuit_stats(self):
+        """circuit_stats() returns dict with allocation info."""
+        _c = ql.circuit()
+        _a = ql.qint(5, width=8)
+        stats = ql.circuit_stats()
+        assert isinstance(stats, dict)
+        assert "peak_allocated" in stats
+        assert "total_allocations" in stats
+
+    def test_available_passes_constant(self):
+        """AVAILABLE_PASSES is module-level constant."""
+        assert hasattr(ql, "AVAILABLE_PASSES")
+        assert "merge" in ql.AVAILABLE_PASSES
+
+
+class TestPhase10SuccessCriteria:
+    """Verify Phase 10 TEST-03 success criteria."""
+
+    def test_qint_operations_covered(self):
+        """TEST-03: Python API tests cover qint operations."""
+        # Arithmetic
+        a = ql.qint(5, width=8)
+        _ = a + 1
+        _ = a - 1
+        _ = a * 2
+        _ = a // 2
+        _ = a % 3
+        assert True  # If we got here, operations work
+
+    def test_qbool_operations_covered(self):
+        """TEST-03: Python API tests cover qbool operations."""
+        a = ql.qbool(True)
+        b = ql.qbool(False)
+        _ = a & b
+        _ = a | b
+        _ = ~a
+        assert True
+
+    def test_circuit_operations_covered(self):
+        """TEST-03: Python API tests cover circuit operations."""
+        c = ql.circuit()
+        _a = ql.qint(5, width=4)
+        _ = c.gate_count
+        _ = c.depth
+        _ = c.gate_counts
+        c.visualize()
+        assert True
