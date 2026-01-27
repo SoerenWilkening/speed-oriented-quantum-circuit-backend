@@ -49,10 +49,14 @@ See `.planning/milestones/v1.0-ROADMAP.md` for full milestone details.
   2. All C functions that previously used QPU_state now use local variables or parameters
   3. All tests pass without any global state dependencies
   4. Memory leak checks confirm no leaked register qubits
-**Plans:** TBD
+**Plans:** 5 plans in 4 waves
 
 Plans:
-- [ ] TBD during plan-phase
+- [ ] 11-01-PLAN.md — Remove purely classical functions (CC_add, CC_mul, CC_equal, etc.)
+- [ ] 11-02-PLAN.md — Refactor P_add/cP_add to take explicit phase parameter
+- [ ] 11-03-PLAN.md — Refactor legacy logic functions to take explicit width/value parameters
+- [ ] 11-04-PLAN.md — Remove QPU_state global, instruction_t type, and infrastructure
+- [ ] 11-05-PLAN.md — Update Python bindings and verify full test suite
 
 ### Phase 12: Comparison Function Refactoring
 **Goal:** Refactor comparison functions to take classical values as parameters instead of using global state
@@ -120,11 +124,11 @@ Phases execute in numeric order: 11 → 12 → 13 → 14 → 15
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 11. Global State Removal | v1.1 | 0/TBD | Not started | - |
+| 11. Global State Removal | v1.1 | 0/5 | Planned | - |
 | 12. Comparison Function Refactoring | v1.1 | 0/TBD | Not started | - |
 | 13. Equality Comparison | v1.1 | 0/TBD | Not started | - |
 | 14. Ordering Comparisons | v1.1 | 0/TBD | Not started | - |
 | 15. Classical Initialization | v1.1 | 0/TBD | Not started | - |
 
 ---
-*Last updated: 2026-01-27 - v1.1 roadmap created*
+*Last updated: 2026-01-27 - Phase 11 planned (5 plans in 4 waves)*
