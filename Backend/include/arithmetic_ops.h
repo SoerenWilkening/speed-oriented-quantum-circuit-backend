@@ -98,14 +98,57 @@ sequence_t *cCQ_add(int bits, int64_t value);
  */
 sequence_t *cQQ_add(int bits);
 
+// ============================================================================
+// Phase Gate Operations
+// ============================================================================
+
 /**
- * @brief Probabilistic addition (special operation).
+ * @brief Phase gate with explicit parameter (no global state).
  *
- * Legacy operation for probabilistic arithmetic (rarely used).
+ * Applies a phase rotation to qubit 0 using the provided phase value.
  *
- * @return Sequence for probabilistic addition
+ * @param phase_value Phase rotation angle in radians
+ * @return Sequence containing single phase gate - caller must free
+ *
+ * OWNERSHIP: Caller owns returned sequence_t*, must free gates_per_layer, seq arrays, and seq
+ */
+sequence_t *P_add_param(double phase_value);
+
+/**
+ * @brief Controlled phase gate with explicit parameter (no global state).
+ *
+ * Applies a controlled phase rotation from qubit 1 to qubit 0 using the provided phase value.
+ *
+ * @param phase_value Phase rotation angle in radians
+ * @return Sequence containing single controlled phase gate - caller must free
+ *
+ * OWNERSHIP: Caller owns returned sequence_t*, must free gates_per_layer, seq arrays, and seq
+ */
+sequence_t *cP_add_param(double phase_value);
+
+/**
+ * @brief DEPRECATED: Probabilistic addition using global state.
+ *
+ * Legacy operation for probabilistic arithmetic. Reads phase value from QPU_state->R0.
+ * Use P_add_param(phase_value) instead for code without global state dependencies.
+ *
+ * @return Sequence for probabilistic addition - caller must free
+ *
+ * DEPRECATED: This function will be removed when all callers are migrated to P_add_param
  */
 sequence_t *P_add();
+
+/**
+ * @brief DEPRECATED: Controlled probabilistic addition using global state.
+ *
+ * Legacy operation for probabilistic arithmetic. Reads phase value from QPU_state->R0.
+ * Use cP_add_param(phase_value) instead for code without global state dependencies.
+ *
+ * @return Sequence for controlled probabilistic addition - caller must free
+ *
+ * DEPRECATED: This function will be removed when all callers are migrated to cP_add_param
+ */
+sequence_t *cP_add();
 
 // Legacy globals for backward compatibility (point to INTEGERSIZE versions)
 extern sequence_t *precompiled_QQ_add;
