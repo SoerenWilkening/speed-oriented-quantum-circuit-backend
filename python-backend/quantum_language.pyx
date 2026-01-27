@@ -2276,22 +2276,24 @@ cdef class qint_mod(qint):
 
 		Raises
 		------
+		NotImplementedError
+			If other is qint_mod (qint_mod * qint_mod not yet supported).
 		ValueError
 			If other is qint_mod with different modulus.
 
 		Examples
 		--------
 		>>> x = qint_mod(5, N=17)
-		>>> y = qint_mod(7, N=17)
-		>>> z = x * y  # (5 * 7) mod 17 = 1
+		>>> z = x * 7  # (5 * 7) mod 17 = 1
 		"""
+		# Check for qint_mod * qint_mod (not supported - causes C-layer segfault)
 		if isinstance(other, qint_mod):
-			if (<qint_mod>other)._modulus != self._modulus:
-				raise ValueError(
-					f"Moduli must match: {self._modulus} != {(<qint_mod>other)._modulus}"
-				)
+			raise NotImplementedError(
+				"qint_mod * qint_mod multiplication is not yet supported. "
+				"Use qint_mod * int instead (e.g., x * 5 instead of x * y)."
+			)
 
-		# Perform regular multiplication
+		# Perform regular multiplication (qint_mod * int)
 		product = qint.__mul__(self, other)
 
 		# Reduce mod N (product may be much larger than N)
