@@ -21,8 +21,8 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Testing Infrastructure
 
 - [x] **TEST-01**: Characterization test suite captures current behavior before refactoring
-- [ ] **TEST-02**: C backend unit tests cover core functions
-- [ ] **TEST-03**: Python API unit tests cover qint/qbool operations
+- [x] **TEST-02**: C backend unit tests cover core functions
+- [x] **TEST-03**: Python API unit tests cover qint/qbool operations
 - [x] **TEST-04**: Valgrind/ASan memory testing integrated into development workflow
 - [x] **TEST-05**: Pre-commit hooks enforce code quality (Ruff, linting)
 
@@ -68,10 +68,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Documentation
 
-- [ ] **DOCS-01**: Comprehensive docstrings (NumPy style)
-- [ ] **DOCS-02**: Sphinx documentation with examples
-- [ ] **DOCS-03**: API reference auto-generated from docstrings
-- [ ] **DOCS-04**: Tutorial examples demonstrating features
+- [x] **DOCS-01**: Comprehensive docstrings (NumPy style)
+- [x] **DOCS-02**: Sphinx documentation with examples
+- [x] **DOCS-03**: API reference auto-generated from docstrings
+- [x] **DOCS-04**: Tutorial examples demonstrating features
 
 ## v2 Requirements
 
@@ -124,8 +124,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FOUND-07 | Phase 3 | Complete |
 | FOUND-08 | Phase 3 | Complete |
 | TEST-01 | Phase 1 | Complete |
-| TEST-02 | Phase 10 | Pending |
-| TEST-03 | Phase 10 | Pending |
+| TEST-02 | Phase 10 | Complete |
+| TEST-03 | Phase 10 | Complete |
 | TEST-04 | Phase 1 | Complete |
 | TEST-05 | Phase 1 | Complete |
 | VINT-01 | Phase 5 | Complete |
@@ -153,10 +153,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CODE-03 | Phase 4 | Complete |
 | CODE-04 | Phase 9 | Complete |
 | CODE-05 | Phase 4 | Complete |
-| DOCS-01 | Phase 10 | Pending |
-| DOCS-02 | Phase 10 | Pending |
-| DOCS-03 | Phase 10 | Pending |
-| DOCS-04 | Phase 10 | Pending |
+| DOCS-01 | Phase 10 | Complete |
+| DOCS-02 | Phase 10 | Complete |
+| DOCS-03 | Phase 10 | Complete |
+| DOCS-04 | Phase 10 | Complete |
 
 **Coverage:**
 - v1 requirements: 37 total
@@ -165,4 +165,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-01-25*
-*Last updated: 2026-01-26 after Phase 8 completion*
+*Last updated: 2026-01-27 after Phase 10 (milestone) completion*
