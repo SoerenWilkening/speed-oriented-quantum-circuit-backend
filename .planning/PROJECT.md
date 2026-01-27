@@ -30,7 +30,13 @@ Write quantum algorithms in natural programming style that compiles to efficient
 
 ### Active
 
-(Fresh requirements for next milestone — define with `/gsd:new-milestone`)
+**Milestone v1.1: QPU State Removal & Comparison Refactoring**
+
+- [ ] Remove QPU_state global dependency (R0-R3 registers)
+- [ ] Refactor equality comparison to use predefined C functions
+- [ ] Implement qint == qint as (qint - qint) == 0
+- [ ] Refactor >= and <= to use in-place subtraction/addition
+- [ ] Initialize qint with classical value via Q_not on binary representation
 
 ### Out of Scope
 
@@ -66,6 +72,7 @@ Write quantum algorithms in natural programming style that compiles to efficient
 **Known limitations:**
 - qint_mod * qint_mod raises NotImplementedError (by design)
 - apply_merge() placeholder for future phase rotation merging
+- QPU_state global registers (R0-R3) — removing in v1.1
 
 ## Constraints
 
@@ -86,4 +93,4 @@ Write quantum algorithms in natural programming style that compiles to efficient
 | Single README format | GitHub-rendered, accessible without build | ✓ Good — easy to maintain |
 
 ---
-*Last updated: 2026-01-27 after v1.0 milestone*
+*Last updated: 2026-01-27 after v1.1 milestone started*

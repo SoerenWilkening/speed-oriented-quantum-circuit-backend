@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-27)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** Planning next milestone
+**Current focus:** v1.1 QPU State Removal & Comparison Refactoring
 
 ## Current Position
 
-Phase: — (milestone complete)
+Phase: Not started (defining requirements)
 Plan: —
-Status: Ready for next milestone
-Last activity: 2026-01-27 — v1.0 milestone complete
+Status: Defining requirements
+Last activity: 2026-01-27 — Milestone v1.1 started
 
-Progress: Milestone v1.0 shipped
+Progress: ░░░░░░░░░░ 0%
 
 ## Performance Metrics
 
@@ -38,9 +38,12 @@ None.
 ### Blockers/Concerns
 
 **Resolved in v1.0:**
-- Global state eliminated from C backend
+- Most global state eliminated from C backend
 - Memory bugs fixed (sizeof, NULL checks, initialization)
 - QQ_mul segfault fixed via MAXLAYERINSEQUENCE allocation
+
+**Active in v1.1:**
+- QPU_state (R0-R3 registers) — removing global dependency
 
 **Known limitations (acceptable):**
 - qint_mod * qint_mod raises NotImplementedError (by design)
@@ -55,9 +58,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-27
-Stopped at: v1.0 milestone complete
+Stopped at: Milestone v1.1 started, defining requirements
 Resume file: None
-Note: Run /gsd:new-milestone to start v1.1
+Note: Continue with requirements definition
 
 ---
 
