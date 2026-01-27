@@ -4,37 +4,33 @@ from libc.stdint cimport int64_t
 
 # cdef int INTEGERSIZE = 64
 
-cdef extern from "Integer.h":
+cdef extern from "arithmetic_ops.h":
 	ctypedef struct gate_t:
 		pass
 
 	ctypedef struct sequence_t:
 		pass
 
-	sequence_t *CC_mul();
-	sequence_t *CQ_mul(int bits, long long value);
-	sequence_t *QQ_mul(int bits);
-	sequence_t *cCQ_mul(int bits, long long value);
-	sequence_t *cQQ_mul(int bits);
-
+	# Addition operations
 	sequence_t *CC_add();
 	sequence_t *CQ_add(int bits, long long value);
 	sequence_t *QQ_add(int bits);
 	sequence_t *cCQ_add(int bits, long long value);
 	sequence_t *cQQ_add(int bits);
 
+	# Multiplication operations
+	sequence_t *CC_mul();
+	sequence_t *CQ_mul(int bits, long long value);
+	sequence_t *QQ_mul(int bits);
+	sequence_t *cCQ_mul(int bits, long long value);
+	sequence_t *cQQ_mul(int bits);
 
-cdef extern from "LogicOperations.h":
-	sequence_t *q_and_seq();
-	sequence_t *cq_and_seq();
-	sequence_t *qq_and_seq();
-	sequence_t *cqq_and_seq();
+cdef extern from "Integer.h":
+	# Type creation and manipulation (non-arithmetic functions only)
+	pass  # Arithmetic functions moved to arithmetic_ops.h block
 
-	sequence_t *q_not_seq();
-	sequence_t *cq_not_seq();
 
-	sequence_t *qq_or_seq();
-
+cdef extern from "bitwise_ops.h":
 	# Width-parameterized bitwise operations (Phase 6)
 	sequence_t *Q_not(int bits)
 	sequence_t *cQ_not(int bits)
@@ -44,6 +40,18 @@ cdef extern from "LogicOperations.h":
 	sequence_t *CQ_and(int bits, int64_t value)
 	sequence_t *Q_or(int bits)
 	sequence_t *CQ_or(int bits, int64_t value)
+
+cdef extern from "LogicOperations.h":
+	# Legacy qbool operations
+	sequence_t *q_and_seq();
+	sequence_t *cq_and_seq();
+	sequence_t *qq_and_seq();
+	sequence_t *cqq_and_seq();
+
+	sequence_t *q_not_seq();
+	sequence_t *cq_not_seq();
+
+	sequence_t *qq_or_seq();
 
 
 cdef extern from "QPU.h":
