@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-01-27)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: Phase 11 - Global State Removal
 Plan: —
-Status: Defining requirements
-Last activity: 2026-01-27 — Milestone v1.1 started
+Status: Roadmap created, awaiting phase planning
+Last activity: 2026-01-27 — v1.1 roadmap created
 
-Progress: ░░░░░░░░░░ 0%
+Progress: ░░░░░░░░░░ 0% (Phase 11/15)
 
 ## Performance Metrics
 
@@ -24,6 +24,11 @@ Progress: ░░░░░░░░░░ 0%
 - Total execution time: 3.14 hours
 - Phases: 10
 - Requirements shipped: 37/37
+
+**v1.1 Progress:**
+- Total plans completed: 0
+- Phases complete: 0/5
+- Requirements shipped: 0/9
 
 ## Accumulated Context
 
@@ -43,7 +48,8 @@ None.
 - QQ_mul segfault fixed via MAXLAYERINSEQUENCE allocation
 
 **Active in v1.1:**
-- QPU_state (R0-R3 registers) — removing global dependency
+- QPU_state (R0-R3 registers) — removing global dependency (Phase 11)
+- Comparison functions using global state — refactoring to explicit parameters (Phase 12)
 
 **Known limitations (acceptable):**
 - qint_mod * qint_mod raises NotImplementedError (by design)
@@ -58,9 +64,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-27
-Stopped at: Milestone v1.1 started, defining requirements
-Resume file: None
-Note: Continue with requirements definition
+Stopped at: v1.1 roadmap created
+Resume file: .planning/ROADMAP.md
+Note: Ready for phase planning - run `/gsd:plan-phase 11` to begin Phase 11
 
 ---
 
@@ -81,5 +87,4 @@ See `.planning/milestones/v1.0-REQUIREMENTS.md` for archived requirements.
 - Comprehensive documentation and test coverage
 
 **Next Steps:**
-- `/gsd:new-milestone` to start v1.1 planning
-- `/clear` first for fresh context window
+- `/gsd:plan-phase 11` to plan Global State Removal phase

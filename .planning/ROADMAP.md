@@ -1,0 +1,130 @@
+# Roadmap: Quantum Assembly
+
+## Milestones
+
+- ✅ **v1.0 Initial Release** - Phases 1-10 (shipped 2026-01-27)
+- 🚧 **v1.1 QPU State Removal & Comparison Refactoring** - Phases 11-15 (in progress)
+
+## Phases
+
+<details>
+<summary>✅ v1.0 Initial Release (Phases 1-10) - SHIPPED 2026-01-27</summary>
+
+See `.planning/milestones/v1.0-ROADMAP.md` for full milestone details.
+
+**Phases:**
+1. Testing Foundation - Characterization tests and infrastructure
+2. C Layer Cleanup - Eliminate global state and fix memory bugs
+3. Memory Architecture - Centralized qubit allocator
+4. Module Separation - Split QPU.c into focused modules
+5. Variable-Width Integers - 1-64 bit quantum integers
+6. Bit Operations - Bitwise operations with operator overloading
+7. Extended Arithmetic - Multiplication, division, modulo, modular arithmetic
+8. Circuit Optimization - Statistics, visualization, optimization passes
+9. Code Organization - Category-based module headers
+10. Documentation and API Polish - Comprehensive docs and tests
+
+**Summary:** 41 plans, 3.14 hours total execution time, all 37 v1.0 requirements shipped.
+
+</details>
+
+### 🚧 v1.1 QPU State Removal & Comparison Refactoring (In Progress)
+
+**Milestone Goal:** Remove global state dependency (QPU_state R0-R3 registers) and refactor comparison operations for cleaner architecture and efficient implementation.
+
+- [ ] **Phase 11: Global State Removal** - Remove QPU_state global dependency
+- [ ] **Phase 12: Comparison Function Refactoring** - Refactor comparison functions to pass values explicitly
+- [ ] **Phase 13: Equality Comparison** - Implement qint == int and qint == qint
+- [ ] **Phase 14: Ordering Comparisons** - Refactor <= and >= for efficiency
+- [ ] **Phase 15: Classical Initialization** - Initialize qint with classical values
+
+## Phase Details
+
+### Phase 11: Global State Removal
+**Goal:** Remove QPU_state global dependency from C backend, eliminating the last remnant of global state
+**Depends on:** Nothing (first phase of v1.1)
+**Requirements:** GLOB-01
+**Success Criteria** (what must be TRUE):
+  1. QPU_state global variable and R0-R3 registers are completely removed from C backend
+  2. All C functions that previously used QPU_state now use local variables or parameters
+  3. All tests pass without any global state dependencies
+  4. Memory leak checks confirm no leaked register qubits
+**Plans:** TBD
+
+Plans:
+- [ ] TBD during plan-phase
+
+### Phase 12: Comparison Function Refactoring
+**Goal:** Refactor comparison functions to take classical values as parameters instead of using global state
+**Depends on:** Phase 11
+**Requirements:** GLOB-02, GLOB-03, GLOB-04
+**Success Criteria** (what must be TRUE):
+  1. CQ_equal takes classical value as explicit parameter (no global state)
+  2. cCQ_equal takes classical value as explicit parameter (no global state)
+  3. CC_equal is removed from codebase (purely classical, not needed for quantum operations)
+  4. All existing comparison operations continue to work correctly
+  5. Tests verify comparison functions work with explicit parameters
+**Plans:** TBD
+
+Plans:
+- [ ] TBD during plan-phase
+
+### Phase 13: Equality Comparison
+**Goal:** Implement efficient equality comparison for qint == int and qint == qint using refactored functions
+**Depends on:** Phase 12
+**Requirements:** COMP-01, COMP-02
+**Success Criteria** (what must be TRUE):
+  1. User can compare qint == int and get correct quantum boolean result
+  2. User can compare qint == qint and get correct result using (qint - qint) == 0 pattern
+  3. Equality comparisons use refactored CQ_equal/cCQ_equal with explicit parameters
+  4. Python operator overloading (__eq__) works correctly for both cases
+  5. Tests verify equality comparisons for various bit widths and values
+**Plans:** TBD
+
+Plans:
+- [ ] TBD during plan-phase
+
+### Phase 14: Ordering Comparisons
+**Goal:** Refactor <= and >= operators to use in-place subtraction/addition without temporary qint allocation
+**Depends on:** Phase 13
+**Requirements:** COMP-03, COMP-04
+**Success Criteria** (what must be TRUE):
+  1. User can compare qint <= value without allocating temporary qint
+  2. User can compare qint >= value without allocating temporary qint
+  3. Ordering comparisons use in-place arithmetic operations for efficiency
+  4. Python operator overloading (__le__, __ge__) works correctly
+  5. Tests verify memory efficiency (no temp qint allocation during comparison)
+**Plans:** TBD
+
+Plans:
+- [ ] TBD during plan-phase
+
+### Phase 15: Classical Initialization
+**Goal:** Initialize qint with classical value by setting qubits to |1⟩ based on binary representation
+**Depends on:** Phase 11 (independent of comparison refactoring)
+**Requirements:** INIT-01
+**Success Criteria** (what must be TRUE):
+  1. User can create qint with classical initial value (e.g., qint(5, 3) creates 3-bit qint initialized to 5)
+  2. Initialization sets qubits to |1⟩ via Q_not based on binary representation
+  3. Initialized qint can be used in arithmetic and comparison operations
+  4. Tests verify correct initialization for various bit widths and values
+**Plans:** TBD
+
+Plans:
+- [ ] TBD during plan-phase
+
+## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 11 → 12 → 13 → 14 → 15
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 11. Global State Removal | v1.1 | 0/TBD | Not started | - |
+| 12. Comparison Function Refactoring | v1.1 | 0/TBD | Not started | - |
+| 13. Equality Comparison | v1.1 | 0/TBD | Not started | - |
+| 14. Ordering Comparisons | v1.1 | 0/TBD | Not started | - |
+| 15. Classical Initialization | v1.1 | 0/TBD | Not started | - |
+
+---
+*Last updated: 2026-01-27 - v1.1 roadmap created*
