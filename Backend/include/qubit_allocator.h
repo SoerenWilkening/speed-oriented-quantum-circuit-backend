@@ -1,7 +1,15 @@
-//
-// qubit_allocator.h - Centralized qubit allocation
-// Dependencies: types.h
-//
+/**
+ * @file qubit_allocator.h
+ * @brief Centralized qubit allocation and lifecycle management.
+ *
+ * Provides centralized qubit allocation with:
+ * - Contiguous qubit allocation
+ * - Freed qubit reuse for memory efficiency
+ * - Usage statistics for debugging and circuit analysis
+ * - Optional DEBUG_OWNERSHIP tracking
+ *
+ * Dependencies: types.h
+ */
 
 #ifndef QUBIT_ALLOCATOR_H
 #define QUBIT_ALLOCATOR_H
@@ -11,7 +19,11 @@
 // Hard-coded maximum to prevent runaway allocation
 #define ALLOCATOR_MAX_QUBITS 8192
 
-// Statistics for debugging and circuit analysis
+/**
+ * @brief Statistics for debugging and circuit analysis.
+ *
+ * Tracks qubit allocation patterns and usage for debugging and optimization.
+ */
 typedef struct {
     num_t peak_allocated;      // Highest water mark
     num_t total_allocations;   // Total alloc calls
@@ -20,6 +32,12 @@ typedef struct {
     num_t ancilla_allocations; // Total ancilla qubits allocated (FOUND-08)
 } allocator_stats_t;
 
+/**
+ * @brief Centralized qubit allocator structure.
+ *
+ * Manages qubit allocation with reuse capability for freed qubits.
+ * Prevents runaway allocation with hard-coded ALLOCATOR_MAX_QUBITS limit.
+ */
 typedef struct {
     qubit_t *indices;        // Array of qubit indices
     num_t capacity;          // Current array capacity
@@ -39,27 +57,69 @@ typedef struct {
 // Forward declaration for circuit_t (avoid circular dependency)
 struct circuit_s;
 
-// Lifecycle
-// OWNERSHIP: Caller owns returned qubit_allocator_t*, must call allocator_destroy()
+/**
+ * @brief Create a new qubit allocator.
+ *
+ * @param initial_capacity Initial capacity for qubit storage
+ * @return Pointer to newly allocated allocator, or NULL on failure
+ *
+ * OWNERSHIP: Caller owns returned qubit_allocator_t*, must call allocator_destroy()
+ */
 qubit_allocator_t *allocator_create(num_t initial_capacity);
+
+/**
+ * @brief Destroy a qubit allocator and free all resources.
+ *
+ * @param alloc Allocator to destroy (can be NULL)
+ */
 void allocator_destroy(qubit_allocator_t *alloc);
 
-// Allocation
-// Returns starting qubit index, or (qubit_t)-1 on failure
-// Allocates `count` contiguous qubits
-// If is_ancilla is true, increments ancilla_allocations stat
+/**
+ * @brief Allocate contiguous qubits.
+ *
+ * Allocates `count` contiguous qubits. Reuses freed qubits when possible.
+ * If is_ancilla is true, increments ancilla_allocations stat.
+ *
+ * @param alloc Allocator to use
+ * @param count Number of contiguous qubits to allocate
+ * @param is_ancilla True if allocating ancilla qubits
+ * @return Starting qubit index, or (qubit_t)-1 on failure
+ */
 qubit_t allocator_alloc(qubit_allocator_t *alloc, num_t count, bool is_ancilla);
 
-// Deallocation
-// Returns qubits to pool for potential reuse
-// Returns 0 on success, -1 on double-free
+/**
+ * @brief Return qubits to pool for potential reuse.
+ *
+ * @param alloc Allocator to use
+ * @param start Starting qubit index
+ * @param count Number of qubits to free
+ * @return 0 on success, -1 on double-free
+ */
 int allocator_free(qubit_allocator_t *alloc, qubit_t start, num_t count);
 
-// Statistics
+/**
+ * @brief Get allocation statistics.
+ *
+ * @param alloc Allocator to query
+ * @return Allocation statistics structure
+ */
 allocator_stats_t allocator_get_stats(qubit_allocator_t *alloc);
+
+/**
+ * @brief Reset allocation statistics to zero.
+ *
+ * @param alloc Allocator to reset
+ */
 void allocator_reset_stats(qubit_allocator_t *alloc);
 
-// Accessor for Python bindings (circuit_t is opaque in Cython)
+/**
+ * @brief Get allocator from circuit (accessor for Python bindings).
+ *
+ * circuit_t is opaque in Cython, so this accessor is needed.
+ *
+ * @param circ Circuit to query
+ * @return Pointer to circuit's allocator
+ */
 qubit_allocator_t *circuit_get_allocator(struct circuit_s *circ);
 
 #ifdef DEBUG_OWNERSHIP
