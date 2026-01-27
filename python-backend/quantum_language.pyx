@@ -317,21 +317,39 @@ cdef class qint(circuit):
 	def __init__(self, value = 0, width = None, bits = None, classical = False, create_new = True, bit_list = None):
 		"""Create a quantum integer.
 
-		Args:
-			value: Initial value (default 0)
-			width: Bit width (1-64, default 8) - primary parameter
-			bits: Bit width alias for backward compatibility
-			classical: Whether this is a classical integer
-			create_new: Whether to allocate new qubits
-			bit_list: External qubit list (when create_new=False)
+		Allocates qubits and initializes to specified value in superposition.
 
-		Raises:
-			ValueError: If width < 1 or width > 64
+		Parameters
+		----------
+		value : int, optional
+			Initial value (default 0). Encoded into quantum state |value>.
+		width : int, optional
+			Bit width (1-64, default 8). Determines range: [-2^(w-1), 2^(w-1)-1].
+		bits : int, optional
+			Alias for width (backward compatibility).
+		classical : bool, optional
+			Whether this is a classical integer (default False).
+		create_new : bool, optional
+			Whether to allocate new qubits (default True).
+		bit_list : array-like, optional
+			External qubit list (when create_new=False).
 
-		Examples:
-			qint(5)          - 8-bit quantum integer with value 5 (default)
-			qint(5, width=16) - 16-bit quantum integer with value 5
-			qint(5, bits=16)  - backward compatible alias for width
+		Raises
+		------
+		ValueError
+			If width < 1 or width > 64.
+		UserWarning
+			If value exceeds width range (modular arithmetic applies).
+
+		Examples
+		--------
+		>>> a = qint(5)           # 8-bit quantum integer, value 5
+		>>> b = qint(5, width=16) # 16-bit quantum integer, value 5
+		>>> c = qint(5, bits=16)  # Backward compatible alias
+
+		Notes
+		-----
+		Creates quantum state |value> using computational basis encoding.
 		"""
 		global _controlled, _control_bool, _int_counter, _smallest_allocated_qubit, ancilla
 		global _num_qubits
@@ -422,6 +440,13 @@ cdef class qint(circuit):
 		return self.bits
 
 	def print_circuit(self):
+		"""Print the current quantum circuit to stdout.
+
+		Examples
+		--------
+		>>> a = qint(5, width=4)
+		>>> a.print_circuit()
+		"""
 		print_circuit(_circuit)
 
 	def __del__(self):
@@ -444,6 +469,26 @@ cdef class qint(circuit):
 
 	# Context manager protocol
 	def __enter__(self):
+		"""Enter quantum conditional context.
+
+		Enables conditional quantum operations controlled by this qint's value.
+
+		Returns
+		-------
+		qint
+			Self for use in with statement.
+
+		Examples
+		--------
+		>>> flag = qbool(True)
+		>>> result = qint(0, width=8)
+		>>> with flag:
+		...     result += 5  # Conditional addition
+
+		Notes
+		-----
+		Creates controlled quantum gates where this qint acts as control.
+		"""
 		global _controlled, _control_bool
 		if not _controlled:
 			_control_bool = self
@@ -456,6 +501,28 @@ cdef class qint(circuit):
 		return self
 
 	def __exit__(self, exc__type, exc, tb):
+		"""Exit quantum conditional context.
+
+		Parameters
+		----------
+		exc__type : type
+			Exception type if raised.
+		exc : Exception
+			Exception instance if raised.
+		tb : traceback
+			Traceback if exception raised.
+
+		Returns
+		-------
+		bool
+			False (does not suppress exceptions).
+
+		Examples
+		--------
+		>>> flag = qbool(True)
+		>>> with flag:
+		...     pass  # Controlled operations here
+		"""
 		global _controlled, _control_bool, ancilla, _smallest_allocated_qubit
 		_controlled = False
 		_control_bool = None
@@ -524,6 +591,28 @@ cdef class qint(circuit):
 		return self
 
 	def __add__(self, other: qint | int):
+		"""Add quantum integers: self + other
+
+		Result width is max(self.width, other.width). Overflow wraps (modular).
+
+		Parameters
+		----------
+		other : qint or int
+			Value to add.
+
+		Returns
+		-------
+		qint
+			New quantum integer containing sum.
+
+		Examples
+		--------
+		>>> a = qint(5, width=8)
+		>>> b = qint(3, width=8)
+		>>> c = a + b
+		>>> c.width
+		8
+		"""
 		# out of place addition - result width is max of operands
 		if type(other) == qint:
 			result_width = max(self.bits, (<qint>other).bits)
@@ -534,6 +623,25 @@ cdef class qint(circuit):
 		return a
 
 	def __radd__(self, other: qint | int):
+		"""Reverse addition: other + self (for int + qint).
+
+		Parameters
+		----------
+		other : int
+			Classical value to add.
+
+		Returns
+		-------
+		qint
+			New quantum integer containing sum.
+
+		Examples
+		--------
+		>>> a = qint(5, width=8)
+		>>> b = 3 + a  # Uses __radd__
+		>>> b.width
+		8
+		"""
 		# out of place addition - result width is max of operands
 		if type(other) == qint:
 			result_width = max(self.bits, (<qint>other).bits)
@@ -544,10 +652,50 @@ cdef class qint(circuit):
 		return a
 
 	def __iadd__(self, other: qint | int):
+		"""In-place addition: self += other
+
+		Parameters
+		----------
+		other : qint or int
+			Value to add.
+
+		Returns
+		-------
+		qint
+			Self (modified in-place via quantum gates).
+
+		Examples
+		--------
+		>>> a = qint(5, width=8)
+		>>> a += 3
+		>>> # a now represents |5+3> = |8>
+		"""
 		# in place addition
 		return self.addition_inplace(other)
 
 	def __sub__(self, other: qint | int):
+		"""Subtract quantum integers: self - other
+
+		Result width is max(self.width, other.width). Underflow wraps (modular).
+
+		Parameters
+		----------
+		other : qint or int
+			Value to subtract.
+
+		Returns
+		-------
+		qint
+			New quantum integer containing difference.
+
+		Examples
+		--------
+		>>> a = qint(5, width=8)
+		>>> b = qint(3, width=8)
+		>>> c = a - b
+		>>> c.width
+		8
+		"""
 		# out of place subtraction - result width is max of operands
 		if type(other) == qint:
 			result_width = max(self.bits, (<qint>other).bits)
@@ -558,6 +706,24 @@ cdef class qint(circuit):
 		return a
 
 	def __isub__(self, other: qint | int):
+		"""In-place subtraction: self -= other
+
+		Parameters
+		----------
+		other : qint or int
+			Value to subtract.
+
+		Returns
+		-------
+		qint
+			Self (modified in-place via quantum gates).
+
+		Examples
+		--------
+		>>> a = qint(5, width=8)
+		>>> a -= 3
+		>>> # a now represents |5-3> = |2>
+		"""
 		# in place addition
 		return self.addition_inplace(other, invert = True)
 
@@ -724,13 +890,48 @@ cdef class qint(circuit):
 		return self
 
 	def measure(self):
+		"""Measure quantum integer, collapsing to classical value.
+
+		Returns
+		-------
+		int
+			Measured classical value.
+
+		Notes
+		-----
+		Measurement collapses quantum superposition to classical state.
+		Currently returns initialization value (simulation placeholder).
+
+		Examples
+		--------
+		>>> a = qint(5, width=8)
+		>>> result = a.measure()
+		>>> result
+		5
+		"""
 		return self.value
 
 	def __and__(self, other):
-		"""Bitwise AND operation. Returns NEW qint.
+		"""Bitwise AND: self & other
 
-		For qint & qint: result width = max(self.width, other.width)
-		For qint & int: result width = max(self.width, value.bit_length())
+		Result width is max(self.width, other.width).
+
+		Parameters
+		----------
+		other : qint or int
+			Value to AND with.
+
+		Returns
+		-------
+		qint
+			New quantum integer containing bitwise AND result.
+
+		Examples
+		--------
+		>>> a = qint(0b1101, width=4)
+		>>> b = qint(0b1011, width=4)
+		>>> c = a & b
+		>>> # c represents |1001>
 		"""
 		global _controlled, _control_bool, qubit_array
 		cdef sequence_t *seq
@@ -784,7 +985,24 @@ cdef class qint(circuit):
 		return result
 
 	def __iand__(self, other):
-		"""In-place AND: a &= b. Allocates result, swaps qubit references."""
+		"""In-place AND: self &= other
+
+		Parameters
+		----------
+		other : qint or int
+			Value to AND with.
+
+		Returns
+		-------
+		qint
+			Self (with swapped qubit references).
+
+		Examples
+		--------
+		>>> a = qint(0b1101, width=4)
+		>>> a &= 0b1011
+		>>> # a now represents |1001>
+		"""
 		cdef qint result_qint
 		result = self & other
 		result_qint = <qint>result
@@ -799,10 +1017,26 @@ cdef class qint(circuit):
 		return self & other
 
 	def __or__(self, other):
-		"""Bitwise OR operation. Returns NEW qint.
+		"""Bitwise OR: self | other
 
-		For qint | qint: result width = max(self.width, other.width)
-		For qint | int: result width = max(self.width, value.bit_length())
+		Result width is max(self.width, other.width).
+
+		Parameters
+		----------
+		other : qint or int
+			Value to OR with.
+
+		Returns
+		-------
+		qint
+			New quantum integer containing bitwise OR result.
+
+		Examples
+		--------
+		>>> a = qint(0b1100, width=4)
+		>>> b = qint(0b0011, width=4)
+		>>> c = a | b
+		>>> # c represents |1111>
 		"""
 		global _controlled, _control_bool, qubit_array
 		cdef sequence_t *seq
@@ -856,7 +1090,24 @@ cdef class qint(circuit):
 		return result
 
 	def __ior__(self, other):
-		"""In-place OR: a |= b. Allocates result, swaps qubit references."""
+		"""In-place OR: self |= other
+
+		Parameters
+		----------
+		other : qint or int
+			Value to OR with.
+
+		Returns
+		-------
+		qint
+			Self (with swapped qubit references).
+
+		Examples
+		--------
+		>>> a = qint(0b1100, width=4)
+		>>> a |= 0b0011
+		>>> # a now represents |1111>
+		"""
 		cdef qint result_qint
 		result = self | other
 		result_qint = <qint>result
@@ -871,10 +1122,26 @@ cdef class qint(circuit):
 		return self | other
 
 	def __xor__(self, other):
-		"""Bitwise XOR operation. Returns NEW qint.
+		"""Bitwise XOR: self ^ other
 
-		For qint ^ qint: result width = max(self.width, other.width)
-		For qint ^ int: result width = max(self.width, value.bit_length())
+		Result width is max(self.width, other.width).
+
+		Parameters
+		----------
+		other : qint or int
+			Value to XOR with.
+
+		Returns
+		-------
+		qint
+			New quantum integer containing bitwise XOR result.
+
+		Examples
+		--------
+		>>> a = qint(0b1100, width=4)
+		>>> b = qint(0b0110, width=4)
+		>>> c = a ^ b
+		>>> # c represents |1010>
 		"""
 		global _controlled, _control_bool, qubit_array
 		cdef sequence_t *seq
@@ -952,7 +1219,26 @@ cdef class qint(circuit):
 		return result
 
 	def __ixor__(self, other):
-		"""In-place XOR: a ^= b. Modifies self directly (XOR is special)."""
+		"""In-place XOR: self ^= other
+
+		Modifies qubits directly (true in-place operation).
+
+		Parameters
+		----------
+		other : qint or int
+			Value to XOR with.
+
+		Returns
+		-------
+		qint
+			Self (modified in-place).
+
+		Examples
+		--------
+		>>> a = qint(0b1100, width=4)
+		>>> a ^= 0b0110
+		>>> # a now represents |1010>
+		"""
 		global _controlled, _control_bool, qubit_array
 		cdef sequence_t *seq
 		cdef unsigned int[:] arr
@@ -996,7 +1282,25 @@ cdef class qint(circuit):
 		return self ^ other
 
 	def __invert__(self):
-		"""Bitwise NOT operation. Inverts all bits IN-PLACE and returns self."""
+		"""Bitwise NOT: ~self
+
+		Inverts all bits in-place.
+
+		Returns
+		-------
+		qint
+			Self (modified in-place).
+
+		Examples
+		--------
+		>>> a = qint(0b1010, width=4)
+		>>> ~a
+		>>> # a now represents |0101>
+
+		Notes
+		-----
+		Applies X gate to each qubit (parallel execution).
+		"""
 		global _controlled, _control_bool, qubit_array
 		cdef sequence_t *seq
 		cdef unsigned int[:] arr
@@ -1021,6 +1325,24 @@ cdef class qint(circuit):
 		return self
 
 	def __getitem__(self, item: int):
+		"""Access individual qubit as qbool: self[index]
+
+		Parameters
+		----------
+		item : int
+			Qubit index (right-aligned, 0 = LSB).
+
+		Returns
+		-------
+		qbool
+			Single-qubit quantum boolean.
+
+		Examples
+		--------
+		>>> a = qint(0b1010, width=4)
+		>>> bit1 = a[1]  # Second bit from right (LSB=0)
+		>>> # bit1 is qbool representing |1>
+		"""
 		bit_list = np.zeros(64)
 		bit_list[-1] = self.qubits[item]
 		a = qbool(create_new = False, bit_list = bit_list)
@@ -1029,11 +1351,28 @@ cdef class qint(circuit):
 	def __eq__(self, other):
 		"""Equality comparison: self == other
 
-		Uses optimized XOR-based circuit (O(n) gates).
-		Returns qbool result. Preserves input operands.
+		Uses optimized XOR-based circuit (O(n) gates). Preserves inputs.
 
-		Strategy: XOR all bits together, then check if result is zero.
-		If all bits are equal, XOR produces 0.
+		Parameters
+		----------
+		other : qint or int
+			Value to compare with.
+
+		Returns
+		-------
+		qbool
+			Quantum boolean indicating equality.
+
+		Examples
+		--------
+		>>> a = qint(5, width=8)
+		>>> b = qint(5, width=8)
+		>>> result = (a == b)
+		>>> # result is qbool representing |True>
+
+		Notes
+		-----
+		XOR all bits: if equal, XOR produces |0...0>.
 		"""
 		global _controlled, _control_bool, qubit_array
 		cdef sequence_t *seq
@@ -1071,14 +1410,52 @@ cdef class qint(circuit):
 		return result
 
 	def __ne__(self, other):
-		"""Not-equal comparison: self != other"""
+		"""Inequality comparison: self != other
+
+		Parameters
+		----------
+		other : qint or int
+			Value to compare with.
+
+		Returns
+		-------
+		qbool
+			Quantum boolean indicating inequality.
+
+		Examples
+		--------
+		>>> a = qint(5, width=8)
+		>>> b = qint(3, width=8)
+		>>> result = (a != b)
+		>>> # result is qbool representing |True>
+		"""
 		return ~(self == other)
 
 	def __lt__(self, other):
 		"""Less-than comparison: self < other
 
-		Returns qbool result. Preserves input operands.
-		Uses subtraction and MSB check.
+		Uses subtraction and sign bit check. Preserves inputs.
+
+		Parameters
+		----------
+		other : qint or int
+			Value to compare with.
+
+		Returns
+		-------
+		qbool
+			Quantum boolean indicating self < other.
+
+		Examples
+		--------
+		>>> a = qint(3, width=8)
+		>>> b = qint(5, width=8)
+		>>> result = (a < b)
+		>>> # result is qbool representing |True>
+
+		Notes
+		-----
+		Computes self - other, checks MSB (sign bit).
 		"""
 		global _controlled, _control_bool, qubit_array
 		cdef sequence_t *seq
@@ -1116,7 +1493,25 @@ cdef class qint(circuit):
 		return result
 
 	def __gt__(self, other):
-		"""Greater-than comparison: self > other"""
+		"""Greater-than comparison: self > other
+
+		Parameters
+		----------
+		other : qint or int
+			Value to compare with.
+
+		Returns
+		-------
+		qbool
+			Quantum boolean indicating self > other.
+
+		Examples
+		--------
+		>>> a = qint(5, width=8)
+		>>> b = qint(3, width=8)
+		>>> result = (a > b)
+		>>> # result is qbool representing |True>
+		"""
 		# self > other is equivalent to other < self (swap operands)
 		# For int type, create qint and swap
 		if type(other) == int:
@@ -1128,7 +1523,25 @@ cdef class qint(circuit):
 			raise TypeError("Comparison requires qint or int")
 
 	def __le__(self, other):
-		"""Less-than-or-equal comparison: self <= other"""
+		"""Less-than-or-equal comparison: self <= other
+
+		Parameters
+		----------
+		other : qint or int
+			Value to compare with.
+
+		Returns
+		-------
+		qbool
+			Quantum boolean indicating self <= other.
+
+		Examples
+		--------
+		>>> a = qint(3, width=8)
+		>>> b = qint(5, width=8)
+		>>> result = (a <= b)
+		>>> # result is qbool representing |True>
+		"""
 		# self <= other is equivalent to NOT (other < self)
 		if type(other) == int:
 			other_qint = qint(other, width=self.bits)
@@ -1139,25 +1552,60 @@ cdef class qint(circuit):
 			raise TypeError("Comparison requires qint or int")
 
 	def __ge__(self, other):
-		"""Greater-than-or-equal comparison: self >= other"""
+		"""Greater-than-or-equal comparison: self >= other
+
+		Parameters
+		----------
+		other : qint or int
+			Value to compare with.
+
+		Returns
+		-------
+		qbool
+			Quantum boolean indicating self >= other.
+
+		Examples
+		--------
+		>>> a = qint(5, width=8)
+		>>> b = qint(3, width=8)
+		>>> result = (a >= b)
+		>>> # result is qbool representing |True>
+		"""
 		# self >= other is equivalent to NOT (self < other)
 		return ~(self < other)
 
 	def __floordiv__(self, divisor):
 		"""Floor division: self // divisor
 
-		Implements via repeated subtraction (restoring division algorithm)
-		per arXiv:1809.09732 approach at Python level.
+		Uses restoring division algorithm (repeated subtraction).
 
-		Args:
-			divisor: int or qint divisor
+		Parameters
+		----------
+		divisor : int or qint
+			Divisor.
 
-		Returns:
-			qint quotient
+		Returns
+		-------
+		qint
+			Quotient.
 
-		Raises:
-			ZeroDivisionError: If divisor is zero (classical only)
-			TypeError: If divisor is not int or qint
+		Raises
+		------
+		ZeroDivisionError
+			If divisor is zero (classical only).
+		TypeError
+			If divisor is not int or qint.
+
+		Examples
+		--------
+		>>> a = qint(17, width=8)
+		>>> q = a // 5
+		>>> # q represents |3>
+
+		Notes
+		-----
+		Classical divisor: O(width) circuit via bit-level algorithm.
+		Quantum divisor: O(quotient) circuit via repeated subtraction.
 		"""
 		# Classical divisor case
 		if type(divisor) == int:
@@ -1243,18 +1691,30 @@ cdef class qint(circuit):
 	def __mod__(self, divisor):
 		"""Modulo operation: self % divisor
 
-		Computes remainder efficiently using restoring division.
-		More efficient than computing quotient separately.
+		Computes remainder via restoring division.
 
-		Args:
-			divisor: int or qint divisor
+		Parameters
+		----------
+		divisor : int or qint
+			Divisor.
 
-		Returns:
-			qint remainder
+		Returns
+		-------
+		qint
+			Remainder.
 
-		Raises:
-			ZeroDivisionError: If divisor is zero (classical only)
-			TypeError: If divisor is not int or qint
+		Raises
+		------
+		ZeroDivisionError
+			If divisor is zero (classical only).
+		TypeError
+			If divisor is not int or qint.
+
+		Examples
+		--------
+		>>> a = qint(17, width=8)
+		>>> r = a % 5
+		>>> # r represents |2>
 		"""
 		# Classical divisor case
 		if type(divisor) == int:
@@ -1320,20 +1780,32 @@ cdef class qint(circuit):
 		return remainder
 
 	def __divmod__(self, divisor):
-		"""Return (quotient, remainder) tuple: divmod(self, divisor)
+		"""Divmod operation: divmod(self, divisor)
 
-		More efficient than calling // and % separately since it computes
-		both in a single pass through the division algorithm.
+		Computes both quotient and remainder in single pass.
 
-		Args:
-			divisor: int or qint divisor
+		Parameters
+		----------
+		divisor : int or qint
+			Divisor.
 
-		Returns:
-			tuple (quotient, remainder) where both are qint
+		Returns
+		-------
+		tuple of qint
+			(quotient, remainder).
 
-		Raises:
-			ZeroDivisionError: If divisor is zero (classical only)
-			TypeError: If divisor is not int or qint
+		Raises
+		------
+		ZeroDivisionError
+			If divisor is zero (classical only).
+		TypeError
+			If divisor is not int or qint.
+
+		Examples
+		--------
+		>>> a = qint(17, width=8)
+		>>> q, r = divmod(a, 5)
+		>>> # q represents |3>, r represents |2>
 		"""
 		# Classical divisor case
 		if type(divisor) == int:
@@ -1404,13 +1876,21 @@ cdef class qint(circuit):
 	def __rfloordiv__(self, other):
 		"""Reverse floor division: other // self
 
-		Called when left operand doesn't support //, e.g. int // qint
+		Parameters
+		----------
+		other : int
+			Dividend (numerator).
 
-		Args:
-			other: int dividend
+		Returns
+		-------
+		qint
+			Quotient.
 
-		Returns:
-			qint quotient
+		Examples
+		--------
+		>>> a = qint(5, width=8)
+		>>> q = 17 // a
+		>>> # q represents |3>
 		"""
 		# Convert int to qint and perform division
 		if type(other) == int:
@@ -1423,13 +1903,21 @@ cdef class qint(circuit):
 	def __rmod__(self, other):
 		"""Reverse modulo: other % self
 
-		Called when left operand doesn't support %, e.g. int % qint
+		Parameters
+		----------
+		other : int
+			Dividend (numerator).
 
-		Args:
-			other: int dividend
+		Returns
+		-------
+		qint
+			Remainder.
 
-		Returns:
-			qint remainder
+		Examples
+		--------
+		>>> a = qint(5, width=8)
+		>>> r = 17 % a
+		>>> # r represents |2>
 		"""
 		# Convert int to qint and perform modulo
 		if type(other) == int:
@@ -1442,13 +1930,21 @@ cdef class qint(circuit):
 	def __rdivmod__(self, other):
 		"""Reverse divmod: divmod(other, self)
 
-		Called when left operand doesn't support divmod, e.g. divmod(int, qint)
+		Parameters
+		----------
+		other : int
+			Dividend (numerator).
 
-		Args:
-			other: int dividend
+		Returns
+		-------
+		tuple of qint
+			(quotient, remainder).
 
-		Returns:
-			tuple (quotient, remainder) where both are qint
+		Examples
+		--------
+		>>> a = qint(5, width=8)
+		>>> q, r = divmod(17, a)
+		>>> # q represents |3>, r represents |2>
 		"""
 		# Convert int to qint and perform divmod
 		if type(other) == int:
