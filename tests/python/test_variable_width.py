@@ -30,8 +30,8 @@ class TestWidthParameter:
     """Test QInt constructor accepts width parameter."""
 
     def test_default_width_is_8(self):
-        """Default width is 8 bits per CONTEXT.md decision."""
-        a = ql.qint(5)
+        """Default width is 8 bits when value is 0 (no auto-width)."""
+        a = ql.qint(0)  # Value 0 uses default width
         assert a.width == 8
 
     @pytest.mark.parametrize("width", [1, 2, 4, 8, 16, 32, 64])
@@ -65,6 +65,20 @@ class TestWidthParameter:
         """width= takes precedence if both specified."""
         a = ql.qint(5, width=32, bits=16)
         assert a.width == 32
+
+    def test_qint_auto_width_from_value(self):
+        """Test auto-width mode determines width from value."""
+        # Value 5 needs 3 bits (binary 101)
+        a = ql.qint(5)
+        assert a.width == 3
+
+        # Value 255 needs 8 bits
+        b = ql.qint(255)
+        assert b.width == 8
+
+        # Value 0 still uses default (8 bits)
+        c = ql.qint(0)
+        assert c.width == 8
 
 
 # ============================================================================
