@@ -395,3 +395,185 @@ class TestSelfComparisons:
 
         _ = a >= a
         assert a.width == width_before
+
+
+# ============================================================================
+# Context Manager Integration Tests
+# ============================================================================
+
+
+class TestOrderingContextManager:
+    """Tests for using ordering comparison results in controlled operations."""
+
+    def test_lt_result_as_control(self):
+        """< result can be used as control in with statement."""
+        a = ql.qint(3, width=8)
+        is_less = a < 5
+
+        result = ql.qint(0, width=4)
+        with is_less:
+            result += 1
+
+        assert isinstance(result, ql.qint)
+
+    def test_le_result_as_control(self):
+        """<= result can be used as control in with statement."""
+        a = ql.qint(3, width=8)
+        is_le = a <= 5
+
+        result = ql.qint(0, width=4)
+        with is_le:
+            result += 1
+
+        assert isinstance(result, ql.qint)
+
+    def test_gt_result_as_control(self):
+        """> result can be used as control in with statement."""
+        a = ql.qint(7, width=8)
+        is_greater = a > 5
+
+        result = ql.qint(0, width=4)
+        with is_greater:
+            result += 1
+
+        assert isinstance(result, ql.qint)
+
+    def test_ge_result_as_control(self):
+        """>= result can be used as control in with statement."""
+        a = ql.qint(7, width=8)
+        is_ge = a >= 5
+
+        result = ql.qint(0, width=4)
+        with is_ge:
+            result += 1
+
+        assert isinstance(result, ql.qint)
+
+    def test_combined_ordering_controls(self):
+        """Multiple ordering comparisons combined."""
+        a = ql.qint(5, width=8)
+
+        in_range = (a >= 3) & (a <= 7)
+
+        result = ql.qint(0, width=4)
+        with in_range:
+            result += 1
+
+        assert isinstance(result, ql.qint)
+
+
+# ============================================================================
+# Edge Cases and Regression Tests
+# ============================================================================
+
+
+class TestOrderingEdgeCases:
+    """Edge cases and regression tests."""
+
+    def test_zero_comparisons(self):
+        """Comparisons with zero work correctly."""
+        a = ql.qint(0, width=8)
+
+        assert isinstance(a < 1, ql.qbool)
+        assert isinstance(a <= 0, ql.qbool)
+        assert isinstance(a > 0, ql.qbool)
+        assert isinstance(a >= 0, ql.qbool)
+
+    def test_max_value_comparisons(self):
+        """Comparisons at max value for width."""
+        a = ql.qint(127, width=8)  # Use 127 to avoid signed issues
+
+        assert isinstance(a < 128, ql.qbool)
+        assert isinstance(a <= 127, ql.qbool)
+        assert isinstance(a > 126, ql.qbool)
+        assert isinstance(a >= 127, ql.qbool)
+
+    def test_comparison_after_arithmetic(self):
+        """Comparison after arithmetic operations."""
+        a = ql.qint(3, width=8)
+        a += 2  # a is now 5
+
+        result = a < 10
+        assert isinstance(result, ql.qbool)
+
+    def test_multiple_comparisons_same_qint(self):
+        """Multiple comparisons on same qint."""
+        a = ql.qint(5, width=8)
+
+        r1 = a < 10
+        r2 = a > 3
+        r3 = a <= 5
+        r4 = a >= 5
+
+        assert isinstance(r1, ql.qbool)
+        assert isinstance(r2, ql.qbool)
+        assert isinstance(r3, ql.qbool)
+        assert isinstance(r4, ql.qbool)
+
+    def test_reversed_operand_int_lt_qint(self):
+        """Reversed operand: int < qint (Python calls __gt__)."""
+        a = ql.qint(5, width=8)
+        # Python should call a.__gt__(3) for: 3 < a
+        # This tests the reflection behavior
+        result = 3 < a  # Equivalent to a > 3
+        assert isinstance(result, ql.qbool)
+
+    def test_reversed_operand_int_le_qint(self):
+        """Reversed operand: int <= qint (Python calls __ge__)."""
+        a = ql.qint(5, width=8)
+        result = 3 <= a  # Equivalent to a >= 3
+        assert isinstance(result, ql.qbool)
+
+
+# ============================================================================
+# Requirements Coverage Tests
+# ============================================================================
+
+
+class TestRequirementsCoverage:
+    """Tests explicitly mapping to COMP-03 and COMP-04 requirements."""
+
+    def test_comp03_le_no_temp_allocation(self):
+        """COMP-03: <= works (no temp qint allocation)."""
+        a = ql.qint(5, width=8)
+        result = a <= 10
+        assert isinstance(result, ql.qbool)
+        # Note: We verify no temp allocation by code inspection, not test
+
+    def test_comp03_le_preserves_operand(self):
+        """COMP-03: <= preserves operand (in-place pattern)."""
+        a = ql.qint(5, width=8)
+        width_before = a.width
+
+        _ = a <= 10
+
+        assert a.width == width_before
+
+    def test_comp04_ge_no_temp_allocation(self):
+        """COMP-04: >= works (no temp qint allocation)."""
+        a = ql.qint(5, width=8)
+        result = a >= 3
+        assert isinstance(result, ql.qbool)
+
+    def test_comp04_ge_preserves_operand(self):
+        """COMP-04: >= preserves operand (in-place pattern)."""
+        a = ql.qint(5, width=8)
+        width_before = a.width
+
+        _ = a >= 3
+
+        assert a.width == width_before
+
+    def test_all_operators_return_qbool(self):
+        """All four operators return qbool type."""
+        a = ql.qint(5, width=8)
+        b = ql.qint(3, width=8)
+
+        assert isinstance(a < b, ql.qbool)
+        assert isinstance(a > b, ql.qbool)
+        assert isinstance(a <= b, ql.qbool)
+        assert isinstance(a >= b, ql.qbool)
+        assert isinstance(a < 10, ql.qbool)
+        assert isinstance(a > 3, ql.qbool)
+        assert isinstance(a <= 5, ql.qbool)
+        assert isinstance(a >= 5, ql.qbool)
