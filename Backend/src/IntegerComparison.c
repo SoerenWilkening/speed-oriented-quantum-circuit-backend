@@ -166,16 +166,28 @@ sequence_t *CQ_equal_width(int bits, int64_t value) {
         current_layer++;
         seq->used_layer++;
     } else {
-        // Multi-bit (3+): Requires proper multi-controlled gates
-        // Phase 12-01: Placeholder implementation - returns valid sequence structure
-        // but gate logic needs ancilla qubits for correct multi-controlled X
-        // Full implementation will use large_control array for >2 controls
-        // For now: just apply CCX for first two bits (partial check)
-        ccx(&seq->seq[current_layer][seq->gates_per_layer[current_layer]], 0, 1, 2);
+        // Multi-bit (3+): Use n-controlled X gate via mcx()
+        // All operand qubits [1..bits] must be |1> to set result qubit[0] to |1>
+        qubit_t *controls = malloc(bits * sizeof(qubit_t));
+        if (controls == NULL) {
+            // Cleanup and return NULL
+            for (int i = 0; i < num_layers; i++) {
+                free(seq->seq[i]);
+            }
+            free(seq->seq);
+            free(seq->gates_per_layer);
+            free(bin);
+            free(seq);
+            return NULL;
+        }
+        for (int i = 0; i < bits; i++) {
+            controls[i] = i + 1; // Operand qubits are at [1, bits]
+        }
+        mcx(&seq->seq[current_layer][seq->gates_per_layer[current_layer]], 0, controls, bits);
         seq->gates_per_layer[current_layer]++;
         current_layer++;
         seq->used_layer++;
-        // TODO(Phase 12-02): Implement proper n-bit AND with ancilla/large_control
+        free(controls);
     }
 
     // Phase 3: Uncompute - reverse the X gates to restore original state
