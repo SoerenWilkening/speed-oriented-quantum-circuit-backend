@@ -1,3 +1,314 @@
+# qint_operations.pxi - All qint operations and utility methods
+# This file is included by quantum_language.pyx
+# Do not import directly
+
+# ====================================================================
+# UTILITY AND TRACKING METHODS
+# ====================================================================
+
+	def add_dependency(self, parent):
+		"""Register parent as dependency (weak reference).
+
+		Parameters
+		----------
+		parent : qint
+			Parent qint this value depends on.
+
+		Raises
+		------
+		AssertionError
+			If parent was created after self (cycle detection).
+		"""
+		if parent is None:
+			return
+		# Cycle prevention: parent must be older
+		assert parent._creation_order < self._creation_order, \
+			f"Cycle detected: dependency (order {parent._creation_order}) must be older than dependent (order {self._creation_order})"
+		self.dependency_parents.append(weakref.ref(parent))
+
+	def get_live_parents(self):
+		"""Get list of parent dependencies that are still alive.
+
+		Returns
+		-------
+		list
+			List of parent qint objects (filtered for alive weakrefs).
+		"""
+		live = []
+		for ref in self.dependency_parents:
+			parent = ref()
+			if parent is not None:
+				live.append(parent)
+		return live
+
+	def _do_uncompute(self, bint from_del=False):
+		"""Internal method to uncompute this qbool and cascade to dependencies.
+
+		Called by __del__ (from_del=True) or explicit uncompute() (from_del=False).
+
+		Parameters
+		----------
+		from_del : bool
+			If True, suppress exceptions and only print warnings (Python __del__ best practice).
+			If False, allow exceptions to propagate.
+		"""
+		global _circuit, _circuit_initialized
+		cdef qubit_allocator_t *alloc
+
+		# Idempotency check - already uncomputed
+		if self._is_uncomputed:
+			return
+
+		# No allocated qubits means nothing to uncompute
+		if not self.allocated_qubits:
+			self._is_uncomputed = True
+			return
+
+		try:
+			# 1. CASCADE: Get live parents and sort by creation order (descending = LIFO)
+			live_parents = self.get_live_parents()
+			# Sort by _creation_order descending for LIFO order
+			live_parents.sort(key=lambda p: p._creation_order, reverse=True)
+
+			# Recursively uncompute parents (they will cascade further if needed)
+			for parent in live_parents:
+				if not parent._is_uncomputed:
+					parent._do_uncompute(from_del=from_del)
+
+			# 2. REVERSE GATES: Only if there's a valid range
+			if _circuit_initialized and self._end_layer > self._start_layer:
+				reverse_circuit_range(_circuit, self._start_layer, self._end_layer)
+
+			# 3. FREE QUBITS: Return to allocator
+			if _circuit_initialized:
+				alloc = circuit_get_allocator(<circuit_s*>_circuit)
+				if alloc != NULL:
+					allocator_free(alloc, self.allocated_start, self.bits)
+
+			# 4. Mark as uncomputed and clear ownership
+			self._is_uncomputed = True
+			self.allocated_qubits = False
+
+		except Exception as e:
+			if from_del:
+				# Phase 18 decision: __del__ failures print warning only
+				import sys
+				print(f"Warning: Uncomputation failed: {e}", file=sys.stderr)
+			else:
+				raise
+
+	def uncompute(self):
+		"""Explicitly uncompute this qbool and its dependencies.
+
+		Triggers early uncomputation before garbage collection.
+		Use when you need deterministic cleanup timing.
+
+		Raises
+		------
+		RuntimeError
+			If other references to this qbool still exist (refcount > 2).
+			The value 2 accounts for: the variable itself + the getrefcount argument.
+		RuntimeError
+			If using qbool after it has been uncomputed.
+
+		Notes
+		-----
+		This method is idempotent: calling twice is a no-op, not an error.
+
+		Examples
+		--------
+		>>> c = circuit()
+		>>> a = qbool(True)
+		>>> b = qbool(False)
+		>>> result = a & b
+		>>> result.uncompute()  # Explicit early cleanup
+		>>> # result can no longer be used in operations
+		"""
+		import sys
+
+		# Already uncomputed - idempotent, no error (Phase 18 decision)
+		if self._is_uncomputed:
+			return
+
+		# Check reference count (getrefcount adds 1 for the argument)
+		# Expected: 2 = variable + getrefcount argument
+		refcount = sys.getrefcount(self)
+		if refcount > 2:
+			raise RuntimeError(
+				f"Cannot uncompute qbool: {refcount - 1} references still exist. "
+				f"Delete other references first or let garbage collection handle cleanup."
+			)
+
+		# Perform uncomputation with exception propagation (not from __del__)
+		self._do_uncompute(from_del=False)
+
+	def _check_not_uncomputed(self):
+		"""Raise if this qbool has been uncomputed.
+
+		Called at the start of operations to prevent use-after-uncompute bugs.
+
+		Raises
+		------
+		RuntimeError
+			If qbool has been uncomputed.
+		"""
+		if self._is_uncomputed:
+			raise RuntimeError(
+				"qbool has been uncomputed and cannot be used. "
+				"Create a new qbool or avoid uncomputing values still needed."
+			)
+
+	def print_circuit(self):
+		"""Print the current quantum circuit to stdout.
+
+		Examples
+		--------
+		>>> a = qint(5, width=4)
+		>>> a.print_circuit()
+		"""
+		print_circuit(_circuit)
+
+	def __del__(self):
+		"""Automatic uncomputation on garbage collection.
+
+		When a qbool goes out of scope, automatically:
+		1. Cascade uncomputation through dependencies (LIFO order)
+		2. Reverse the gates that created this qbool
+		3. Free the allocated qubits back to the pool
+
+		Notes
+		-----
+		Follows Python best practice: exceptions in __del__ print warnings only.
+		For deterministic cleanup, use explicit .uncompute() instead.
+		"""
+		global _controlled, _control_bool, _int_counter, _smallest_allocated_qubit, ancilla
+		global _num_qubits
+
+		# Use the internal uncompute method with from_del=True
+		# This suppresses exceptions and only prints warnings
+		self._do_uncompute(from_del=True)
+
+		# Keep backward compat tracking (deprecated, but maintained for older code)
+		if not self._is_uncomputed and self.bits > 0:
+			_smallest_allocated_qubit -= self.bits
+			ancilla -= self.bits
+
+	def __str__(self):
+		return f"{self.qubits}"
+
+	# Context manager protocol
+	def __enter__(self):
+		"""Enter quantum conditional context.
+
+		Enables conditional quantum operations controlled by this qint's value.
+
+		Returns
+		-------
+		qint
+			Self for use in with statement.
+
+		Examples
+		--------
+		>>> flag = qbool(True)
+		>>> result = qint(0, width=8)
+		>>> with flag:
+		...     result += 5  # Conditional addition
+
+		Notes
+		-----
+		Creates controlled quantum gates where this qint acts as control.
+		"""
+		global _controlled, _control_bool, _scope_stack
+		self._check_not_uncomputed()
+		if not _controlled:
+			_control_bool = self
+		else:
+			# TODO: and operation of self and qint._control_bool
+			_list_of_controls.append(_control_bool)
+			_control_bool &= self
+			pass
+		_controlled = True
+
+		# Phase 19: Scope management - push new scope frame
+		current_scope_depth.set(current_scope_depth.get() + 1)
+		_scope_stack.append([])  # New empty scope frame
+
+		return self
+
+	def __exit__(self, exc__type, exc, tb):
+		"""Exit quantum conditional context with scope cleanup.
+
+		Parameters
+		----------
+		exc__type : type
+			Exception type if raised.
+		exc : Exception
+			Exception instance if raised.
+		tb : traceback
+			Traceback if exception raised.
+
+		Returns
+		-------
+		bool
+			False (does not suppress exceptions).
+
+		Examples
+		--------
+		>>> flag = qbool(True)
+		>>> with flag:
+		...     pass  # Controlled operations here
+		"""
+		global _controlled, _control_bool, ancilla, _smallest_allocated_qubit, _scope_stack
+
+		# Phase 19: Uncompute scope-local qbools FIRST (while still controlled)
+		# This ensures uncomputation gates are generated inside the controlled context
+		if _scope_stack:
+			scope_qbools = _scope_stack.pop()
+
+			# Sort by _creation_order descending for LIFO (newest first)
+			scope_qbools.sort(key=lambda q: q._creation_order, reverse=True)
+
+			# Uncompute each qbool in scope (skip if already uncomputed)
+			for qbool_obj in scope_qbools:
+				if not qbool_obj._is_uncomputed:
+					qbool_obj._do_uncompute(from_del=False)
+
+		# Phase 19: Decrement scope depth
+		current_scope_depth.set(current_scope_depth.get() - 1)
+
+		# THEN restore control state (existing logic)
+		_controlled = False
+		_control_bool = None
+
+		# undo logical and operations (TODO from original)
+		return False  # do not suppress exceptions
+
+	def measure(self):
+		"""Measure quantum integer, collapsing to classical value.
+
+		Returns
+		-------
+		int
+			Measured classical value.
+
+		Notes
+		-----
+		Measurement collapses quantum superposition to classical state.
+		Currently returns initialization value (simulation placeholder).
+
+		Examples
+		--------
+		>>> a = qint(5, width=8)
+		>>> result = a.measure()
+		>>> result
+		5
+		"""
+		return self.value
+
+# ====================================================================
+# ARITHMETIC OPERATIONS
+# ====================================================================
+
 # qint_arithmetic.pxi - Arithmetic operations for qint class
 # This file is included by quantum_language.pyx
 # Do not import directly
