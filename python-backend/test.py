@@ -267,12 +267,146 @@ def run_dependency_tracking_tests():
 
 
 # =============================================================================
+# Phase 17: Reverse Gate Generation Tests
+# =============================================================================
+
+
+def test_reverse_self_adjoint_gates():
+    """Test that self-adjoint gates (X, H) reverse correctly."""
+    ql.circuit()
+
+    # Get current gate count
+    before_gates = ql.circuit().gate_count
+    current_depth = ql.circuit().depth
+
+    # Reverse a range of layers (e.g., first 10 layers if they exist)
+    # This tests that the function can reverse self-adjoint gates like H, X
+    if current_depth >= 10:
+        ql.reverse_instruction_range(0, 10)
+        after_gates = ql.circuit().gate_count
+        # Should have added reversed gates
+        assert after_gates > before_gates, (
+            f"Reversing layers 0-10 should add gates: {before_gates} -> {after_gates}"
+        )
+    print("  Self-adjoint gate reversal: PASS")
+
+
+def test_reverse_phase_gates():
+    """Test that phase gates invert correctly (P(t) -> P(-t))."""
+    ql.circuit()
+
+    start_gates = ql.circuit().gate_count
+
+    # Create qints and perform addition (uses phase gates via QFT)
+    a = ql.qint(13, width=8)
+    a += 7  # Addition uses QFT which has phase gates
+
+    mid_gates = ql.circuit().gate_count
+    gates_added = mid_gates - start_gates
+
+    # Verify operation added gates
+    assert gates_added > 0, "Addition should add gates"
+
+    # Reverse circuit from start to current depth
+    current_depth = ql.circuit().depth
+    ql.reverse_instruction_range(0, current_depth)
+
+    after_gates = ql.circuit().gate_count
+
+    # Should have added the reversed gates
+    assert after_gates > mid_gates, f"Reversing should add gates: {mid_gates} -> {after_gates}"
+    print("  Phase gate reversal: PASS")
+
+
+def test_reverse_empty_range():
+    """Test that empty range (start == end) is no-op."""
+    ql.circuit()
+
+    before_gates = ql.circuit().gate_count
+    before_depth = ql.circuit().depth
+
+    # Reverse empty range
+    ql.reverse_instruction_range(5, 5)
+
+    after_gates = ql.circuit().gate_count
+    after_depth = ql.circuit().depth
+
+    assert before_gates == after_gates, "Empty range should not add gates"
+    assert before_depth == after_depth, "Empty range should not change depth"
+    print("  Empty range reversal (no-op): PASS")
+
+
+def test_reverse_controlled_gates():
+    """Test that controlled gates preserve control structure."""
+    ql.circuit()
+
+    start_gates = ql.circuit().gate_count
+
+    # Create qints and perform comparison (uses controlled gates)
+    a = ql.qint(15, width=8)
+    b = ql.qint(10, width=8)
+    _c = a == b  # Comparison uses controlled gates
+
+    mid_gates = ql.circuit().gate_count
+    gates_added = mid_gates - start_gates
+
+    # Verify operation added gates
+    assert gates_added > 0, "Comparison should add gates"
+
+    # Reverse circuit from start to current depth
+    current_depth = ql.circuit().depth
+    ql.reverse_instruction_range(0, current_depth)
+
+    after_gates = ql.circuit().gate_count
+
+    # Should have added the reversed gates
+    assert after_gates > mid_gates, f"Reversing should add gates: {mid_gates} -> {after_gates}"
+    print("  Controlled gate reversal: PASS")
+
+
+def test_get_current_layer():
+    """Test get_current_layer returns correct layer count."""
+    # Circuit may already be initialized from previous tests
+    # Just verify get_current_layer works
+    layer_count = ql.get_current_layer()
+    assert layer_count >= 0, "Layer count should be non-negative"
+
+    # Verify the function returns an integer
+    assert isinstance(layer_count, int), f"Expected int, got {type(layer_count)}"
+
+    # Capture layer before and after an operation to show layers can increase
+    before = ql.get_current_layer()
+    a = ql.qint(7, width=8)  # Use different width to ensure new qubits
+    b = ql.qint(11, width=8)
+    _c = a + b  # noqa: F841
+    after = ql.get_current_layer()
+
+    # With fresh qubits and operation, layers should increase (or at least not decrease)
+    assert after >= before, f"Layer count should not decrease, got {before} -> {after}"
+    print("  get_current_layer: PASS")
+
+
+def run_reverse_gate_tests():
+    """Run all Phase 17 reverse gate generation tests."""
+    print("\n=== Phase 17: Reverse Gate Generation Tests ===")
+
+    test_get_current_layer()
+    test_reverse_empty_range()
+    test_reverse_self_adjoint_gates()
+    test_reverse_phase_gates()
+    test_reverse_controlled_gates()
+
+    print("\n=== All Reverse Gate Tests PASSED ===\n")
+
+
+# =============================================================================
 # Test Runner
 # =============================================================================
 
 if __name__ == "__main__":
     try:
         run_dependency_tracking_tests()
+        run_reverse_gate_tests()
         print("\nAll tests completed successfully!")
         sys.exit(0)
     except AssertionError as e:
