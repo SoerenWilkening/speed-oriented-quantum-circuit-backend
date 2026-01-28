@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-01-28)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** Phase 17 - C Reverse Gate Generation
+**Current focus:** Phase 18 - Basic Uncomputation Integration
 
 ## Current Position
 
-Phase: 17 of 20 (C Reverse Gate Generation)
-Plan: 1 of 1 in current phase (17-01 complete)
-Status: Phase 17 complete
-Last activity: 2026-01-28 — Completed 17-01-PLAN.md (reverse gate generation)
+Phase: 18 of 20 (Basic Uncomputation Integration)
+Plan: 1 of 1 in current phase (18-01 complete)
+Status: Phase 18 complete
+Last activity: 2026-01-28 — Completed 18-01-PLAN.md (core uncomputation infrastructure)
 
-Progress: [████████▓░] 85% (phases 1-17 complete, 18-20 pending)
+Progress: [████████▓░] 90% (phases 1-18 complete, 19-20 pending)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 57 (v1.0: 41, v1.1: 13, v1.2: 3)
+- Total plans completed: 58 (v1.0: 41, v1.1: 13, v1.2: 4)
 - Average duration: ~6 min/plan
-- Total execution time: ~5.7 hours
+- Total execution time: ~5.8 hours
 
 **By Milestone:**
 
@@ -29,12 +29,13 @@ Progress: [████████▓░] 85% (phases 1-17 complete, 18-20 pend
 |-----------|--------|-------|--------|
 | v1.0 MVP | 1-10 | 41 | Complete (2026-01-27) |
 | v1.1 QPU State | 11-15 | 13 | Complete (2026-01-28) |
-| v1.2 Uncomputation | 16-20 | 3/? | In progress |
+| v1.2 Uncomputation | 16-20 | 4/? | In progress |
 
 **Recent Trend:**
 - v1.1: 13 plans in 1 day (accelerated delivery)
 - v1.2 Phase 16: 2 plans in 15 min total (infrastructure + tests)
 - v1.2 Phase 17: 1 plan in 11 min (C reverse gate generation)
+- v1.2 Phase 18: 1 plan in 10 min (core uncomputation infrastructure)
 
 ## Accumulated Context
 
@@ -43,6 +44,9 @@ Progress: [████████▓░] 85% (phases 1-17 complete, 18-20 pend
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting v1.2 work:
 
+- v1.2 Phase 18-01: Layer tracking placement — start_layer captured before operation, end_layer before return
+- v1.2 Phase 18-01: LIFO cascade order — dependencies sorted by _creation_order descending for correct reversal
+- v1.2 Phase 18-01: Error handling in __del__ — suppress exceptions, print warnings (Python best practice)
 - v1.2 Phase 17-01: Empty range handling — start >= end returns silently (no-op, correct behavior)
 - v1.2 Phase 17-01: Append vs replace — reversed gates appended to circuit (not replaced)
 - v1.2 Phase 17-01: Layer tracking — exposed circuit_s.used_layer to Python for instruction boundaries
@@ -74,8 +78,8 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-28
-Stopped at: Completed 17-01-PLAN.md (C reverse gate generation)
-Resume file: None (Phase 17 complete, ready for Phase 18 with `/gsd:plan-phase 18`)
+Stopped at: Completed 18-01-PLAN.md (core uncomputation infrastructure)
+Resume file: None (Phase 18 complete, ready for Phase 19 with `/gsd:plan-phase 19`)
 
 ---
 
@@ -86,7 +90,7 @@ Resume file: None (Phase 17 complete, ready for Phase 18 with `/gsd:plan-phase 1
 **Phases:**
 - Phase 16: Dependency tracking infrastructure (4 requirements) — COMPLETE
 - Phase 17: C reverse gate generation (2 requirements) — COMPLETE
-- Phase 18: Basic uncomputation integration (3 requirements)
+- Phase 18: Basic uncomputation integration (3 requirements) — COMPLETE
 - Phase 19: Context manager integration for `with` (2 requirements)
 - Phase 20: Modes and user control (6 requirements)
 
@@ -94,5 +98,6 @@ Resume file: None (Phase 17 complete, ready for Phase 18 with `/gsd:plan-phase 1
 
 **Phase 16 completed:** 2026-01-28 (2 plans: infrastructure + test suite)
 **Phase 17 completed:** 2026-01-28 (1 plan: C reverse gate generation)
+**Phase 18 completed:** 2026-01-28 (1 plan: core uncomputation infrastructure)
 
-**Next action:** `/gsd:plan-phase 18` to create detailed plan for basic uncomputation integration
+**Next action:** `/gsd:plan-phase 19` to create detailed plan for context manager integration
