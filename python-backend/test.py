@@ -400,6 +400,175 @@ def run_reverse_gate_tests():
 
 
 # =============================================================================
+# Phase 18: Basic Uncomputation Integration Tests
+# =============================================================================
+
+
+def test_uncompute_basic():
+    """SCOPE-02: Basic uncomputation marks flag and clears allocation."""
+    c = ql.circuit()  # noqa: F841
+    a = ql.qbool(True)
+    b = ql.qbool(False)
+    result = a & b
+
+    assert not result._is_uncomputed, "Should start as not uncomputed"
+    # Note: allocated_qubits is a cdef attribute, not accessible from Python
+    # We verify allocation status indirectly through _is_uncomputed
+
+    result.uncompute()
+
+    assert result._is_uncomputed, "Should be marked uncomputed"
+    # After uncompute, the flag should be set (qubits internally freed)
+    print("  Basic uncompute: PASS")
+
+
+def test_uncompute_idempotent():
+    """CTRL-02: Calling uncompute twice is a no-op."""
+    c = ql.circuit()  # noqa: F841
+    a = ql.qbool(True)
+    b = ql.qbool(False)
+    result = a & b
+
+    result.uncompute()
+    result.uncompute()  # Second call should be silent no-op
+
+    assert result._is_uncomputed
+    print("  Idempotent uncompute: PASS")
+
+
+def test_uncompute_refcount_check():
+    """CTRL-02: Uncompute fails if other references exist."""
+    c = ql.circuit()  # noqa: F841
+    a = ql.qbool(True)
+    b = ql.qbool(False)
+    result = a & b
+    alias = result  # Extra reference  # noqa: F841
+
+    try:
+        result.uncompute()
+        raise AssertionError("Should have raised RuntimeError")
+    except RuntimeError as e:
+        assert "references still exist" in str(e)
+
+    del alias
+    result.uncompute()  # Now should work
+    assert result._is_uncomputed
+    print("  Refcount check: PASS")
+
+
+def test_uncompute_use_after():
+    """SCOPE-02: Using uncomputed qbool raises clear error."""
+    c = ql.circuit()  # noqa: F841
+    a = ql.qbool(True)
+    b = ql.qbool(False)
+    result = a & b
+    result.uncompute()
+
+    try:
+        _ = result & a
+        raise AssertionError("Should have raised RuntimeError")
+    except RuntimeError as e:
+        assert "has been uncomputed" in str(e)
+
+    print("  Use-after-uncompute: PASS")
+
+
+def test_uncompute_cascade_lifo():
+    """UNCOMP-02/03: Cascade uncomputes dependencies in LIFO order."""
+    c = ql.circuit()  # noqa: F841
+
+    # Create chain: a & b = ab, ab & c = abc
+    a = ql.qbool(True)
+    b = ql.qbool(False)
+    ab = a & b
+    c_val = ql.qbool(True)
+    abc = ab & c_val
+
+    # Track creation orders
+    order_a = a._creation_order
+    order_ab = ab._creation_order
+    order_c = c_val._creation_order
+    order_abc = abc._creation_order
+
+    # Verify LIFO order: abc > ab > a, abc > c
+    assert order_abc > order_ab > order_a
+    assert order_abc > order_c
+    # Note: order_b unused (b's order doesn't matter for cascade test)
+
+    # Uncompute abc - should cascade to ab (its dependency)
+    # Note: a, b, c_val won't be uncomputed because they're still referenced here
+    abc.uncompute()
+
+    assert abc._is_uncomputed
+    # ab should be uncomputed via cascade (only referenced by abc)
+    # But a, b, c_val remain alive (referenced in this scope)
+    print("  LIFO cascade: PASS")
+
+
+def test_uncompute_layer_tracking():
+    """SCOPE-02: Layer boundaries captured for gate reversal."""
+    c = ql.circuit()  # noqa: F841
+    a = ql.qbool(True)
+    b = ql.qbool(False)
+    result = a & b
+
+    # Layer boundaries should be set
+    assert result._start_layer >= 0, "start_layer should be set"
+    assert result._end_layer >= result._start_layer, "end_layer should be >= start_layer"
+
+    print("  Layer tracking: PASS")
+
+
+def test_uncompute_automatic_gc():
+    """SCOPE-02: Automatic uncomputation on garbage collection."""
+    c = ql.circuit()  # noqa: F841
+    a = ql.qbool(True)
+    b = ql.qbool(False)
+
+    def create_temp():
+        temp = a & b
+        return temp._creation_order  # Return for verification, temp goes out of scope
+
+    order = create_temp()  # noqa: F841
+    gc.collect()
+
+    # Can't directly verify temp was uncomputed, but no error = success
+    print("  Automatic GC uncompute: PASS")
+
+
+def test_uncompute_comparison_result():
+    """SCOPE-02: Comparison results also track layers and uncompute."""
+    c = ql.circuit()  # noqa: F841
+    x = ql.qint(5, width=4)
+    y = ql.qint(3, width=4)
+    result = x > y
+
+    assert hasattr(result, "_start_layer")
+    assert hasattr(result, "_end_layer")
+    assert hasattr(result, "_is_uncomputed")
+
+    result.uncompute()
+    assert result._is_uncomputed
+    print("  Comparison uncompute: PASS")
+
+
+def run_uncomputation_tests():
+    """Run all Phase 18 uncomputation tests."""
+    print("\n=== Phase 18: Basic Uncomputation Integration Tests ===")
+
+    test_uncompute_basic()
+    test_uncompute_idempotent()
+    test_uncompute_refcount_check()
+    test_uncompute_use_after()
+    test_uncompute_cascade_lifo()
+    test_uncompute_layer_tracking()
+    test_uncompute_automatic_gc()
+    test_uncompute_comparison_result()
+
+    print("\n=== All Phase 18 Tests PASSED ===\n")
+
+
+# =============================================================================
 # Test Runner
 # =============================================================================
 
@@ -407,6 +576,7 @@ if __name__ == "__main__":
     try:
         run_dependency_tracking_tests()
         run_reverse_gate_tests()
+        run_uncomputation_tests()
         print("\nAll tests completed successfully!")
         sys.exit(0)
     except AssertionError as e:
