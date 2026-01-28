@@ -42,6 +42,51 @@ _global_creation_counter = 0
 # Each entry is a list of qbools created in that scope
 _scope_stack = []  # List[List[qint]]
 
+# Phase 20: Global uncomputation mode flag
+_qubit_saving_mode = False  # Default: lazy mode
+
+
+def option(key: str, value=None):
+	"""Get or set quantum language options.
+
+	Parameters
+	----------
+	key : str
+		Option name. Currently supported:
+		- 'qubit_saving': Enable eager uncomputation (bool)
+	value : bool, optional
+		New value for option. If None, returns current value.
+
+	Returns
+	-------
+	bool or None
+		Current value if value=None, otherwise None.
+
+	Examples
+	--------
+	>>> ql.option('qubit_saving')
+	False
+	>>> ql.option('qubit_saving', True)
+	>>> ql.option('qubit_saving')
+	True
+
+	Notes
+	-----
+	Mode changes affect newly created qbools only. Existing qbools
+	retain their creation-time mode.
+	"""
+	global _qubit_saving_mode
+
+	if key == 'qubit_saving':
+		if value is None:
+			return _qubit_saving_mode
+		if not isinstance(value, bool):
+			raise ValueError("qubit_saving option requires bool value")
+		_qubit_saving_mode = value
+	else:
+		raise ValueError(f"Unknown option: {key}")
+
+
 # cdef unsigned int * qubit_array = <unsigned int *> malloc(6 * INTEGERSIZE)
 
 qubit_array = np.ndarray(4 * 64 + NUMANCILLY, dtype = np.uint32)  # Max width support
