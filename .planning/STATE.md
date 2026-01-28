@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-28)
 ## Current Position
 
 Phase: 20 of 20 (Modes and Control)
-Plan: 1 of 2 in current phase (complete)
-Status: Phase 20 in progress
-Last activity: 2026-01-28 — Completed 20-01-PLAN.md (option API and mode-aware uncomputation)
+Plan: 2 of 2 in current phase (complete)
+Status: Phase 20 complete
+Last activity: 2026-01-28 — Completed 20-02-PLAN.md (keep() method for uncomputation opt-out)
 
-Progress: [█████████░] 96% (phases 1-19 complete, phase 20 plan 1/2 complete)
+Progress: [██████████] 100% (all 20 phases complete, v1.2 milestone achieved)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 61 (v1.0: 41, v1.1: 13, v1.2: 7)
+- Total plans completed: 62 (v1.0: 41, v1.1: 13, v1.2: 8)
 - Average duration: ~6 min/plan
-- Total execution time: ~6.1 hours
+- Total execution time: ~6.2 hours
 
 **By Milestone:**
 
@@ -29,7 +29,7 @@ Progress: [█████████░] 96% (phases 1-19 complete, phase 20 p
 |-----------|--------|-------|--------|
 | v1.0 MVP | 1-10 | 41 | Complete (2026-01-27) |
 | v1.1 QPU State | 11-15 | 13 | Complete (2026-01-28) |
-| v1.2 Uncomputation | 16-20 | 7/8 | In progress |
+| v1.2 Uncomputation | 16-20 | 8 | Complete (2026-01-28) |
 
 **Recent Trend:**
 - v1.1: 13 plans in 1 day (accelerated delivery)
@@ -38,6 +38,7 @@ Progress: [█████████░] 96% (phases 1-19 complete, phase 20 p
 - v1.2 Phase 18: 2 plans in 25 min total (core infrastructure + integration)
 - v1.2 Phase 19: 1 plan in 9 min (context manager integration)
 - v1.2 Phase 20-01: 1 plan in 5.5 min (option API and mode-aware uncomputation)
+- v1.2 Phase 20-02: 1 plan in 3 min (keep() method for uncomputation opt-out)
 
 ## Accumulated Context
 
@@ -46,6 +47,9 @@ Progress: [█████████░] 96% (phases 1-19 complete, phase 20 p
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting v1.2 work:
 
+- v1.2 Phase 20-02: keep() is permanent — flag never cleared automatically, simplest implementation
+- v1.2 Phase 20-02: keep() only affects __del__ — explicit uncompute() always works, gives user full control
+- v1.2 Phase 20-02: keep() returns None — follows Python convention for methods with side effects only
 - v1.2 Phase 20-01: Mode captured at creation time — prevents retroactive mode changes, each qbool has immutable behavior
 - v1.2 Phase 20-01: Eager mode immediate uncomputation — minimizes peak qubit count by freeing on GC regardless of scope
 - v1.2 Phase 20-01: Lazy mode scope-based uncomputation — minimizes gates by keeping intermediates alive within scope
@@ -102,8 +106,8 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-28
-Stopped at: Completed 20-01-PLAN.md (option API and mode-aware uncomputation)
-Resume file: None (Phase 20 plan 1 complete, plan 2 pending)
+Stopped at: Completed 20-02-PLAN.md (keep() method for uncomputation opt-out)
+Resume file: None (Phase 20 complete, v1.2 milestone achieved)
 
 ---
 
@@ -116,7 +120,7 @@ Resume file: None (Phase 20 plan 1 complete, plan 2 pending)
 - Phase 17: C reverse gate generation (2 requirements) — COMPLETE
 - Phase 18: Basic uncomputation integration (3 requirements) — COMPLETE
 - Phase 19: Context manager integration for `with` (2 requirements) — COMPLETE
-- Phase 20: Modes and user control (6 requirements) — IN PROGRESS (1/2 plans complete)
+- Phase 20: Modes and user control (6 requirements) — COMPLETE (2/2 plans complete)
 
 **Research completed:** 2026-01-28 (HIGH confidence, Python weakref + C adjoint pattern validated)
 
@@ -125,5 +129,6 @@ Resume file: None (Phase 20 plan 1 complete, plan 2 pending)
 **Phase 18 completed:** 2026-01-28 (2 plans: core infrastructure + integration/tests)
 **Phase 19 completed:** 2026-01-28 (1 plan: context manager integration)
 **Phase 20-01 completed:** 2026-01-28 (option API and mode-aware uncomputation)
+**Phase 20-02 completed:** 2026-01-28 (keep() method for uncomputation opt-out)
 
-**Next action:** Execute Phase 20-02 for .keep() and .uncompute() enhancements
+**v1.2 MILESTONE ACHIEVED:** All automatic uncomputation features complete
