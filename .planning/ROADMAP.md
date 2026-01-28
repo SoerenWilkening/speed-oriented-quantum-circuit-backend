@@ -162,7 +162,13 @@ Plans:
 
 **Dependencies:** Phase 19 (all basic and scope-aware features complete)
 
-**Plans:** TBD
+**Plans:** 4 plans
+
+Plans:
+- [ ] 20-01-PLAN.md - Option API and mode-aware automatic uncomputation
+- [ ] 20-02-PLAN.md - .keep() method for opt-out of automatic uncomputation
+- [ ] 20-03-PLAN.md - Enhanced error messages for uncomputation failures
+- [ ] 20-04-PLAN.md - Comprehensive Phase 20 test suite
 
 ---
 
@@ -213,7 +219,7 @@ Plans:
 | 17. Reverse Gate Generation | v1.2 | 1/1 | Complete | 2026-01-28 |
 | 18. Basic Uncomputation | v1.2 | 2/2 | Complete | 2026-01-28 |
 | 19. Context Manager Integration | v1.2 | 1/1 | Complete | 2026-01-28 |
-| 20. Modes and Control | v1.2 | 0/? | Not started | - |
+| 20. Modes and Control | v1.2 | 0/4 | Planned | - |
 
 ---
 *Roadmap created: 2026-01-28*
