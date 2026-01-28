@@ -134,7 +134,10 @@ Plans:
 
 **Dependencies:** Phase 18 (extends basic uncomputation to conditional scopes)
 
-**Plans:** TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 19-01-PLAN.md - Scope stack infrastructure, __enter__/__exit__ integration, and tests
 
 ---
 
@@ -209,7 +212,7 @@ Plans:
 | 16. Dependency Tracking | v1.2 | 2/2 | Complete | 2026-01-28 |
 | 17. Reverse Gate Generation | v1.2 | 1/1 | Complete | 2026-01-28 |
 | 18. Basic Uncomputation | v1.2 | 2/2 | Complete | 2026-01-28 |
-| 19. Context Manager Integration | v1.2 | 0/? | Not started | - |
+| 19. Context Manager Integration | v1.2 | 0/1 | Not started | - |
 | 20. Modes and Control | v1.2 | 0/? | Not started | - |
 
 ---
