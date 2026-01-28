@@ -709,6 +709,22 @@ cdef class qint(circuit):
 		# Perform uncomputation with exception propagation (not from __del__)
 		self._do_uncompute(from_del=False)
 
+	def _check_not_uncomputed(self):
+		"""Raise if this qbool has been uncomputed.
+
+		Called at the start of operations to prevent use-after-uncompute bugs.
+
+		Raises
+		------
+		RuntimeError
+			If qbool has been uncomputed.
+		"""
+		if self._is_uncomputed:
+			raise RuntimeError(
+				"qbool has been uncomputed and cannot be used. "
+				"Create a new qbool or avoid uncomputing values still needed."
+			)
+
 	def print_circuit(self):
 		"""Print the current quantum circuit to stdout.
 
@@ -770,6 +786,7 @@ cdef class qint(circuit):
 		Creates controlled quantum gates where this qint acts as control.
 		"""
 		global _controlled, _control_bool
+		self._check_not_uncomputed()
 		if not _controlled:
 			_control_bool = self
 		else:
@@ -1221,6 +1238,11 @@ cdef class qint(circuit):
 		cdef int classical_width
 		cdef int start_layer
 
+		# Phase 18: Check for use-after-uncompute
+		self._check_not_uncomputed()
+		if isinstance(other, qint):
+			(<qint>other)._check_not_uncomputed()
+
 		# Capture start layer
 		start_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
 
@@ -1340,6 +1362,11 @@ cdef class qint(circuit):
 		cdef int classical_width
 		cdef int start_layer
 
+		# Phase 18: Check for use-after-uncompute
+		self._check_not_uncomputed()
+		if isinstance(other, qint):
+			(<qint>other)._check_not_uncomputed()
+
 		# Capture start layer
 		start_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
 
@@ -1458,6 +1485,11 @@ cdef class qint(circuit):
 		cdef int self_offset, result_offset, other_offset
 		cdef int classical_width
 		cdef int start_layer
+
+		# Phase 18: Check for use-after-uncompute
+		self._check_not_uncomputed()
+		if isinstance(other, qint):
+			(<qint>other)._check_not_uncomputed()
 
 		# Capture start layer
 		start_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
@@ -1628,6 +1660,9 @@ cdef class qint(circuit):
 		cdef unsigned int[:] arr
 		cdef int self_offset
 
+		# Phase 18: Check for use-after-uncompute
+		self._check_not_uncomputed()
+
 		# Use width-parameterized NOT for multi-bit qints
 		self_offset = 64 - self.bits
 
@@ -1704,6 +1739,11 @@ cdef class qint(circuit):
 		cdef int self_offset
 		cdef int start
 		cdef int start_layer
+
+		# Phase 18: Check for use-after-uncompute
+		self._check_not_uncomputed()
+		if isinstance(other, qint):
+			(<qint>other)._check_not_uncomputed()
 
 		# Capture start layer
 		start_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
@@ -1818,6 +1858,10 @@ cdef class qint(circuit):
 		>>> result = (a != b)
 		>>> # result is qbool representing |True>
 		"""
+		# Phase 18: Check for use-after-uncompute
+		self._check_not_uncomputed()
+		if isinstance(other, qint):
+			(<qint>other)._check_not_uncomputed()
 		return ~(self == other)
 
 	def __lt__(self, other):
@@ -1849,6 +1893,11 @@ cdef class qint(circuit):
 		"""
 		global _circuit_initialized, _circuit
 		cdef int start_layer
+
+		# Phase 18: Check for use-after-uncompute
+		self._check_not_uncomputed()
+		if isinstance(other, qint):
+			(<qint>other)._check_not_uncomputed()
 
 		# Capture start layer
 		start_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
@@ -1932,6 +1981,11 @@ cdef class qint(circuit):
 		global _circuit_initialized, _circuit
 		cdef int start_layer
 
+		# Phase 18: Check for use-after-uncompute
+		self._check_not_uncomputed()
+		if isinstance(other, qint):
+			(<qint>other)._check_not_uncomputed()
+
 		# Capture start layer
 		start_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
 
@@ -2001,6 +2055,11 @@ cdef class qint(circuit):
 		"""
 		global _circuit_initialized, _circuit
 		cdef int start_layer
+
+		# Phase 18: Check for use-after-uncompute
+		self._check_not_uncomputed()
+		if isinstance(other, qint):
+			(<qint>other)._check_not_uncomputed()
 
 		# Capture start layer
 		start_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
@@ -2087,6 +2146,11 @@ cdef class qint(circuit):
 		Phase 14: Added self-comparison optimization.
 		Delegates to NOT(self < other) which uses in-place pattern.
 		"""
+		# Phase 18: Check for use-after-uncompute
+		self._check_not_uncomputed()
+		if isinstance(other, qint):
+			(<qint>other)._check_not_uncomputed()
+
 		# Self-comparison optimization
 		if self is other:
 			return qbool(True)  # x >= x is always true
