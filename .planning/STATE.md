@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-28)
 ## Current Position
 
 Phase: 16 of 20 (Dependency Tracking Infrastructure)
-Plan: 1 of 1 in current phase (16-01 complete)
+Plan: 2 of 2 in current phase (16-01 and 16-02 complete)
 Status: Phase 16 complete
-Last activity: 2026-01-28 — Completed 16-01-PLAN.md (dependency tracking infrastructure)
+Last activity: 2026-01-28 — Completed 16-02-PLAN.md (dependency tracking test suite)
 
-Progress: [████████░░] 76% (phases 1-16 complete, 17-20 pending)
+Progress: [████████░░] 80% (phases 1-16 complete, 17-20 pending)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 55 (v1.0: 41, v1.1: 13, v1.2: 1)
+- Total plans completed: 56 (v1.0: 41, v1.1: 13, v1.2: 2)
 - Average duration: ~5 min/plan
-- Total execution time: ~4.7 hours
+- Total execution time: ~4.8 hours
 
 **By Milestone:**
 
@@ -29,11 +29,11 @@ Progress: [████████░░] 76% (phases 1-16 complete, 17-20 pend
 |-----------|--------|-------|--------|
 | v1.0 MVP | 1-10 | 41 | Complete (2026-01-27) |
 | v1.1 QPU State | 11-15 | 13 | Complete (2026-01-28) |
-| v1.2 Uncomputation | 16-20 | 1/? | In progress |
+| v1.2 Uncomputation | 16-20 | 2/? | In progress |
 
 **Recent Trend:**
 - v1.1: 13 plans in 1 day (accelerated delivery)
-- v1.2 Phase 16: 1 plan in 11 min (dependency tracking infrastructure)
+- v1.2 Phase 16: 2 plans in 15 min total (infrastructure + tests)
 
 ## Accumulated Context
 
@@ -42,10 +42,11 @@ Progress: [████████░░] 76% (phases 1-16 complete, 17-20 pend
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting v1.2 work:
 
-- v1.2 Phase 16: Weak references for dependency storage — prevents circular reference memory leaks
-- v1.2 Phase 16: Creation order cycle prevention — assert parent._creation_order < self._creation_order at add-time
-- v1.2 Phase 16: Track only quantum operands — classical int operands don't need uncomputation tracking
-- v1.2 Phase 16: Unidirectional child→parent tracking — defer bidirectional to Phase 20 if needed
+- v1.2 Phase 16-02: Test file location decision — replaced tic-tac-toe example in python-backend/test.py with comprehensive test suite
+- v1.2 Phase 16-01: Weak references for dependency storage — prevents circular reference memory leaks
+- v1.2 Phase 16-01: Creation order cycle prevention — assert parent._creation_order < self._creation_order at add-time
+- v1.2 Phase 16-01: Track only quantum operands — classical int operands don't need uncomputation tracking
+- v1.2 Phase 16-01: Unidirectional child→parent tracking — defer bidirectional to Phase 20 if needed
 - v1.1: Stateless C backend — enables Python-level dependency tracking (v1.2 foundation)
 - v1.0: Circuit compilation model — uncomputation appends reverse gates to circuit
 - v1.0: Centralized qubit allocator — uncomputation integrates with existing ownership tracking
@@ -69,7 +70,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-01-28
-Stopped at: Completed 16-01-PLAN.md (dependency tracking infrastructure)
+Stopped at: Completed 16-02-PLAN.md (dependency tracking test suite)
 Resume file: None (Phase 16 complete, ready for Phase 17 with `/gsd:plan-phase 17`)
 
 ---
@@ -79,7 +80,7 @@ Resume file: None (Phase 16 complete, ready for Phase 17 with `/gsd:plan-phase 1
 **Goal:** Automatically uncompute intermediate qubits when their lifetime ends
 
 **Phases:**
-- Phase 16: Dependency tracking infrastructure (4 requirements)
+- Phase 16: Dependency tracking infrastructure (4 requirements) — COMPLETE
 - Phase 17: C reverse gate generation (2 requirements)
 - Phase 18: Basic uncomputation integration (3 requirements)
 - Phase 19: Context manager integration for `with` (2 requirements)
@@ -87,4 +88,6 @@ Resume file: None (Phase 16 complete, ready for Phase 17 with `/gsd:plan-phase 1
 
 **Research completed:** 2026-01-28 (HIGH confidence, Python weakref + C adjoint pattern validated)
 
-**Next action:** `/gsd:plan-phase 16` to create detailed plan for dependency tracking
+**Phase 16 completed:** 2026-01-28 (2 plans: infrastructure + test suite)
+
+**Next action:** `/gsd:plan-phase 17` to create detailed plan for C reverse gate generation
