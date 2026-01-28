@@ -111,7 +111,11 @@ Plans:
 
 **Dependencies:** Phase 17 (needs reverse gate generation to perform uncomputation)
 
-**Plans:** TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 18-01-PLAN.md - Core uncomputation infrastructure (layer tracking, _do_uncompute method)
+- [ ] 18-02-PLAN.md - Integration and tests (__del__, .uncompute(), use-after guards)
 
 ---
 
