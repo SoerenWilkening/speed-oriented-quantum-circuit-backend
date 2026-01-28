@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-01-28)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** Phase 18 complete — Basic Uncomputation Integration
+**Current focus:** Phase 19 complete — Context Manager Integration
 
 ## Current Position
 
-Phase: 18 of 20 (Basic Uncomputation Integration)
-Plan: 2 of 2 in current phase (both complete)
-Status: Phase 18 complete
-Last activity: 2026-01-28 — Completed 18-02-PLAN.md (integration and tests)
+Phase: 19 of 20 (Context Manager Integration)
+Plan: 1 of 1 in current phase (complete)
+Status: Phase 19 complete
+Last activity: 2026-01-28 — Completed 19-01-PLAN.md (context manager integration)
 
-Progress: [████████▓░] 90% (phases 1-18 complete, 19-20 pending)
+Progress: [█████████░] 95% (phases 1-19 complete, phase 20 pending)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 59 (v1.0: 41, v1.1: 13, v1.2: 5)
+- Total plans completed: 60 (v1.0: 41, v1.1: 13, v1.2: 6)
 - Average duration: ~6 min/plan
-- Total execution time: ~5.9 hours
+- Total execution time: ~6.0 hours
 
 **By Milestone:**
 
@@ -29,13 +29,14 @@ Progress: [████████▓░] 90% (phases 1-18 complete, 19-20 pend
 |-----------|--------|-------|--------|
 | v1.0 MVP | 1-10 | 41 | Complete (2026-01-27) |
 | v1.1 QPU State | 11-15 | 13 | Complete (2026-01-28) |
-| v1.2 Uncomputation | 16-20 | 5/? | In progress |
+| v1.2 Uncomputation | 16-20 | 6/? | In progress |
 
 **Recent Trend:**
 - v1.1: 13 plans in 1 day (accelerated delivery)
 - v1.2 Phase 16: 2 plans in 15 min total (infrastructure + tests)
 - v1.2 Phase 17: 1 plan in 11 min (C reverse gate generation)
 - v1.2 Phase 18: 2 plans in 25 min total (core infrastructure + integration)
+- v1.2 Phase 19: 1 plan in 9 min (context manager integration)
 
 ## Accumulated Context
 
@@ -44,6 +45,11 @@ Progress: [████████▓░] 90% (phases 1-18 complete, 19-20 pend
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting v1.2 work:
 
+- v1.2 Phase 19-01: Uncompute before restore — uncomputation happens BEFORE restoring control state for quantum correctness
+- v1.2 Phase 19-01: LIFO order via _creation_order — sort scope_qbools by _creation_order descending
+- v1.2 Phase 19-01: Skip already-uncomputed in __exit__ — allows early explicit uncompute (though refcount prevents it)
+- v1.2 Phase 19-01: Condition survives own block — not registered in scope it controls (lower creation_scope)
+- v1.2 Phase 19-01: Registration constraints — only register when scope_stack non-empty, scope > 0, creation_scope matches
 - v1.2 Phase 18-02: Refcount threshold of 2 (self + getrefcount) for explicit uncompute validation
 - v1.2 Phase 18-02: Guards added to all 11 quantum operations for defense in depth
 - v1.2 Phase 18-01: Layer tracking placement — start_layer captured before operation, end_layer before return
@@ -67,21 +73,25 @@ None yet.
 
 ### Blockers/Concerns
 
-**From research (SUMMARY.md):**
-- Phase 19 may need deeper research during planning — complex interaction between global `_controlled` state (quantum_language.pyx lines 26-29) and scope-aware dependency tracking. Consider `/gsd:research-phase` if planning reveals complexity.
+**From Phase 19 execution:**
+- Nested `with` statements require quantum-quantum AND operation (NotImplementedError at line 809)
+- This affects future quantum control flow but doesn't block Phase 20
+- Single-level contexts work correctly, nested AND can be added separately
 
 **Known pre-existing issues:**
 - Multiplication tests segfault at certain widths (C backend issue, tracked)
+- Nested quantum conditionals require quantum-quantum AND implementation
 
 **Known limitations (acceptable by design):**
 - qint_mod * qint_mod raises NotImplementedError
 - apply_merge() placeholder for phase rotation merging
+- Explicit uncompute inside `with` block fails refcount check (scope_stack reference) — use scope-based cleanup instead
 
 ## Session Continuity
 
 Last session: 2026-01-28
-Stopped at: Completed 18-02-PLAN.md (integration and tests)
-Resume file: None (Phase 18 complete, ready for Phase 19 with `/gsd:plan-phase 19`)
+Stopped at: Completed 19-01-PLAN.md (context manager integration)
+Resume file: None (Phase 19 complete, ready for Phase 20 with `/gsd:plan-phase 20`)
 
 ---
 
@@ -93,7 +103,7 @@ Resume file: None (Phase 18 complete, ready for Phase 19 with `/gsd:plan-phase 1
 - Phase 16: Dependency tracking infrastructure (4 requirements) — COMPLETE
 - Phase 17: C reverse gate generation (2 requirements) — COMPLETE
 - Phase 18: Basic uncomputation integration (3 requirements) — COMPLETE
-- Phase 19: Context manager integration for `with` (2 requirements)
+- Phase 19: Context manager integration for `with` (2 requirements) — COMPLETE
 - Phase 20: Modes and user control (6 requirements)
 
 **Research completed:** 2026-01-28 (HIGH confidence, Python weakref + C adjoint pattern validated)
@@ -101,5 +111,6 @@ Resume file: None (Phase 18 complete, ready for Phase 19 with `/gsd:plan-phase 1
 **Phase 16 completed:** 2026-01-28 (2 plans: infrastructure + test suite)
 **Phase 17 completed:** 2026-01-28 (1 plan: C reverse gate generation)
 **Phase 18 completed:** 2026-01-28 (2 plans: core infrastructure + integration/tests)
+**Phase 19 completed:** 2026-01-28 (1 plan: context manager integration)
 
-**Next action:** `/gsd:plan-phase 19` to create detailed plan for context manager integration
+**Next action:** `/gsd:plan-phase 20` to create detailed plan for uncomputation modes and user control
