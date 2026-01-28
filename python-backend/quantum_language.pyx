@@ -664,6 +664,51 @@ cdef class qint(circuit):
 			else:
 				raise
 
+	def uncompute(self):
+		"""Explicitly uncompute this qbool and its dependencies.
+
+		Triggers early uncomputation before garbage collection.
+		Use when you need deterministic cleanup timing.
+
+		Raises
+		------
+		RuntimeError
+			If other references to this qbool still exist (refcount > 2).
+			The value 2 accounts for: the variable itself + the getrefcount argument.
+		RuntimeError
+			If using qbool after it has been uncomputed.
+
+		Notes
+		-----
+		This method is idempotent: calling twice is a no-op, not an error.
+
+		Examples
+		--------
+		>>> c = circuit()
+		>>> a = qbool(True)
+		>>> b = qbool(False)
+		>>> result = a & b
+		>>> result.uncompute()  # Explicit early cleanup
+		>>> # result can no longer be used in operations
+		"""
+		import sys
+
+		# Already uncomputed - idempotent, no error (Phase 18 decision)
+		if self._is_uncomputed:
+			return
+
+		# Check reference count (getrefcount adds 1 for the argument)
+		# Expected: 2 = variable + getrefcount argument
+		refcount = sys.getrefcount(self)
+		if refcount > 2:
+			raise RuntimeError(
+				f"Cannot uncompute qbool: {refcount - 1} references still exist. "
+				f"Delete other references first or let garbage collection handle cleanup."
+			)
+
+		# Perform uncomputation with exception propagation (not from __del__)
+		self._do_uncompute(from_del=False)
+
 	def print_circuit(self):
 		"""Print the current quantum circuit to stdout.
 
