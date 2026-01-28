@@ -1,12 +1,25 @@
 import os
+import subprocess
+import sys
 
 from Cython.Build import cythonize
 from setuptools import Extension, setup
 
+# Preprocess .pyx files to inline .pxi includes (Cython 3 workaround)
+try:
+    subprocess.run([sys.executable, "build_preprocessor.py"], check=True)
+    source_file = "quantum_language_preprocessed.pyx"
+except subprocess.CalledProcessError:
+    print("Warning: Preprocessing failed, using original file")
+    source_file = "quantum_language.pyx"
+except FileNotFoundError:
+    # Preprocessor not found, use original
+    source_file = "quantum_language.pyx"
+
 compiler_args = ["-O3", "-flto", "-pthread"]
 
 sources_circuit = [
-    os.path.join("quantum_language.pyx"),
+    os.path.join(source_file),
     os.path.join("..", "Backend", "src", "QPU.c"),
     os.path.join("..", "Backend", "src", "optimizer.c"),
     os.path.join("..", "Backend", "src", "qubit_allocator.c"),
