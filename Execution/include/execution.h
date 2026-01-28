@@ -13,5 +13,6 @@
 void qubit_mapping(qubit_t qubit_arrray[], circuit_t *circ);
 void run_instruction(sequence_t *res, const qubit_t qubit_array[], int invert, circuit_t *circ);
 int execute(circuit_t *circ);
+void reverse_circuit_range(circuit_t *circ, int start_layer, int end_layer);
 
 #endif // CQ_BACKEND_IMPROVED_EXECUTION_H
