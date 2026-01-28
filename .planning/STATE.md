@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-01-28)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** Planning next milestone (v1.2)
+**Current focus:** Milestone v1.2 — Automatic Uncomputation
 
 ## Current Position
 
-Phase: 16+ (not yet planned)
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-01-28 — v1.1 milestone complete
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-01-28 — Milestone v1.2 started
 
-Progress: Milestone v1.1 shipped, ready for v1.2 planning
+Progress: Defining requirements for automatic uncomputation
 
 ## Performance Metrics
 

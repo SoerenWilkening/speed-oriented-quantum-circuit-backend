@@ -35,9 +35,16 @@ Write quantum algorithms in natural programming style that compiles to efficient
 
 ### Active
 
-**Milestone v1.2: TBD**
+**Milestone v1.2: Automatic Uncomputation**
 
-(Requirements to be defined in `/gsd:new-milestone`)
+**Goal:** Automatically uncompute intermediate qubits in boolean expressions when their lifetime ends.
+
+**Target features:**
+- Dependency tracking for qbool expressions (track what intermediates created a result)
+- Auto-uncomputation when final qbool lifetime ends (scope exit, explicit uncompute)
+- Cascading cleanup through dependency graph (uncompute intermediates in reverse order)
+- Qubit-saving mode option (`ql.option("qubit_saving")`) for immediate intermediate cleanup
+- Support for both qbool operations and qint comparison results
 
 ### Out of Scope
 
@@ -98,4 +105,4 @@ Write quantum algorithms in natural programming style that compiles to efficient
 | Auto-width qint initialization | qint(5) calculates minimum bits automatically | ✓ Good — user-friendly API |
 
 ---
-*Last updated: 2026-01-28 after v1.1 milestone*
+*Last updated: 2026-01-28 after starting v1.2 milestone*
