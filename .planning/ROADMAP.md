@@ -67,8 +67,8 @@ Eliminated global state dependency and implemented efficient comparison operator
 **Plans:** 2 plans
 
 Plans:
-- [ ] 16-01-PLAN.md - Dependency tracking infrastructure and operator modifications
-- [ ] 16-02-PLAN.md - Tests and verification
+- [x] 16-01-PLAN.md - Dependency tracking infrastructure and operator modifications
+- [x] 16-02-PLAN.md - Tests and verification
 
 ---
 
@@ -199,7 +199,7 @@ Plans:
 | 13. Equality Refactoring | v1.1 | 3/3 | Complete | 2026-01-28 |
 | 14. Ordering Operators | v1.1 | 3/3 | Complete | 2026-01-28 |
 | 15. Classical Initialization | v1.1 | 2/2 | Complete | 2026-01-28 |
-| 16. Dependency Tracking | v1.2 | 0/2 | Planned | - |
+| 16. Dependency Tracking | v1.2 | 2/2 | Complete | 2026-01-28 |
 | 17. Reverse Gate Generation | v1.2 | 0/? | Not started | - |
 | 18. Basic Uncomputation | v1.2 | 0/? | Not started | - |
 | 19. Context Manager Integration | v1.2 | 0/? | Not started | - |

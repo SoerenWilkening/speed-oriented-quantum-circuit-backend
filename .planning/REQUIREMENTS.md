@@ -9,10 +9,10 @@ Requirements for automatic uncomputation milestone. Each maps to roadmap phases.
 
 ### Dependency Tracking
 
-- [ ] **TRACK-01**: Track parent→child dependencies when qbool operations create intermediate results
-- [ ] **TRACK-02**: Track dependencies from qint comparison results (>, <, ==, etc.)
-- [ ] **TRACK-03**: Single ownership model prevents circular reference memory leaks
-- [ ] **TRACK-04**: Layer-aware dependency tracking respects existing circuit structure
+- [x] **TRACK-01**: Track parent→child dependencies when qbool operations create intermediate results
+- [x] **TRACK-02**: Track dependencies from qint comparison results (>, <, ==, etc.)
+- [x] **TRACK-03**: Single ownership model prevents circular reference memory leaks
+- [x] **TRACK-04**: Layer-aware dependency tracking respects existing circuit structure
 
 ### Uncomputation Core
 
@@ -67,10 +67,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TRACK-01 | Phase 16 | Pending |
-| TRACK-02 | Phase 16 | Pending |
-| TRACK-03 | Phase 16 | Pending |
-| TRACK-04 | Phase 16 | Pending |
+| TRACK-01 | Phase 16 | Complete |
+| TRACK-02 | Phase 16 | Complete |
+| TRACK-03 | Phase 16 | Complete |
+| TRACK-04 | Phase 16 | Complete |
 | UNCOMP-01 | Phase 17 | Pending |
 | UNCOMP-04 | Phase 17 | Pending |
 | UNCOMP-02 | Phase 18 | Pending |
