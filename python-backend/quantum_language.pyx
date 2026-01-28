@@ -2714,3 +2714,59 @@ def circuit_stats():
 		'current_in_use': stats.current_in_use,
 		'ancilla_allocations': stats.ancilla_allocations
 	}
+
+
+def get_current_layer():
+	"""Get current layer count in circuit.
+
+	Returns
+	-------
+	int
+		Number of used layers in circuit.
+
+	Examples
+	--------
+	>>> c = circuit()
+	>>> a = qint(5, width=4)
+	>>> layer = get_current_layer()
+	>>> b = qint(3, width=4)
+	>>> new_layer = get_current_layer()
+	>>> new_layer > layer
+	True
+	"""
+	cdef circuit_s *circ
+	global _circuit
+	if not _circuit_initialized:
+		return 0
+	circ = <circuit_s*>_circuit
+	return circ.used_layer
+
+
+def reverse_instruction_range(int start_layer, int end_layer):
+	"""Reverse gates in circuit from start_layer to end_layer (exclusive).
+
+	Parameters
+	----------
+	start_layer : int
+		Starting layer index (inclusive)
+	end_layer : int
+		Ending layer index (exclusive)
+
+	Notes
+	-----
+	Reverses gates in LIFO order, appending adjoint gates to circuit.
+	Phase gates have their angles negated. Self-adjoint gates (X, H, CX)
+	are their own inverses.
+
+	Examples
+	--------
+	>>> c = circuit()
+	>>> start = get_current_layer()
+	>>> a = qint(5, width=4)
+	>>> end = get_current_layer()
+	>>> reverse_instruction_range(start, end)
+	"""
+	global _circuit
+	if not _circuit_initialized:
+		raise RuntimeError("Circuit not initialized")
+	reverse_circuit_range(_circuit, start_layer, end_layer)

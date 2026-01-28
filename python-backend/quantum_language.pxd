@@ -80,11 +80,12 @@ cdef extern from "circuit_output.h":
 cdef extern from "execution.h":
 	void qubit_mapping(unsigned int qubit_arrray[], circuit_t *circ);
 	void run_instruction(sequence_t *res, const unsigned int qubit_array[], int invert, circuit_t *circ);
+	void reverse_circuit_range(circuit_t *circ, int start_layer, int end_layer);
 
 cdef extern from "qubit_allocator.h":
 	# Forward declaration to match C header
 	cdef struct circuit_s:
-		pass
+		unsigned int used_layer
 
 	ctypedef struct allocator_stats_t:
 		unsigned int peak_allocated
