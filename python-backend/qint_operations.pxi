@@ -130,6 +130,10 @@
 			      file=sys.stderr)
 			return
 
+		# NOTE: Deliberately NOT checking _keep_flag here.
+		# Design: .keep() only affects automatic uncomputation in __del__.
+		# Explicit .uncompute() always allowed (gives user full control).
+
 		# Check reference count
 		refcount = sys.getrefcount(self)
 		if refcount > 2:  # self + getrefcount argument
