@@ -32,19 +32,16 @@ Write quantum algorithms in natural programming style that compiles to efficient
 - ✓ Implement qint == qint as (qint - qint) == 0 — v1.1
 - ✓ Refactor >= and <= to use in-place subtraction/addition — v1.1
 - ✓ Classical qint initialization via X gates — v1.1
+- ✓ Dependency tracking for qbool expressions (parent-child relationships) — v1.2
+- ✓ Reverse gate generation (adjoints) for all gate types — v1.2
+- ✓ Automatic uncomputation on scope exit with LIFO cascade — v1.2
+- ✓ Context manager integration (`with` block cleanup) — v1.2
+- ✓ Uncomputation modes (lazy vs eager, `ql.option("qubit_saving")`) — v1.2
+- ✓ User control methods (`.uncompute()`, `.keep()`, clear error messages) — v1.2
 
 ### Active
 
-**Milestone v1.2: Automatic Uncomputation**
-
-**Goal:** Automatically uncompute intermediate qubits in boolean expressions when their lifetime ends.
-
-**Target features:**
-- Dependency tracking for qbool expressions (track what intermediates created a result)
-- Auto-uncomputation when final qbool lifetime ends (scope exit, explicit uncompute)
-- Cascading cleanup through dependency graph (uncompute intermediates in reverse order)
-- Qubit-saving mode option (`ql.option("qubit_saving")`) for immediate intermediate cleanup
-- Support for both qbool operations and qint comparison results
+(No active milestone — run `/gsd:new-milestone` to start v1.3)
 
 ### Out of Scope
 
@@ -60,10 +57,10 @@ Write quantum algorithms in natural programming style that compiles to efficient
 
 **Architecture:** Three-layer stateless design — C backend (gate primitives, circuit management, integer operations) → Cython bindings → Python frontend (qint/qbool classes, operator overloading). All functions take explicit parameters; no global state.
 
-**Current state:** v1.1 shipped. Clean modular C backend with types.h, circuit.h, arithmetic_ops.h, comparison_ops.h, bitwise_ops.h. Centralized qubit allocator with ownership tracking. Variable-width quantum integers (1-64 bits) with complete arithmetic, comparison, and initialization operations.
+**Current state:** v1.2 shipped. Clean modular C backend with types.h, circuit.h, arithmetic_ops.h, comparison_ops.h, bitwise_ops.h. Centralized qubit allocator with ownership tracking. Variable-width quantum integers (1-64 bits) with complete arithmetic, comparison, and initialization operations. Automatic uncomputation with dependency tracking, mode control (lazy/eager), and user override methods.
 
 **Codebase:**
-- ~70,900 lines of code (Python, Cython, C)
+- ~81,459 lines of code (Python, Cython, C)
 - Version 0.1.0
 - Tech stack: Python 3.11+, Cython, C backend
 
@@ -81,6 +78,7 @@ Write quantum algorithms in natural programming style that compiles to efficient
 - qint_mod * qint_mod raises NotImplementedError (by design)
 - apply_merge() placeholder for future phase rotation merging
 - Multiplication tests segfault at certain widths (C backend issue, pre-existing)
+- Nested quantum conditionals require quantum-quantum AND implementation (future work)
 
 ## Constraints
 
@@ -103,6 +101,10 @@ Write quantum algorithms in natural programming style that compiles to efficient
 | Multi-controlled gates via large_control | Supports n-controlled X without ancilla qubits | ✓ Good — efficient for comparisons |
 | In-place comparison pattern | Subtract-add-back preserves operands without temp allocation | ✓ Good — memory efficient |
 | Auto-width qint initialization | qint(5) calculates minimum bits automatically | ✓ Good — user-friendly API |
+| Weak references for dependencies | Prevents circular reference memory leaks | ✓ Good — enables safe GC |
+| LIFO cascade uncomputation | Reverse creation order for correct quantum state | ✓ Good — verified correct |
+| Mode capture at creation | Immutable per-qbool behavior, predictable | ✓ Good — no retroactive changes |
+| Scope-based cleanup | Automatic uncomputation in `with` block exit | ✓ Good — Python-idiomatic |
 
 ---
-*Last updated: 2026-01-28 after starting v1.2 milestone*
+*Last updated: 2026-01-28 after v1.2 milestone*

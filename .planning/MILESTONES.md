@@ -1,5 +1,33 @@
 # Project Milestones: Quantum Assembly
 
+## v1.2 Automatic Uncomputation (Shipped: 2026-01-28)
+
+**Delivered:** Automatic uncomputation of intermediate qubits in boolean expressions with configurable modes and user control methods.
+
+**Phases completed:** 16-20 (10 plans total)
+
+**Key accomplishments:**
+
+- Dependency tracking infrastructure for qbool expressions (weak references, creation order, single ownership)
+- C backend reverse gate generation with correct adjoint handling for phase gates and multi-controlled gates
+- Automatic uncomputation on scope exit with LIFO cascade through dependency graph
+- Context manager integration for `with` blocks (automatic cleanup when block exits)
+- Uncomputation modes (lazy vs eager) with per-circuit and per-qbool mode control
+- User control methods: explicit `.uncompute()`, `.keep()` opt-out, clear error messages
+
+**Stats:**
+
+- 49 files modified
+- +10,423 net lines (81,459 total LOC)
+- 5 phases, 10 plans, 47 tests (100% pass rate)
+- 1 day (v1.1 → v1.2)
+
+**Git range:** `feat(16-01)` → `docs(phase-20)`
+
+**What's next:** v1.3 — debug visualization, qubit statistics, OpenQASM comment markers for uncomputation blocks
+
+---
+
 ## v1.1 QPU State Removal & Comparison Refactoring (Shipped: 2026-01-28)
 
 **Delivered:** Eliminated global state dependency and implemented efficient comparison operators with classical qint initialization.
