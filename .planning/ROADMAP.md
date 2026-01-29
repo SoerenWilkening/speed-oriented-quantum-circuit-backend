@@ -14,7 +14,7 @@ This milestone transforms Quantum Assembly's package structure for maintainabili
 ## Phases
 
 - [x] **Phase 21: Package Restructuring** - Split large Cython files, create proper package structure
-- [ ] **Phase 22: Array Class Foundation** - Create ql.array with qint/qbool support and Python integration
+- [x] **Phase 22: Array Class Foundation** - Create ql.array with qint/qbool support and Python integration
 - [ ] **Phase 23: Array Reductions** - Implement AND/OR/XOR/sum reductions with pairwise tree structure
 - [ ] **Phase 24: Element-wise Operations** - Implement arithmetic, bitwise, and comparison operators between arrays
 
@@ -54,11 +54,11 @@ Plans:
 **Plans**: 5 plans in 4 waves
 
 Plans:
-- [ ] 22-01-PLAN.md — Create qarray.pyx/pxd with core data structure and flat list construction
-- [ ] 22-02-PLAN.md — Multi-dimensional construction and NumPy-style indexing with view semantics
-- [ ] 22-03-PLAN.md — Extended construction API: width, dtype, dim, NumPy array support
-- [ ] 22-04-PLAN.md — Python integration: iteration, immutability, compact repr
-- [ ] 22-05-PLAN.md — Public API integration and comprehensive test suite
+- [x] 22-01-PLAN.md — Create qarray.pyx/pxd with core data structure and flat list construction
+- [x] 22-02-PLAN.md — Multi-dimensional construction and NumPy-style indexing with view semantics
+- [x] 22-03-PLAN.md — Extended construction API: width, dtype, dim, NumPy array support
+- [x] 22-04-PLAN.md — Python integration: iteration, immutability, compact repr
+- [x] 22-05-PLAN.md — Public API integration and comprehensive test suite
 
 ### Phase 23: Array Reductions
 **Goal**: Users can reduce arrays to single values with optimal circuit depth
@@ -99,7 +99,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 21. Package Restructuring | v1.3 | 7/7 | Complete | 2026-01-29 |
-| 22. Array Class Foundation | v1.3 | 0/5 | Not started | - |
+| 22. Array Class Foundation | v1.3 | 5/5 | Complete | 2026-01-29 |
 | 23. Array Reductions | v1.3 | 0/TBD | Not started | - |
 | 24. Element-wise Operations | v1.3 | 0/TBD | Not started | - |
 

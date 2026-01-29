@@ -79,18 +79,18 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PKG-01 | Phase 21 | Pending |
-| PKG-02 | Phase 21 | Pending |
-| PKG-03 | Phase 21 | Pending |
-| PKG-04 | Phase 21 | Pending |
-| ARR-01 | Phase 22 | Pending |
-| ARR-02 | Phase 22 | Pending |
-| ARR-03 | Phase 22 | Pending |
-| ARR-04 | Phase 22 | Pending |
-| ARR-05 | Phase 22 | Pending |
-| ARR-06 | Phase 22 | Pending |
-| ARR-07 | Phase 22 | Pending |
-| ARR-08 | Phase 22 | Pending |
+| PKG-01 | Phase 21 | Complete |
+| PKG-02 | Phase 21 | Complete |
+| PKG-03 | Phase 21 | Complete |
+| PKG-04 | Phase 21 | Complete |
+| ARR-01 | Phase 22 | Complete |
+| ARR-02 | Phase 22 | Complete |
+| ARR-03 | Phase 22 | Complete |
+| ARR-04 | Phase 22 | Complete |
+| ARR-05 | Phase 22 | Complete |
+| ARR-06 | Phase 22 | Complete |
+| ARR-07 | Phase 22 | Complete |
+| ARR-08 | Phase 22 | Complete |
 | RED-01 | Phase 23 | Pending |
 | RED-02 | Phase 23 | Pending |
 | RED-03 | Phase 23 | Pending |
@@ -100,10 +100,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ELM-03 | Phase 24 | Pending |
 | ELM-04 | Phase 24 | Pending |
 | ELM-05 | Phase 24 | Pending |
-| PYI-01 | Phase 22 | Pending |
-| PYI-02 | Phase 22 | Pending |
-| PYI-03 | Phase 22 | Pending |
-| PYI-04 | Phase 22 | Pending |
+| PYI-01 | Phase 22 | Complete |
+| PYI-02 | Phase 22 | Complete |
+| PYI-03 | Phase 22 | Complete |
+| PYI-04 | Phase 22 | Complete |
 
 **Coverage:**
 - v1.3 requirements: 25 total
