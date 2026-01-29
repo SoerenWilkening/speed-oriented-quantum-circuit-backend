@@ -1,8 +1,15 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel", "cython>=3.0.11,<4.0"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "quantum-assembly"
 version = "0.1.0"
 requires-python = ">=3.11"
 description = "Quantum programming framework with natural programming style"
+dependencies = [
+    "numpy>=1.24",
+]
 
 [tool.ruff]
 line-length = 100
