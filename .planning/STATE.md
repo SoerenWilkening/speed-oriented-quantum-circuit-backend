@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Phase: 21 of 24 (Package Restructuring)
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-01-29 — Roadmap created for v1.3
+Plan: 1 of 4 complete
+Status: In progress
+Last activity: 2026-01-29 — Completed 21-01-PLAN.md
 
-Progress: [..........] 0%
+Progress: [█.........] 4%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 64 (v1.0: 41, v1.1: 13, v1.2: 10)
+- Total plans completed: 65 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 1)
 - Average duration: ~6 min/plan
-- Total execution time: ~6.4 hours
+- Total execution time: ~6.5 hours
 
 **By Milestone:**
 
@@ -36,7 +36,13 @@ Progress: [..........] 0%
 
 ### Decisions
 
-Decisions logged in PROJECT.md Key Decisions table.
+| Phase | Decision | Rationale |
+|-------|----------|-----------|
+| 21-01 | Accessor functions for global state | Cython cdef module variables cannot be cimported across modules |
+| 21-01 | array() requires explicit dtype in _core | Function references qint/qbool which don't exist until full package import |
+| 21-01 | Empty __init__.pxd for package cimport | Enables `from quantum_language cimport ...` syntax |
+
+Additional decisions logged in PROJECT.md Key Decisions table.
 
 ### Pending Todos
 
@@ -55,8 +61,8 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-29
-Stopped at: v1.3 roadmap creation
+Stopped at: Completed 21-01-PLAN.md (Package foundation)
 Resume file: None
 
 ---
-*State updated: 2026-01-29 after roadmap creation*
+*State updated: 2026-01-29 after 21-01 execution*
