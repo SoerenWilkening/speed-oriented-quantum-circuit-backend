@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 Phase: 21 of 24 (Package Restructuring) — COMPLETE
 Plan: 7/7 complete (all plans done)
 Status: Phase 21 verified and complete
-Last activity: 2026-01-29 — Completed quick task 004 (verified Cython include limitation)
+Last activity: 2026-01-29 — Completed quick task 005 (removed legacy monolithic code)
 
 Progress: [██████....] 25%
 
@@ -80,11 +80,12 @@ None.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 004 | Verify Cython include limitation for cdef classes | 2026-01-29 | 00a5b75 | [004-consolidate-qint-pxi](./quick/004-consolidate-qint-pxi-includes-to-remove-/) |
+| 005 | Remove legacy monolithic source files | 2026-01-29 | 7baa00f | [005-remove-old-python-code](./quick/005-remove-old-python-code-if-completely-cov/) |
 
 ## Session Continuity
 
 Last session: 2026-01-29
-Stopped at: Completed quick task 004 - verified Cython include limitation
+Stopped at: Completed quick task 005 - removed legacy monolithic source files
 Resume file: None
 
 ---
