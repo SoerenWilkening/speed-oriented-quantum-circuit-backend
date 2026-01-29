@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Phase: 22 of 24 (Array Class Foundation) — IN PROGRESS
-Plan: 2 of 3 complete
-Status: Plan 22-02 complete - multi-dimensional indexing and view semantics
-Last activity: 2026-01-29 — Completed 22-02-PLAN.md (NumPy-style indexing)
+Plan: 3 of 3 complete (Phase 22 complete)
+Status: Plan 22-04 complete - iteration, immutability, and repr
+Last activity: 2026-01-29 — Completed 22-04-PLAN.md (Python integration)
 
-Progress: [██████░...] 28%
+Progress: [██████░...] 29%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 72 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 8 → Phase 22 in progress)
+- Total plans completed: 74 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 10)
 - Average duration: ~6 min/plan
-- Total execution time: ~7.3 hours
+- Total execution time: ~7.4 hours
 
 **By Milestone:**
 
@@ -65,6 +65,10 @@ Progress: [██████░...] 28%
 | 22-03 | Homogeneity enforcement for qarray | Arrays must contain only qint OR only qbool, not both - simplifies element access and dtype is array-level property |
 | 22-03 | NumPy dtype.itemsize for width inference | Use dtype.itemsize * 8 (bytes to bits) for width calculation - direct mapping from NumPy types |
 | 22-03 | dim/data mutual exclusivity | Specifying both raises ValueError - dimension-based creates zeros, data-based uses values (ambiguous semantics) |
+| 22-04 | Iteration yields flattened elements in row-major order | NumPy compatibility and matches internal storage - consistent with __len__ returning flattened size |
+| 22-04 | Repr format: ql.array<qint:8, shape=(3,)>[1, 2, 3] | Compact type info + data - shows width (crucial for circuit analysis), shape, and values for debugging |
+| 22-04 | Truncation threshold 6 elements per dimension | NumPy-style first 3 and last 3 - prevents repr overflow while showing boundary values |
+| 22-04 | Cython cast syntax for cdef attribute access | (<qint>elem).value accesses C-level attributes from Python-typed containers - required for _elements list |
 
 Additional decisions logged in PROJECT.md Key Decisions table.
 
@@ -97,8 +101,8 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-29
-Stopped at: Completed 22-02-PLAN.md - multi-dimensional indexing and view semantics
+Stopped at: Completed 22-04-PLAN.md - iteration, immutability, and repr (Phase 22 complete)
 Resume file: None
 
 ---
-*State updated: 2026-01-29 after Phase 22 Plan 02 completion*
+*State updated: 2026-01-29 after Phase 22 Plan 04 completion*
