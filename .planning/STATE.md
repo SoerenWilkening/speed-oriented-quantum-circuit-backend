@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Phase: 23 of 24 (Array Reductions) — IN PROGRESS
-Plan: 1/TBD plans executed
-Status: Plan 23-01 complete - array reduction methods implemented
-Last activity: 2026-01-29 — Completed 23-01-PLAN.md
+Plan: 2/TBD plans executed
+Status: Plan 23-02 complete - sum reduction and public API functions added
+Last activity: 2026-01-29 — Completed 23-02-PLAN.md
 
-Progress: [████████▒.] 52%
+Progress: [████████▓.] 53%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 77 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 13)
+- Total plans completed: 78 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 14)
 - Average duration: ~6 min/plan
-- Total execution time: ~7.7 hours
+- Total execution time: ~7.8 hours
 
 **By Milestone:**
 
@@ -76,6 +76,9 @@ Progress: [████████▒.] 52%
 | 23-01 | Dual reduction algorithms (tree and linear) | Tree for O(log n) depth (default), linear for qubit-saving mode - different use cases prioritize speed vs space |
 | 23-01 | Empty arrays raise ValueError | No sensible default for quantum reductions - match NumPy behavior |
 | 23-01 | Single-element arrays return element directly | Optimize trivial case without reduction overhead |
+| 23-02 | qbool reductions return qint | qbool inherits from qint, operators return parent type - maintains type system consistency |
+| 23-02 | Module-level reduction functions shadow builtins | ql.all/any/parity shadow Python builtins but only in ql namespace - users call ql.all(arr) not bare all(arr) |
+| 23-02 | No module-level sum() function | Avoids shadowing Python's built-in sum() - Python sum(arr) works via iteration + __radd__ |
 
 Additional decisions logged in PROJECT.md Key Decisions table.
 
@@ -90,6 +93,7 @@ None.
 - Nested quantum conditionals require quantum-quantum AND implementation
 - Some tests fail with MemoryError due to cumulative qubit allocation across test suite
 - Circuit allocator errors in some test combinations
+- Build system: pip install -e . fails with absolute path error in setup.py (code works, tests pass)
 
 **Known limitations (acceptable by design):**
 - qint_mod * qint_mod raises NotImplementedError
@@ -108,8 +112,8 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-29
-Stopped at: Completed 23-01-PLAN.md - array reduction methods (all, any, parity)
+Stopped at: Completed 23-02-PLAN.md - sum reduction and public API functions
 Resume file: None
 
 ---
-*State updated: 2026-01-29 after Phase 23 Plan 01 completion*
+*State updated: 2026-01-29 after Phase 23 Plan 02 completion*
