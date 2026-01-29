@@ -9,19 +9,19 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 
 ## Current Position
 
-Phase: 21 of 24 (Package Restructuring) — COMPLETE
-Plan: 7/7 complete (all plans done)
-Status: Phase 21 verified and complete
-Last activity: 2026-01-29 — Completed quick task 007 (merged Backend/ and Execution/ into c_backend/)
+Phase: 22 of 24 (Array Class Foundation) — IN PROGRESS
+Plan: 1 of 3 complete
+Status: Plan 22-01 complete - qarray core structure established
+Last activity: 2026-01-29 — Completed 22-01-PLAN.md (qarray foundation)
 
-Progress: [██████....] 25%
+Progress: [██████....] 26%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 69 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 5 → Phase 21 complete with 7 plans)
+- Total plans completed: 70 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 6 → Phase 22 in progress)
 - Average duration: ~6 min/plan
-- Total execution time: ~7.1 hours
+- Total execution time: ~7.2 hours
 
 **By Milestone:**
 
@@ -55,6 +55,9 @@ Progress: [██████....] 25%
 | 21-06 | Preserve exact implementations in .pxi | Complete method extraction with docstrings and internal calls - no imports or class declarations |
 | 21-07 | Cython include pattern not viable for cdef classes | Discovered Cython 3.x limitation: include directives not supported inside cdef class definitions |
 | 21-07 | Keep qint.pyx as single file | Accept ~2400 lines for cohesion - Cython include pattern proved incompatible with cdef classes |
+| 22-01 | Flattened storage with shape metadata | Arrays store elements as 1D list with shape tuple - simplifies access and matches NumPy internal representation |
+| 22-01 | Width inference using bit_length() with INTEGERSIZE floor | Auto-detect bit width from max value, always use at least INTEGERSIZE=8 bits - minimizes qubits while preventing over-narrow types |
+| 22-01 | Virtual Sequence registration instead of inheritance | Cython extension types cannot inherit from Python ABCs - use Sequence.register(qarray) for protocol compliance |
 
 Additional decisions logged in PROJECT.md Key Decisions table.
 
@@ -87,8 +90,8 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-29
-Stopped at: Completed quick task 007 - merged Backend/ and Execution/ into c_backend/
+Stopped at: Completed 22-01-PLAN.md - qarray core structure with flat list construction
 Resume file: None
 
 ---
-*State updated: 2026-01-29 after Phase 21 completion*
+*State updated: 2026-01-29 after Phase 22 Plan 01 completion*
