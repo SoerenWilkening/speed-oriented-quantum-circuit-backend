@@ -10,16 +10,9 @@ Tests for ARTH-03 through ARTH-07 requirements:
 Also verifies Phase 7 success criteria from ROADMAP.md.
 """
 
-import os
-import sys
-
 import pytest
 
-# Add python-backend to path
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-sys.path.insert(0, os.path.join(project_root, "python-backend"))
-
-import quantum_language as ql  # noqa: E402
+import quantum_language as ql
 
 # ============================================================================
 # ARTH-03: Variable-Width Multiplication Tests

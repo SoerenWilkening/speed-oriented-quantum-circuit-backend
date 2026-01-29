@@ -11,16 +11,9 @@ Each test class maps to a specific requirement from the Phase 6 ROADMAP.
 Tests verify operations complete successfully and produce expected types/widths.
 """
 
-import os
-import sys
-
 import pytest
 
-# Add python-backend to path
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-sys.path.insert(0, os.path.join(project_root, "python-backend"))
-
-import quantum_language as ql  # noqa: E402
+import quantum_language as ql
 
 # ============================================================================
 # BITOP-01: Bitwise AND Tests

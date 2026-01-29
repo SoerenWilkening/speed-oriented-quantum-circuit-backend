@@ -8,14 +8,7 @@ These tests verify ordering comparisons work correctly for various bit widths
 and edge cases, without allocating temporary qints.
 """
 
-import os
-import sys
-
-# Add python-backend to path
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-sys.path.insert(0, os.path.join(project_root, "python-backend"))
-
-import quantum_language as ql  # noqa: E402
+import quantum_language as ql
 
 # ============================================================================
 # Less-Than Tests (qint < int)

@@ -8,14 +8,7 @@ These tests verify equality comparisons work correctly for various bit widths
 and edge cases, and integrate properly with quantum control flow.
 """
 
-import os
-import sys
-
-# Add python-backend to path
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-sys.path.insert(0, os.path.join(project_root, "python-backend"))
-
-import quantum_language as ql  # noqa: E402
+import quantum_language as ql
 
 # ============================================================================
 # COMP-01: qint == int Tests

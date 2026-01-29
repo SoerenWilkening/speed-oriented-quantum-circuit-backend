@@ -7,16 +7,9 @@ These tests verify that qint objects are correctly initialized to classical valu
 via X gate application, with auto-width mode and explicit width specifications.
 """
 
-import os
-import sys
-
 import pytest
 
-# Add python-backend to path
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-sys.path.insert(0, os.path.join(project_root, "python-backend"))
-
-import quantum_language as ql  # noqa: E402
+import quantum_language as ql
 
 # ============================================================================
 # Basic Initialization Tests

@@ -4,17 +4,7 @@ Tests verify that all public API methods work as documented.
 Complements characterization tests by testing API contracts.
 """
 
-import os
-import sys
-
 import pytest
-
-# noqa comments allow import after path setup
-# ruff: noqa: E402
-
-# Add python-backend to path
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-sys.path.insert(0, os.path.join(project_root, "python-backend"))
 
 import quantum_language as ql
 

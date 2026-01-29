@@ -7,16 +7,9 @@ Tests verify that operations complete successfully and produce expected types,
 not that they produce specific gate sequences.
 """
 
-import os
-import sys
-
 import pytest
 
-# Add python-backend to path
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-sys.path.insert(0, os.path.join(project_root, "python-backend"))
-
-import quantum_language as ql  # noqa: E402
+import quantum_language as ql
 
 # ============================================================================
 # qint Creation Tests

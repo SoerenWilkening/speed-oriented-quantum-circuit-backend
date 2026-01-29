@@ -10,14 +10,7 @@ Note: print_circuit() uses C stdout directly, so output cannot be captured
 by Python's redirect_stdout. Tests verify the function completes without error.
 """
 
-import os
-import sys
-
-# Add python-backend to path
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-sys.path.insert(0, os.path.join(project_root, "python-backend"))
-
-import quantum_language as ql  # noqa: E402
+import quantum_language as ql
 
 # ============================================================================
 # Circuit Output Tests
