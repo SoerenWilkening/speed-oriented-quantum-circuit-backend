@@ -430,8 +430,8 @@ cdef class qarray:
         else:
             raise NotImplementedError(f"Complex slicing pattern not yet supported: {key}")
 
-    @classmethod
-    def _create_view(cls, elements, shape):
+    @staticmethod
+    def _create_view(elements, shape):
         """
         Create a view array sharing element references.
 
@@ -442,8 +442,10 @@ cdef class qarray:
         Returns:
             qarray: View sharing underlying qint/qbool objects
         """
-        # Create new instance without calling __init__
-        arr = cls.__new__(cls)
+        # Create new instance by calling __new__ directly
+        cdef qarray arr = qarray.__new__(qarray)
+
+        # Manually initialize the cdef attributes
         arr._elements = elements  # Shared reference (view semantics)
         arr._shape = shape
 
