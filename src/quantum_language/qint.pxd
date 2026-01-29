@@ -1,0 +1,20 @@
+from quantum_language._core cimport circuit
+
+cdef class qint(circuit):
+	cdef int counter
+	cdef int bits
+	cdef int value
+	cdef object qubits
+	cdef bint allocated_qubits
+	cdef unsigned int allocated_start
+	cdef object __weakref__
+	cdef public object dependency_parents
+	cdef public int _creation_order
+	cdef public object operation_type
+	cdef public int creation_scope
+	cdef public object control_context
+	cdef public bint _is_uncomputed
+	cdef public int _start_layer
+	cdef public int _end_layer
+	cdef public bint _uncompute_mode
+	cdef bint _keep_flag
