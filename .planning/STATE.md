@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Phase: 21 of 24 (Package Restructuring)
-Plan: 5 of 5 complete (21-01, 21-02, 21-03, 21-04, 21-05 done)
-Status: Phase complete
-Last activity: 2026-01-29 — Completed 21-05-PLAN.md (Test import migration)
+Plan: 6 in progress (21-01, 21-02, 21-03, 21-04, 21-05, 21-06 done)
+Status: In progress
+Last activity: 2026-01-29 — Completed 21-06-PLAN.md (qint arithmetic and bitwise extraction)
 
-Progress: [███.......] 11%
+Progress: [███.......] 12%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 67 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 3)
+- Total plans completed: 68 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 4)
 - Average duration: ~6 min/plan
-- Total execution time: ~6.7 hours
+- Total execution time: ~6.9 hours
 
 **By Milestone:**
 
@@ -51,6 +51,8 @@ Progress: [███.......] 11%
 | 21-04 | Package data includes .pxd files | Enables external projects to cimport quantum_language modules |
 | 21-05 | pytest.ini pythonpath = src | Centralized PYTHONPATH config for src-layout packages - cleaner than sys.path in tests |
 | 21-05 | Export AVAILABLE_PASSES from __init__.py | Required for circuit.optimize() API - users need pass names |
+| 21-06 | Extract methods to .pxi include files | Cython include files allow splitting cdef class across files while maintaining single compilation unit |
+| 21-06 | Preserve exact implementations in .pxi | Complete method extraction with docstrings and internal calls - no imports or class declarations |
 
 Additional decisions logged in PROJECT.md Key Decisions table.
 
@@ -73,8 +75,8 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-29
-Stopped at: Completed 21-05-PLAN.md (Test import migration) - Phase 21 complete
+Stopped at: Completed 21-06-PLAN.md (qint arithmetic and bitwise extraction)
 Resume file: None
 
 ---
-*State updated: 2026-01-29 after 21-05 execution*
+*State updated: 2026-01-29 after 21-06 execution*
