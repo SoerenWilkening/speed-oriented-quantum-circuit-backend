@@ -11,6 +11,7 @@ import numpy as np
 from quantum_language.qint cimport qint
 from quantum_language.qbool cimport qbool
 from quantum_language._core cimport INTEGERSIZE
+from quantum_language._core import _get_qubit_saving_mode
 
 
 def _infer_width(values, default_width=8):
@@ -95,6 +96,64 @@ def _flatten(data):
             result.append(item)
 
     _flatten_recursive(data)
+    return result
+
+
+def _reduce_tree(elements, op):
+    """
+    Reduce elements using pairwise tree algorithm.
+
+    Args:
+        elements: List of quantum elements (qint or qbool)
+        op: Binary operator function (e.g., lambda a, b: a & b)
+
+    Returns:
+        Single element after tree reduction
+
+    Note:
+        Assumes elements list has >= 2 items.
+        Circuit depth is O(log n).
+    """
+    current_level = list(elements)  # Copy to avoid mutation
+
+    while len(current_level) > 1:
+        next_level = []
+
+        # Process pairs
+        for i in range(0, len(current_level), 2):
+            if i + 1 < len(current_level):
+                # Pair available - apply operator
+                result = op(current_level[i], current_level[i + 1])
+                next_level.append(result)
+            else:
+                # Odd element - carry forward unpaired
+                next_level.append(current_level[i])
+
+        current_level = next_level
+
+    return current_level[0]
+
+
+def _reduce_linear(elements, op):
+    """
+    Reduce elements using linear chain algorithm.
+
+    Args:
+        elements: List of quantum elements (qint or qbool)
+        op: Binary operator function (e.g., lambda a, b: a & b)
+
+    Returns:
+        Single element after linear reduction
+
+    Note:
+        Assumes elements list has >= 2 items.
+        Circuit depth is O(n), but uses minimal qubits.
+    """
+    result = elements[0]
+
+    for i in range(1, len(elements)):
+        result = op(result, elements[i])
+
     return result
 
 
