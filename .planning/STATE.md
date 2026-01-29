@@ -11,8 +11,8 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 
 Phase: 22 of 24 (Array Class Foundation) — IN PROGRESS
 Plan: 2 of 3 complete
-Status: Plan 22-03 complete - extended construction API with width/dtype/dim parameters
-Last activity: 2026-01-29 — Completed 22-03-PLAN.md (extended construction API)
+Status: Plan 22-02 complete - multi-dimensional indexing and view semantics
+Last activity: 2026-01-29 — Completed 22-02-PLAN.md (NumPy-style indexing)
 
 Progress: [██████░...] 28%
 
@@ -58,6 +58,9 @@ Progress: [██████░...] 28%
 | 22-01 | Flattened storage with shape metadata | Arrays store elements as 1D list with shape tuple - simplifies access and matches NumPy internal representation |
 | 22-01 | Width inference using bit_length() with INTEGERSIZE floor | Auto-detect bit width from max value, always use at least INTEGERSIZE=8 bits - minimizes qubits while preventing over-narrow types |
 | 22-01 | Virtual Sequence registration instead of inheritance | Cython extension types cannot inherit from Python ABCs - use Sequence.register(qarray) for protocol compliance |
+| 22-02 | Single int on multi-dimensional array returns row view | NumPy compatibility - arr[0] on 2D array returns first row, not flattened element |
+| 22-02 | View arrays created via qarray.__new__() | Manual cdef attribute initialization required for Cython extension types |
+| 22-02 | Multi-dimensional indexing uses _multi_to_flat | Row-major index calculation converts (i,j) coordinates to flat index using strides |
 | 22-03 | Keyword-only parameters for width/dtype/dim | NumPy-style API design using * to force keyword-only parameters - prevents positional argument confusion |
 | 22-03 | Homogeneity enforcement for qarray | Arrays must contain only qint OR only qbool, not both - simplifies element access and dtype is array-level property |
 | 22-03 | NumPy dtype.itemsize for width inference | Use dtype.itemsize * 8 (bytes to bits) for width calculation - direct mapping from NumPy types |
@@ -94,8 +97,8 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-29
-Stopped at: Completed 22-03-PLAN.md - extended construction API with width/dtype/dim parameters
+Stopped at: Completed 22-02-PLAN.md - multi-dimensional indexing and view semantics
 Resume file: None
 
 ---
-*State updated: 2026-01-29 after Phase 22 Plan 03 completion*
+*State updated: 2026-01-29 after Phase 22 Plan 02 completion*
