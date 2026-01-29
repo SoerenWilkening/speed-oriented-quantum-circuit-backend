@@ -4,7 +4,7 @@ import re
 
 import pytest
 
-# Clean import - package structure with PYTHONPATH=src
+# Clean import - package installed via pip install -e .
 import quantum_language as ql
 
 
