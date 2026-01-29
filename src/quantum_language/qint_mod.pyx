@@ -43,7 +43,7 @@ cdef class qint_mod(qint):
 	Used for modular exponentiation in Shor's algorithm and other
 	number-theoretic quantum algorithms.
 	"""
-	cdef int _modulus
+	# Attribute declarations are in qint_mod.pxd
 
 	def __init__(self, value=0, N=None, width=None):
 		"""Create quantum integer with classical modulus N.

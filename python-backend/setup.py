@@ -13,39 +13,44 @@ from Cython.Build import cythonize
 from setuptools import Extension, find_packages, setup
 
 # Shared C sources from Backend
+# Project root is one level up from python-backend/
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 c_sources = [
-    os.path.join("..", "Backend", "src", "QPU.c"),
-    os.path.join("..", "Backend", "src", "optimizer.c"),
-    os.path.join("..", "Backend", "src", "qubit_allocator.c"),
-    os.path.join("..", "Backend", "src", "circuit_allocations.c"),
-    os.path.join("..", "Backend", "src", "circuit_output.c"),
-    os.path.join("..", "Backend", "src", "circuit_stats.c"),
-    os.path.join("..", "Backend", "src", "circuit_optimizer.c"),
-    os.path.join("..", "Backend", "src", "gate.c"),
-    os.path.join("..", "Backend", "src", "Integer.c"),
-    os.path.join("..", "Backend", "src", "IntegerAddition.c"),
-    os.path.join("..", "Backend", "src", "IntegerComparison.c"),
-    os.path.join("..", "Backend", "src", "IntegerMultiplication.c"),
-    os.path.join("..", "Backend", "src", "LogicOperations.c"),
-    os.path.join("..", "Execution", "src", "execution.c"),
+    os.path.join(PROJECT_ROOT, "Backend", "src", "QPU.c"),
+    os.path.join(PROJECT_ROOT, "Backend", "src", "optimizer.c"),
+    os.path.join(PROJECT_ROOT, "Backend", "src", "qubit_allocator.c"),
+    os.path.join(PROJECT_ROOT, "Backend", "src", "circuit_allocations.c"),
+    os.path.join(PROJECT_ROOT, "Backend", "src", "circuit_output.c"),
+    os.path.join(PROJECT_ROOT, "Backend", "src", "circuit_stats.c"),
+    os.path.join(PROJECT_ROOT, "Backend", "src", "circuit_optimizer.c"),
+    os.path.join(PROJECT_ROOT, "Backend", "src", "gate.c"),
+    os.path.join(PROJECT_ROOT, "Backend", "src", "Integer.c"),
+    os.path.join(PROJECT_ROOT, "Backend", "src", "IntegerAddition.c"),
+    os.path.join(PROJECT_ROOT, "Backend", "src", "IntegerComparison.c"),
+    os.path.join(PROJECT_ROOT, "Backend", "src", "IntegerMultiplication.c"),
+    os.path.join(PROJECT_ROOT, "Backend", "src", "LogicOperations.c"),
+    os.path.join(PROJECT_ROOT, "Execution", "src", "execution.c"),
 ]
 
 compiler_args = ["-O3", "-flto", "-pthread"]
 
+# src/ directory is at project root, not in python-backend
+SRC_DIR = os.path.join(PROJECT_ROOT, "src")
+
 include_dirs = [
-    os.path.join("..", "Backend", "include"),
-    os.path.join("..", "Execution", "include"),
-    ".",  # CRITICAL: Allows cimport to find .pxd files in package
-    "src",  # Also check src directory for imports
+    os.path.join(PROJECT_ROOT, "Backend", "include"),
+    os.path.join(PROJECT_ROOT, "Execution", "include"),
+    SRC_DIR,  # CRITICAL: Allows cimport to find .pxd files in package
 ]
 
 # Auto-discover all .pyx files in package
 extensions = []
-for pyx_file in glob.glob("src/quantum_language/**/*.pyx", recursive=True):
+for pyx_file in glob.glob(os.path.join(SRC_DIR, "quantum_language", "**", "*.pyx"), recursive=True):
     # Convert path to module name:
     # src/quantum_language/qint.pyx -> quantum_language.qint
     # src/quantum_language/state/qpu.pyx -> quantum_language.state.qpu
-    module_name = Path(pyx_file).relative_to("src").with_suffix("").as_posix().replace("/", ".")
+    module_name = Path(pyx_file).relative_to(SRC_DIR).with_suffix("").as_posix().replace("/", ".")
 
     extensions.append(
         Extension(
@@ -74,8 +79,8 @@ if not extensions:
 setup(
     name="quantum-assembly",
     version="0.1.0",
-    packages=find_packages(where="src"),
-    package_dir={"": "src"},
+    packages=find_packages(where=SRC_DIR),
+    package_dir={"": SRC_DIR},
     ext_modules=cythonize(
         extensions,
         language_level="3",

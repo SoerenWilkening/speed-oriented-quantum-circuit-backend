@@ -142,6 +142,20 @@ def _get_scope_stack():
 	"""Get scope stack reference."""
 	return _scope_stack
 
+def _get_ancilla():
+	"""Get ancilla array reference."""
+	return ancilla
+
+def _increment_ancilla(int amount):
+	"""Increment ancilla[0] by amount (legacy compatibility)."""
+	global ancilla
+	ancilla[0] += amount
+
+def _decrement_ancilla(int amount):
+	"""Decrement ancilla[0] by amount (legacy compatibility)."""
+	global ancilla
+	ancilla[0] -= amount
+
 
 def option(key: str, value=None):
 	"""Get or set quantum language options.

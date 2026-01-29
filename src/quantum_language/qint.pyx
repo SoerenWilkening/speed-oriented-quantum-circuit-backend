@@ -19,6 +19,7 @@ from quantum_language._core cimport (
     Q_and, CQ_and, Q_or, CQ_or, Q_xor,
     cQ_not,
     CQ_equal_width, cCQ_equal_width,
+    print_circuit as c_print_circuit,
 )
 
 # Python-level imports for global state access via accessor functions
@@ -33,7 +34,8 @@ from quantum_language._core import (
     _get_qubit_saving_mode, _set_qubit_saving_mode,
     _get_global_creation_counter, _increment_global_creation_counter,
     _get_scope_stack,
-    qubit_array, ancilla,
+    _get_ancilla, _increment_ancilla, _decrement_ancilla,
+    qubit_array,
     current_scope_depth,
 )
 
@@ -80,31 +82,7 @@ cdef class qint(circuit):
 	Auto-width mode uses unsigned representation (minimum bits for magnitude).
 	All operations preserve quantum coherence and support superposition.
 	"""
-	cdef int counter
-	cdef int bits
-	cdef int value
-	cdef object qubits
-	cdef bint allocated_qubits
-	cdef unsigned int allocated_start  # Starting qubit index from allocator
-
-	# Enable weak references for dependency tracking
-	cdef object __weakref__
-
-	# Phase 16: Dependency tracking attributes (public for Python access)
-	cdef public object dependency_parents  # list[weakref.ref[qint]]
-	cdef public int _creation_order
-	cdef public object operation_type  # str: 'AND', 'OR', 'XOR', 'EQ', 'LT', 'GT', 'LE', 'GE'
-	cdef public int creation_scope  # scope depth when created
-	cdef public object control_context  # list of control qubit indices when created
-
-	# Phase 18: Uncomputation tracking attributes
-	cdef public bint _is_uncomputed  # Idempotency flag
-	cdef public int _start_layer     # Layer before operation (for reversal range)
-	cdef public int _end_layer       # Layer after operation (for reversal range)
-
-	# Phase 20: Mode capture attribute
-	cdef public bint _uncompute_mode  # True = eager, False = lazy
-	cdef bint _keep_flag  # True = prevent automatic uncomputation
+	# Attribute declarations are in qint.pxd
 
 	def __init__(self, value = 0, width = None, bits = None, classical = False, create_new = True, bit_list = None):
 		"""Create a quantum integer.
@@ -283,7 +261,7 @@ cdef class qint(circuit):
 			# Note: _smallest_allocated_qubit and ancilla numpy array still updated
 			# for any code that might still use them
 			_set_smallest_allocated_qubit(_get_smallest_allocated_qubit() + actual_width)
-			ancilla += actual_width
+			_increment_ancilla(actual_width)
 		else:
 			self.bits = actual_width
 			self.qubits = bit_list
@@ -530,9 +508,8 @@ cdef class qint(circuit):
 		>>> a = qint(5, width=4)
 		>>> a.print_circuit()
 		"""
-		from quantum_language._core import print_circuit as _print_circuit
-		cdef circuit_t *_circuit = <circuit_t*><unsigned long long>_get_circuit()
-		_print_circuit(_circuit)
+		cdef circuit_t *circ = <circuit_t*><unsigned long long>_get_circuit()
+		c_print_circuit(circ)
 
 	def __del__(self):
 		"""Automatic uncomputation on garbage collection with mode awareness.
@@ -576,7 +553,7 @@ cdef class qint(circuit):
 		# Keep backward compat tracking (deprecated, but maintained for older code)
 		if not self._is_uncomputed and self.bits > 0:
 			_set_smallest_allocated_qubit(_get_smallest_allocated_qubit() - self.bits)
-			ancilla -= self.bits
+			_decrement_ancilla(self.bits)
 
 	def __str__(self):
 		return f"{self.qubits}"
@@ -698,7 +675,7 @@ cdef class qint(circuit):
 	# ARITHMETIC OPERATIONS
 	# ====================================================================
 
-	cdef addition_inplace(self, other: qint | int, invert: int  = False):
+	cdef addition_inplace(self, other, int invert=False):
 		cdef sequence_t *seq
 		cdef unsigned int[:] arr
 		cdef int result_bits
@@ -722,10 +699,10 @@ cdef class qint(circuit):
 			if _controlled:
 				# Control qubit from qbool (last element)
 				qubit_array[start: start + 1] = (<qint> _control_bool).qubits[63:64]
-				qubit_array[start + 1: start + 1 + NUMANCILLY] = ancilla
+				qubit_array[start + 1: start + 1 + NUMANCILLY] = _get_ancilla()
 				seq = cCQ_add(self.bits, other)
 			else:
-				qubit_array[start: start + NUMANCILLY] = ancilla
+				qubit_array[start: start + NUMANCILLY] = _get_ancilla()
 				seq = CQ_add(self.bits, other)
 
 
@@ -750,10 +727,10 @@ cdef class qint(circuit):
 		if _controlled:
 			# Control qubit from qbool (last element)
 			qubit_array[start: start + 1] = (<qint> _control_bool).qubits[63:64]
-			qubit_array[start + 1: start + 1 + NUMANCILLY] = ancilla
+			qubit_array[start + 1: start + 1 + NUMANCILLY] = _get_ancilla()
 			seq = cQQ_add(result_bits)
 		else:
-			qubit_array[start: start + NUMANCILLY] = ancilla
+			qubit_array[start: start + NUMANCILLY] = _get_ancilla()
 			seq = QQ_add(result_bits)
 
 		arr = qubit_array
@@ -898,7 +875,7 @@ cdef class qint(circuit):
 		return self.addition_inplace(other, invert = True)
 
 
-	cdef multiplication_inplace(self, other: qint | int, ret: qint):
+	cdef multiplication_inplace(self, other, qint ret):
 		cdef sequence_t *seq
 		cdef unsigned int[:] arr
 		cdef int result_bits
@@ -931,10 +908,10 @@ cdef class qint(circuit):
 			if _controlled:
 				# Control qubit from qbool (last element)
 				qubit_array[start: start + 1] = (<qint> _control_bool).qubits[63:64]
-				qubit_array[start + 1: start + 1 + NUMANCILLY] = ancilla
+				qubit_array[start + 1: start + 1 + NUMANCILLY] = _get_ancilla()
 				seq = cCQ_mul(result_bits, other)  # Pass bits parameter
 			else:
-				qubit_array[start: start + NUMANCILLY] = ancilla
+				qubit_array[start: start + NUMANCILLY] = _get_ancilla()
 				seq = CQ_mul(result_bits, other)  # Pass bits parameter
 
 			if seq == NULL:
@@ -957,10 +934,10 @@ cdef class qint(circuit):
 
 		if _controlled:
 			qubit_array[start: start + 1] = (<qint> _control_bool).qubits[63:64]
-			qubit_array[start + 1: start + 1 + NUMANCILLY] = ancilla
+			qubit_array[start + 1: start + 1 + NUMANCILLY] = _get_ancilla()
 			seq = cQQ_mul(result_bits)  # Pass bits parameter
 		else:
-			qubit_array[start: start + NUMANCILLY] = ancilla
+			qubit_array[start: start + NUMANCILLY] = _get_ancilla()
 			seq = QQ_mul(result_bits)  # Pass bits parameter
 
 		if seq == NULL:

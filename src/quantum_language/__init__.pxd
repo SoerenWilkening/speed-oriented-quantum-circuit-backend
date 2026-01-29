@@ -1,1 +1,2 @@
-# Empty file - allows package-level cimport
+# Package-level cimport declarations
+# This file allows: from quantum_language cimport ...
