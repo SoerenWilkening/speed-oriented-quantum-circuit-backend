@@ -91,10 +91,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ARR-06 | Phase 22 | Complete |
 | ARR-07 | Phase 22 | Complete |
 | ARR-08 | Phase 22 | Complete |
-| RED-01 | Phase 23 | Pending |
-| RED-02 | Phase 23 | Pending |
-| RED-03 | Phase 23 | Pending |
-| RED-04 | Phase 23 | Pending |
+| RED-01 | Phase 23 | Complete |
+| RED-02 | Phase 23 | Complete |
+| RED-03 | Phase 23 | Complete |
+| RED-04 | Phase 23 | Complete |
 | ELM-01 | Phase 24 | Pending |
 | ELM-02 | Phase 24 | Pending |
 | ELM-03 | Phase 24 | Pending |
