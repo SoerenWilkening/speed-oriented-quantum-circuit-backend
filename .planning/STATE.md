@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Phase: 21 of 24 (Package Restructuring)
-Plan: 3 of 5 complete (21-01, 21-02, 21-04 done; 21-03 and 21-05 pending)
+Plan: 4 of 5 complete (21-01, 21-02, 21-03, 21-04 done; 21-05 pending)
 Status: In progress - Wave 2 executing
-Last activity: 2026-01-29 — Completed 21-04-PLAN.md (Build system update)
+Last activity: 2026-01-29 — Completed 21-03-PLAN.md (Public API surface)
 
 Progress: [██........] 8%
 
@@ -43,6 +43,9 @@ Progress: [██........] 8%
 | 21-01 | Empty __init__.pxd for package cimport | Enables `from quantum_language cimport ...` syntax |
 | 21-02 | Keep all operations in qint.pyx | RESEARCH.md permits large files for cohesion; splitting would break logical grouping |
 | 21-02 | Use accessor functions for global state | Clean cross-module state access without cdef variable duplication |
+| 21-03 | Re-export pattern for state subpackage | Simpler than separate qpu.pyx/uncompute.pyx - avoids cdef global state duplication |
+| 21-03 | array() wrapper in __init__.py | Injects default dtype=qint - avoids circular import between _core and qint |
+| 21-03 | Dual access pattern for state functions | Both ql.circuit_stats() and ql.state.circuit_stats() work - user preference |
 | 21-04 | Include "." in include_dirs | Enables cimport to find .pxd files in package structure |
 | 21-04 | Legacy fallback in setup.py | Smooth transition while Wave 2 completes - auto-switches when src/ exists |
 | 21-04 | Package data includes .pxd files | Enables external projects to cimport quantum_language modules |
@@ -66,8 +69,8 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-29
-Stopped at: Completed 21-04-PLAN.md (Build system update) - checkpoint pending
+Stopped at: Completed 21-03-PLAN.md (Public API surface)
 Resume file: None
 
 ---
-*State updated: 2026-01-29 after 21-04 execution*
+*State updated: 2026-01-29 after 21-03 execution*
