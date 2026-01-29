@@ -19,9 +19,11 @@ Requirements for Package Structure & ql.array milestone. Each maps to roadmap ph
 - [ ] **ARR-01**: Create `ql.array` class for homogeneous quantum arrays
 - [ ] **ARR-02**: Support qint arrays (array of quantum integers)
 - [ ] **ARR-03**: Support qbool arrays (array of quantum booleans)
-- [ ] **ARR-04**: Initialize array from Python list with auto-width inference
-- [ ] **ARR-05**: Initialize array with explicit width parameter
-- [ ] **ARR-06**: Validate homogeneity (reject mixed qint/qbool)
+- [ ] **ARR-04**: Initialize array from Python list or NumPy array with auto-width inference: `ql.array([1, 2, 3])` or `ql.array(np_array)`
+- [ ] **ARR-05**: Initialize array with explicit width parameter: `ql.array([1, 2, 3], width=8)`
+- [ ] **ARR-06**: Initialize array from dimensions with dtype: `ql.array(dim=(3,3), dtype=ql.qint)`
+- [ ] **ARR-07**: Support multi-dimensional arrays with arbitrary shapes
+- [ ] **ARR-08**: Validate homogeneity (reject mixed qint/qbool)
 
 ### Array Reductions (RED)
 
@@ -35,14 +37,15 @@ Requirements for Package Structure & ql.array milestone. Each maps to roadmap ph
 - [ ] **ELM-01**: Element-wise arithmetic (`A + B`, `A - B`, `A * B`) between arrays
 - [ ] **ELM-02**: Element-wise bitwise (`A & B`, `A | B`, `A ^ B`) between arrays
 - [ ] **ELM-03**: Element-wise comparison (`A < B`, `A > B`, `A <= B`, `A >= B`, `A == B`, `A != B`) between arrays
-- [ ] **ELM-04**: Array length validation for element-wise operations
+- [ ] **ELM-04**: Array shape validation for element-wise operations
+- [ ] **ELM-05**: In-place element-wise operations (`A += B`, `A -= B`, `A *= B`, `A &= B`, `A |= B`, `A ^= B`)
 
 ### Python Integration (PYI)
 
-- [ ] **PYI-01**: `len(A)` returns array length
-- [ ] **PYI-02**: Iteration support (`for x in A`)
-- [ ] **PYI-03**: Indexing support (`A[i]`)
-- [ ] **PYI-04**: Slicing support (`A[i:j]`)
+- [ ] **PYI-01**: `len(A)` returns total element count (flattened length)
+- [ ] **PYI-02**: Iteration support (`for x in A` iterates over flattened elements)
+- [ ] **PYI-03**: NumPy-style indexing (`A[i]`, `A[i,j]`, `A[:, j]` column access)
+- [ ] **PYI-04**: NumPy-style slicing (`A[1:3]`, `A[1:3, 0:2]`)
 
 ## Future Requirements
 
@@ -68,7 +71,7 @@ Explicitly excluded from v1.3.
 | Mixed-type arrays | Homogeneous arrays simpler, cleaner semantics |
 | Array broadcasting | NumPy-style broadcasting adds complexity, defer |
 | Sparse arrays | Not needed for current use cases |
-| Multi-dimensional arrays | 1D sufficient for this milestone |
+| Axis parameter for reductions | Flatten-then-reduce simpler for v1.3 |
 
 ## Traceability
 
@@ -76,34 +79,37 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PKG-01 | — | Pending |
-| PKG-02 | — | Pending |
-| PKG-03 | — | Pending |
-| PKG-04 | — | Pending |
-| ARR-01 | — | Pending |
-| ARR-02 | — | Pending |
-| ARR-03 | — | Pending |
-| ARR-04 | — | Pending |
-| ARR-05 | — | Pending |
-| ARR-06 | — | Pending |
-| RED-01 | — | Pending |
-| RED-02 | — | Pending |
-| RED-03 | — | Pending |
-| RED-04 | — | Pending |
-| ELM-01 | — | Pending |
-| ELM-02 | — | Pending |
-| ELM-03 | — | Pending |
-| ELM-04 | — | Pending |
-| PYI-01 | — | Pending |
-| PYI-02 | — | Pending |
-| PYI-03 | — | Pending |
-| PYI-04 | — | Pending |
+| PKG-01 | Phase 21 | Pending |
+| PKG-02 | Phase 21 | Pending |
+| PKG-03 | Phase 21 | Pending |
+| PKG-04 | Phase 21 | Pending |
+| ARR-01 | Phase 22 | Pending |
+| ARR-02 | Phase 22 | Pending |
+| ARR-03 | Phase 22 | Pending |
+| ARR-04 | Phase 22 | Pending |
+| ARR-05 | Phase 22 | Pending |
+| ARR-06 | Phase 22 | Pending |
+| ARR-07 | Phase 22 | Pending |
+| ARR-08 | Phase 22 | Pending |
+| RED-01 | Phase 23 | Pending |
+| RED-02 | Phase 23 | Pending |
+| RED-03 | Phase 23 | Pending |
+| RED-04 | Phase 23 | Pending |
+| ELM-01 | Phase 24 | Pending |
+| ELM-02 | Phase 24 | Pending |
+| ELM-03 | Phase 24 | Pending |
+| ELM-04 | Phase 24 | Pending |
+| ELM-05 | Phase 24 | Pending |
+| PYI-01 | Phase 22 | Pending |
+| PYI-02 | Phase 22 | Pending |
+| PYI-03 | Phase 22 | Pending |
+| PYI-04 | Phase 22 | Pending |
 
 **Coverage:**
-- v1.3 requirements: 22 total
-- Mapped to phases: 0
-- Unmapped: 22 (pending roadmap creation)
+- v1.3 requirements: 25 total
+- Mapped to phases: 25
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-01-29*
-*Last updated: 2026-01-29 after initial definition*
+*Last updated: 2026-01-29 after roadmap creation*
