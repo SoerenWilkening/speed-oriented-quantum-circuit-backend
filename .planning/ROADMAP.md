@@ -39,6 +39,10 @@ Plans:
 **Goal**: Users can call `ql.to_openqasm()` to get an OpenQASM 3.0 string from their circuit
 **Depends on**: Phase 25
 **Requirements**: API-01, API-02, API-03
+**Plans:** 2 plans
+Plans:
+- [ ] 26-01-PLAN.md — Create openqasm.pxd/pyx Cython wrapper, update __init__.py and setup.py
+- [ ] 26-02-PLAN.md — Build package, create tests, verify full pipeline
 **Success Criteria** (what must be TRUE):
   1. Cython `to_openqasm()` method returns Python string and frees C buffer in finally block
   2. `ql.to_openqasm()` module-level function returns QASM string for current circuit
@@ -64,7 +68,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 25. C Backend OpenQASM Export | v1.4 | 2/2 | Complete | 2026-01-30 |
-| 26. Python API Bindings | v1.4 | 0/? | Not Started | — |
+| 26. Python API Bindings | v1.4 | 0/2 | Not Started | — |
 | 27. Verification Script | v1.4 | 0/? | Not Started | — |
 
 ---
