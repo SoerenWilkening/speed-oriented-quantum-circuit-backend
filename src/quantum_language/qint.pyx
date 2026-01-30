@@ -2,12 +2,11 @@
 
 import sys
 import warnings
-import weakref
 
 import numpy as np
 
 # C-level imports for type declarations
-from quantum_language._core cimport (
+from ._core cimport (
     circuit, circuit_t, circuit_s, sequence_t,
     INTEGERSIZE, NUMANCILLY,
     init_circuit, Q_not, run_instruction,
@@ -23,7 +22,7 @@ from quantum_language._core cimport (
 )
 
 # Python-level imports for global state access via accessor functions
-from quantum_language._core import (
+from ._core import (
     _get_circuit, _get_circuit_initialized, _set_circuit_initialized,
     _get_num_qubits, _set_num_qubits,
     _get_int_counter, _set_int_counter, _increment_int_counter,
@@ -315,7 +314,11 @@ cdef class qint(circuit):
 	# ====================================================================
 
 	def add_dependency(self, parent):
-		"""Register parent as dependency (weak reference).
+		"""Register parent as dependency (strong reference).
+
+		Strong references ensure parents stay alive until this object is
+		uncomputed, preventing premature garbage collection of intermediates
+		in expression chains like ``(arr == 1).all()``.
 
 		Parameters
 		----------
@@ -332,7 +335,7 @@ cdef class qint(circuit):
 		# Cycle prevention: parent must be older
 		assert parent._creation_order < self._creation_order, \
 			f"Cycle detected: dependency (order {parent._creation_order}) must be older than dependent (order {self._creation_order})"
-		self.dependency_parents.append(weakref.ref(parent))
+		self.dependency_parents.append(parent)
 
 	def get_live_parents(self):
 		"""Get list of parent dependencies that are still alive.
@@ -340,14 +343,9 @@ cdef class qint(circuit):
 		Returns
 		-------
 		list
-			List of parent qint objects (filtered for alive weakrefs).
+			List of parent qint objects.
 		"""
-		live = []
-		for ref in self.dependency_parents:
-			parent = ref()
-			if parent is not None:
-				live.append(parent)
-		return live
+		return [p for p in self.dependency_parents if not p._is_uncomputed]
 
 	def _do_uncompute(self, bint from_del=False):
 		"""Internal method to uncompute this qbool and cascade to dependencies.
@@ -374,19 +372,21 @@ cdef class qint(circuit):
 			return
 
 		try:
-			# 1. CASCADE: Get live parents and sort by creation order (descending = LIFO)
-			live_parents = self.get_live_parents()
-			# Sort by _creation_order descending for LIFO order
-			live_parents.sort(key=lambda p: p._creation_order, reverse=True)
-
-			# Recursively uncompute parents (they will cascade further if needed)
-			for parent in live_parents:
-				if not parent._is_uncomputed:
-					parent._do_uncompute(from_del=from_del)
-
-			# 2. REVERSE GATES: Only if there's a valid range
+			# 1. REVERSE GATES: Undo this operation first, while inputs still exist.
+			# Must happen before cascading to parents — our gates reference parent qubits.
 			if _circuit_initialized and self._end_layer > self._start_layer:
 				reverse_circuit_range(_circuit, self._start_layer, self._end_layer)
+
+			# 2. CASCADE: Get live parents and sort by creation order (descending = LIFO)
+			live_parents = self.get_live_parents()
+			live_parents.sort(key=lambda p: p._creation_order, reverse=True)
+
+			# Recursively uncompute parents that are intermediates (have operation_type).
+			# Skip user-created variables (operation_type is None) — they must not
+			# be destroyed by cascade uncomputation of expressions that use them.
+			for parent in live_parents:
+				if not parent._is_uncomputed and parent.operation_type is not None:
+					parent._do_uncompute(from_del=from_del)
 
 			# 3. FREE QUBITS: Return to allocator
 			if _circuit_initialized:
@@ -394,9 +394,10 @@ cdef class qint(circuit):
 				if alloc != NULL:
 					allocator_free(alloc, self.allocated_start, self.bits)
 
-			# 4. Mark as uncomputed and clear ownership
+			# 4. Mark as uncomputed, clear ownership and release parent refs
 			self._is_uncomputed = True
 			self.allocated_qubits = False
+			self.dependency_parents = []
 
 		except Exception as e:
 			if from_del:
@@ -1596,7 +1597,7 @@ cdef class qint(circuit):
 		qint == int: Uses C-level CQ_equal_width circuit.
 		qint == qint: Uses subtract-add-back pattern (a-=b, check a==0, a+=b).
 		"""
-		from quantum_language.qbool import qbool
+		from .qbool import qbool
 		cdef sequence_t *seq
 		cdef unsigned int[:] arr
 		cdef int self_offset
@@ -1758,7 +1759,7 @@ cdef class qint(circuit):
 		Computes self - other in-place, checks MSB (sign bit), then restores self.
 		Phase 14: Refactored to use in-place subtract-add-back pattern without temporary qint allocation.
 		"""
-		from quantum_language.qbool import qbool
+		from .qbool import qbool
 		cdef int start_layer
 		cdef circuit_t *_circuit = <circuit_t*><unsigned long long>_get_circuit()
 		cdef bint _circuit_initialized = _get_circuit_initialized()
@@ -1847,7 +1848,7 @@ cdef class qint(circuit):
 		Phase 14: Refactored to use in-place pattern for qint operands.
 		For int operands, uses NOT(self <= other) for efficiency.
 		"""
-		from quantum_language.qbool import qbool
+		from .qbool import qbool
 		cdef int start_layer
 		cdef circuit_t *_circuit = <circuit_t*><unsigned long long>_get_circuit()
 		cdef bint _circuit_initialized = _get_circuit_initialized()
@@ -1924,7 +1925,7 @@ cdef class qint(circuit):
 		Phase 14: Refactored to use in-place subtract-add-back pattern.
 		a <= b means (a - b) is negative OR zero.
 		"""
-		from quantum_language.qbool import qbool
+		from .qbool import qbool
 		cdef int start_layer
 		cdef circuit_t *_circuit = <circuit_t*><unsigned long long>_get_circuit()
 		cdef bint _circuit_initialized = _get_circuit_initialized()
@@ -2019,7 +2020,7 @@ cdef class qint(circuit):
 		Phase 14: Added self-comparison optimization.
 		Delegates to NOT(self < other) which uses in-place pattern.
 		"""
-		from quantum_language.qbool import qbool
+		from .qbool import qbool
 
 		# Phase 18: Check for use-after-uncompute
 		self._check_not_uncomputed()

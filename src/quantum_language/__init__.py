@@ -33,12 +33,12 @@ __version__ = "0.1.0"
 
 # Import types from Cython modules
 # Import state subpackage (makes ql.state accessible)
-from quantum_language import state
+# from .quantum_language import state
 
 # Import circuit and utilities from core
 # Re-export state module-level functions for convenience
 # (Users can also access via ql.state.X)
-from quantum_language._core import (
+from ._core import (
     AVAILABLE_PASSES,
     circuit,
     circuit_stats,
@@ -46,10 +46,10 @@ from quantum_language._core import (
     option,
     reverse_instruction_range,
 )
-from quantum_language.qarray import qarray
-from quantum_language.qbool import qbool
-from quantum_language.qint import qint
-from quantum_language.qint_mod import qint_mod
+from .qarray import qarray
+from .qbool import qbool
+from .qint import qint
+from .qint_mod import qint_mod
 
 
 def array(data=None, *, width=None, dtype=None, dim=None):

@@ -1,4 +1,4 @@
-from quantum_language._core cimport circuit
+from ._core cimport circuit
 
 cdef class qint(circuit):
 	cdef int counter

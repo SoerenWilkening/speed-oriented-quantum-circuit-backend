@@ -8,10 +8,10 @@ in a flattened representation with shape metadata.
 from collections.abc import Sequence
 import warnings
 import numpy as np
-from quantum_language.qint cimport qint
-from quantum_language.qbool cimport qbool
-from quantum_language._core cimport INTEGERSIZE
-from quantum_language._core import _get_qubit_saving_mode
+from .qint cimport qint
+from .qbool cimport qbool
+from ._core cimport INTEGERSIZE
+from ._core import _get_qubit_saving_mode
 
 
 def _infer_width(values, default_width=8):
@@ -794,9 +794,11 @@ cdef class qarray:
 
         # Scalar broadcast
         if type(other) == int or isinstance(other, qint):
-            if type(other) == int:
-                other = qint(other, width=self._width)
+            # if type(other) == int:
+            #     other = qint(other, width=self._width)
+            # print(self._elements)
             result_elements = [op_func(elem, other) for elem in self._elements]
+            # print(result_elements)
             result = self._create_view(result_elements, self._shape)
             if result_dtype is not None:
                 result._dtype = result_dtype

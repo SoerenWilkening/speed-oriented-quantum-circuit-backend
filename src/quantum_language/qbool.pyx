@@ -1,6 +1,6 @@
 """Quantum boolean - a 1-bit quantum integer."""
 
-from quantum_language.qint cimport qint
+from .qint cimport qint
 
 cdef class qbool(qint):
 	"""Quantum boolean - a 1-bit quantum integer.

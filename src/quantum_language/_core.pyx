@@ -11,6 +11,8 @@ __version__ = "0.1.0"
 INTEGERSIZE = 8
 NUMANCILLY = 2 * 64  # Max possible ancilla (2 * max_width)
 
+
+
 # Module-level constant for available optimization passes
 AVAILABLE_PASSES = ['merge', 'cancel_inverse']
 
@@ -597,3 +599,6 @@ def reverse_instruction_range(int start_layer, int end_layer):
 	if not _circuit_initialized:
 		raise RuntimeError("Circuit not initialized")
 	reverse_circuit_range(_circuit, start_layer, end_layer)
+
+
+circuit()
