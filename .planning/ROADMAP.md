@@ -33,11 +33,11 @@
   2. Tests can be parameterized to generate exhaustive combinations for small widths (1-4 bits) and representative samples for larger widths
   3. Test failures display expected value, actual value, operation name, operand values, and bit width
   4. Classical qint initialization is verified correct for all bit widths 1 through 8 (exhaustive value coverage for 1-4 bits)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 28-01: TBD
-- [ ] 28-02: TBD
+- [ ] 28-01-PLAN.md -- Reusable verification framework (conftest fixture + helpers)
+- [ ] 28-02-PLAN.md -- Exhaustive qint initialization verification
 
 ### Phase 29: C Backend Bug Fixes
 **Goal**: All four known C backend bugs are fixed -- subtraction underflow, less-or-equal comparison, multiplication segfault, and QFT addition with nonzero operands all produce correct results.
