@@ -88,7 +88,7 @@ sequence_t *CQ_mul(int bits, int64_t value) {
         return NULL;
     }
     mul->used_layer = 0;
-    mul->num_layer = bits * (2 * bits + 6) - 1;
+    mul->num_layer = MAXLAYERINSEQUENCE;
     mul->gates_per_layer = calloc(mul->num_layer, sizeof(num_t));
     if (mul->gates_per_layer == NULL) {
         free(bin);
@@ -104,7 +104,7 @@ sequence_t *CQ_mul(int bits, int64_t value) {
         return NULL;
     }
     for (int i = 0; i < mul->num_layer; ++i) {
-        mul->seq[i] = calloc(2 * bits, sizeof(gate_t));
+        mul->seq[i] = calloc(10 * bits, sizeof(gate_t));
         if (mul->seq[i] == NULL) {
             for (int j = 0; j < i; ++j) {
                 free(mul->seq[j]);
@@ -167,7 +167,7 @@ sequence_t *QQ_mul(int bits) {
     }
 
     mul->used_layer = 0;
-    mul->num_layer = bits * (2 * bits + 6) - 1;
+    mul->num_layer = MAXLAYERINSEQUENCE;
     mul->gates_per_layer = calloc(mul->num_layer, sizeof(num_t));
     if (mul->gates_per_layer == NULL) {
         free(mul);
@@ -181,7 +181,7 @@ sequence_t *QQ_mul(int bits) {
         return NULL;
     }
     for (int i = 0; i < mul->num_layer; ++i) {
-        mul->seq[i] = calloc(2 * bits, sizeof(gate_t));
+        mul->seq[i] = calloc(10 * bits, sizeof(gate_t));
         if (mul->seq[i] == NULL) {
             for (int j = 0; j < i; ++j) {
                 free(mul->seq[j]);
@@ -260,7 +260,7 @@ sequence_t *cCQ_mul(int bits, int64_t value) {
         return NULL;
     }
     mul->used_layer = 0;
-    mul->num_layer = bits * (2 * bits + 6) - 1;
+    mul->num_layer = MAXLAYERINSEQUENCE;
     mul->gates_per_layer = calloc(mul->num_layer, sizeof(num_t));
     if (mul->gates_per_layer == NULL) {
         free(bin);
@@ -276,7 +276,7 @@ sequence_t *cCQ_mul(int bits, int64_t value) {
         return NULL;
     }
     for (int i = 0; i < mul->num_layer; ++i) {
-        mul->seq[i] = calloc(2 * bits, sizeof(gate_t));
+        mul->seq[i] = calloc(10 * bits, sizeof(gate_t));
         if (mul->seq[i] == NULL) {
             for (int j = 0; j < i; ++j) {
                 free(mul->seq[j]);
@@ -383,7 +383,7 @@ sequence_t *cQQ_mul(int bits) {
         return NULL;
     }
     for (int i = 0; i < mul->num_layer; ++i) {
-        mul->seq[i] = calloc(2 * bits, sizeof(gate_t));
+        mul->seq[i] = calloc(10 * bits, sizeof(gate_t));
         if (mul->seq[i] == NULL) {
             for (int j = 0; j < i; ++j) {
                 free(mul->seq[j]);
