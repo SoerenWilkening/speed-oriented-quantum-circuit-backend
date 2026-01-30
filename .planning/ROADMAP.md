@@ -49,7 +49,7 @@ Plans:
   3. Multiplication operations complete without segfault across all tested bit widths (1-4 bits exhaustive)
   4. QFT-based addition of two nonzero operands (e.g., `qint(3) + qint(5)`) returns the correct sum
   5. All four fixes pass through the full verification pipeline (OpenQASM export -> Qiskit simulate -> result check)
-**Plans**: 5 plans
+**Plans**: 8 plans
 
 Plans:
 - [x] 29-01-PLAN.md -- Investigate BUG-01 & BUG-02, create test files
@@ -57,6 +57,9 @@ Plans:
 - [x] 29-03-PLAN.md -- Complete BUG-04 QFT addition fix (CQ_add bit-ordering)
 - [x] 29-04-PLAN.md -- Retest BUG-01 & BUG-02 (blocked by QQ_add)
 - [x] 29-05-PLAN.md -- Investigate BUG-03 multiplication logic (partial fix)
+- [ ] 29-06-PLAN.md -- Fix QQ_add bit-ordering + investigate CQ_add regression (gap closure)
+- [ ] 29-07-PLAN.md -- Fix BUG-03 multiplication phase formula (gap closure)
+- [ ] 29-08-PLAN.md -- Verify BUG-01 subtraction + BUG-02 comparison after QQ_add fix (gap closure)
 
 ### Phase 30: Arithmetic Verification
 **Goal**: Every arithmetic operation (add, subtract, multiply, divide, modulo, modular arithmetic) is exhaustively verified at small bit widths and representatively tested at larger widths.
