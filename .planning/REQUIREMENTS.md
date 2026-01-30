@@ -14,13 +14,13 @@
 
 ### Verification Framework
 
-- [ ] **VFWK-01**: Reusable test framework: build circuit -> export OpenQASM -> Qiskit simulate -> verify outcome
-- [ ] **VFWK-02**: Parameterized test generation (exhaustive for small widths, representative for larger)
-- [ ] **VFWK-03**: Clear failure diagnostics (expected vs actual, operation, operand values, bit widths)
+- [x] **VFWK-01**: Reusable test framework: build circuit -> export OpenQASM -> Qiskit simulate -> verify outcome
+- [x] **VFWK-02**: Parameterized test generation (exhaustive for small widths, representative for larger)
+- [x] **VFWK-03**: Clear failure diagnostics (expected vs actual, operation, operand values, bit widths)
 
 ### Verification — Initialization
 
-- [ ] **VINIT-01**: Verify classical qint initialization produces correct values across all bit widths
+- [x] **VINIT-01**: Verify classical qint initialization produces correct values across all bit widths
 
 ### Verification — Arithmetic
 
@@ -71,10 +71,10 @@
 | BUG-02 | Phase 29 | Pending |
 | BUG-03 | Phase 29 | Pending |
 | BUG-04 | Phase 29 | Pending |
-| VFWK-01 | Phase 28 | Pending |
-| VFWK-02 | Phase 28 | Pending |
-| VFWK-03 | Phase 28 | Pending |
-| VINIT-01 | Phase 28 | Pending |
+| VFWK-01 | Phase 28 | Complete |
+| VFWK-02 | Phase 28 | Complete |
+| VFWK-03 | Phase 28 | Complete |
+| VINIT-01 | Phase 28 | Complete |
 | VARITH-01 | Phase 30 | Pending |
 | VARITH-02 | Phase 30 | Pending |
 | VARITH-03 | Phase 30 | Pending |

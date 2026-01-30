@@ -15,7 +15,7 @@
 
 ### Phase Overview
 
-- [ ] **Phase 28: Verification Framework & Init** - Reusable test framework with parameterized generation and init verification
+- [x] **Phase 28: Verification Framework & Init** - Reusable test framework with parameterized generation and init verification
 - [ ] **Phase 29: C Backend Bug Fixes** - Fix subtraction, comparison, multiplication, and QFT addition bugs
 - [ ] **Phase 30: Arithmetic Verification** - Exhaustive verification of all arithmetic operations
 - [ ] **Phase 31: Comparison Verification** - Exhaustive verification of all comparison operators and variants
@@ -36,8 +36,8 @@
 **Plans**: 2 plans
 
 Plans:
-- [ ] 28-01-PLAN.md -- Reusable verification framework (conftest fixture + helpers)
-- [ ] 28-02-PLAN.md -- Exhaustive qint initialization verification
+- [x] 28-01-PLAN.md -- Reusable verification framework (conftest fixture + helpers)
+- [x] 28-02-PLAN.md -- Exhaustive qint initialization verification
 
 ### Phase 29: C Backend Bug Fixes
 **Goal**: All four known C backend bugs are fixed -- subtraction underflow, less-or-equal comparison, multiplication segfault, and QFT addition with nonzero operands all produce correct results.
@@ -117,7 +117,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 28. Verification Framework & Init | v1.5 | 0/TBD | Not started | - |
+| 28. Verification Framework & Init | v1.5 | 2/2 | ✓ Complete | 2026-01-30 |
 | 29. C Backend Bug Fixes | v1.5 | 0/TBD | Not started | - |
 | 30. Arithmetic Verification | v1.5 | 0/TBD | Not started | - |
 | 31. Comparison Verification | v1.5 | 0/TBD | Not started | - |
