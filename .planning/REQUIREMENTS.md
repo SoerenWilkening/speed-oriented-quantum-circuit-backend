@@ -43,7 +43,7 @@
 
 ### Verification — Advanced
 
-- [ ] **VADV-01**: Verify automatic uncomputation (ancilla qubits return to |0⟩)
+- [ ] **VADV-01**: Verify automatic uncomputation (ancilla qubits return to |0>)
 - [ ] **VADV-02**: Verify quantum conditionals (`with` blocks)
 - [ ] **VADV-03**: Verify ql.array operations (reductions, element-wise)
 
@@ -67,33 +67,33 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BUG-01 | — | Pending |
-| BUG-02 | — | Pending |
-| BUG-03 | — | Pending |
-| BUG-04 | — | Pending |
-| VFWK-01 | — | Pending |
-| VFWK-02 | — | Pending |
-| VFWK-03 | — | Pending |
-| VINIT-01 | — | Pending |
-| VARITH-01 | — | Pending |
-| VARITH-02 | — | Pending |
-| VARITH-03 | — | Pending |
-| VARITH-04 | — | Pending |
-| VARITH-05 | — | Pending |
-| VCMP-01 | — | Pending |
-| VCMP-02 | — | Pending |
-| VCMP-03 | — | Pending |
-| VBIT-01 | — | Pending |
-| VBIT-02 | — | Pending |
-| VADV-01 | — | Pending |
-| VADV-02 | — | Pending |
-| VADV-03 | — | Pending |
+| BUG-01 | Phase 29 | Pending |
+| BUG-02 | Phase 29 | Pending |
+| BUG-03 | Phase 29 | Pending |
+| BUG-04 | Phase 29 | Pending |
+| VFWK-01 | Phase 28 | Pending |
+| VFWK-02 | Phase 28 | Pending |
+| VFWK-03 | Phase 28 | Pending |
+| VINIT-01 | Phase 28 | Pending |
+| VARITH-01 | Phase 30 | Pending |
+| VARITH-02 | Phase 30 | Pending |
+| VARITH-03 | Phase 30 | Pending |
+| VARITH-04 | Phase 30 | Pending |
+| VARITH-05 | Phase 30 | Pending |
+| VCMP-01 | Phase 31 | Pending |
+| VCMP-02 | Phase 31 | Pending |
+| VCMP-03 | Phase 31 | Pending |
+| VBIT-01 | Phase 32 | Pending |
+| VBIT-02 | Phase 32 | Pending |
+| VADV-01 | Phase 33 | Pending |
+| VADV-02 | Phase 33 | Pending |
+| VADV-03 | Phase 33 | Pending |
 
 **Coverage:**
 - v1.5 requirements: 21 total
-- Mapped to phases: 0
-- Unmapped: 21 ⚠️
+- Mapped to phases: 21
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-01-30*
-*Last updated: 2026-01-30 after initial definition*
+*Last updated: 2026-01-30 after roadmap creation*
