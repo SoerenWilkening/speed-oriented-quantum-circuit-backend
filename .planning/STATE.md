@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-30)
 ## Current Position
 
 Phase: 29 of 33 (C Backend Bug Fixes)
-Plan: 05 of 04 (Gap Closure - BUG-03 Investigation)
+Plan: 04 of 06 (BUG-01 & BUG-02 Retest)
 Status: In progress
-Last activity: 2026-01-30 -- Completed 29-05 (BUG-03 investigation, partial fix)
+Last activity: 2026-01-30 -- Completed 29-04 (BUG-01 & BUG-02 investigation, remain blocked)
 
 Progress: [███░░░░░░░] 19%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 91 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 5)
-- Average duration: ~9 min/plan
-- Total execution time: ~13.6 hours
+- Total plans completed: 92 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 6)
+- Average duration: ~10 min/plan
+- Total execution time: ~15.3 hours
 
 **By Milestone:**
 
@@ -61,6 +61,8 @@ Milestone decisions archived. See PROJECT.md Key Decisions table for full histor
 | 29-03 | Verify formula against Qiskit reference | Analytical verification when BUG-05 prevents reliable test execution |
 | 29-05 | Accept partial fix for BUG-03 multiplication | Investigation identified root cause but fix incomplete - document for future work |
 | 29-05 | Disable GCC LTO due to compiler bug | GCC 15 -flto triggers internal error, disabled until toolchain fixed |
+| 29-04 | BUG-04 fix scope limited to CQ_add only | QQ_add (qint+qint) uses different implementation, needs separate fix |
+| 29-04 | BUG-01 and BUG-02 remain blocked by incomplete BUG-04 | Cannot test/fix until QQ_add bit-ordering corrected |
 
 ### Pending Todos
 
@@ -70,10 +72,10 @@ None.
 
 **Known C backend bugs (v1.5 targets):**
 - **BUG-05 (CRITICAL):** circuit() does not properly reset state - causes memory explosion, blocks exhaustive testing AND prevents verification of fixes
+- **BUG-04 (PARTIALLY FIXED):** CQ_add bit-ordering fixed (29-03), but QQ_add still broken - qint+qint addition/subtraction fails
 - **BUG-03 (INVESTIGATED):** Multiplication returns 0 - root cause identified (bit-ordering), fix attempted but still fails (29-05)
-- **BUG-04 (NEEDS RE-INVESTIGATION):** Addition bit-ordering issue discovered during 29-05 - similar to BUG-03, needs separate fix
-- BUG-01: Subtraction underflow (3-7 returns 7 instead of 12) - blocked by BUG-04 fix needed
-- BUG-02: Less-or-equal comparison (5<=5 returns 0) - blocked by BUG-04 fix needed
+- **BUG-01 (BLOCKED):** Subtraction underflow (3-7 returns 7 instead of 12) - blocked by QQ_add fix needed (29-04)
+- **BUG-02 (BLOCKED):** Less-or-equal comparison (5<=5 returns 0) - transitively blocked by BUG-01 (29-04)
 
 **Known pre-existing issues (not v1.5 scope):**
 - Nested quantum conditionals require quantum-quantum AND
@@ -83,9 +85,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-30
-Stopped at: Completed Phase 29-05 (BUG-03 investigation, partial fix)
+Stopped at: Completed Phase 29-04 (BUG-01 & BUG-02 investigation, remain blocked by QQ_add)
 Resume file: None
-Resume action: Re-investigate multiplication and addition logic bugs - bit-ordering fix incomplete, deeper QFT algorithm review needed
+Resume action: Fix QQ_add bit-ordering (similar to CQ_add fix from 29-03), then retest BUG-01 and BUG-02
 
 ---
-*State updated: 2026-01-30 after completing Phase 29-05*
+*State updated: 2026-01-30 after completing Phase 29-04*
