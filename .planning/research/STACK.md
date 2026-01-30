@@ -1,398 +1,471 @@
-# Technology Stack: Automatic Uncomputation with Dependency Tracking
+# Technology Stack
 
-**Project:** Quantum Assembly Language - Automatic Uncomputation Milestone
-**Researched:** 2026-01-28
+**Project:** Quantum Assembly - OpenQASM Export & Qiskit Verification
+**Researched:** 2026-01-30
 **Confidence:** HIGH
 
 ## Executive Summary
 
-Automatic uncomputation requires dependency tracking to determine when intermediate qbool/qint results can be safely uncomputed. The existing three-layer stateless architecture (C backend → Cython → Python frontend) constrains where tracking can occur. Research indicates **Python-level dependency tracking with C-level circuit generation** is the optimal pattern, avoiding the complexity of C-level object graphs while maintaining the performance-critical circuit generation in C.
+This stack addition enables production-quality OpenQASM 3.0 export and Qiskit-based circuit verification for the existing Quantum Assembly framework. The additions are minimal and surgical: two Python packages for testing/verification only, with no changes to core dependencies. The C backend requires no new dependencies, only implementation of existing gate types and proper multi-control handling.
 
-## Recommended Patterns
+## New Dependencies (Test/Verification Layer Only)
 
-### Core Pattern: Python-Level Dependency Graph
+### Qiskit Ecosystem
 
-| Component | Technology | Purpose | Why |
-|-----------|-----------|---------|-----|
-| Dependency Storage | Python list/dict | Track parent→children relationships | Native Python collections; no external dependency; O(1) lookups |
-| Lifetime Management | `weakref.finalize` | Trigger uncomputation on GC | Reliable cleanup without `__del__` pitfalls (PEP 442) |
-| Reference Tracking | `weakref.ref` | Track dependencies without preventing GC | Prevents circular reference issues; allows natural GC |
-| Uncomputation Trigger | Python callback | Invoke C circuit generation | Clean separation of tracking (Python) and generation (C) |
+| Package | Version | Purpose | When to Use |
+|---------|---------|---------|-------------|
+| qiskit | >=2.3.0 | Core quantum SDK for circuit verification | Required for all verification tasks |
+| qiskit-aer | >=0.17.1 | High-performance quantum circuit simulator | Required for measurement-based verification |
+| qiskit[qasm3-import] | >=2.3.0 | OpenQASM 3.0 string import capability | Required for loading exported QASM |
 
-**Why Python-level tracking:**
-- Existing architecture is stateless at C level (no object lifecycle)
-- Python already manages qint/qbool object lifetimes
-- Dependency graph mutations are infrequent (creation-time only)
-- Avoids retrofitting object lifecycle into C backend
+**Rationale:** These are TEST dependencies only, not runtime requirements. The framework generates OpenQASM 3.0 strings that can be consumed by any QASM 3.0 compliant tool. Qiskit provides the gold standard for verification during development and testing.
 
-**Why NOT C-level tracking:**
-- C backend is stateless by design (circuit_t is just gate storage)
-- Would require adding object lifecycle management to C
-- Python already has robust GC and weak reference support
-- Cython bindings would need complex memory ownership logic
+**Version justification:**
+- Qiskit 2.3.0 (released Jan 8, 2026) is the latest stable version with mature QASM3 support
+- qiskit-aer 0.17.1+ includes Python 3.13 support, GPU acceleration, and stable simulation APIs
+- qiskit[qasm3-import] pulls in qiskit-qasm3-import >=0.6.0, which supports the stable `loads()` API
 
-### Alternative Pattern: C-Level Dependency Tracking (NOT RECOMMENDED)
+**Installation:**
+```bash
+# Test/verification dependencies (add to dev dependencies)
+pip install qiskit>=2.3.0 qiskit-aer>=0.17.1
+pip install "qiskit[qasm3-import]>=2.3.0"
+```
 
-| Component | Technology | Purpose | Why NOT |
-|-----------|-----------|---------|---------|
-| Dependency Storage | C linked list | Track parent→child pointers | Complex memory management; no native weak references |
-| Lifetime Management | Manual ref counting | Track object lifetimes | Error-prone; duplicates Python's GC; no weak reference support |
-| Uncomputation | C function | Generate inverse gates | Already possible; tracking is the hard part |
+## Existing Stack (No Changes Required)
 
-**Rejection rationale:**
-- C has no weak reference equivalent (would need manual ref counting)
-- Existing architecture is stateless at C level
-- Duplicates Python's GC machinery
-- Increases Cython binding complexity (ownership transfer)
+| Technology | Current Version | Purpose | Status |
+|------------|----------------|---------|--------|
+| Python | >=3.11 | Frontend language | Maintained |
+| Cython | >=3.0.11,<4.0 | C/Python bridge | Maintained |
+| numpy | >=1.24 | Array operations | Maintained |
+| C (gcc/clang) | - | Backend implementation | Maintained |
 
-## Dependency Tracking Approach
+**No changes needed** to the core stack. The OpenQASM export is pure C string generation, and verification is test-only.
 
-### Data Structure: Dependency Graph
+## Integration Architecture
 
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Python Test Suite (NEW)                                    │
+│  ├─ Qiskit imports (qiskit, qiskit_aer, qiskit.qasm3)      │
+│  └─ Verification workflow                                   │
+└──────────────────┬──────────────────────────────────────────┘
+                   │ calls
+┌──────────────────▼──────────────────────────────────────────┐
+│  Quantum Assembly Python Frontend (EXISTING)                │
+│  ├─ qint/qbool/qarray classes                              │
+│  └─ Operator overloading                                    │
+└──────────────────┬──────────────────────────────────────────┘
+                   │ calls via Cython
+┌──────────────────▼──────────────────────────────────────────┐
+│  C Backend (EXISTING + ENHANCEMENTS)                        │
+│  ├─ circuit_to_openqasm3_string() [NEW FUNCTION]           │
+│  ├─ circuit_to_opanqasm() [EXISTING - ENHANCE]             │
+│  └─ Gate implementations (Y, R, Rx, Ry, Rz) [ENHANCE]      │
+└─────────────────────────────────────────────────────────────┘
+                   │ outputs
+┌──────────────────▼──────────────────────────────────────────┐
+│  OpenQASM 3.0 String                                        │
+│  ├─ Consumed by Qiskit (verification)                       │
+│  └─ Consumed by any QASM 3.0 tool (portability)            │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## API Usage Patterns
+
+### 1. OpenQASM 3.0 Export (C Backend Enhancement)
+
+**New function signature:**
+```c
+// Returns malloc'd string - caller must free()
+char* circuit_to_openqasm3_string(circuit_t *circ);
+```
+
+**Enhancement to existing:**
+```c
+// Existing - writes to file, needs fix for file handle closure
+void circuit_to_opanqasm(circuit_t *circ, char *path);
+```
+
+**Implementation requirements:**
+- Use `sprintf()` or `snprintf()` with dynamic buffer for string generation
+- Handle all gate types: X, Y, Z, H, P, R, Rx, Ry, Rz, M
+- Handle multi-controlled gates via Control[0..1] and large_control array
+- Use OpenQASM 3.0 `ctrl(n) @` modifier for n>2 controls
+
+### 2. Qiskit QASM Import (CURRENT API - Qiskit 2.3.0)
+
+**Recommended API (Stable):**
 ```python
-# Python-level tracking in qint/qbool base class or circuit singleton
-class DependencyTracker:
-    def __init__(self):
-        # Map: dependent object -> list of parent dependencies
-        self._dependencies = {}  # dict[int(id(obj)), list[weakref.ref]]
+from qiskit import qasm3
 
-        # Map: object -> finalization callback
-        self._finalizers = {}  # dict[int(id(obj)), weakref.finalize]
+# Load from string (production use)
+qasm_string = """
+OPENQASM 3.0;
+include "stdgates.inc";
+qubit[3] q;
+h q[0];
+cx q[0], q[1];
+"""
+circuit = qasm3.loads(qasm_string)
+
+# Load from file (legacy/testing)
+circuit = qasm3.load("circuit.qasm")
 ```
 
-**Storage rationale:**
-- `dict` provides O(1) lookup by object ID
-- `weakref.ref` allows parent garbage collection without blocking
-- `weakref.finalize` provides reliable cleanup trigger (PEP 442)
+**Status:** STABLE (but marked "exploratory release period")
+- Requires `qiskit[qasm3-import]` extra to be installed
+- `qiskit_qasm3_import` package must be >=0.6.0
+- Issues no deprecation warnings (as of Qiskit 2.3.0)
 
-**Why NOT NetworkX:**
-- Dependency graphs are simple (parent→child edges only)
-- No need for graph algorithms (topological sort, cycle detection)
-- Avoid external dependency for simple use case
-- Native Python dict/list sufficient
-
-### Lifetime Pattern: weakref.finalize (Not __del__)
-
+**Experimental alternative (NOT RECOMMENDED):**
 ```python
-# Pattern: Register finalization callback at creation time
-class qbool(qint):
-    def __init__(self, ...):
-        super().__init__(...)
-
-        # Register uncomputation callback
-        if has_dependencies:
-            finalizer = weakref.finalize(
-                self,
-                self._uncompute_callback,
-                self.qubits,  # Pass data, not self reference
-                self.dependencies
-            )
-            tracker.register_finalizer(id(self), finalizer)
+# Faster Rust-based parser, but experimental and incomplete feature support
+circuit = qasm3.loads_experimental(qasm_string)  # Issues ExperimentalWarning
 ```
 
-**Why `weakref.finalize` over `__del__`:**
-- **Reliability:** `__del__` not guaranteed to be called (circular refs, interpreter exit)
-- **Order:** `weakref.finalize` respects dependency order
-- **PEP 442:** Modern Python (3.4+) finalization is safer but `weakref.finalize` still preferred
-- **Testing:** Finalizers can be triggered manually for tests
+**Rationale:** Use `loads()` over `loads_experimental()` because:
+- Stable API surface (no breaking changes expected in Qiskit 2.x)
+- Complete OpenQASM 3.0 feature support
+- Experimental version lacks features we may need later
 
-**Sources:**
-- [Python weakref documentation](https://docs.python.org/3/library/weakref.html) - Official Python 3.14.2 docs (Jan 26, 2026)
-- [PEP 442 – Safe object finalization](https://peps.python.org/pep-0442/) - Python Enhancement Proposal
-- [Python Weak References in 2025](https://medium.com/pythoneers/python-weak-references-in-2025-a-simpler-way-to-work-with-the-garbage-collector-26517aebde2e) - Medium article (2025)
+### 3. Qiskit Aer Simulation (CURRENT API - Qiskit Aer 0.17.1)
 
-### Uncomputation Modes
-
-#### Mode 1: Deferred Uncomputation (Default)
-
-**Pattern:** Keep intermediates until final result is uncomputed
-
+**DEPRECATED pattern (found in tests/run_qisk.py):**
 ```python
-# Track dependencies at creation
-result = a < b  # Creates intermediate qbools
-# Intermediates remain allocated
+from qiskit import Aer, execute, transpile  # OLD - DO NOT USE
 
-# When result is GC'd, trigger cascade uncomputation:
-# 1. Uncompute result
-# 2. Check if any intermediate now has no remaining dependents
-# 3. Uncompute those intermediates
-# 4. Recursively uncompute freed dependencies
+simulator = Aer.get_backend("aer_simulator")  # Removed in Qiskit 1.0
+job = execute(circuit, backend=simulator)     # Deprecated in 0.46, removed in 1.0
 ```
 
-**Implementation strategy:**
-- Reference counting: track how many dependents each intermediate has
-- Cascade trigger: when dependent drops to zero, uncompute and propagate
-- Requires: `weakref.ref` for tracking without preventing GC
-
-**Why this mode:**
-- Enables clean circuit reversal (inverse gates in reverse order)
-- Natural Python pattern (object lifetime = resource lifetime)
-- Matches quantum algorithm patterns (uncompute after use)
-
-#### Mode 2: Immediate Uncomputation (Qubit-Saving)
-
-**Pattern:** Uncompute intermediates as soon as final result computed
-
+**CURRENT pattern (Qiskit 2.3.0 + Aer 0.17.1):**
 ```python
-# Compute final result
-result = a < b  # Creates and uses intermediates
+from qiskit_aer import AerSimulator
+from qiskit import transpile
 
-# Immediately after final gate, insert uncomputation gates
-# for all intermediate qbools
-# (if no other references exist)
+# Create simulator instance
+simulator = AerSimulator()
+
+# Transpile circuit for simulator
+transpiled = transpile(circuit, backend=simulator)
+
+# Run simulation
+job = simulator.run(transpiled, shots=1024)
+result = job.result()
+counts = result.get_counts()
 ```
 
-**Implementation strategy:**
-- Eager finalization: call `finalizer()` manually after operation
-- Check reference count: only uncompute if refcount == 1 (only result holds it)
-- Mode flag: user sets mode at circuit or operation level
+**Key changes from old API:**
+- Import from `qiskit_aer`, not `qiskit.Aer` (namespace changed in Qiskit 1.0)
+- Use `AerSimulator()` constructor, not `Aer.get_backend()` (removed in 1.0)
+- Use `transpile()` + `backend.run()`, not `execute()` (removed in 1.0)
+- Explicit transpilation gives better control and visibility
 
-**Tradeoff:**
-- **Pro:** Reduces peak qubit usage (up to 80% in some cases per literature)
-- **Con:** Cannot reverse circuit (intermediate states destroyed)
-- **Con:** Increased gate count (uncomputation immediately, not batched)
-
-**Sources:**
-- [Qubit-Reuse Compilation with Mid-Circuit Measurement](https://link.aps.org/doi/10.1103/PhysRevX.13.041057) - Physical Review X (2023)
-- [Integrated Qubit Reuse and Circuit Cutting](https://arxiv.org/html/2312.10298v1) - arXiv (2023)
-- [Scalable Memory Recycling for Large Quantum Programs](https://ar5iv.labs.arxiv.org/html/2503.00822) - arXiv (2025)
-
-## Integration with Existing Architecture
-
-### Current Architecture (v1.1)
-
-```
-Python Frontend (quantum_language.pyx)
-  - qint/qbool classes with __init__, __del__, operators
-  - Operations call C functions via Cython
-  ↓
-Cython Bindings
-  - Type conversion (Python → C types)
-  - Function wrapping (Python API → C API)
-  ↓
-C Backend (Backend/src/)
-  - Gate generation (CQ_equal_width, Q_and, etc.)
-  - Circuit building (add_gate, layers, optimization)
-  - Qubit allocation (qubit_allocator_t)
-```
-
-### Modified Architecture (Automatic Uncomputation)
-
-```
-Python Frontend (quantum_language.pyx)
-  - qint/qbool classes
-  - NEW: DependencyTracker singleton
-  - NEW: weakref.finalize registration in operations
-  - Operations call C functions (unchanged)
-  ↓
-Dependency Tracking (Python-level)
-  - Track parent→child relationships at creation
-  - Register finalization callbacks
-  - On GC: trigger uncomputation cascade
-  ↓
-Uncomputation Trigger (Python callback)
-  - Identify inverse operation sequence
-  - Call C backend to generate inverse gates
-  ↓
-Cython Bindings (minimal changes)
-  - Expose C uncomputation functions (if new ones needed)
-  ↓
-C Backend (Backend/src/)
-  - NEW: Inverse gate sequences (already possible via invert flag)
-  - Circuit building (unchanged)
-  - Qubit allocation (unchanged)
-```
-
-**Key integration points:**
-
-1. **qint/qbool operators** (`__eq__`, `__lt__`, `__and__`, etc.)
-   - After creating result qbool, register dependencies
-   - Record operation type for inverse lookup
-
-2. **weakref.finalize callback**
-   - Receives qubit indices and operation type
-   - Calls C backend to append inverse gates
-
-3. **qubit_allocator_t** (existing)
-   - Already handles qubit freeing via `allocator_free`
-   - Uncomputation happens before freeing (circuit generation first, then free)
-
-### Changes Required by Layer
-
-**Python Layer (quantum_language.pyx):**
-- Add `DependencyTracker` class (new, ~100 lines)
-- Modify comparison operators (`__eq__`, `__lt__`, etc.) to register dependencies (~5 lines per operator)
-- Add `_register_dependency` method to qbool/qint (~20 lines)
-- Add `_uncompute_callback` static method (~30 lines)
-
-**Cython Layer:**
-- Expose C inverse operation functions (if not already exposed)
-- No ownership changes needed (Python still owns qint/qbool lifecycle)
-
-**C Layer:**
-- Verify inverse operation support (via `invert` flag in `run_instruction`)
-- Add any missing inverse operation generators (if needed)
-- No dependency tracking code needed
-
-**Estimated LOC:**
-- Python: ~200 lines new code
-- Cython: ~20 lines exposing functions
-- C: 0-50 lines (only if inverse operations missing)
-
-## Technology Choices: NOT to Add
-
-### Rejected: External Graph Libraries
-
-**Option:** NetworkX, graphlib
-**Rejection rationale:**
-- Dependency graphs are trivial (parent→child edges only)
-- No complex graph algorithms needed
-- Native Python dict/list sufficient
-- Avoid external dependency
-
-**Exception:** If future phases need topological sort or cycle detection, `graphlib` (stdlib since Python 3.9) is appropriate.
-
-**Sources:**
-- [NetworkX for Dependency Graphs](https://towardsdatascience.com/network-graphs-for-dependency-resolution-5327cffe650f/) - Medium (2020, still relevant)
-- [Building a Dependency Graph](https://www.python.org/success-stories/building-a-dependency-graph-of-our-python-codebase/) - Python.org success stories
-
-### Rejected: C-Level Object System
-
-**Option:** Implement reference counting and weak references in C
-**Rejection rationale:**
-- Duplicates Python's GC
-- Existing architecture is stateless at C level
-- High complexity for marginal gain
-- Python already provides robust weak references
-
-### Rejected: Context Managers for Uncomputation
-
-**Option:** Use `with` statement to define uncomputation scope
-**Rejection rationale:**
-- Awkward API: `with temp_bool: result = a < b` is unnatural
-- User must explicitly scope every intermediate
-- Defeats purpose of "automatic" uncomputation
-- Better for explicit resource management (e.g., `with circuit_mode(qubit_saving):`)
-
-**Valid use:** Mode switching (deferred vs immediate)
+**Simulation methods:**
+The simulator auto-selects method based on circuit, but can be explicit:
 ```python
-with circuit_mode(qubit_saving=True):
-    result = compute_complex_expression()
-# All intermediates uncomputed immediately within this block
+# Auto-select (recommended)
+sim = AerSimulator()
+
+# Or specify method explicitly
+sim = AerSimulator(method='statevector')  # Dense statevector
+sim = AerSimulator(method='density_matrix')  # With noise
+sim = AerSimulator(method='matrix_product_state')  # For certain circuits
 ```
 
-**Sources:**
-- [Python Context Managers](https://docs.python.org/3/library/contextlib.html) - Official Python docs
-- [Understanding Python Context Managers](https://realpython.com/python-with-statement/) - Real Python (2025)
+**Rationale:** Use automatic method selection. AerSimulator intelligently chooses based on circuit structure and noise model.
 
-## Anti-Patterns to Avoid
+### 4. Verification Workflow Pattern
 
-### Anti-Pattern 1: Using __del__ for Uncomputation
+**Complete workflow for measurement-based verification:**
+```python
+from qiskit import qasm3, transpile
+from qiskit_aer import AerSimulator
 
-**What goes wrong:**
-- `__del__` not called for circular references
-- Order of `__del__` calls undefined (dependencies may uncompute before parents)
-- `__del__` not called on interpreter exit
-- Testing difficult (cannot trigger manually)
+# 1. Export from Quantum Assembly (via Cython binding)
+qasm_string = quantum_assembly_circuit.to_openqasm3()  # NEW method
 
-**Prevention:**
-- Use `weakref.finalize` exclusively
-- Document why `__del__` is insufficient
+# 2. Load into Qiskit
+circuit = qasm3.loads(qasm_string)
 
-### Anti-Pattern 2: Strong References in Dependency Graph
+# 3. Add measurements (if not already present)
+if not circuit.num_clbits:
+    circuit.measure_all()
 
-**What goes wrong:**
-- Storing `parent_obj` directly prevents GC
-- Circular references (parent→child→parent) cause memory leaks
-- Defeats automatic lifetime management
+# 4. Transpile for simulator
+simulator = AerSimulator()
+transpiled = transpile(circuit, backend=simulator)
 
-**Prevention:**
-- Store `weakref.ref(parent_obj)` instead
-- Document weak reference requirement
+# 5. Execute
+job = simulator.run(transpiled, shots=1024)
+result = job.result()
+counts = result.get_counts()
 
-### Anti-Pattern 3: C-Level Dependency Tracking
+# 6. Verify expected distribution
+assert '000' in counts or '111' in counts  # Bell state example
+```
 
-**What goes wrong:**
-- Duplicates Python's GC
-- No native weak reference support in C
-- Manual ref counting error-prone
-- Breaks stateless architecture
+## OpenQASM 3.0 Specification Compliance
 
-**Prevention:**
-- Keep dependency tracking in Python layer
-- C layer remains stateless (circuit generation only)
+### Multi-Controlled Gate Syntax
 
-### Anti-Pattern 4: Global Mutable State
+**Standard gates in stdgates.inc:**
+- Single-qubit: `p, x, y, z, h, s, sdg, t, tdg, sx, rx, ry, rz`
+- Two-qubit: `cx, cy, cz, cp, crx, cry, crz, ch, cu, swap`
+- Three-qubit: `ccx, cswap`
 
-**What goes wrong:**
-- Multiple circuits interfere with each other
-- Testing difficult (state persists between tests)
-- Thread-safety issues
+**Multi-control handling:**
 
-**Prevention:**
-- Make `DependencyTracker` per-circuit or use weak references to circuit
-- Document that tracker is circuit-scoped
+For ≤2 controls, use explicit gate names:
+```openqasm
+// 0 controls
+x q[0];
 
-## Comparison: Python vs C Tracking
+// 1 control (CNOT)
+cx q[0], q[1];
 
-| Aspect | Python-Level | C-Level | Winner |
-|--------|--------------|---------|--------|
-| **Weak references** | Native (`weakref.ref`) | Manual ref counting | Python |
-| **GC integration** | Automatic (PEP 442) | Must implement | Python |
-| **Architecture fit** | Natural (qint/qbool are Python objects) | Requires C object system | Python |
-| **Implementation effort** | ~200 LOC | ~800 LOC + ref counting | Python |
-| **Testing** | Easy (trigger finalizers) | Complex (memory leak testing) | Python |
-| **Performance** | Dependency registration: O(1), Uncomputation trigger: O(dependencies) | Same | Tie |
-| **Maintenance** | Standard Python patterns | Custom memory management | Python |
+// 2 controls (Toffoli)
+ccx q[0], q[1], q[2];
+```
 
-**Verdict:** Python-level tracking is superior for this architecture.
+For >2 controls, use `ctrl(n) @` modifier:
+```openqasm
+// 3 controls
+ctrl(3) @ x q[0], q[1], q[2], q[3];
 
-## Research Sources
+// 4 controls
+ctrl(4) @ x q[0], q[1], q[2], q[3], q[4];
+```
 
-### Quantum Uncomputation Research (2024-2026)
+**Implementation mapping:**
+```c
+gate_t g;  // From circuit
 
-- [Qurts: Automatic Quantum Uncomputation by Affine Types with Lifetime](https://arxiv.org/abs/2411.10835) - arXiv (2024)
-- [Modular Synthesis of Efficient Quantum Uncomputation](https://dl.acm.org/doi/pdf/10.1145/3689785) - ACM (2024)
-- [Unqomp: Synthesizing Uncomputation in Quantum Circuits](https://files.sri.inf.ethz.ch/website/papers/pldi21-unqomp.pdf) - PLDI (2021, still relevant)
-- [Rise of conditionally clean ancillae](https://quantum-journal.org/papers/q-2025-05-21-1752/pdf/) - Quantum Journal (2025)
+if (g.NumControls == 0) {
+    fprintf(f, "x q[%d];\n", g.Target);
+} else if (g.NumControls == 1) {
+    fprintf(f, "cx q[%d], q[%d];\n", g.Control[0], g.Target);
+} else if (g.NumControls == 2) {
+    fprintf(f, "ccx q[%d], q[%d], q[%d];\n",
+            g.Control[0], g.Control[1], g.Target);
+} else {
+    // >2 controls: use large_control array and ctrl modifier
+    fprintf(f, "ctrl(%d) @ x ", g.NumControls);
+    for (int i = 0; i < g.NumControls; i++) {
+        fprintf(f, "q[%d]", g.large_control[i]);
+        if (i < g.NumControls - 1) fprintf(f, ", ");
+    }
+    fprintf(f, ", q[%d];\n", g.Target);
+}
+```
 
-### Python Patterns
+**Why this approach:**
+- Explicit gates (cx, ccx) are more widely supported than ctrl modifier
+- ctrl modifier is required for >2 controls (c3x, c4x not in standard library)
+- Qiskit's qasm3.loads() handles both syntaxes correctly
 
-- [weakref — Weak references](https://docs.python.org/3/library/weakref.html) - Python 3.14.2 docs (Jan 26, 2026)
-- [PEP 442 – Safe object finalization](https://peps.python.org/pep-0442/) - Python Enhancement Proposal
-- [Python Context Managers](https://docs.python.org/3/library/contextlib.html) - Official Python docs
-- [Python Weak References in 2025](https://medium.com/pythoneers/python-weak-references-in-2025-a-simpler-way-to-work-with-the-garbage-collector-26517aebde2e) - Medium (2025)
+### Rotation Gate Syntax
 
-### Qubit Reuse Research
+**Parameterized gates:**
+```openqasm
+// Phase gate
+p(0.785398163) q[0];  // π/4 rotation
 
-- [Qubit-Reuse Compilation with Mid-Circuit Measurement and Reset](https://link.aps.org/doi/10.1103/PhysRevX.13.041057) - Physical Review X (2023)
-- [Integrated Qubit Reuse and Circuit Cutting](https://arxiv.org/html/2312.10298v1) - arXiv (2023)
-- [Scalable Memory Recycling for Large Quantum Programs](https://ar5iv.labs.arxiv.org/html/2503.00822) - arXiv (2025)
+// Pauli rotations
+rx(1.57079633) q[0];  // π/2 X rotation
+ry(3.14159265) q[0];  // π Y rotation
+rz(0.785398163) q[0]; // π/4 Z rotation
 
-### Dependency Graph Patterns
+// Generic rotation (if implemented)
+r(1.57, 0.0) q[0];  // r(θ, φ) - NOT in stdgates.inc
+```
 
-- [NetworkX for Dependency Graphs](https://towardsdatascience.com/network-graphs-for-dependency-resolution-5327cffe650f/) - Medium (2020)
-- [Building a Dependency Graph](https://www.python.org/success-stories/building-a-dependency-graph-of-our-python-codebase/) - Python.org
+**Current C backend status:**
+```c
+// In circuit_output.c, lines 310-319:
+case Y:   // break; (no-op)
+case R:   // break; (no-op)
+case Rx:  // break; (no-op)
+case Ry:  // break; (no-op)
+case Rz:  // break; (no-op)
+```
+
+**Required implementation:**
+```c
+case Y:
+    fprintf(oq_file, "y ");
+    break;
+case Rx:
+    fprintf(oq_file, "rx(%.20f) ", g.GateValue);
+    break;
+case Ry:
+    fprintf(oq_file, "ry(%.20f) ", g.GateValue);
+    break;
+case Rz:
+    fprintf(oq_file, "rz(%.20f) ", g.GateValue);
+    break;
+case R:
+    // R gate may require decomposition or custom handling
+    // OpenQASM 3.0 stdgates.inc doesn't have generic r(θ,φ)
+    // May need: fprintf(oq_file, "// R gate not in stdgates.inc\n");
+    break;
+```
+
+**Note on R gate:** The generic rotation gate R(θ, φ) is NOT in OpenQASM 3.0 stdgates.inc. If the C backend uses this, it needs either:
+1. Decomposition to rx, ry, rz sequence
+2. Custom gate definition in QASM output header
+3. Mark as unsupported in export
+
+### Measurement Syntax
+
+**Standard measurement:**
+```openqasm
+OPENQASM 3.0;
+include "stdgates.inc";
+qubit[2] q;
+bit[2] c;
+
+h q[0];
+cx q[0], q[1];
+c[0] = measure q[0];
+c[1] = measure q[1];
+```
+
+**Current C backend (line 308):**
+```c
+case M:
+    fprintf(oq_file, "m ");
+    break;
+```
+
+**Problem:** `m` is not a valid OpenQASM gate. Correct syntax is `measure`.
+
+**Required fix:**
+```c
+case M:
+    // OpenQASM 3.0 measurement requires classical bit declaration
+    // For now, use measure keyword (Qiskit will auto-add classical register)
+    fprintf(oq_file, "measure ");
+    break;
+```
+
+**Alternative:** Have Qiskit add measurements via `circuit.measure_all()` after import.
+
+## What NOT to Add
+
+### 1. Do NOT add PyQASM or openqasm3 parser packages
+
+**Reasoning:**
+- PyQASM is for validating QASM we didn't write (external sources)
+- openqasm3 (reference parser) is for building compilers
+- We only need to GENERATE valid QASM, not parse/validate it
+- Qiskit's qasm3.loads() provides sufficient validation (will error on invalid QASM)
+
+**If validation is needed later:** Add to test suite, not production dependencies.
+
+### 2. Do NOT add qiskit-transpiler-service
+
+**Reasoning:**
+- Cloud-based transpilation service for IBM Quantum hardware
+- We're doing local simulation only
+- Local AerSimulator handles transpilation efficiently
+
+### 3. Do NOT add Qiskit Runtime (qiskit-ibm-runtime)
+
+**Reasoning:**
+- For running on real IBM quantum hardware
+- Milestone is verification via simulation only
+- Adds cloud dependencies we don't need
+
+### 4. Do NOT add Qiskit Primitives (Sampler/Estimator)
+
+**Reasoning:**
+- Higher-level abstraction for quantum applications
+- We need low-level circuit verification
+- AerSimulator provides direct circuit execution we need
+
+### 5. Do NOT change build system
+
+**Reasoning:**
+- OpenQASM export is pure C string generation
+- Qiskit verification is Python test code
+- No new compiled dependencies
+- Keep existing setuptools + Cython build
+
+## Implementation Checklist
+
+### C Backend Enhancements
+
+- [ ] Implement `circuit_to_openqasm3_string()` returning malloc'd string
+- [ ] Fix `circuit_to_opanqasm()` to close file handle (line 326 - no fclose)
+- [ ] Add Y gate export: `fprintf(oq_file, "y ");`
+- [ ] Add Rx gate export: `fprintf(oq_file, "rx(%.20f) ", g.GateValue);`
+- [ ] Add Ry gate export: `fprintf(oq_file, "ry(%.20f) ", g.GateValue);`
+- [ ] Add Rz gate export: `fprintf(oq_file, "rz(%.20f) ", g.GateValue);`
+- [ ] Fix M gate export: change "m" to "measure"
+- [ ] Handle large_control array for NumControls > 2
+- [ ] Add classical bit declaration for measurements (optional - Qiskit can infer)
+
+### Cython Bindings
+
+- [ ] Add Python method `to_openqasm3() -> str` to circuit wrapper
+- [ ] Ensure proper memory management (free C string after Python string created)
+
+### Python Test Suite
+
+- [ ] Update tests/run_qisk.py to use current API:
+  - [ ] Replace `from qiskit import Aer` with `from qiskit_aer import AerSimulator`
+  - [ ] Replace `Aer.get_backend()` with `AerSimulator()`
+  - [ ] Replace `execute()` with `transpile()` + `backend.run()`
+  - [ ] Use `qasm3.loads()` for string import
+- [ ] Add measurement-based verification tests
+- [ ] Add multi-controlled gate tests (3, 4, 5+ controls)
+
+### Dependencies
+
+- [ ] Add to pyproject.toml `[project.optional-dependencies]` section:
+  ```toml
+  [project.optional-dependencies]
+  test = [
+      "qiskit>=2.3.0",
+      "qiskit-aer>=0.17.1",
+      "qiskit[qasm3-import]>=2.3.0",
+  ]
+  ```
+- [ ] Document that test dependencies are optional (not required for core functionality)
 
 ## Confidence Assessment
 
-| Area | Confidence | Rationale |
-|------|-----------|-----------|
-| Python patterns | HIGH | Official Python docs (3.14.2, 2026-01-26), PEP 442, multiple educational sources |
-| Quantum uncomputation | MEDIUM-HIGH | Recent research (2024-2026), but academic not production-tested |
-| Architecture fit | HIGH | Direct codebase analysis confirms stateless C layer, Python object lifecycle |
-| Implementation effort | HIGH | Clear pattern with well-defined integration points |
+| Area | Confidence | Source | Notes |
+|------|-----------|--------|-------|
+| Qiskit version | HIGH | Official docs, PyPI | 2.3.0 released Jan 8, 2026 |
+| Qiskit Aer API | HIGH | Official docs, release notes | 0.17.1 stable, clear migration path |
+| qasm3.loads() API | HIGH | Official IBM Quantum docs | Stable, requires qasm3-import extra |
+| OpenQASM 3.0 syntax | HIGH | Official spec at openqasm.com | ctrl(n) modifier for multi-control |
+| Integration approach | HIGH | Existing codebase analysis | Clear separation: C export, Python verify |
+| No new core deps | HIGH | Architecture analysis | QASM is strings, verification is test-only |
 
-## Open Questions
+## Sources
 
-1. **Inverse operation availability:** Does every C operation support `invert` flag? Need to audit C backend.
-   - **Resolution:** Code audit in implementation phase
+**Qiskit API Documentation:**
+- [qasm3 module - IBM Quantum Documentation](https://quantum.cloud.ibm.com/docs/api/qiskit/qasm3)
+- [Qiskit releases - GitHub](https://github.com/Qiskit/qiskit/releases)
+- [Qiskit on PyPI](https://pypi.org/project/qiskit/)
 
-2. **Partial uncomputation:** What if only some intermediates should be kept?
-   - **Resolution:** User can take explicit reference: `keep_me = intermediate` prevents GC
+**Qiskit Aer:**
+- [AerSimulator documentation](https://qiskit.github.io/qiskit-aer/stubs/qiskit_aer.AerSimulator.html)
+- [Qiskit Aer releases](https://github.com/Qiskit/qiskit-aer/releases)
+- [qiskit-aer on PyPI](https://pypi.org/project/qiskit-aer/)
 
-3. **Qubit-saving mode implementation:** Should it be per-circuit, per-operation, or dynamic?
-   - **Resolution:** Start with per-circuit flag, add per-operation in later phase
+**QASM3 Import:**
+- [qiskit-qasm3-import GitHub](https://github.com/Qiskit/qiskit-qasm3-import)
+- [qiskit-qasm3-import on PyPI](https://pypi.org/project/qiskit-qasm3-import/)
 
-4. **Cross-circuit dependencies:** What if qbool from circuit A used in circuit B?
-   - **Resolution:** Document as unsupported (single circuit at a time in v1.2)
+**OpenQASM 3.0 Specification:**
+- [Gates - OpenQASM 3.0 Specification](https://openqasm.com/versions/3.0/language/gates.html)
+- [Standard library - OpenQASM Live Specification](https://openqasm.com/language/standard_library.html)
+
+**Migration Guides:**
+- [Qiskit 1.0 feature migration guide](https://docs.quantum.ibm.com/migration-guides/qiskit-1.0-features)

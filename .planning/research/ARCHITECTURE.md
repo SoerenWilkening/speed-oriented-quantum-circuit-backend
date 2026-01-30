@@ -1,959 +1,800 @@
-# Architecture: Automatic Uncomputation with Dependency Tracking
+# Architecture Integration Patterns: OpenQASM Export & Verification
 
-**Domain:** Automatic uncomputation for quantum circuit generators
-**Researched:** 2026-01-28
-**Confidence:** HIGH (verified with multiple academic sources and existing implementations)
+**Domain:** Quantum circuit export and verification
+**Researched:** 2026-01-30
+**Confidence:** HIGH
 
 ## Executive Summary
 
-Automatic uncomputation with dependency tracking requires three architectural components: (1) a dependency graph tracking which qubits/values depend on which intermediates, (2) a reverse gate generator that creates adjoint circuits for uncomputation, and (3) integration with object lifetime management to trigger uncomputation at scope exit. The architecture must decide whether tracking happens at Python level (easier integration, higher overhead) or C level (more complex, better performance). Research shows hybrid approaches work best: Python tracks high-level dependencies, C generates reverse gates.
+This research addresses how to integrate production-quality OpenQASM 3.0 string export and Qiskit-based verification into the existing three-layer stateless architecture (C backend → Cython bindings → Python frontend) without disrupting the established patterns.
 
-## Current Architecture (Baseline)
+### Key Findings
 
-### Existing 3-Layer Architecture
+**Export approach:** Hybrid — C generates QASM to dynamically allocated buffer, Cython wraps with Python string, avoiding file I/O entirely.
 
-```
-┌─────────────────────────────────────────┐
-│         Python Layer (Frontend)          │
-│  - qint/qbool classes                    │
-│  - Operator overloading                  │
-│  - Context manager (with statement)      │
-│  - Object lifecycle (__init__, __del__)  │
-└─────────────────┬───────────────────────┘
-                  │ Cython bindings
-┌─────────────────▼───────────────────────┐
-│      Cython Layer (python-backend/)      │
-│  - quantum_language.pyx                  │
-│  - Wraps C functions                     │
-│  - Converts Python→C types               │
-└─────────────────┬───────────────────────┘
-                  │ C function calls
-┌─────────────────▼───────────────────────┐
-│         C Layer (Backend/)               │
-│  - gate.c: Gate primitives               │
-│  - circuit.c: Circuit management         │
-│  - arithmetic_ops.c, comparison_ops.c    │
-│  - bitwise_ops.c                         │
-│  - qubit_allocator.c: Centralized alloc  │
-└──────────────────────────────────────────┘
-```
+**Verification location:** Standalone script at `scripts/verify_circuit.py` with optional Qiskit dependency, keeping verification separate from core library.
 
-**Key characteristics:**
-- **Stateless C functions**: All take explicit `circuit_t*` parameter
-- **Centralized qubit allocator**: Tracks ownership, reuses freed qubits
-- **Python object lifecycle**: `__init__` allocates qubits, `__del__` frees them
-- **Right-aligned qubit arrays**: 64-element arrays support variable width (1-64 bits)
-- **Sequence-based operations**: C returns `sequence_t*` gate sequences, Python applies to circuit
+**Measurement integration:** Add measurement support to existing gate_t enum (already has M), expose via Python API for verification use cases.
 
-### Current Flow (Without Uncomputation)
+**Integration pattern:** Minimal C changes, single new Cython binding, clean Python API addition (`ql.to_openqasm()`) maintaining architectural consistency.
+
+## Recommended Architecture
+
+### Component Overview
 
 ```
-User writes: result = ~a & b
+┌─────────────────────────────────────────────────────────────┐
+│ Python Layer (src/quantum_language/__init__.py)             │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ ql.to_openqasm() -> str                                 │ │
+│ │ ql.circuit.measure(qint) -> None                        │ │
+│ └─────────────────────────────────────────────────────────┘ │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+┌────────────────────────▼────────────────────────────────────┐
+│ Cython Layer (src/quantum_language/_core.pyx)               │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ def to_openqasm() -> str:                               │ │
+│ │   cdef char* qasm_str = circuit_to_qasm_string(_circuit)│ │
+│ │   py_str = qasm_str.decode('utf-8')                     │ │
+│ │   free(qasm_str)  # C allocated, Python-managed free    │ │
+│ │   return py_str                                         │ │
+│ └─────────────────────────────────────────────────────────┘ │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+┌────────────────────────▼────────────────────────────────────┐
+│ C Backend (c_backend/src/circuit_output.c)                  │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ char* circuit_to_qasm_string(circuit_t *circ)           │ │
+│ │   - Calculate buffer size (gate count estimate)         │ │
+│ │   - malloc() buffer                                     │ │
+│ │   - snprintf() QASM header                              │ │
+│ │   - Iterate layers → gates → snprintf() gate strings    │ │
+│ │   - Handle large_control for multi-controlled gates     │ │
+│ │   - Return buffer (caller frees via Cython)             │ │
+│ └─────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
 
-1. Python: intermediate = ~a
-   - Calls Q_not() from bitwise_ops.c
-   - Allocates new qbool for intermediate
-   - Adds gates to circuit
-
-2. Python: result = intermediate & b
-   - Calls Q_and() from bitwise_ops.c
-   - Allocates new qbool for result
-   - Adds gates to circuit
-
-3. Scope exit: Python __del__ called
-   - intermediate.__del__() frees qubit to allocator
-   - result.__del__() frees qubit to allocator
-   - BUT: No uncomputation gates added!
+┌─────────────────────────────────────────────────────────────┐
+│ Verification (scripts/verify_circuit.py) — STANDALONE       │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ import quantum_language as ql                           │ │
+│ │ qasm_str = ql.to_openqasm()                             │ │
+│ │ from qiskit.qasm3 import loads  # Optional dependency   │ │
+│ │ circuit = loads(qasm_str)                               │ │
+│ │ simulate and verify outcomes                            │ │
+│ └─────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-**Problem:** Qubits are returned to allocator pool but remain entangled. No reverse gates are generated. Intermediate qubit states "leak" into final result.
+### Integration Points with Existing Components
 
-## Recommended Architecture: Hybrid Dependency Tracking
+| Component | Current State | Required Changes | Integration Pattern |
+|-----------|---------------|------------------|---------------------|
+| **circuit_output.c** | Has `circuit_to_opanqasm(circ, path)` file-based export | Add `circuit_to_qasm_string(circ)` returning `char*` | New function alongside existing, reuse gate iteration logic |
+| **circuit_output.h** | Declares file-based export | Add `char* circuit_to_qasm_string(circuit_t *circ);` | Single line addition |
+| **_core.pxd** | No QASM export binding | Add `cdef extern from "circuit_output.h": char* circuit_to_qasm_string(circuit_t *circ)` | Standard Cython extern declaration |
+| **_core.pyx** | Has circuit class with methods | Add `to_openqasm()` method to circuit class | Method returns decoded string, frees C buffer |
+| **__init__.py** | Exports circuit class | Add `to_openqasm()` convenience function at module level | `def to_openqasm(): return circuit().to_openqasm()` |
+| **setup.py** | No optional dependencies | Add `extras_require={"verification": ["qiskit>=1.0"]}` | Standard optional dependency pattern |
 
-Based on research into Silq, Unqomp, Qurts, and analysis of existing codebase, the recommended architecture uses **Python-level dependency tracking with C-level reverse gate generation**.
+### New Components Needed
 
-### Architecture Overview
+**1. C Function: `circuit_to_qasm_string()` in circuit_output.c**
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                   Python Layer (Extended)                     │
-│                                                                │
-│  qint/qbool classes (extended):                               │
-│    - dependency_list: [qbool] tracking intermediates          │
-│    - add_dependency(dep: qbool)                               │
-│    - uncompute() triggers cascade                             │
-│                                                                │
-│  DependencyManager (new):                                     │
-│    - track_dependency(result, intermediate)                   │
-│    - cascade_uncompute(target)                                │
-│    - topological_sort(deps) for correct order                 │
-│                                                                │
-│  Context Manager (extended):                                  │
-│    - __exit__ triggers uncomputation for scope temporaries    │
-│                                                                │
-└───────────────────────┬──────────────────────────────────────┘
-                        │
-┌───────────────────────▼──────────────────────────────────────┐
-│                 Cython Layer (Extended)                       │
-│                                                                │
-│  - Expose reverse_sequence(seq) binding                       │
-│  - Expose uncompute_qubit(circuit, qubit, history)            │
-│                                                                │
-└───────────────────────┬──────────────────────────────────────┘
-                        │
-┌───────────────────────▼──────────────────────────────────────┐
-│                  C Layer (New Components)                     │
-│                                                                │
-│  reverse_gate_generator.c:                                    │
-│    - reverse_sequence(sequence_t*) → sequence_t*              │
-│    - reverse_gate(gate_t) → gate_t                            │
-│                                                                │
-│  uncomputation.c:                                             │
-│    - apply_uncomputation(circuit_t*, qubit_t*, sequence_t*)   │
-│                                                                │
-│  Modified qubit_allocator.c:                                  │
-│    - Track gate history per qubit (optional)                  │
-│    - allocator_mark_computed(qubit, sequence)                 │
-│                                                                │
-└───────────────────────────────────────────────────────────────┘
-```
+Purpose: Generate OpenQASM 3.0 string in dynamically allocated buffer.
 
-### Component Boundaries
-
-| Component | Responsibility | Lives In | Communicates With |
-|-----------|---------------|----------|-------------------|
-| **DependencyManager** | Track qbool→qbool dependencies, topological sort | Python (new class) | qint/qbool classes |
-| **qbool.dependency_list** | Store list of intermediates this value depends on | Python (extend qbool) | DependencyManager |
-| **qbool.uncompute()** | Trigger cascade uncomputation in reverse order | Python (new method) | DependencyManager, Cython bindings |
-| **reverse_gate_generator** | Generate adjoint sequences (X→X, H→H, P(θ)→P(-θ), CNOT→CNOT) | C (new module) | uncomputation.c |
-| **uncomputation.c** | Apply reverse sequence to circuit | C (new module) | circuit.c, reverse_gate_generator.c |
-| **qubit_allocator** | (Optional) Track gate history per qubit | C (extended) | uncomputation.c |
-
-### Data Flow: Automatic Uncomputation
-
-```
-User writes: result = ~a & b
-
-Step 1: Create intermediate (~a)
-┌────────────────────────────────────────┐
-│ intermediate = a.__invert__()          │
-│                                         │
-│ 1. Allocate qubit for intermediate     │
-│ 2. Generate NOT sequence from C         │
-│ 3. Apply sequence to circuit            │
-│ 4. Record dependency: intermediate.deps = [] │
-└────────────────────────────────────────┘
-
-Step 2: Create result (intermediate & b)
-┌────────────────────────────────────────┐
-│ result = intermediate.__and__(b)       │
-│                                         │
-│ 1. Allocate qubit for result            │
-│ 2. Generate AND sequence from C          │
-│ 3. Apply sequence to circuit             │
-│ 4. Record dependency:                    │
-│    result.deps = [intermediate]          │
-│    DependencyManager.track(result, intermediate) │
-└────────────────────────────────────────┘
-
-Step 3: Scope exit triggers uncomputation
-┌────────────────────────────────────────┐
-│ result.__del__() called                │
-│                                         │
-│ 1. Check if has dependencies:           │
-│    result.deps = [intermediate]         │
-│                                          │
-│ 2. Call result.uncompute():              │
-│    a. For each dep in deps (reversed):  │
-│       - Call dep.uncompute() (recursive)│
-│    b. Generate reverse sequence for      │
-│       operations that created result     │
-│    c. Apply reverse sequence to circuit  │
-│    d. Free qubit to allocator            │
-│                                          │
-│ 3. intermediate.uncompute():            │
-│    a. intermediate.deps = [] (no deps)  │
-│    b. Generate reverse NOT sequence      │
-│    c. Apply to circuit                   │
-│    d. Free qubit to allocator            │
-└────────────────────────────────────────┘
-```
-
-## Integration Points with Existing Components
-
-### 1. Python qbool Class (quantum_language.pyx)
-
-**Current state (line ~2157):**
-```python
-cdef class qbool(qint):
-    def __init__(self, value=False, ...):
-        super().__init__(value, width=1, ...)
-
-    def __del__(self):
-        if self.allocated_qubits:
-            alloc = circuit_get_allocator(...)
-            allocator_free(alloc, self.allocated_start, self.bits)
-```
-
-**Integration point:** Extend `__del__` to call `uncompute()` before freeing:
-```python
-cdef class qbool(qint):
-    cdef public list dependency_list  # Track intermediates
-
-    def __init__(self, value=False, ...):
-        super().__init__(value, width=1, ...)
-        self.dependency_list = []
-
-    def uncompute(self):
-        """Uncompute this qbool and its dependencies."""
-        # Cascade to dependencies first (reverse order)
-        for dep in reversed(self.dependency_list):
-            dep.uncompute()
-
-        # Generate and apply reverse gates for self
-        if self.allocated_qubits and self.creation_sequence:
-            reversed_seq = reverse_sequence(self.creation_sequence)
-            apply_uncomputation(_circuit, self.qubits, reversed_seq)
-
-    def __del__(self):
-        if self.allocated_qubits:
-            self.uncompute()  # NEW: Uncompute before freeing
-            alloc = circuit_get_allocator(...)
-            allocator_free(alloc, self.allocated_start, self.bits)
-```
-
-### 2. Bitwise Operations (bitwise_ops.c)
-
-**Current state:** Returns `sequence_t*` for operations (Q_not, Q_and, Q_xor, Q_or)
-
-**Integration point:** No changes needed to C functions. Python layer tracks which sequence created which qbool:
-
-```python
-def __invert__(self):  # ~self (NOT)
-    result = qbool()
-    seq = Q_not(self.bits)  # Get sequence from C
-    run_instruction(seq, qubit_array, False, _circuit)
-    result.creation_sequence = seq  # NEW: Track sequence
-    result.dependency_list = []     # NEW: No deps for NOT
-    return result
-
-def __and__(self, other):  # self & other
-    result = qbool()
-    seq = Q_and(self.bits)  # Get sequence from C
-    run_instruction(seq, qubit_array, False, _circuit)
-    result.creation_sequence = seq       # NEW: Track sequence
-    result.dependency_list = [self, other]  # NEW: Track deps
-    return result
-```
-
-### 3. Comparison Operations (comparison_ops.c)
-
-**Current state (line ~1426):** qint comparisons return qbool:
-```python
-def __eq__(self, other):
-    result = qbool()
-    seq = CQ_equal_width(self.bits, other)
-    run_instruction(seq, ...)
-    return result
-```
-
-**Integration point:** Track comparison intermediates:
-```python
-def __eq__(self, other):
-    result = qbool()
-    seq = CQ_equal_width(self.bits, other)
-    run_instruction(seq, ...)
-    result.creation_sequence = seq
-    # For qint == qint, dependencies created during subtract-add-back
-    # are already tracked. result depends on operands (no new intermediates).
-    result.dependency_list = []
-    return result
-```
-
-### 4. Context Manager (with statement)
-
-**Current state (line ~546):** `__enter__` sets `_controlled = True`, `__exit__` resets.
-
-**Integration point:** Track temporaries created within context and uncompute on exit:
-
-```python
-# Global tracking for context-local temporaries
-cdef list _context_temporaries = []
-
-def __enter__(self):
-    global _controlled, _control_bool, _context_temporaries
-    _controlled = True
-    _control_bool = self
-    _context_temporaries.append([])  # New scope
-    return self
-
-def __exit__(self, exc_type, exc, tb):
-    global _controlled, _control_bool, _context_temporaries
-
-    # Uncompute all temporaries created in this context
-    temporaries = _context_temporaries.pop()
-    for temp in reversed(temporaries):  # Reverse order
-        temp.uncompute()
-
-    _controlled = False
-    _control_bool = None
-    return False
-```
-
-### 5. Qubit Allocator (qubit_allocator.c)
-
-**Current state:** Tracks allocation/deallocation, reuses freed qubits.
-
-**Integration point (optional):** Track gate history per qubit for more sophisticated uncomputation:
-
+Signature:
 ```c
-// Extension to qubit_allocator_t (optional, for Phase 2)
-typedef struct {
-    qubit_t *indices;
-    num_t capacity;
-    num_t next_qubit;
-    num_t freed_count;
-    qubit_t *freed_stack;
-    num_t freed_capacity;
-    allocator_stats_t stats;
-
-    // NEW: Optional gate history tracking
-    sequence_t **qubit_history;  // [qubit_id] -> sequence that created it
-    num_t history_capacity;
-
-#ifdef DEBUG_OWNERSHIP
-    char **owner_tags;
-    num_t owner_capacity;
-#endif
-} qubit_allocator_t;
-
-// NEW: Mark qubit as computed with sequence
-void allocator_mark_computed(qubit_allocator_t *alloc, qubit_t q, sequence_t *seq);
-
-// NEW: Get sequence that created qubit
-sequence_t* allocator_get_history(qubit_allocator_t *alloc, qubit_t q);
+char* circuit_to_qasm_string(circuit_t *circ);
 ```
 
-**Rationale:** Optional for Phase 1. Python-level tracking is sufficient for basic uncomputation. C-level history tracking enables more advanced optimizations (merging uncomputation sequences, detecting recomputation).
+Implementation approach:
+- Calculate buffer size estimate: `size = 200 + (circ->used * 80)` (header + ~80 chars per gate average)
+- Use `malloc()` for buffer allocation
+- Use `snprintf()` for safe string building (prevents overflow)
+- Return buffer pointer (Cython layer handles free)
 
-## New Components Needed
+Key differences from existing `circuit_to_opanqasm()`:
+- Returns `char*` instead of `void`
+- Uses `malloc()` + `snprintf()` instead of `fprintf()`
+- Handles all gate types (X, Y, Z, H, P, M, R, Rx, Ry, Rz)
+- Correctly handles `large_control` for gates with `NumControls > 2`
+- Includes error handling (NULL circuit, allocation failure)
 
-### 1. reverse_gate_generator.c (C layer)
+**2. Cython Binding: `to_openqasm()` in _core.pyx**
 
-**Purpose:** Generate adjoint (reverse) sequences for uncomputation.
+Purpose: Wrap C string allocation with Python memory safety.
 
-**API:**
-```c
-/**
- * @file reverse_gate_generator.h
- * @brief Reverse gate generation for automatic uncomputation.
- */
-
-#ifndef REVERSE_GATE_GENERATOR_H
-#define REVERSE_GATE_GENERATOR_H
-
-#include "types.h"
-
-/**
- * @brief Reverse a single gate (generate adjoint).
- *
- * Gate reversals:
- * - X → X (self-adjoint)
- * - Y → Y (self-adjoint)
- * - Z → Z (self-adjoint)
- * - H → H (self-adjoint)
- * - CNOT → CNOT (self-adjoint)
- * - P(θ) → P(-θ)
- * - Rx(θ) → Rx(-θ)
- * - Ry(θ) → Ry(-θ)
- * - Rz(θ) → Rz(-θ)
- *
- * @param g Gate to reverse
- * @return Reversed gate (caller owns)
- */
-gate_t reverse_gate(gate_t *g);
-
-/**
- * @brief Reverse an entire sequence (generate adjoint circuit).
- *
- * Reverses gate order and applies adjoint to each gate.
- * Result: seq[n-1]† → seq[n-2]† → ... → seq[0]†
- *
- * @param seq Sequence to reverse
- * @return Reversed sequence (caller owns, must free with free_sequence)
- *
- * OWNERSHIP: Caller owns returned sequence_t*, must free
- */
-sequence_t* reverse_sequence(sequence_t *seq);
-
-/**
- * @brief Check if sequence is reversible (all gates have adjoints).
- *
- * @param seq Sequence to check
- * @return 1 if reversible, 0 otherwise
- */
-int is_reversible(sequence_t *seq);
-
-#endif // REVERSE_GATE_GENERATOR_H
-```
-
-**Implementation notes:**
-- Most quantum gates are self-adjoint (X, Y, Z, H, CNOT)
-- Phase gates require sign flip: P(θ) → P(-θ)
-- Sequence reversal: gates applied in reverse order
-- Layer structure must be rebuilt (gates reordered into new layers)
-
-### 2. uncomputation.c (C layer)
-
-**Purpose:** Apply uncomputation to circuit.
-
-**API:**
-```c
-/**
- * @file uncomputation.h
- * @brief Apply uncomputation to quantum circuit.
- */
-
-#ifndef UNCOMPUTATION_H
-#define UNCOMPUTATION_H
-
-#include "types.h"
-#include "circuit.h"
-
-/**
- * @brief Apply uncomputation sequence to circuit.
- *
- * Applies reversed sequence to specified qubits, effectively
- * uncomputing the original operation.
- *
- * @param circ Circuit to modify
- * @param qubits Qubit array (indices to uncompute)
- * @param reversed_seq Reversed sequence from reverse_sequence()
- * @return 0 on success, -1 on error
- */
-int apply_uncomputation(circuit_t *circ, qubit_t *qubits, sequence_t *reversed_seq);
-
-/**
- * @brief Uncompute a qbool value (Python-level helper).
- *
- * High-level function that:
- * 1. Retrieves sequence that created qbool
- * 2. Reverses the sequence
- * 3. Applies to circuit
- *
- * @param circ Circuit
- * @param qubit Qubit to uncompute
- * @param creation_seq Sequence that created this qubit's value
- * @return 0 on success, -1 on error
- */
-int uncompute_qubit(circuit_t *circ, qubit_t qubit, sequence_t *creation_seq);
-
-#endif // UNCOMPUTATION_H
-```
-
-**Implementation notes:**
-- Reuses existing `add_gate()` infrastructure
-- No new gate types needed
-- Layering handled by circuit.c's existing logic
-
-### 3. DependencyManager (Python layer)
-
-**Purpose:** Centralized dependency tracking and topological sorting.
-
-**API:**
+Implementation:
 ```python
-class DependencyManager:
-    """Manage qbool dependency graph for automatic uncomputation.
+def to_openqasm(self):
+    """Export circuit to OpenQASM 3.0 string.
 
-    Tracks dependencies between qbool values and provides
-    topological sorting for correct uncomputation order.
+    Returns
+    -------
+    str
+        OpenQASM 3.0 representation of circuit.
     """
+    cdef char* qasm_cstr = circuit_to_qasm_string(<circuit_t*>_circuit)
+    if qasm_cstr == NULL:
+        raise RuntimeError("Failed to generate OpenQASM string")
 
-    def __init__(self):
-        self.dependencies = {}  # {qbool_id: [dep1, dep2, ...]}
+    try:
+        # Decode C string to Python string
+        qasm_str = qasm_cstr.decode('utf-8')
+    finally:
+        # Free C-allocated buffer
+        free(qasm_cstr)
 
-    def track_dependency(self, result: qbool, intermediate: qbool):
-        """Record that result depends on intermediate."""
-        if id(result) not in self.dependencies:
-            self.dependencies[id(result)] = []
-        self.dependencies[id(result)].append(intermediate)
-
-    def get_dependencies(self, qbool: qbool) -> list:
-        """Get all dependencies for a qbool."""
-        return self.dependencies.get(id(qbool), [])
-
-    def cascade_uncompute(self, target: qbool):
-        """Uncompute target and all dependencies in correct order.
-
-        Uses topological sort to ensure dependencies are
-        uncomputed in reverse creation order.
-        """
-        visited = set()
-
-        def visit(node):
-            if id(node) in visited:
-                return
-            visited.add(id(node))
-
-            # Recursively visit dependencies first
-            for dep in self.get_dependencies(node):
-                visit(dep)
-
-            # Uncompute this node
-            node._uncompute_self()  # Internal method
-
-        visit(target)
-
-    def clear(self):
-        """Clear all tracked dependencies."""
-        self.dependencies.clear()
-
-# Global instance
-_dependency_manager = DependencyManager()
+    return qasm_str
 ```
 
-**Rationale:** Centralized manager enables:
-- Cycle detection (error case: `a = b; b = a`)
-- Global dependency visualization for debugging
-- Weak reference tracking (avoid keeping qbools alive)
+Memory safety pattern:
+- C allocates with `malloc()`
+- Cython decodes to Python string (copies data)
+- Cython frees C buffer with `free()` in finally block
+- Python string is Python-managed (no manual free needed)
 
-## Architecture Patterns
+**3. Python API: `ql.to_openqasm()` in __init__.py**
 
-### Pattern 1: Dependency Tracking on Creation
+Purpose: Provide module-level convenience function.
 
-**What:** Every qbool operation records its dependencies at creation time.
-
-**When:** During operator overloading (`__invert__`, `__and__`, `__xor__`, `__or__`, comparisons).
-
-**Implementation:**
+Implementation:
 ```python
-def __and__(self, other):
-    result = qbool()
-    # ... generate gates ...
-    result.dependency_list = [self, other]  # Track dependencies
-    result.creation_sequence = seq          # Track creating sequence
-    return result
+def to_openqasm():
+    """Export current circuit to OpenQASM 3.0 string.
+
+    Returns
+    -------
+    str
+        OpenQASM 3.0 representation of circuit.
+
+    Examples
+    --------
+    >>> import quantum_language as ql
+    >>> c = ql.circuit()
+    >>> a = ql.qint(5, width=4)
+    >>> qasm_str = ql.to_openqasm()
+    >>> print(qasm_str)
+    OPENQASM 3.0;
+    include "stdgates.inc";
+    qubit[4] q;
+    ...
+    """
+    return circuit().to_openqasm()
 ```
 
-**Benefits:**
-- Simple: dependency recorded when known
-- No retroactive graph building
-- Clear ownership: result owns its dependency list
+**4. Verification Script: `scripts/verify_circuit.py`**
 
-### Pattern 2: Cascade Uncomputation on Destruction
+Purpose: Standalone verification tool with Qiskit integration.
 
-**What:** `__del__` triggers recursive uncomputation before freeing qubits.
+Location: `scripts/` directory (not in package)
 
-**When:** Scope exit, explicit `del`, or garbage collection.
-
-**Implementation:**
+Structure:
 ```python
-def __del__(self):
-    if self.allocated_qubits:
-        self.uncompute()  # Cascades to dependencies
-        allocator_free(...)
+#!/usr/bin/env python3
+"""Verify quantum_language circuits via Qiskit simulation.
+
+Usage:
+    python scripts/verify_circuit.py [--test-case CASE]
+
+Optional dependency: qiskit>=1.0
+Install with: pip install "quantum-assembly[verification]"
+"""
+
+def verify_circuit(qasm_string: str) -> bool:
+    """Import QASM and simulate with Qiskit."""
+    try:
+        from qiskit.qasm3 import loads
+        from qiskit_aer import AerSimulator
+    except ImportError:
+        print("ERROR: Qiskit not installed. Install with: pip install qiskit qiskit-aer")
+        return False
+
+    circuit = loads(qasm_string)
+    simulator = AerSimulator()
+    result = simulator.run(circuit, shots=1024).result()
+    counts = result.get_counts()
+    return counts
+
+def test_classical_init():
+    """Test case: qint(5) should measure as |101> with probability 1.0."""
+    import quantum_language as ql
+
+    c = ql.circuit()
+    a = ql.qint(5, width=3)
+    # TODO: Add measurement gates
+    qasm = ql.to_openqasm()
+
+    counts = verify_circuit(qasm)
+    assert '101' in counts  # Binary 5 = 101
+    assert counts['101'] > 900  # Should be ~1024 shots
+
+if __name__ == '__main__':
+    # Run built-in test cases
+    test_classical_init()
+    print("✓ All verification tests passed")
 ```
 
-**Benefits:**
-- Automatic: no manual uncompute calls
-- Correct ordering: recursive ensures dependencies uncomputed first
-- Integrates with existing lifecycle
+Why standalone script:
+- Keeps Qiskit dependency optional (not required for core library)
+- Provides example usage pattern for users
+- Can be run independently during development
+- Not imported by package (no import-time dependency check)
 
-### Pattern 3: Sequence Reversal for Adjoint
+**5. Measurement Gate Support**
 
-**What:** Reverse gate sequence to generate uncomputation circuit.
+Current state: `gate_t` enum already includes `M` (measurement), but not exposed to Python.
 
-**When:** During `uncompute()` call.
+Required additions:
 
-**Implementation:**
+In `_core.pyx`:
+```python
+def measure(self, qint_obj):
+    """Add measurement gates for all qubits in quantum integer.
+
+    Parameters
+    ----------
+    qint_obj : qint
+        Quantum integer to measure.
+
+    Notes
+    -----
+    Adds measurement gates to circuit. Outcomes available via
+    OpenQASM export and external simulation.
+    """
+    # Iterate qubits in qint and add M gates
+    # Use existing add_gate infrastructure
+    pass
+```
+
+In `circuit_output.c` (`circuit_to_qasm_string`):
 ```c
-sequence_t* reverse_sequence(sequence_t *seq) {
-    sequence_t *reversed = allocate_sequence(seq->num_layer);
+case M:
+    // OpenQASM 3.0 measurement syntax
+    snprintf(gate_buf, sizeof(gate_buf), "measure q[%d];\n", g.Target);
+    break;
+```
 
-    // Reverse layer order
-    for (int layer = 0; layer < seq->num_layer; layer++) {
-        int rev_layer = seq->num_layer - 1 - layer;
+Note: Measurement gates do not modify circuit structure, just add M gate type to sequence.
 
-        // Copy gates, applying adjoint to each
-        for (int gate = 0; gate < seq->gates_per_layer[layer]; gate++) {
-            reversed->seq[rev_layer][gate] = reverse_gate(&seq->seq[layer][gate]);
-        }
-        reversed->gates_per_layer[rev_layer] = seq->gates_per_layer[layer];
-    }
+## Data Flow Changes
 
-    return reversed;
+### Current OpenQASM Export Flow (File-Based)
+
+```
+User → calls circuit_to_opanqasm(circ, path)
+     → C function opens file at path/circuit.qasm
+     → fprintf() writes QASM to file
+     → User reads file externally
+```
+
+### New OpenQASM Export Flow (String-Based)
+
+```
+User → calls ql.to_openqasm()
+     → Python forwards to _core.circuit.to_openqasm()
+     → Cython calls circuit_to_qasm_string(_circuit)
+     → C allocates buffer with malloc()
+     → C writes QASM to buffer with snprintf()
+     → C returns char* to Cython
+     → Cython decodes char* to Python str
+     → Cython frees C buffer
+     → Python string returned to user
+```
+
+### Verification Flow (External Script)
+
+```
+User builds circuit in quantum_language
+     → calls ql.to_openqasm() → gets string
+     → runs scripts/verify_circuit.py
+     → script imports Qiskit (optional dep)
+     → Qiskit loads QASM string
+     → Simulate and verify outcomes
+```
+
+## Patterns to Follow
+
+### Pattern 1: C String Return with Cython Cleanup
+
+**Context:** C function needs to return variable-length string to Python.
+
+**Problem:** C can't know Python's memory management; Python can't free C's malloc.
+
+**Solution:** C allocates with malloc(), Cython decodes and frees.
+
+**Example:**
+```c
+// C side (circuit_output.c)
+char* circuit_to_qasm_string(circuit_t *circ) {
+    size_t bufsize = 200 + (circ->used * 80);
+    char *buf = malloc(bufsize);
+    if (!buf) return NULL;
+
+    // Build string with snprintf
+    size_t offset = 0;
+    offset += snprintf(buf + offset, bufsize - offset, "OPENQASM 3.0;\n");
+    // ... more snprintf calls
+
+    return buf;  // Caller must free
 }
 ```
 
-**Benefits:**
-- Correct quantum uncomputation (adjoint circuit)
-- Reuses existing gate types (no new gate primitives)
-- Layer-aware: preserves parallelism
-
-### Pattern 4: Context-Local Uncomputation
-
-**What:** Temporaries created in `with` block are automatically uncomputed on exit.
-
-**When:** `__exit__` of context manager.
-
-**Implementation:**
 ```python
-def __exit__(self, exc_type, exc, tb):
-    # Uncompute all context-local temporaries
-    for temp in reversed(_context_temporaries[-1]):
-        temp.uncompute()
-    _context_temporaries.pop()
-    return False
+# Cython side (_core.pyx)
+def to_openqasm(self):
+    cdef char* c_str = circuit_to_qasm_string(<circuit_t*>_circuit)
+    if c_str == NULL:
+        raise RuntimeError("Export failed")
+    try:
+        py_str = c_str.decode('utf-8')
+    finally:
+        free(c_str)  # Use libc.stdlib.free
+    return py_str
 ```
 
-**Benefits:**
-- Matches user expectation: "temporary" means "cleanup on scope exit"
-- Reduces qubit usage during long computations
-- Integrates with existing `with` statement support
+**Why this works:**
+- C allocates exactly the size needed
+- Cython copies to Python string (immutable, GC-managed)
+- Cython frees C memory immediately
+- No Python object created in C (avoids mixed allocators)
+
+**Reference:** [Python C Extension Memory Management](https://docs.python.org/3/c-api/memory.html), [Cython Unicode and Passing Strings](https://cython.readthedocs.io/en/latest/src/tutorial/strings.html)
+
+### Pattern 2: Optional Dependencies via extras_require
+
+**Context:** Verification needs Qiskit, but core library should not.
+
+**Problem:** Don't want to force all users to install Qiskit (large dependency).
+
+**Solution:** Use `extras_require` in setup.py for optional feature sets.
+
+**Implementation:**
+
+In `setup.py`:
+```python
+setup(
+    name="quantum-assembly",
+    version="0.1.0",
+    # ... existing config
+    python_requires=">=3.11",
+    install_requires=[
+        "numpy>=1.24",
+    ],
+    extras_require={
+        "verification": [
+            "qiskit>=1.0",
+            "qiskit-aer>=0.13",
+        ],
+    },
+)
+```
+
+In `pyproject.toml` (for modern tooling):
+```toml
+[project.optional-dependencies]
+verification = [
+    "qiskit>=1.0",
+    "qiskit-aer>=0.13",
+]
+```
+
+**Installation:**
+```bash
+# Core library only
+pip install quantum-assembly
+
+# With verification support
+pip install "quantum-assembly[verification]"
+```
+
+**Why this works:**
+- Core library remains lightweight
+- Users who need verification can opt-in
+- CI/CD can install [verification] extra for testing
+- Follows Python packaging best practices
+
+**Reference:** [Setuptools Dependency Management](https://setuptools.pypa.io/en/latest/userguide/dependency_management.html)
+
+### Pattern 3: Standalone Verification Script
+
+**Context:** Verification needs Qiskit but shouldn't be part of package imports.
+
+**Problem:** Don't want `import quantum_language` to fail if Qiskit not installed.
+
+**Solution:** Verification script in `scripts/` (not in package), checks dependencies at runtime.
+
+**Structure:**
+```
+Quantum_Assembly/
+├── src/
+│   └── quantum_language/       # Package code
+│       ├── __init__.py
+│       └── _core.pyx
+├── scripts/                    # Not in package
+│   └── verify_circuit.py       # Standalone tool
+└── setup.py
+```
+
+**Import safety:**
+```python
+# scripts/verify_circuit.py
+def verify_circuit(qasm_str: str):
+    try:
+        from qiskit.qasm3 import loads
+        from qiskit_aer import AerSimulator
+    except ImportError:
+        raise RuntimeError(
+            "Verification requires Qiskit. Install with:\n"
+            "    pip install 'quantum-assembly[verification]'"
+        )
+    # ... proceed with verification
+```
+
+**Why this works:**
+- `scripts/` not installed as package data
+- Can be run as `python scripts/verify_circuit.py`
+- Lazy import checks dependencies only when script runs
+- Clear error message if dependencies missing
+
+**Reference:** Python packaging conventions for scripts vs packages
+
+### Pattern 4: Extend Existing C Functions vs New Functions
+
+**Context:** Existing `circuit_to_opanqasm()` writes to file; need string version.
+
+**Decision:** Create new function `circuit_to_qasm_string()`, keep old function.
+
+**Rationale:**
+- Old function may be used by existing code (main.c uses it)
+- Different memory semantics (file I/O vs malloc)
+- Can share gate iteration logic via helper function if needed
+
+**Implementation:**
+```c
+// Shared helper (internal)
+static void format_gate_qasm(gate_t *g, char *buf, size_t bufsize) {
+    // Format single gate to QASM
+    size_t offset = 0;
+    for (int i = 0; i < g->NumControls; i++)
+        offset += snprintf(buf + offset, bufsize - offset, "c");
+    // ... gate type, qubits
+}
+
+// File-based (existing)
+void circuit_to_opanqasm(circuit_t *circ, char *path) {
+    FILE *f = fopen(...);
+    // ... iterate gates
+    char gate_buf[256];
+    format_gate_qasm(&g, gate_buf, sizeof(gate_buf));
+    fprintf(f, "%s", gate_buf);
+    fclose(f);
+}
+
+// String-based (new)
+char* circuit_to_qasm_string(circuit_t *circ) {
+    char *buf = malloc(...);
+    size_t offset = 0;
+    // ... iterate gates
+    char gate_buf[256];
+    format_gate_qasm(&g, gate_buf, sizeof(gate_buf));
+    offset += snprintf(buf + offset, bufsize - offset, "%s", gate_buf);
+    return buf;
+}
+```
+
+**Why this works:**
+- No breaking changes to existing code
+- Code reuse via shared helper
+- Clear separation of concerns
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: C-Level Dependency Tracking
+### Anti-Pattern 1: Python-Managed Buffer Passed to C
 
-**What:** Tracking dependencies in C layer with graph data structures.
-
-**Why bad:**
-- Complex memory management (C lacks garbage collection)
-- Requires exposing graph API to Python
-- Duplicates Python object graph structure
-- Hard to debug (no introspection)
-
-**Instead:** Track at Python level where object references are natural and memory is managed automatically.
-
-### Anti-Pattern 2: Immediate Uncomputation After Every Operation
-
-**What:** Uncompute intermediates immediately after they're used.
+**What:** Pass pre-allocated Python buffer to C to fill.
 
 **Why bad:**
-- Breaks quantum algorithms that need intermediates
-- Example: `a = x & y; b = a | z` — can't uncompute `a` until `b` done
-- Forces eager evaluation, prevents optimization
+- Python strings are immutable (can't modify after creation)
+- Python bytearray would work but requires size estimation in Python
+- Requires two function calls (size query, then fill)
+- More complex than C allocation
 
-**Instead:** Defer uncomputation until scope exit (lazy uncomputation).
+**Instead:** Let C allocate exact size needed, Cython copies to Python string.
 
-### Anti-Pattern 3: Relying on `__del__` Timing
+### Anti-Pattern 2: C Function Returns Python Object
 
-**What:** Assuming `__del__` called at specific time.
-
-**Why bad:**
-- CPython: `__del__` called when refcount=0, but timing varies
-- PyPy/other: garbage collection is non-deterministic
-- Circular references delay `__del__` indefinitely
-
-**Instead:** Provide explicit `uncompute()` method for deterministic cleanup. Use `__del__` as fallback.
-
-### Anti-Pattern 4: Storing Entire Circuit History
-
-**What:** Recording every gate applied to every qubit for uncomputation.
+**What:** Use Python C API in C backend to create Python string.
 
 **Why bad:**
-- Memory overhead grows linearly with circuit size
-- Most gates never need uncomputation (only intermediates)
-- Duplicates information already in circuit structure
+- Mixes Python C API into pure C backend
+- Breaks clean layer separation
+- Requires linking against Python headers in C backend
+- Violates stateless C backend principle
 
-**Instead:** Only track creation sequences for qbools that might need uncomputation (intermediates). Main results don't need history.
+**Instead:** C returns C types (char*), Cython handles Python conversion.
 
-### Anti-Pattern 5: Global State for Dependencies
+### Anti-Pattern 3: Required Qiskit Dependency
 
-**What:** Single global dependency graph for all circuits.
+**What:** Add Qiskit to `install_requires` in setup.py.
 
 **Why bad:**
-- Multiple circuits can't coexist
-- Thread-unsafe
-- No isolation between computations
+- Qiskit is large (~500MB with dependencies)
+- Most users don't need verification
+- Slows down installation
+- Violates "lightweight core" principle
 
-**Instead:** Dependency tracking tied to circuit instance (already global per module, but could be circuit-local in future).
+**Instead:** Use `extras_require` for optional verification feature.
+
+### Anti-Pattern 4: Inline Verification in Package
+
+**What:** Add verification functions to quantum_language/__init__.py.
+
+**Why bad:**
+- Forces `import qiskit` at package import time (or complex lazy loading)
+- Increases package complexity
+- Mixes concerns (circuit building vs verification)
+
+**Instead:** Standalone script in `scripts/`, imported only when needed.
+
+### Anti-Pattern 5: File-Based Export as Primary API
+
+**What:** Keep only `circuit.export_qasm(filename)` API.
+
+**Why bad:**
+- Requires file I/O for every export
+- Awkward for testing (create temp files)
+- Doesn't compose well with other tools
+- Less Pythonic than returning string
+
+**Instead:** String-based API (`ql.to_openqasm() -> str`), optionally add file convenience method later.
 
 ## Scalability Considerations
 
-| Concern | At 10 qbools | At 100 qbools | At 1000 qbools |
-|---------|--------------|---------------|----------------|
-| **Dependency tracking** | Python list (~10 refs) | Python list (~100 refs) | Consider weak references to avoid keeping all alive |
-| **Sequence storage** | Keep all sequences | Keep all sequences | Consider lazy loading or discarding sequences for long-lived qbools |
-| **Uncomputation cost** | O(gates) per qbool | O(gates) per qbool | Optimize: batch uncomputation, merge sequences |
-| **Memory overhead** | Negligible | ~KB per qbool | Switch to C-level tracking or sparse representation |
+### Buffer Size Estimation
 
-### Optimization Strategies
+**At 100 gates:**
+- Header: ~200 bytes
+- Gates: ~50-80 bytes each (multi-controlled gates longer)
+- Total: ~8KB
+- Strategy: `malloc(200 + gates * 80)` with safety margin
 
-**Phase 1 (MVP):** Python-level tracking, immediate sequence reversal
-- Simple, correct, sufficient for <100 qbools
-- No C API changes
-- Easy to debug
+**At 10K gates:**
+- Total: ~800KB
+- Strategy: Same formula works, check allocation success
+- Consider: May want to switch to file-based export for very large circuits
 
-**Phase 2 (Optimization):** Lazy sequence reversal, weak references
-- Generate reverse sequence only when needed
-- Use `weakref.ref` to avoid keeping dependencies alive unnecessarily
-- Python-only changes
+**At 1M gates:**
+- Total: ~80MB
+- Strategy: File-based export recommended (`circuit_to_opanqasm()`)
+- String API still works but inefficient for huge circuits
 
-**Phase 3 (Advanced):** C-level sequence merging
-- Merge multiple uncomputation sequences into single optimized sequence
-- Requires C API for sequence manipulation
-- Significant gate count reduction for complex expressions
+**Recommendation:** Provide both APIs, document file-based for large circuits.
 
-## Qubit-Saving Mode (Future Extension)
+### Measurement Overhead
 
-**Goal:** Minimize peak qubit usage by uncomputing intermediates eagerly.
+**Impact:** Measurement gates are single-qubit, minimal overhead.
 
-**Architecture:**
-```python
-# User enables qubit-saving mode
-ql.option("qubit_saving", True)
+**At 64 qubits:** +64 gates (negligible compared to typical circuit size).
 
-# Now intermediates are uncomputed immediately after use
-result = ~a & b  # Intermediate (~a) uncomputed right after AND
-```
+**Strategy:** Measurements added only when user explicitly calls `.measure()` or verification script adds them.
 
-**Implementation:**
-- Track "last use" of each qbool
-- Uncompute immediately after last use, not at scope exit
-- Requires dataflow analysis to determine last use
-- Trade-off: More gates (less optimization opportunity) for fewer qubits
+## Build Order Considerations
 
-**Integration point:** Extend `DependencyManager` with reference counting:
-```python
-class DependencyManager:
-    def record_use(self, qbool):
-        self.use_count[id(qbool)] += 1
-
-    def record_last_use(self, qbool):
-        if _qubit_saving_enabled:
-            qbool.uncompute()  # Immediate uncomputation
-```
-
-## Build Order (Suggested Phasing)
-
-### Phase 1: Core Uncomputation (Python-level tracking)
-
-**Components:**
-1. `reverse_gate_generator.c` + `.h`
-2. `uncomputation.c` + `.h`
-3. Cython bindings for reverse_sequence, apply_uncomputation
-4. Extend qbool with `dependency_list`, `creation_sequence`, `uncompute()`
-5. Modify `__del__` to call `uncompute()`
-
-**Integration points:**
-- Extend qbool class in quantum_language.pyx
-- Add two new C modules (reverse_gate_generator, uncomputation)
-- Update Cython bindings
-
-**Test coverage:**
-- Unit test: reverse_sequence for each gate type
-- Unit test: apply_uncomputation adds correct gates
-- Integration test: `a = ~b; del a` uncomputes NOT
-- Integration test: `result = a & b & c; del result` uncomputes in correct order
-
-**Success criteria:**
-- Intermediate qubits correctly uncomputed
-- Circuit gates include adjoint sequences
-- No memory leaks (valgrind clean)
-
-### Phase 2: Dependency Tracking (DependencyManager)
-
-**Components:**
-1. `DependencyManager` Python class
-2. Integrate into operator overloading
-3. Update comparison operations to track dependencies
-
-**Integration points:**
-- Modify `__and__`, `__or__`, `__xor__`, `__invert__` in qbool
-- Modify `__eq__`, `__lt__`, `__gt__`, etc. in qint
-
-**Test coverage:**
-- Test: Dependencies tracked for bitwise ops
-- Test: Dependencies tracked for comparisons
-- Test: Cascade uncomputation for nested expressions
-- Test: No duplicate uncomputation (if intermediate used twice)
-
-**Success criteria:**
-- Complex expressions uncompute all intermediates
-- Topological sort handles arbitrary dependency graphs
-- No crashes on circular references (error raised)
-
-### Phase 3: Context Manager Integration
-
-**Components:**
-1. Extend `__enter__` to push context scope
-2. Extend `__exit__` to uncompute context temporaries
-3. Track temporaries created within `with` block
-
-**Integration points:**
-- Modify qint/qbool `__enter__` and `__exit__`
-- Add global `_context_temporaries` stack
-
-**Test coverage:**
-- Test: `with flag: temp = a & b` — temp uncomputed on exit
-- Test: Nested `with` blocks uncompute correctly
-- Test: Exception in `with` block still uncomputes
-
-**Success criteria:**
-- Temporaries in `with` blocks auto-uncomputed
-- Scope exit triggers uncomputation before control qbool freed
-- No interference with existing controlled gate functionality
-
-### Phase 4: Optional Qubit History (C-level)
-
-**Components:**
-1. Extend `qubit_allocator_t` with history tracking
-2. `allocator_mark_computed`, `allocator_get_history` functions
-3. Python bindings for history access
-
-**Integration points:**
-- Modify qubit_allocator.c
-- Add Cython bindings
-
-**Test coverage:**
-- Test: History recorded on allocation
-- Test: History retrieved correctly
-- Test: History cleared on deallocation
-
-**Success criteria:**
-- Optional feature (disabled by default)
-- Enables future optimizations (sequence merging, recomputation detection)
-- No performance impact when disabled
-
-## Dependency Flow Diagram
+### Existing Dependencies
 
 ```
-User Code:
-    cross_win = ~(count_cross_wins < 1)
-
-Step 1: count_cross_wins < 1 creates intermediate temp1
-    temp1 = count_cross_wins.__lt__(1)
-    temp1.deps = []
-    temp1.creation_seq = CQ_less_than(bits, 1)
-
-Step 2: ~temp1 creates cross_win
-    cross_win = temp1.__invert__()
-    cross_win.deps = [temp1]
-    cross_win.creation_seq = Q_not(1)
-
-Scope exit: cross_win.__del__()
-    1. cross_win.uncompute()
-       a. For dep in reversed([temp1]):
-          - temp1.uncompute()
-            i. temp1.deps = [] (no further deps)
-            ii. rev_seq = reverse_sequence(temp1.creation_seq)
-            iii. apply_uncomputation(circuit, temp1.qubits, rev_seq)
-       b. rev_seq = reverse_sequence(cross_win.creation_seq)
-       c. apply_uncomputation(circuit, cross_win.qubits, rev_seq)
-    2. allocator_free(cross_win.qubits)
+types.h (foundation)
+  ↓
+gate.h, circuit.h
+  ↓
+circuit_output.h (visualization, file export)
+  ↓
+_core.pxd (Cython declarations)
+  ↓
+_core.pyx (Cython implementation)
+  ↓
+__init__.py (Python API)
 ```
 
-## References and Confidence Assessment
+### New Dependencies Added
 
-### HIGH Confidence Sources
+```
+circuit_output.h
+  + char* circuit_to_qasm_string(circuit_t*)  [new declaration]
+  ↓
+circuit_output.c
+  + circuit_to_qasm_string() implementation    [new function]
+  ↓
+_core.pxd
+  + extern char* circuit_to_qasm_string(...)   [new binding]
+  ↓
+_core.pyx
+  + circuit.to_openqasm() method               [new method]
+  ↓
+__init__.py
+  + to_openqasm() convenience function         [new export]
+  ↓
+scripts/verify_circuit.py                      [new script, standalone]
+```
 
-**Silq (ETH Zurich, PLDI 2020):**
-- [Silq: A High-Level Quantum Language with Safe Uncomputation](https://dl.acm.org/doi/10.1145/3385412.3386007)
-- Type system ensures uncomputation safety
-- Automatic uncomputation based on classical evaluation patterns
-- Demonstrates feasibility of compiler-driven uncomputation
+### Suggested Build Order for Implementation
 
-**Unqomp (ETH Zurich, PLDI 2021):**
-- [Unqomp: Synthesizing Uncomputation in Quantum Circuits](https://github.com/eth-sri/Unqomp)
-- Integrates with Qiskit via Python extension
-- Uses dependency graph in `dependencygraph.py`
-- Demonstrates Python-level tracking with C-level (Qiskit) integration
+1. **Phase 1: C String Export**
+   - Modify `circuit_output.c`: Add `circuit_to_qasm_string()`
+   - Modify `circuit_output.h`: Declare new function
+   - Test: Write C test that calls function, prints result, frees buffer
 
-**Qurts (2024, ACM POPL 2025):**
-- [Qurts: Automatic Quantum Uncomputation by Affine Types with Lifetime](https://arxiv.org/abs/2411.10835)
-- Uses Rust's lifetime tracking for scope-based uncomputation
-- Affine types during lifetime, linear types outside
-- Demonstrates type-system-driven automatic uncomputation
+2. **Phase 2: Cython Binding**
+   - Modify `_core.pxd`: Add extern declaration
+   - Modify `_core.pyx`: Add `circuit.to_openqasm()` method
+   - Test: Python test calls method, checks QASM format
 
-**TUSQ (2025):**
-- [Noisy Quantum Simulation Using Tracking, Uncomputation and Sampling](https://arxiv.org/abs/2508.04880)
-- Tree-based execution with dependency tracking
-- Uncomputation for rollback-recovery
-- 52.5× speedup over Qiskit via uncomputation
+3. **Phase 3: Python API**
+   - Modify `__init__.py`: Add module-level `to_openqasm()` function
+   - Add to `__all__` exports
+   - Test: Import-level function works
 
-### MEDIUM Confidence Sources
+4. **Phase 4: Measurement Support**
+   - Modify `_core.pyx`: Add `circuit.measure(qint)` method
+   - Modify `circuit_output.c`: Ensure M gates export correctly
+   - Test: Measurement gates appear in QASM
 
-**Modular Synthesis (OOPSLA 2024):**
-- [Modular Synthesis of Efficient Quantum Uncomputation](https://arxiv.org/pdf/2406.14227)
-- Intermediate representation for expressive quantum programs
-- Modular algorithms for synthesizing adjoints
-- Demonstrates IR-based approach
+5. **Phase 5: Verification Script**
+   - Create `scripts/verify_circuit.py`
+   - Implement test cases
+   - Modify `setup.py`: Add extras_require
+   - Test: Install with [verification], run script
 
-**Scalable Memory Recycling (March 2025):**
-- [Scalable Memory Recycling for Large Quantum Programs](https://arxiv.org/pdf/2503.00822)
-- Control flow graph for quantum code
-- Scheduling uncomputation operations
-- Qubit reuse via dependency analysis
+**Rationale:** Bottom-up build ensures each layer works before adding next.
 
-**DAG-based Intermediate Representations:**
-- [Quantum Circuit Optimization Review](https://arxiv.org/pdf/2408.08941)
-- DAG structure for gate dependencies
-- Standard approach in Qiskit, TKET
-- Well-understood for dependency tracking
+## OpenQASM 3.0 Specification Compliance
 
-### Python Lifetime Management
+### Required Elements
 
-**Python Reference Counting:**
-- [Managing Python Object Lifecycles (2025)](https://www.oreateai.com/blog/managing-python-object-lifecycles-an-indepth-analysis-of-the-del-destructor-method-and-garbage-collection-mechanism/fe335ac233f71becd8d2e930c3c32419)
-- [Python 3.14 Data Model](https://docs.python.org/3/reference/datamodel.html)
-- `__del__` called when refcount=0
-- Circular references require garbage collector
+Based on [OpenQASM 3.0 specification](https://openqasm.com/versions/3.0/index.html):
 
-**Weak References:**
-- [Python Weak References in 2025](https://medium.com/pythoneers/python-weak-references-in-2025-a-simpler-way-to-work-with-the-garbage-collector-26517aebde2e)
-- `weakref.ref` for non-owning references
-- `weakref.finalize` for cleanup callbacks
-- Avoids circular reference issues
+**1. Version Declaration**
+```qasm
+OPENQASM 3.0;
+```
 
-## Summary: Architecture Confidence
+**2. Standard Gate Library Include**
+```qasm
+include "stdgates.inc";
+```
 
-| Area | Confidence | Reasoning |
+**3. Qubit Register Declaration**
+```qasm
+qubit[n] q;
+```
+
+**4. Gate Syntax**
+- Single-qubit: `gate q[index];`
+- Controlled: `cgate q[ctrl], q[target];`
+- Multi-controlled: `ccgate q[ctrl1], q[ctrl2], q[target];`
+- Parametric: `p(angle) q[index];`
+
+**5. Measurement Syntax**
+```qasm
+measure q[index];
+```
+
+Note: OpenQASM 3.0 supports measurement without explicit bit declaration for simple cases.
+
+### Current Implementation Gaps
+
+**Missing in existing `circuit_to_opanqasm()`:**
+- Y, R, Rx, Ry, Rz gates (marked as no-ops)
+- Correct handling of `large_control` (uses Control[i] which only stores 2 controls)
+- Error handling (NULL circuit check)
+
+**Fix in new `circuit_to_qasm_string()`:**
+```c
+// Handle all gates
+case Y:
+    snprintf(gate_buf, sizeof(gate_buf), "y ");
+    break;
+case R:
+    snprintf(gate_buf, sizeof(gate_buf), "r(%.20f) ", g.GateValue);
+    break;
+case Rx:
+    snprintf(gate_buf, sizeof(gate_buf), "rx(%.20f) ", g.GateValue);
+    break;
+case Ry:
+    snprintf(gate_buf, sizeof(gate_buf), "ry(%.20f) ", g.GateValue);
+    break;
+case Rz:
+    snprintf(gate_buf, sizeof(gate_buf), "rz(%.20f) ", g.GateValue);
+    break;
+
+// Handle large_control correctly
+qubit_t *controls = (g.NumControls > 2) ? g.large_control : g.Control;
+for (int i = 0; i < g.NumControls; i++) {
+    offset += snprintf(buf + offset, bufsize - offset, "q[%d],", controls[i]);
+}
+```
+
+## Confidence Assessment
+
+| Area | Confidence | Rationale |
 |------|------------|-----------|
-| **Python-level tracking** | HIGH | Proven by Unqomp, natural Python idiom, matches existing codebase patterns |
-| **C-level reverse gate generation** | HIGH | Standard quantum computing technique (adjoint circuits), well-understood |
-| **Dependency graph approach** | HIGH | Used by Silq, Unqomp, TUSQ, standard compiler technique |
-| **Integration with existing code** | HIGH | Analyzed actual codebase, identified specific integration points |
-| **`__del__` for uncomputation trigger** | MEDIUM | Works in CPython, but timing non-deterministic; explicit `uncompute()` safer |
-| **Context manager integration** | HIGH | Natural Python idiom, matches existing `with` statement support |
-| **Qubit-saving mode** | MEDIUM | Research prototype in literature, requires dataflow analysis |
+| C string return pattern | HIGH | Standard C idiom, used in many C libraries |
+| Cython memory safety | HIGH | Official Cython docs pattern for C string wrapping |
+| Optional dependencies | HIGH | Standard Python packaging practice |
+| OpenQASM 3.0 format | HIGH | Official spec available, clear syntax |
+| Qiskit import | MEDIUM | Qiskit API changes between versions, but loads() is stable |
+| Buffer sizing | MEDIUM | Estimate works for typical cases, may need adjustment for edge cases |
 
-## Open Questions for Phase-Specific Research
+### Sources
 
-1. **Sequence caching:** Should reversed sequences be cached (memoized) or regenerated each time?
-   - Pro cache: Faster uncomputation for repeated patterns
-   - Con cache: Memory overhead
-   - Research in Phase 1 during performance testing
+**Official Documentation:**
+- [OpenQASM 3.0 Specification](https://openqasm.com/versions/3.0/index.html) — Gate syntax, measurement format
+- [Cython Unicode and Passing Strings](https://cython.readthedocs.io/en/latest/src/tutorial/strings.html) — String handling best practices
+- [Python C-API Memory Management](https://docs.python.org/3/c-api/memory.html) — Memory allocation domains
+- [Setuptools Dependency Management](https://setuptools.pypa.io/en/latest/userguide/dependency_management.html) — Optional dependencies pattern
 
-2. **Weak vs strong references:** Should `dependency_list` use `weakref.ref` or strong references?
-   - Strong: Simpler, ensures intermediates not GC'd prematurely
-   - Weak: Allows earlier cleanup, more complex
-   - Research in Phase 2 during large circuit testing
+**Qiskit Integration:**
+- [Qiskit OpenQASM 3 Import](https://quantum.cloud.ibm.com/docs/en/guides/interoperate-qiskit-qasm3) — loads() and load() functions
+- [Qiskit qasm3 API](https://docs.quantum.ibm.com/api/qiskit/qasm3) — Official Qiskit import/export
 
-3. **C-level history tracking:** Is per-qubit history worth the complexity?
-   - Enables advanced optimizations (sequence merging)
-   - Adds memory overhead and API complexity
-   - Research in Phase 4 after basic uncomputation working
+## Gaps and Open Questions
 
-4. **Optimization passes:** Should uncomputation sequences go through optimizer?
-   - Pro: Gate count reduction, inverse cancellation
-   - Con: Correctness concerns (optimizer must preserve semantics)
-   - Research in Phase 3 after optimizer integration
+### Resolved During Research
 
----
+- **String allocation:** C malloc + Cython free pattern confirmed safe
+- **Dependency management:** extras_require is standard approach
+- **Measurement syntax:** OpenQASM 3.0 spec clarifies measurement format
 
-**Sources:**
+### Remaining for Implementation
 
-Academic Research:
-- [Silq: A High-Level Quantum Language with Safe Uncomputation](https://dl.acm.org/doi/10.1145/3385412.3386007)
-- [Unqomp: Automated Uncomputation for Quantum Programs](https://github.com/eth-sri/Unqomp)
-- [Qurts: Automatic Quantum Uncomputation by Affine Types with Lifetime](https://arxiv.org/abs/2411.10835)
-- [TUSQ: Noisy Quantum Simulation Using Tracking, Uncomputation and Sampling](https://arxiv.org/abs/2508.04880)
-- [Modular Synthesis of Efficient Quantum Uncomputation](https://arxiv.org/pdf/2406.14227)
-- [Scalable Memory Recycling for Large Quantum Programs](https://arxiv.org/pdf/2503.00822)
-- [Quantum Circuit Optimization Review](https://arxiv.org/pdf/2408.08941)
+1. **Exact buffer size formula:** Current estimate `200 + (gates * 80)` is conservative; profile actual gate string lengths during implementation.
 
-Python Resources:
-- [Managing Python Object Lifecycles](https://www.oreateai.com/blog/managing-python-object-lifecycles-an-indepth-analysis-of-the-del-destructor-method-and-garbage-collection-mechanism/fe335ac233f71becd8d2e930c3c32419)
-- [Python 3.14 Data Model](https://docs.python.org/3/reference/datamodel.html)
-- [Python Weak References in 2025](https://medium.com/pythoneers/python-weak-references-in-2025-a-simpler-way-to-work-with-the-garbage-collector-26517aebde2e)
+2. **Multi-controlled gate representation:** OpenQASM 3.0 has `ctrl @ gate` syntax for arbitrary controls, but current implementation uses `ccc...gate` syntax (compatible with OpenQASM 2). Decision: Use compatible syntax unless Qiskit import requires newer syntax.
+
+3. **Measurement bit allocation:** OpenQASM 3.0 allows measurement without classical bit declaration (`measure q[0];`) or with explicit assignment (`measure q[0] -> c[0];`). Decision needed during implementation based on Qiskit import requirements.
+
+4. **Error handling detail:** What errors to check in C (NULL circuit, allocation failure, invalid gate types)? Recommendation: Check NULL circuit and malloc failure, log warning for unknown gate types.
+
+### Phase-Specific Research Flags
+
+**Phase 1 (C String Export):** Unlikely to need deeper research — straightforward C implementation.
+
+**Phase 2 (Cython Binding):** Unlikely to need research — standard pattern.
+
+**Phase 3 (Python API):** Unlikely to need research — thin wrapper.
+
+**Phase 4 (Measurement):** May need research on measurement semantics if qint measurement requires classical bit tracking.
+
+**Phase 5 (Verification):** May need research on Qiskit simulator configuration (shots, measurement basis, outcome interpretation).
+
+## Implementation Recommendations Summary
+
+### Critical Success Factors
+
+1. **Memory safety:** Use try/finally in Cython to ensure C buffer freed even on decode error
+2. **Buffer overflow protection:** Use snprintf() throughout, check remaining space
+3. **Compatibility:** Keep file-based export for backward compatibility
+4. **Dependency isolation:** Qiskit only in extras_require, not core dependencies
+5. **Clear errors:** RuntimeError with helpful message if export fails
+
+### Integration Strategy
+
+**Incremental approach:** Add string export first (usable immediately), then add verification script (users can opt-in).
+
+**Testing strategy:**
+- Unit tests for C function (verify buffer allocation, gate formatting)
+- Integration tests for Python API (verify string returned, QASM valid)
+- Optional verification tests (skip if Qiskit not installed)
+
+**Documentation needs:**
+- Docstring for `ql.to_openqasm()` with example
+- README section on OpenQASM export
+- Verification script usage in docstring
+- Installation instructions for [verification] extra
+
+### Ready for Roadmap
+
+All integration points identified, patterns validated, build order clear. Proceeding to roadmap creation.
