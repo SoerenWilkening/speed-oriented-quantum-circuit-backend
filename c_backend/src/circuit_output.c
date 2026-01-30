@@ -6,6 +6,11 @@
 #include "circuit_output.h"
 #include "QPU.h"
 #include "gate.h"
+#include <math.h>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 // Printing functionality
 
@@ -323,4 +328,306 @@ void circuit_to_opanqasm(circuit_t *circ, char *path) {
             fprintf(oq_file, "q[%d];\n", g.Target);
         }
     }
+}
+
+// ======================================================
+// OpenQASM 3.0 String Export Implementation
+// ======================================================
+
+// Normalize angle to [0, 2π)
+static double normalize_angle(double theta) {
+    double result = fmod(theta, 2.0 * M_PI);
+    if (result < 0.0) {
+        result += 2.0 * M_PI;
+    }
+    return result;
+}
+
+// Get control qubit at index, handling large_control array
+static qubit_t _get_control_qubit(gate_t *g, int index) {
+    if (g->NumControls > MAXCONTROLS && g->large_control != NULL) {
+        return g->large_control[index];
+    }
+    return g->Control[index];
+}
+
+// Count measurement gates in circuit
+static int _count_measurements(circuit_t *circ) {
+    int count = 0;
+    for (int layer = 0; layer < circ->used_layer; layer++) {
+        for (int gate_idx = 0; gate_idx < circ->used_gates_per_layer[layer]; gate_idx++) {
+            if (circ->sequence[layer][gate_idx].Gate == M) {
+                count++;
+            }
+        }
+    }
+    return count;
+}
+
+// Export a single gate to buffer
+// Returns new offset, or (size_t)-1 on buffer overflow
+static size_t _export_gate(gate_t *g, char *buffer, size_t buf_size, size_t offset,
+                           int *measurement_idx) {
+    // Safety check: ensure we have at least 200 bytes left
+    if (offset > buf_size - 200) {
+        return (size_t)-1;
+    }
+
+    int written = 0;
+
+    if (g->NumControls == 0) {
+        // No controls - simple gate
+        switch (g->Gate) {
+        case X:
+            written = sprintf(buffer + offset, "x q[%d];\n", g->Target);
+            break;
+        case Y:
+            written = sprintf(buffer + offset, "y q[%d];\n", g->Target);
+            break;
+        case Z:
+            written = sprintf(buffer + offset, "z q[%d];\n", g->Target);
+            break;
+        case H:
+            written = sprintf(buffer + offset, "h q[%d];\n", g->Target);
+            break;
+        case P:
+            written = sprintf(buffer + offset, "p(%.17g) q[%d];\n", normalize_angle(g->GateValue),
+                              g->Target);
+            break;
+        case Rx:
+            written = sprintf(buffer + offset, "rx(%.17g) q[%d];\n", normalize_angle(g->GateValue),
+                              g->Target);
+            break;
+        case Ry:
+            written = sprintf(buffer + offset, "ry(%.17g) q[%d];\n", normalize_angle(g->GateValue),
+                              g->Target);
+            break;
+        case Rz:
+            written = sprintf(buffer + offset, "rz(%.17g) q[%d];\n", normalize_angle(g->GateValue),
+                              g->Target);
+            break;
+        case M:
+            written =
+                sprintf(buffer + offset, "c[%d] = measure q[%d];\n", *measurement_idx, g->Target);
+            (*measurement_idx)++;
+            break;
+        case R:
+            written = sprintf(buffer + offset, "reset q[%d];\n", g->Target);
+            break;
+        default:
+            written = sprintf(buffer + offset, "// unknown gate %d\n", g->Gate);
+            break;
+        }
+    } else if (g->NumControls == 1) {
+        // Single control - use c-prefix
+        qubit_t ctrl = _get_control_qubit(g, 0);
+        switch (g->Gate) {
+        case X:
+            written = sprintf(buffer + offset, "cx q[%d], q[%d];\n", ctrl, g->Target);
+            break;
+        case Y:
+            written = sprintf(buffer + offset, "cy q[%d], q[%d];\n", ctrl, g->Target);
+            break;
+        case Z:
+            written = sprintf(buffer + offset, "cz q[%d], q[%d];\n", ctrl, g->Target);
+            break;
+        case H:
+            written = sprintf(buffer + offset, "ch q[%d], q[%d];\n", ctrl, g->Target);
+            break;
+        case P:
+            written = sprintf(buffer + offset, "cp(%.17g) q[%d], q[%d];\n",
+                              normalize_angle(g->GateValue), ctrl, g->Target);
+            break;
+        case Rx:
+            written = sprintf(buffer + offset, "crx(%.17g) q[%d], q[%d];\n",
+                              normalize_angle(g->GateValue), ctrl, g->Target);
+            break;
+        case Ry:
+            written = sprintf(buffer + offset, "cry(%.17g) q[%d], q[%d];\n",
+                              normalize_angle(g->GateValue), ctrl, g->Target);
+            break;
+        case Rz:
+            written = sprintf(buffer + offset, "crz(%.17g) q[%d], q[%d];\n",
+                              normalize_angle(g->GateValue), ctrl, g->Target);
+            break;
+        case M:
+        case R:
+            // M and R are not meaningfully controlled - skip
+            written = sprintf(buffer + offset, "// skipped controlled %s\n",
+                              g->Gate == M ? "measure" : "reset");
+            break;
+        default:
+            written = sprintf(buffer + offset, "// unknown controlled gate %d\n", g->Gate);
+            break;
+        }
+    } else if (g->NumControls == 2) {
+        // Two controls - use cc-prefix or special syntax
+        qubit_t ctrl0 = _get_control_qubit(g, 0);
+        qubit_t ctrl1 = _get_control_qubit(g, 1);
+
+        if (g->Gate == X) {
+            // Toffoli gate has dedicated ccx syntax
+            written =
+                sprintf(buffer + offset, "ccx q[%d], q[%d], q[%d];\n", ctrl0, ctrl1, g->Target);
+        } else {
+            // Other 2-control gates use ctrl(2) @ syntax
+            const char *gate_name = "";
+            char param_str[64] = "";
+            switch (g->Gate) {
+            case Y:
+                gate_name = "y";
+                break;
+            case Z:
+                gate_name = "z";
+                break;
+            case H:
+                gate_name = "h";
+                break;
+            case P:
+                gate_name = "p";
+                sprintf(param_str, "(%.17g)", normalize_angle(g->GateValue));
+                break;
+            case Rx:
+                gate_name = "rx";
+                sprintf(param_str, "(%.17g)", normalize_angle(g->GateValue));
+                break;
+            case Ry:
+                gate_name = "ry";
+                sprintf(param_str, "(%.17g)", normalize_angle(g->GateValue));
+                break;
+            case Rz:
+                gate_name = "rz";
+                sprintf(param_str, "(%.17g)", normalize_angle(g->GateValue));
+                break;
+            default:
+                gate_name = "unknown";
+                break;
+            }
+            written = sprintf(buffer + offset, "ctrl(2) @ %s%s q[%d], q[%d], q[%d];\n", gate_name,
+                              param_str, ctrl0, ctrl1, g->Target);
+        }
+    } else {
+        // More than 2 controls - use ctrl(n) @ syntax
+        const char *gate_name = "";
+        char param_str[64] = "";
+
+        switch (g->Gate) {
+        case X:
+            gate_name = "x";
+            break;
+        case Y:
+            gate_name = "y";
+            break;
+        case Z:
+            gate_name = "z";
+            break;
+        case H:
+            gate_name = "h";
+            break;
+        case P:
+            gate_name = "p";
+            sprintf(param_str, "(%.17g)", normalize_angle(g->GateValue));
+            break;
+        case Rx:
+            gate_name = "rx";
+            sprintf(param_str, "(%.17g)", normalize_angle(g->GateValue));
+            break;
+        case Ry:
+            gate_name = "ry";
+            sprintf(param_str, "(%.17g)", normalize_angle(g->GateValue));
+            break;
+        case Rz:
+            gate_name = "rz";
+            sprintf(param_str, "(%.17g)", normalize_angle(g->GateValue));
+            break;
+        default:
+            gate_name = "unknown";
+            break;
+        }
+
+        written =
+            sprintf(buffer + offset, "ctrl(%d) @ %s%s ", g->NumControls, gate_name, param_str);
+        offset += written;
+
+        // Write all control qubits
+        for (int i = 0; i < g->NumControls; i++) {
+            written = sprintf(buffer + offset, "q[%d], ", _get_control_qubit(g, i));
+            offset += written;
+        }
+
+        // Write target
+        written = sprintf(buffer + offset, "q[%d];\n", g->Target);
+    }
+
+    return offset + written;
+}
+
+// Export circuit to OpenQASM 3.0 string
+char *circuit_to_qasm_string(circuit_t *circ) {
+    if (circ == NULL) {
+        return NULL;
+    }
+
+    // Count measurements for classical register declaration
+    int num_measurements = _count_measurements(circ);
+
+    // Allocate initial buffer (512 bytes header + 100 bytes per gate estimate)
+    size_t buf_size = 512 + (circ->used * 100);
+    char *buffer = malloc(buf_size);
+    if (buffer == NULL) {
+        return NULL;
+    }
+
+    size_t offset = 0;
+
+    // Write header
+    int written = sprintf(buffer + offset,
+                          "OPENQASM 3.0;\n"
+                          "include \"stdgates.inc\";\n"
+                          "\n"
+                          "qubit[%d] q;\n",
+                          circ->used_qubits + 1);
+    offset += written;
+
+    // Write classical register declaration if there are measurements
+    if (num_measurements > 0) {
+        written = sprintf(buffer + offset, "bit[%d] c;\n", num_measurements);
+        offset += written;
+    }
+
+    // Write separator
+    written = sprintf(buffer + offset, "\n");
+    offset += written;
+
+    // Export all gates
+    int measurement_idx = 0;
+    for (int layer = 0; layer < circ->used_layer; layer++) {
+        for (int gate_idx = 0; gate_idx < circ->used_gates_per_layer[layer]; gate_idx++) {
+            gate_t *g = &circ->sequence[layer][gate_idx];
+
+            // Try to export gate
+            size_t new_offset = _export_gate(g, buffer, buf_size, offset, &measurement_idx);
+
+            // If buffer overflow, reallocate and retry
+            while (new_offset == (size_t)-1) {
+                buf_size *= 2;
+                char *tmp = realloc(buffer, buf_size);
+                if (tmp == NULL) {
+                    free(buffer);
+                    return NULL;
+                }
+                buffer = tmp;
+
+                // Retry the same gate
+                new_offset = _export_gate(g, buffer, buf_size, offset, &measurement_idx);
+            }
+
+            offset = new_offset;
+        }
+    }
+
+    // Null-terminate
+    buffer[offset] = '\0';
+
+    return buffer;
 }

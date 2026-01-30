@@ -33,4 +33,14 @@ void circuit_visualize(circuit_t *circ);
 // Creates file at: {path}/circuit.qasm
 void circuit_to_opanqasm(circuit_t *circ, char *path);
 
+// Export circuit to OpenQASM 3.0 string (heap-allocated)
+// Returns malloc'd string buffer containing valid OpenQASM 3.0
+// Caller must free() the returned pointer
+// Returns NULL on error (NULL circuit, malloc failure)
+char *circuit_to_qasm_string(circuit_t *circ);
+
+// Export circuit to OpenQASM 3.0 file (fixed version)
+// Returns 0 on success, -1 on error
+int circuit_to_openqasm(circuit_t *circ, const char *path);
+
 #endif // QUANTUM_CIRCUIT_OUTPUT_H
