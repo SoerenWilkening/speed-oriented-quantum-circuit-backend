@@ -9,14 +9,14 @@ Requirements for OpenQASM Export & Verification milestone. Each maps to roadmap 
 
 ### C Backend Export (EXP)
 
-- [ ] **EXP-01**: New `circuit_to_qasm_string()` C function returning malloc'd OpenQASM 3.0 string buffer
-- [ ] **EXP-02**: Export all single-qubit gates: X, Y, Z, H (lowercase OpenQASM syntax)
-- [ ] **EXP-03**: Export all rotation gates: P(θ), Rx(θ), Ry(θ), Rz(θ) with `%.17g` angle precision
-- [ ] **EXP-04**: Multi-controlled gate export: `cx` (1 ctrl), `ccx` (2 ctrl), `ctrl(n) @ gate` (>2 ctrl)
-- [ ] **EXP-05**: `large_control` array support for gates with >2 control qubits
-- [ ] **EXP-06**: Measurement export with classical register: `bit[n] c;` + `c[i] = measure q[i];`
-- [ ] **EXP-07**: Error handling: NULL circuit check, malloc failure returns NULL
-- [ ] **EXP-08**: Fix existing `circuit_to_opanqasm()`: add fclose, fix gate no-ops, fix measurement syntax
+- [x] **EXP-01**: New `circuit_to_qasm_string()` C function returning malloc'd OpenQASM 3.0 string buffer
+- [x] **EXP-02**: Export all single-qubit gates: X, Y, Z, H (lowercase OpenQASM syntax)
+- [x] **EXP-03**: Export all rotation gates: P(θ), Rx(θ), Ry(θ), Rz(θ) with `%.17g` angle precision
+- [x] **EXP-04**: Multi-controlled gate export: `cx` (1 ctrl), `ccx` (2 ctrl), `ctrl(n) @ gate` (>2 ctrl)
+- [x] **EXP-05**: `large_control` array support for gates with >2 control qubits
+- [x] **EXP-06**: Measurement export with classical register: `bit[n] c;` + `c[i] = measure q[i];`
+- [x] **EXP-07**: Error handling: NULL circuit check, malloc failure returns NULL
+- [x] **EXP-08**: Fix existing `circuit_to_opanqasm()`: add fclose, fix gate no-ops, fix measurement syntax
 
 ### Python API (API)
 
@@ -111,14 +111,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| EXP-01 | Phase 25 | Pending |
-| EXP-02 | Phase 25 | Pending |
-| EXP-03 | Phase 25 | Pending |
-| EXP-04 | Phase 25 | Pending |
-| EXP-05 | Phase 25 | Pending |
-| EXP-06 | Phase 25 | Pending |
-| EXP-07 | Phase 25 | Pending |
-| EXP-08 | Phase 25 | Pending |
+| EXP-01 | Phase 25 | Complete |
+| EXP-02 | Phase 25 | Complete |
+| EXP-03 | Phase 25 | Complete |
+| EXP-04 | Phase 25 | Complete |
+| EXP-05 | Phase 25 | Complete |
+| EXP-06 | Phase 25 | Complete |
+| EXP-07 | Phase 25 | Complete |
+| EXP-08 | Phase 25 | Complete |
 | API-01 | Phase 26 | Pending |
 | API-02 | Phase 26 | Pending |
 | API-03 | Phase 26 | Pending |

@@ -14,7 +14,7 @@ This milestone adds production-quality OpenQASM 3.0 string export from the C bac
 
 ## Phases
 
-- [ ] **Phase 25: C Backend OpenQASM Export** - Fix all gate exports, add string-return function, handle large_control and measurements
+- [x] **Phase 25: C Backend OpenQASM Export** - Fix all gate exports, add string-return function, handle large_control and measurements
 - [ ] **Phase 26: Python API Bindings** - Cython wrapper with memory safety, module-level ql.to_openqasm(), optional deps
 - [ ] **Phase 27: Verification Script** - Standalone Qiskit-based verification with built-in test cases and pass/fail reporting
 
@@ -26,8 +26,8 @@ This milestone adds production-quality OpenQASM 3.0 string export from the C bac
 **Requirements**: EXP-01, EXP-02, EXP-03, EXP-04, EXP-05, EXP-06, EXP-07, EXP-08
 **Plans:** 2 plans
 Plans:
-- [ ] 25-01-PLAN.md — Implement circuit_to_qasm_string() with all gate types, controls, measurements, error handling
-- [ ] 25-02-PLAN.md — Fix circuit_to_opanqasm() and add circuit_to_openqasm() file-based wrapper
+- [x] 25-01-PLAN.md — Implement circuit_to_qasm_string() with all gate types, controls, measurements, error handling
+- [x] 25-02-PLAN.md — Fix circuit_to_opanqasm() and add circuit_to_openqasm() file-based wrapper
 **Success Criteria** (what must be TRUE):
   1. `circuit_to_qasm_string()` returns valid OpenQASM 3.0 for circuits with X, Y, Z, H, P, Rx, Ry, Rz gates
   2. Multi-controlled gates with >2 controls use `ctrl(n) @ gate` syntax reading from `large_control` array
@@ -63,10 +63,10 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 25. C Backend OpenQASM Export | v1.4 | 0/2 | Planned | — |
+| 25. C Backend OpenQASM Export | v1.4 | 2/2 | Complete | 2026-01-30 |
 | 26. Python API Bindings | v1.4 | 0/? | Not Started | — |
 | 27. Verification Script | v1.4 | 0/? | Not Started | — |
 
 ---
 *Roadmap created: 2026-01-30*
-*Last updated: 2026-01-30*
+*Last updated: 2026-01-30 (Phase 25 complete)*
