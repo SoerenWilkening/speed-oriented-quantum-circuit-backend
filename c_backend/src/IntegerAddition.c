@@ -48,11 +48,12 @@ sequence_t *CQ_add(int bits, int64_t value) {
     }
     for (int bit_idx = 0; bit_idx < bits; ++bit_idx) {
         for (int qubit = bit_idx; qubit < bits; ++qubit) {
-            // bin[bit_idx]: bit_idx=0 is LSB, bit_idx=bits-1 is MSB
-            // qubit: qubit=0 is LSB, qubit=bits-1 is MSB
+            // two_complement() returns MSB-first: bin[0]=MSB, bin[bits-1]=LSB
+            // bit_idx: 0=LSB position, bits-1=MSB position
+            // qubit: 0=LSB qubit, bits-1=MSB qubit
             // Higher bits don't affect lower qubits, so only iterate qubit >= bit_idx
             // Phase for qubit from bit: 2*PI / 2^(qubit-bit+1)
-            rotations[qubit] += bin[bit_idx] * 2 * M_PI / pow(2, qubit - bit_idx + 1);
+            rotations[qubit] += bin[bits - 1 - bit_idx] * 2 * M_PI / pow(2, qubit - bit_idx + 1);
         }
         if (rotations[bit_idx] != 0)
             NonZeroCount++;
@@ -66,7 +67,7 @@ sequence_t *CQ_add(int bits, int64_t value) {
 
         for (int i = 0; i < bits; ++i) {
             add->seq[start_layer + i][add->gates_per_layer[start_layer + i] - 1].GateValue =
-                rotations[bits - i - 1];
+                rotations[i];
         }
         free(rotations);
         return add;
@@ -232,11 +233,12 @@ sequence_t *cCQ_add(int bits, int64_t value) {
     }
     for (int bit_idx = 0; bit_idx < bits; ++bit_idx) {
         for (int qubit = bit_idx; qubit < bits; ++qubit) {
-            // bin[bit_idx]: bit_idx=0 is LSB, bit_idx=bits-1 is MSB
-            // qubit: qubit=0 is LSB, qubit=bits-1 is MSB
+            // two_complement() returns MSB-first: bin[0]=MSB, bin[bits-1]=LSB
+            // bit_idx: 0=LSB position, bits-1=MSB position
+            // qubit: 0=LSB qubit, bits-1=MSB qubit
             // Higher bits don't affect lower qubits, so only iterate qubit >= bit_idx
             // Phase for qubit from bit: 2*PI / 2^(qubit-bit+1)
-            rotations[qubit] += bin[bit_idx] * 2 * M_PI / pow(2, qubit - bit_idx + 1);
+            rotations[qubit] += bin[bits - 1 - bit_idx] * 2 * M_PI / pow(2, qubit - bit_idx + 1);
         }
         if (rotations[bit_idx] != 0)
             NonZeroCount++;
