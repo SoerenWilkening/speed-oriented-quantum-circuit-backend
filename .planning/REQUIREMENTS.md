@@ -1,0 +1,99 @@
+# Requirements: Quantum Assembly v1.5
+
+**Defined:** 2026-01-30
+**Core Value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
+
+## v1.5 Requirements
+
+### Bug Fixes
+
+- [ ] **BUG-01**: Fix subtraction underflow (3-7 returns 7 instead of wrapping to correct unsigned result)
+- [ ] **BUG-02**: Fix less-or-equal comparison (5<=5 returns 0 instead of 1)
+- [ ] **BUG-03**: Fix multiplication segfaults at certain widths
+- [ ] **BUG-04**: Fix QFT addition bug with both nonzero operands
+
+### Verification Framework
+
+- [ ] **VFWK-01**: Reusable test framework: build circuit -> export OpenQASM -> Qiskit simulate -> verify outcome
+- [ ] **VFWK-02**: Parameterized test generation (exhaustive for small widths, representative for larger)
+- [ ] **VFWK-03**: Clear failure diagnostics (expected vs actual, operation, operand values, bit widths)
+
+### Verification — Initialization
+
+- [ ] **VINIT-01**: Verify classical qint initialization produces correct values across all bit widths
+
+### Verification — Arithmetic
+
+- [ ] **VARITH-01**: Verify addition (exhaustive 1-4 bits, representative larger)
+- [ ] **VARITH-02**: Verify subtraction (exhaustive 1-4 bits, representative larger)
+- [ ] **VARITH-03**: Verify multiplication (exhaustive 1-3 bits, representative larger)
+- [ ] **VARITH-04**: Verify division and modulo operations
+- [ ] **VARITH-05**: Verify modular arithmetic (add/sub/mul mod N)
+
+### Verification — Comparison
+
+- [ ] **VCMP-01**: Verify all 6 comparison operators (==, !=, <, >, <=, >=)
+- [ ] **VCMP-02**: Verify qint vs int and qint vs qint comparison variants
+- [ ] **VCMP-03**: Verify comparison edge cases (equal values, boundaries, zero)
+
+### Verification — Bitwise
+
+- [ ] **VBIT-01**: Verify AND, OR, XOR, NOT operations
+- [ ] **VBIT-02**: Verify bitwise operations with variable-width operands
+
+### Verification — Advanced
+
+- [ ] **VADV-01**: Verify automatic uncomputation (ancilla qubits return to |0⟩)
+- [ ] **VADV-02**: Verify quantum conditionals (`with` blocks)
+- [ ] **VADV-03**: Verify ql.array operations (reductions, element-wise)
+
+## Future Requirements
+
+- Statistical verification for superposition-based algorithms
+- Noise model simulation testing
+- Hardware execution verification
+- Performance regression benchmarks
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Hardware execution testing | OpenQASM export covers this path |
+| Noise model simulation | Not relevant for correctness verification |
+| GUI test runner | CLI/pytest sufficient |
+| Nested conditional verification | Requires quantum-quantum AND (not yet implemented) |
+
+## Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| BUG-01 | — | Pending |
+| BUG-02 | — | Pending |
+| BUG-03 | — | Pending |
+| BUG-04 | — | Pending |
+| VFWK-01 | — | Pending |
+| VFWK-02 | — | Pending |
+| VFWK-03 | — | Pending |
+| VINIT-01 | — | Pending |
+| VARITH-01 | — | Pending |
+| VARITH-02 | — | Pending |
+| VARITH-03 | — | Pending |
+| VARITH-04 | — | Pending |
+| VARITH-05 | — | Pending |
+| VCMP-01 | — | Pending |
+| VCMP-02 | — | Pending |
+| VCMP-03 | — | Pending |
+| VBIT-01 | — | Pending |
+| VBIT-02 | — | Pending |
+| VADV-01 | — | Pending |
+| VADV-02 | — | Pending |
+| VADV-03 | — | Pending |
+
+**Coverage:**
+- v1.5 requirements: 21 total
+- Mapped to phases: 0
+- Unmapped: 21 ⚠️
+
+---
+*Requirements defined: 2026-01-30*
+*Last updated: 2026-01-30 after initial definition*
