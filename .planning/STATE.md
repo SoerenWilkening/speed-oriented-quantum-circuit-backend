@@ -9,19 +9,19 @@ See: .planning/PROJECT.md (updated 2026-01-30)
 
 ## Current Position
 
-Phase: Phase 26 (Python API Bindings) — COMPLETE
-Plan: 2/2 complete, verified
-Status: Phase 26 complete, ready for Phase 27
-Last activity: 2026-01-30 — Phase 26 verified and complete
+Phase: Phase 27 (Verification Script) — IN PROGRESS
+Plan: 1/1 in progress (framework complete, bit extraction needs fix)
+Status: Script framework operational, verification blocked on bit extraction logic
+Last activity: 2026-01-30 — Created verification script with test cases
 
-Progress: [██████░░░░] 67%
+Progress: [██████░░░░] 68%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 84 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 4)
+- Total plans completed: 85 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 5)
 - Average duration: ~7 min/plan
-- Total execution time: ~11.0 hours
+- Total execution time: ~11.2 hours
 
 **By Milestone:**
 
@@ -31,7 +31,7 @@ Progress: [██████░░░░] 67%
 | v1.1 QPU State | 11-15 | 13 | Complete (2026-01-28) |
 | v1.2 Uncomputation | 16-20 | 10 | Complete (2026-01-28) |
 | v1.3 Package & Array | 21-24 | 16 | Complete (2026-01-29) |
-| v1.4 OpenQASM Export | 25-27 | 4/TBD | In progress (Phase 26 complete) |
+| v1.4 OpenQASM Export | 25-27 | 5/TBD | In progress (Phase 27 in progress) |
 
 ## Accumulated Context
 
@@ -97,6 +97,10 @@ Progress: [██████░░░░] 67%
 | 26-01 | extras_require for optional verification | Qiskit is large dependency not needed for core functionality |
 | 26-02 | Module auto-initializes circuit at import | _core.pyx calls circuit() at module level - circuit always available |
 | 26-02 | Use _ prefix for quantum variables in tests | Indicates "used for side effects" to linter - quantum operations aren't visible to static analysis |
+| 27-01 | Use dataclass for test case structure | Clean definition with qasm_generator callable, enables circuit reset per test |
+| 27-01 | Pytest-style output with ANSI color auto-detection | Familiar format, respects NO_COLOR/CLICOLOR_FORCE/isatty() standards |
+| 27-01 | Category-based test organization | Enables selective running via --category flag for debugging |
+| 27-01 | Signed value ranges for qint | qint uses signed integers - test values must fit [-2^(w-1), 2^(w-1)-1] |
 
 Additional decisions logged in PROJECT.md Key Decisions table.
 
@@ -105,6 +109,11 @@ Additional decisions logged in PROJECT.md Key Decisions table.
 None.
 
 ### Blockers/Concerns
+
+**Current blockers (Phase 27):**
+- Verification script bit extraction logic incorrect - extracts wrong bits from measurement bitstring (see 27-01-SUMMARY.md)
+- Requires understanding of qubit allocation strategy to identify result qubits vs input/ancilla qubits
+- PYTHONPATH dependency: script requires src/ in PYTHONPATH to import quantum_language
 
 **Known pre-existing issues:**
 - Multiplication tests segfault at certain widths (C backend issue, tracked)
@@ -132,8 +141,8 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-30
-Stopped at: Phase 26 complete, verified
+Stopped at: Phase 27-01 complete (script framework operational, bit extraction needs investigation)
 Resume file: None
 
 ---
-*State updated: 2026-01-30 after Phase 26 completion and verification*
+*State updated: 2026-01-30 after Phase 27-01 execution*
