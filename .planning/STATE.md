@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-30)
 ## Current Position
 
 Phase: 28 of 33 (Verification Framework & Init)
-Plan: 01 of 02 (Verification Framework)
-Status: In progress
-Last activity: 2026-01-30 -- Completed 28-01-PLAN.md (Verification Framework)
+Plan: 02 of 02 (Init Verification Tests)
+Status: Phase complete
+Last activity: 2026-01-30 -- Completed 28-02-PLAN.md (Init Verification Tests)
 
-Progress: [█░░░░░░░░░] 10%
+Progress: [██░░░░░░░░] 15%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 87 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 1)
+- Total plans completed: 88 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 2)
 - Average duration: ~8 min/plan
-- Total execution time: ~11.6 hours
+- Total execution time: ~11.8 hours
 
 **By Milestone:**
 
@@ -48,6 +48,9 @@ Milestone decisions archived. See PROJECT.md Key Decisions table for full histor
 | 28-01 | verify_circuit returns (actual, expected) tuple instead of asserting directly | Gives tests flexibility in assertion style and failure message formatting |
 | 28-01 | Exhaustive testing threshold at 4 bits, sampled testing for 5+ bits | Balance coverage (all 256 pairs at 4-bit) vs runtime (sampled edge cases + random at higher widths) |
 | 28-01 | Deterministic sampling with random.seed(42) | Reproducible test cases across runs for debugging |
+| 28-02 | Generate parametrize data at module level via helper functions | Clean test structure, avoids pytest collection overhead from dynamic generation |
+| 28-02 | Use default argument binding in circuit_builder closures | Avoids Python closure variable capture issues in loops |
+| 28-02 | Document C backend circuit() reset bug rather than attempting fix | C backend memory management fix is risky and time-consuming, beyond v1.5 scope |
 
 ### Pending Todos
 
@@ -60,17 +63,19 @@ None.
 - BUG-02: Less-or-equal comparison (5<=5 returns 0)
 - BUG-03: Multiplication segfaults at certain widths
 - BUG-04: QFT addition fails with both nonzero operands
+- BUG-05: circuit() does not properly reset state - gates accumulate across calls (discovered in 28-02)
 
 **Known pre-existing issues (not v1.5 scope):**
 - Nested quantum conditionals require quantum-quantum AND
 - Build system: pip install -e . fails with absolute path error
+- Some tests/python/ tests cause segfaults during execution (discovered in 28-02, pre-existing)
 
 ## Session Continuity
 
 Last session: 2026-01-30
-Stopped at: Completed 28-01-PLAN.md
+Stopped at: Completed Phase 28 (Verification Framework & Init)
 Resume file: None
-Resume action: Continue with Phase 28 Plan 02 (Init Verification)
+Resume action: Continue with Phase 29 (Binary Operations Verification)
 
 ---
-*State updated: 2026-01-30 after completing 28-01-PLAN.md*
+*State updated: 2026-01-30 after completing Phase 28-02*
