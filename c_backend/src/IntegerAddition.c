@@ -65,9 +65,12 @@ sequence_t *CQ_add(int bits, int64_t value) {
     if (precompiled_CQ_add_width[bits] != NULL) {
         sequence_t *add = precompiled_CQ_add_width[bits];
 
+        // Reversed rotation mapping: qubit i gets rotations[bits-1-i]
+        // Compensates for qubit_array reversal in Python layer, together
+        // implementing the missing QFT swap gates for correct Draper addition.
         for (int i = 0; i < bits; ++i) {
             add->seq[start_layer + i][add->gates_per_layer[start_layer + i] - 1].GateValue =
-                rotations[i];
+                rotations[bits - 1 - i];
         }
         free(rotations);
         return add;
@@ -111,8 +114,12 @@ sequence_t *CQ_add(int bits, int64_t value) {
     QFT(add, bits);
 
     // Phase rotation gates: target qubits are at indices [0, bits-1]
+    // Reversed rotation mapping to compensate for qubit_array reversal in Python layer.
+    // Together with the Python-side qubit reversal, this implements the missing QFT swap
+    // gates needed for correct Draper QFT addition.
     for (int i = 0; i < bits; ++i) {
-        p(&add->seq[start_layer + i][add->gates_per_layer[start_layer + i]++], i, rotations[i]);
+        p(&add->seq[start_layer + i][add->gates_per_layer[start_layer + i]++], i,
+          rotations[bits - 1 - i]);
     }
     free(rotations);
     add->used_layer++;
@@ -256,9 +263,10 @@ sequence_t *cCQ_add(int bits, int64_t value) {
     if (precompiled_cCQ_add_width[bits] != NULL) {
         sequence_t *add = precompiled_cCQ_add_width[bits];
 
+        // Reversed rotation mapping (same as CQ_add)
         for (int i = 0; i < bits; ++i) {
             add->seq[start_layer + i][add->gates_per_layer[start_layer + i] - 1].GateValue =
-                rotations[i];
+                rotations[bits - 1 - i];
         }
         free(rotations);
         return add;
@@ -302,9 +310,10 @@ sequence_t *cCQ_add(int bits, int64_t value) {
     QFT(add, bits);
 
     // Controlled phase rotation gates: target at [0, bits-1], control at [bits]
+    // Reversed rotation mapping (same as CQ_add)
     for (int i = 0; i < bits; ++i) {
         cp(&add->seq[start_layer + i][add->gates_per_layer[start_layer + i]++], i, bits,
-           rotations[i]);
+           rotations[bits - 1 - i]);
     }
     free(rotations);
     add->used_layer++;
