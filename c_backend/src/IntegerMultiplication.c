@@ -200,42 +200,91 @@ sequence_t *QQ_mul(int bits) {
     }
 
     QFT(mul, bits);
-    num_t layer = bits;
+    num_t layer = 2 * bits - 1; // layer after QFT
 
-    // block 1
+    // QQ_mul implements Draper QFT multiplication using CCP decomposition.
+    //
+    // Qubit layout (right-aligned storage: index 0 = LSB, index bits-1 = MSB):
+    //   0..bits-1       : result register (QFT domain), 0=LSB, bits-1=MSB
+    //   bits..2*bits-1   : operand a (self), bits=a_LSB, 2*bits-1=a_MSB
+    //   2*bits..3*bits-1 : operand b (other), 2*bits=b_LSB, 3*bits-1=b_MSB
+    //
+    // Bit weight mapping: qubit at index (bits+k) has weight 2^k for operand a,
+    //                     qubit at index (2*bits+j) has weight 2^j for operand b.
+    //
+    // For each bit of a (control) and each bit of b, we need CCP(theta) where
+    // theta encodes the product weight in the Fourier domain.
+    //
+    // CCP(theta, a_ctrl, b_ctrl, target) decomposes into:
+    //   CP(theta/2, target, a_ctrl)
+    //   CX(a_ctrl, b_ctrl)
+    //   CP(-theta/2, target, a_ctrl)
+    //   CX(a_ctrl, b_ctrl)
+    //   CP(theta/2, target, b_ctrl)
+    //
+    // For efficiency, we merge all b bits for fixed (a_ctrl, target):
+    //   Step 1: CP(sum_theta/2, target, a_ctrl)
+    //   Step 2: for each b bit j: CX, CP(-theta_j/2), CX
+    //   Step 3: for each b bit j: CP(theta_j/2, target, b_ctrl_j)
+
     int rounds = 0;
-    // First blocks of CCP decompositions
-    // all the CP block of the first decomp step can be merged
     for (int bit = bits - 1; bit >= 0; --bit) {
-        layer = 2 * bits + 2 * rounds - 1;
-        // FIX BUG-03: Same control reversal as in CQ_mul and QQ_add (plan 29-06)
-        CP_sequence(mul, &layer, rounds, 2 * bits - 1 - bit, pow(2, bits) - 1, false, bits);
-        rounds++;
-    }
-    layer++;
+        num_t a_ctrl = 2 * bits - 1 - bit;
 
-    // block 2
-    // intermediate step, C1X0 C0P_2(value/2)C1X0
-    for (int bit_int2 = 0; bit_int2 < bits; ++bit_int2) {
-        layer -= bits;
-        CX_sequence(mul, &layer, -bit_int2, bits);
-
-        all_rot(mul, &layer, false, pow(2, 1 + bit_int2), bits);
-
-        CX_sequence(mul, &layer, -bit_int2, bits);
-
-        for (int i = 0; i < bits; ++i) {
+        // Step 1: CP(sum_theta/2, target, a_ctrl) for each Fourier target
+        // sum_theta for target at index i = M_PI * (2^bits - 1) / 2^i
+        // so sum_theta/2 = M_PI * (2^bits - 1) / 2^(i+1)
+        for (int i = 0; i < bits - rounds; ++i) {
+            num_t target = rounds + i;
+            double sum_phase = M_PI * (pow(2, bits) - 1) / pow(2, i + 1);
             gate_t *g = &mul->seq[layer][mul->gates_per_layer[layer]++];
-            //		    printf("%d %d %f %f\n", bit_int2, i, pow(2, i + 1) - 1, pow(2,
-            // bit_int2));
-            double value = pow(2, -i - 1) * M_PI * (pow(2, i + 1) - 1) * pow(2, bit_int2);
-            cp(g, bits - i - 1, 3 * bits - bit_int2 - 1, value);
+            cp(g, target, a_ctrl, sum_phase);
             layer++;
         }
+
+        // Step 2: For each b bit j: CX(a_ctrl, b_ctrl) + negative CPs + CX
+        for (int j = 0; j < bits; ++j) {
+            num_t b_ctrl = 2 * bits + j; // b bit at weight 2^j
+
+            // CX: b_ctrl controls, a_ctrl is target
+            gate_t *g = &mul->seq[layer][mul->gates_per_layer[layer]++];
+            cx(g, a_ctrl, b_ctrl);
+            layer++;
+
+            // CP(-theta_j/2, target, a_ctrl) for each Fourier target
+            // theta_j for target index i = 2*pi * 2^j / 2^(i+1) = M_PI * 2^(j-i)
+            // -theta_j/2 = -M_PI * 2^(j-i) / 2 = -M_PI * 2^(j-i-1)
+            for (int i = 0; i < bits - rounds; ++i) {
+                num_t target = rounds + i;
+                double neg_phase = -M_PI * pow(2, j) / pow(2, i + 1);
+                g = &mul->seq[layer][mul->gates_per_layer[layer]++];
+                cp(g, target, a_ctrl, neg_phase);
+                layer++;
+            }
+
+            // CX: restore a_ctrl
+            g = &mul->seq[layer][mul->gates_per_layer[layer]++];
+            cx(g, a_ctrl, b_ctrl);
+            layer++;
+        }
+
+        // Step 3: CP(theta_j/2, target, b_ctrl_j) for each b bit and target
+        for (int j = 0; j < bits; ++j) {
+            num_t b_ctrl = 2 * bits + j;
+
+            for (int i = 0; i < bits - rounds; ++i) {
+                num_t target = rounds + i;
+                double phase = M_PI * pow(2, j) / pow(2, i + 1);
+                gate_t *g = &mul->seq[layer][mul->gates_per_layer[layer]++];
+                cp(g, target, b_ctrl, phase);
+                layer++;
+            }
+        }
+
+        rounds++;
     }
-    layer++;
-    //	layer -= bits - 1;
-    mul->used_layer = layer - 1;
+
+    mul->used_layer = layer;
     QFT_inverse(mul, bits);
 
     // Cache the sequence
