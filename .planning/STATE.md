@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-01-30)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v1.5 Bug Fixes & Exhaustive Verification -- Phase 29: C Backend Bug Fixes (gaps found, round 2)
+**Current focus:** v1.5 Bug Fixes & Exhaustive Verification -- Phase 29: C Backend Bug Fixes (gap closure round 3)
 
 ## Current Position
 
 Phase: 29 of 33 (C Backend Bug Fixes)
-Plan: 10 of 12 (gap closure round 3 in progress)
-Status: In progress -- CQ_add convention fix complete (plan 29-10)
-Last activity: 2026-01-31 -- Completed 29-10-PLAN.md (CQ_add qubit convention fix)
+Plan: 11 of 12 (gap closure round 3 in progress)
+Status: In progress -- QFT convention fix complete (plan 29-09), BUG-01 RESOLVED
+Last activity: 2026-01-31 -- Completed 29-09-PLAN.md (QFT/IQFT convention fix)
 
-Progress: [███░░░░░░░] 22%
+Progress: [███░░░░░░░] 23%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 96 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 10)
+- Total plans completed: 97 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 11)
 - Average duration: ~10 min/plan
-- Total execution time: ~15.8 hours
+- Total execution time: ~16.5 hours
 
 **By Milestone:**
 
@@ -71,6 +71,9 @@ Milestone decisions archived. See PROJECT.md Key Decisions table for full histor
 | 29-08 | BUG-05 prevents definitive QQ_add diagnosis | Cannot distinguish QQ_add bit-ordering bugs from BUG-05 cache pollution |
 | 29-10 | Two-part CQ_add fix: qubit_array reversal + rotation reversal | QFT-no-swaps convention mismatch requires compensating at both Python and C layers |
 | 29-10 | Path taken: convention fix (not BUG-05 cache) | Isolation test confirmed 0+1 fails in fresh process, ruling out cache pollution |
+| 29-09 | Fix QFT processing order at the source (gate.c) rather than patching adders | Fixing the root cause (QFT convention) eliminates all downstream workarounds |
+| 29-09 | Revert 29-10 CQ_add workarounds after QFT fix | With correct QFT, qubit_array reversal and rotation reversal double-compensate |
+| 29-09 | Accept comparison failures as BUG-05 pre-existing | Verified identical failures with original code; BUG-05 cache contamination is root cause |
 
 ### Pending Todos
 
@@ -79,11 +82,11 @@ None.
 ### Blockers/Concerns
 
 **Known C backend bugs (v1.5 targets):**
-- **BUG-05 (CRITICAL BLOCKER - ESCALATED):** circuit() does not properly reset state - causes memory explosion, blocks ALL verification of arithmetic fixes. Phase 29 cannot proceed without BUG-05 resolution.
-- **BUG-04 (CQ_add FIXED, QQ_add PARTIAL):** CQ_add fully fixed (29-10: qubit_array reversal + rotation reversal). All 7 addition tests pass. QQ_add control reversal applied (29-06) but still has issues (29-08: subtraction failures).
+- **BUG-05 (CRITICAL BLOCKER - ESCALATED):** circuit() does not properly reset state - causes memory explosion, blocks ALL verification of arithmetic fixes. Comparison tests (BUG-02) fail specifically because QQ_add cache is reused incorrectly when called twice in same circuit.
+- **BUG-04 (FULLY FIXED):** QFT convention fix (29-09) resolves the root cause. CQ_add: all 7 tests pass. QQ_add: all 5 subtraction tests pass.
 - **BUG-03 (INVESTIGATED):** Multiplication returns 0 - root cause identified but algorithm needs deeper redesign
-- **BUG-01 (STILL BROKEN):** Subtraction verified in 29-08: 2/5 tests pass (0-1, 15-0 work; 3-7, 7-3, 5-5 fail). QQ_add fix incomplete.
-- **BUG-02 (STILL BROKEN):** Comparison verified in 29-08: 2/6 tests pass. Failures are transitive from BUG-01 subtraction errors. Comparison logic itself is correct.
+- **BUG-01 (RESOLVED):** All 5 subtraction tests pass (3-7=12, 7-3=4, 5-5=0, 0-1=15, 15-0=15). Fixed by QFT convention correction in 29-09.
+- **BUG-02 (BLOCKED BY BUG-05):** Comparison tests fail due to BUG-05 circuit cache contamination when QQ_add is called twice (subtract + restore). The comparison logic itself is correct. Requires BUG-05 fix for resolution.
 
 **Known pre-existing issues (not v1.5 scope):**
 - Nested quantum conditionals require quantum-quantum AND
@@ -93,9 +96,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-31
-Stopped at: Completed 29-10-PLAN.md -- CQ_add convention fix verified (all 7 tests pass)
+Stopped at: Completed 29-09-PLAN.md -- QFT convention fix, BUG-01 resolved, BUG-04 fully fixed
 Resume file: None
-Resume action: Continue with remaining gap closure plans (29-11, 29-12) or address BUG-05 for reliable multi-test verification
+Resume action: Continue with remaining gap closure plans (29-11, 29-12) or address BUG-05 for comparison verification
 
 ---
-*State updated: 2026-01-31 after Phase 29 plan 10 completion*
+*State updated: 2026-01-31 after Phase 29 plan 09 completion*
