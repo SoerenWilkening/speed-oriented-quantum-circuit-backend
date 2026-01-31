@@ -97,10 +97,11 @@ Plans:
   1. All six operators (==, !=, <, >, <=, >=) return correct boolean results for exhaustive input pairs at 1-4 bit widths
   2. Both qint-vs-int and qint-vs-qint comparison variants produce identical correct results
   3. Edge cases verified: equal values, zero compared to nonzero, maximum value boundaries, minimum (0) boundaries
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 31-01: TBD
+- [ ] 31-01-PLAN.md -- Exhaustive and sampled comparison tests (all 6 operators, QQ + CQ, BUG-02 regression)
+- [ ] 31-02-PLAN.md -- Operand preservation verification (calibration + representative tests)
 
 ### Phase 32: Bitwise Verification
 **Goal**: All bitwise operations (AND, OR, XOR, NOT) are verified including variable-width operand combinations.
