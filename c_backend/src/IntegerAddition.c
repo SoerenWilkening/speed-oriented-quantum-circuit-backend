@@ -180,11 +180,17 @@ sequence_t *QQ_add(int bits) {
     }
     QFT(add, bits);
     int rounds = 0;
+    // QFT addition: apply controlled phase gates from second operand (control) to first operand
+    // (target) Qubit layout: [0..bits-1]=target LSB..MSB, [bits..2*bits-1]=control LSB..MSB Fixed
+    // bit-ordering: outer loop 'bit' iterates MSB-first but needs to access control qubits
+    // LSB-first
     for (int bit = (int)bits - 1; bit >= 0; --bit) {
         for (int i = 0; i < bits - rounds; ++i) {
             num_t layer = 2 * bits + i + 2 * rounds - 1;
             num_t target = bits - i - 1 - rounds;
-            num_t control = bits + bit;
+            // Reverse control mapping: when bit=bits-1 (first iter), use LSB qubit (bits)
+            // When bit=0 (last iter), use MSB qubit (2*bits-1)
+            num_t control = bits + (bits - 1 - bit); // Equivalent to: 2*bits - 1 - bit
             double value = 2 * M_PI / (pow(2, i + 1));
             gate_t *g = &add->seq[layer][add->gates_per_layer[layer]++];
             cp(g, target, control, value);
