@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-30)
 ## Current Position
 
 Phase: 29 of 33 (C Backend Bug Fixes)
-Plan: 11 of 12 (gap closure round 3 in progress)
-Status: In progress -- CQ_mul fixed (plan 29-11), QQ_mul needs deeper redesign
-Last activity: 2026-01-31 -- Completed 29-11-PLAN.md (multiplication target qubit fix)
+Plan: 13 of 14 (gap closure round 3 - REGRESSION DETECTED)
+Status: CRITICAL -- Attempted BUG-02/BUG-03 fixes caused regressions, need to revert commit 6328d19
+Last activity: 2026-01-31 -- Completed 29-13-PLAN.md (verification reveals regressions)
 
-Progress: [███░░░░░░░] 24%
+Progress: [███░░░░░░░] 25%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 98 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 12)
+- Total plans completed: 100 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 14)
 - Average duration: ~10 min/plan
-- Total execution time: ~17.1 hours
+- Total execution time: ~17.5 hours
 
 **By Milestone:**
 
@@ -76,6 +76,8 @@ Milestone decisions archived. See PROJECT.md Key Decisions table for full histor
 | 29-09 | Accept comparison failures as BUG-05 pre-existing | Verified identical failures with original code; BUG-05 cache contamination is root cause |
 | 29-11 | Fix CQ_mul value formula by removing pow(2,bits-1-bit) factor | Double-counting positional weight caused phase wrapping; CQ_mul now 100% correct |
 | 29-11 | Keep QQ_mul unchanged from baseline | Target reversal alone insufficient; CCP decomposition needs deeper algorithm redesign |
+| 29-13 | Use PYTHONPATH=src instead of pip install -e . | Editable install fails with absolute path error; build_ext --inplace workaround |
+| 29-13 | REVERT needed for BUG-02/BUG-03 fixes (commit 6328d19) | Both fixes caused regressions; __le__ rewrite ineffective, target qubit reversal made multiplication worse |
 
 ### Pending Todos
 
@@ -84,11 +86,11 @@ None.
 ### Blockers/Concerns
 
 **Known C backend bugs (v1.5 targets):**
-- **BUG-05 (CRITICAL BLOCKER - ESCALATED):** circuit() does not properly reset state - causes memory explosion, blocks ALL verification of arithmetic fixes. Comparison tests (BUG-02) fail specifically because QQ_add cache is reused incorrectly when called twice in same circuit.
-- **BUG-04 (FULLY FIXED):** QFT convention fix (29-09) resolves the root cause. CQ_add: all 7 tests pass. QQ_add: all 5 subtraction tests pass.
-- **BUG-03 (PARTIALLY FIXED):** CQ_mul now 100% correct (10/10 tests). QQ_mul still at 2/5 baseline -- algorithm needs deeper redesign beyond target qubit mapping. The CCP decomposition has block-to-block consistency requirements that simple target reversal doesn't satisfy.
-- **BUG-01 (RESOLVED):** All 5 subtraction tests pass (3-7=12, 7-3=4, 5-5=0, 0-1=15, 15-0=15). Fixed by QFT convention correction in 29-09.
-- **BUG-02 (BLOCKED BY BUG-05):** Comparison tests fail due to BUG-05 circuit cache contamination when QQ_add is called twice (subtract + restore). The comparison logic itself is correct. Requires BUG-05 fix for resolution.
+- **BUG-05 (CRITICAL BLOCKER - SEVERELY ESCALATED):** circuit() does not properly reset state - causes memory explosion. Plan 29-13 changes triggered EXPONENTIAL growth in memory requirements (16GB to 17PB for 4-bit operations), now affecting 9 additional tests that previously worked. MUST be fixed before any further BUG-02/BUG-03 work.
+- **BUG-04 (FULLY FIXED):** QFT convention fix (29-09) resolves the root cause. CQ_add: all 7 tests pass. QQ_add: verified stable even after 29-13 changes.
+- **BUG-03 (REGRESSION IN 29-13):** Plan 29-13 target qubit reversal (bits-i-1 → i) made multiplication WORSE - lost both trivial cases (0*5, 1*1) that previously passed. CQ_mul was 100% correct (10/10) before 29-13. NEED TO REVERT commit 6328d19.
+- **BUG-01 (REGRESSION IN 29-13):** Was 5/5 pass after 29-09 QFT fix. Now 2/5 pass - BUG-05 memory explosion blocks 3 tests (0-1, 5-5, 15-0). REVERT needed to restore baseline.
+- **BUG-02 (NO IMPROVEMENT IN 29-13):** __le__ rewrite to ~(self > other) had NO effect - still returns 0 for true comparisons. Plus 3 new BUG-05 memory explosions. The comparison logic itself is broken, not the QQ_add invocation pattern.
 
 **Known pre-existing issues (not v1.5 scope):**
 - Nested quantum conditionals require quantum-quantum AND
@@ -98,9 +100,14 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-31
-Stopped at: Completed 29-11-PLAN.md -- CQ_mul fixed, QQ_mul needs deeper redesign
+Stopped at: Completed 29-13-PLAN.md -- CRITICAL REGRESSIONS DETECTED
 Resume file: None
-Resume action: Continue with plan 29-12 or address BUG-05 for comparison verification
+Resume action: URGENT - Revert commit 6328d19 (plan 29-13 changes) to restore baseline, then investigate BUG-05 root cause before attempting further fixes
+
+**Critical path:**
+1. Revert 6328d19 to restore 14/19 test baseline
+2. Isolate BUG-05 minimal reproduction case
+3. Fix BUG-05 OR work around it before touching BUG-02/BUG-03
 
 ---
-*State updated: 2026-01-31 after Phase 29 plan 11 completion*
+*State updated: 2026-01-31 after Phase 29 plan 13 completion (REGRESSIONS)*
