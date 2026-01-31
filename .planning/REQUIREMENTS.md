@@ -32,9 +32,9 @@
 
 ### Verification — Comparison
 
-- [ ] **VCMP-01**: Verify all 6 comparison operators (==, !=, <, >, <=, >=)
-- [ ] **VCMP-02**: Verify qint vs int and qint vs qint comparison variants
-- [ ] **VCMP-03**: Verify comparison edge cases (equal values, boundaries, zero)
+- [x] **VCMP-01**: Verify all 6 comparison operators (==, !=, <, >, <=, >=)
+- [x] **VCMP-02**: Verify qint vs int and qint vs qint comparison variants
+- [x] **VCMP-03**: Verify comparison edge cases (equal values, boundaries, zero)
 
 ### Verification — Bitwise
 
@@ -80,9 +80,9 @@
 | VARITH-03 | Phase 30 | Complete |
 | VARITH-04 | Phase 30 | Complete |
 | VARITH-05 | Phase 30 | Complete |
-| VCMP-01 | Phase 31 | Pending |
-| VCMP-02 | Phase 31 | Pending |
-| VCMP-03 | Phase 31 | Pending |
+| VCMP-01 | Phase 31 | Complete |
+| VCMP-02 | Phase 31 | Complete |
+| VCMP-03 | Phase 31 | Complete |
 | VBIT-01 | Phase 32 | Pending |
 | VBIT-02 | Phase 32 | Pending |
 | VADV-01 | Phase 33 | Pending |

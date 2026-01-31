@@ -100,8 +100,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 31-01-PLAN.md -- Exhaustive and sampled comparison tests (all 6 operators, QQ + CQ, BUG-02 regression)
-- [ ] 31-02-PLAN.md -- Operand preservation verification (calibration + representative tests)
+- [x] 31-01-PLAN.md -- Exhaustive and sampled comparison tests (all 6 operators, QQ + CQ, BUG-02 regression)
+- [x] 31-02-PLAN.md -- Operand preservation verification (calibration + representative tests)
 
 ### Phase 32: Bitwise Verification
 **Goal**: All bitwise operations (AND, OR, XOR, NOT) are verified including variable-width operand combinations.
@@ -139,10 +139,10 @@ Plans:
 | 28. Verification Framework & Init | v1.5 | 2/2 | ✓ Complete | 2026-01-30 |
 | 29. C Backend Bug Fixes | v1.5 | 18/18 | ✓ Complete | 2026-01-31 |
 | 30. Arithmetic Verification | v1.5 | 4/4 | ✓ Complete | 2026-01-31 |
-| 31. Comparison Verification | v1.5 | 0/TBD | Not started | - |
+| 31. Comparison Verification | v1.5 | 2/2 | ✓ Complete | 2026-01-31 |
 | 32. Bitwise Verification | v1.5 | 0/TBD | Not started | - |
 | 33. Advanced Feature Verification | v1.5 | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-01-30*
-*Last updated: 2026-01-31 (Phase 30 complete)*
+*Last updated: 2026-01-31 (Phase 31 complete)*
