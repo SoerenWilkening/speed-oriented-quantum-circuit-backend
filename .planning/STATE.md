@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-30)
 ## Current Position
 
 Phase: 29 of 33 (C Backend Bug Fixes)
-Plan: 15 of 18 (gap closure round)
-Status: In progress -- BUG-05 fixed, BUG-02 and BUG-03 remain
-Last activity: 2026-01-31 -- Completed 29-15-PLAN.md (circuit reset fix)
+Plan: 16 of 18 (gap closure round)
+Status: In progress -- BUG-02 fixed, BUG-03 remains
+Last activity: 2026-01-31 -- Completed 29-16-PLAN.md (comparison fix)
 
-Progress: [███░░░░░░░] 25%
+Progress: [████░░░░░░] 30%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 101 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 15)
+- Total plans completed: 102 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 16)
 - Average duration: ~10 min/plan
-- Total execution time: ~17.5 hours
+- Total execution time: ~17.8 hours
 
 **By Milestone:**
 
@@ -47,22 +47,25 @@ Milestone decisions archived. See PROJECT.md Key Decisions table for full histor
 | 29-13 | Revert commit 6328d19 (BUG-02/BUG-03 fix attempt) | Both fixes caused regressions; target qubit reversal broke trivial multiplication, __le__ rewrite ineffective |
 | 29-14 | Skip plan 14 entirely | Plan 13 regressions invalidated plan 14's premise (investigate after rebuild) |
 | 29-15 | Use type(self) is circuit guard for reset logic | qint extends circuit; super().__init__() must not destroy active circuit mid-construction |
+| 29-16 | Use (n+1)-bit widened temporaries in __gt__ | n-bit modular subtraction wraps for differences >= 2^(n-1), corrupting sign bit |
+| 29-16 | Remove layer tracking from comparison results | GC triggers gate reversal via __del__ -> _do_uncompute |
+| 29-16 | Simplify __le__ to ~(self > other) delegation | Eliminates fragile OR logic; correctness follows from __gt__ |
 
 ### Blockers/Concerns
 
 **Known C backend bugs (v1.5 targets):**
-- **BUG-05 (FULLY FIXED):** circuit() now properly frees old circuit and resets all Python globals. 12/12 tests pass in combined pytest run. Fixed in plan 29-15.
+- **BUG-05 (FULLY FIXED):** circuit() now properly frees old circuit and resets all Python globals. Fixed in plan 29-15.
 - **BUG-04 (FULLY FIXED):** All 7 QFT addition tests pass deterministically.
 - **BUG-03 (PARTIALLY FIXED):** CQ_mul 100% correct. QQ_mul: trivial cases pass (0*x, 1*1), non-trivial wrong. Algorithm needs deeper redesign.
-- **BUG-01 (FULLY FIXED):** All 5 subtraction tests pass. Combined pytest run now works (BUG-05 fixed).
-- **BUG-02 (UNFIXED):** Comparison always returns 0 for true cases. __le__ rewrite to ~(self > other) did NOT help. Root cause is in comparison result extraction, not QQ_add invocation pattern.
+- **BUG-01 (FULLY FIXED):** All 5 subtraction tests pass.
+- **BUG-02 (FULLY FIXED):** All 6 comparison tests pass. Three root causes fixed: MSB index, GC gate reversal, unsigned overflow. Fixed in plan 29-16.
 
 ## Session Continuity
 
 Last session: 2026-01-31
-Stopped at: Completed 29-15-PLAN.md (BUG-05 circuit reset fix)
+Stopped at: Completed 29-16-PLAN.md (BUG-02 comparison fix)
 Resume file: None
-Resume action: Execute 29-16-PLAN.md (BUG-02 comparison fix)
+Resume action: Execute 29-17-PLAN.md (BUG-03 QQ_mul investigation)
 
 ---
-*State updated: 2026-01-31 after completing plan 29-15 (BUG-05 fix)*
+*State updated: 2026-01-31 after completing plan 29-16 (BUG-02 fix)*
