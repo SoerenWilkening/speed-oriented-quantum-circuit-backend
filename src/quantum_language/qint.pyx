@@ -683,8 +683,6 @@ cdef class qint(circuit):
 		cdef int other_bits
 		cdef int self_offset
 		cdef int other_offset
-		cdef int j_rev
-		cdef unsigned int tmp_rev
 		cdef circuit_t *_circuit = <circuit_t*><unsigned long long>_get_circuit()
 		cdef bint _controlled = _get_controlled()
 		cdef object _control_bool = _get_control_bool()
@@ -699,14 +697,6 @@ cdef class qint(circuit):
 
 		if type(other) == int:
 			# value is a classical integer
-			# Reverse target qubit order for CQ_add/cCQ_add: the QFT without swaps
-			# treats abstract qubit 0 as MSB in Fourier domain, but qubits are stored
-			# LSB-first (qubit_array[0]=LSB). Reversing ensures the QFT bit-reversal
-			# produces correct computational-basis output after IQFT.
-			for j_rev in range(self.bits // 2):
-				tmp_rev = qubit_array[j_rev]
-				qubit_array[j_rev] = qubit_array[self.bits - 1 - j_rev]
-				qubit_array[self.bits - 1 - j_rev] = tmp_rev
 			if _controlled:
 				# Control qubit from qbool (last element)
 				qubit_array[start: start + 1] = (<qint> _control_bool).qubits[63:64]

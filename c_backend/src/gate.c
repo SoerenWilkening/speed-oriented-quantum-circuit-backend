@@ -355,12 +355,16 @@ sequence_t *QFT(sequence_t *qft, int num_qubits) {
     memcpy(&qft->gates_per_layer[qft->used_layer], sum, (2 * num_qubits - 1) * sizeof(num_t));
 
     memset(sum, 0, (2 * num_qubits - 1) * sizeof(num_t));
+    // Textbook QFT (no swaps): process qubits from MSB (n-1) to LSB (0).
+    // Loop index j=0..n-1 maps to qubit q=n-1-j (reversed processing order).
+    // This produces the correct Fourier transform for Draper QFT arithmetic.
     for (int j = 0; j < num_qubits; ++j) {
-        h(&qft->seq[qft->used_layer + 2 * j][sum[2 * j]], offset + j);
+        int q = num_qubits - 1 - j; // actual qubit being processed
+        h(&qft->seq[qft->used_layer + 2 * j][sum[2 * j]], offset + q);
         sum[2 * j]++;
         for (int i = 0; i < num_qubits - 1 - j; ++i) {
-            cp(&qft->seq[qft->used_layer + 2 * j + i + 1][sum[2 * j + i + 1]], offset + j,
-               offset + j + i + 1, M_PI / pow(2, i + 1));
+            cp(&qft->seq[qft->used_layer + 2 * j + i + 1][sum[2 * j + i + 1]], offset + q,
+               offset + q - i - 1, M_PI / pow(2, i + 1));
             sum[2 * j + i + 1]++;
         }
     }
@@ -421,14 +425,17 @@ sequence_t *QFT_inverse(sequence_t *qft, int num_qubits) {
         memset(qft->gates_per_layer, 0, qft->num_layer * sizeof(num_t));
     }
 
+    // Inverse of textbook QFT (no swaps): reverse gate order of QFT.
+    // QFT processes qubits MSB→LSB, so IQFT processes LSB→MSB (j maps to q=n-1-j).
     for (int j = 0; j < num_qubits; ++j) {
+        int q = num_qubits - 1 - j; // actual qubit being processed
         for (int i = 0; i < num_qubits - 1 - j; ++i) {
             num_t layer = qft->used_layer + 2 * num_qubits - 1 - (2 * j + i + 1) - 1;
-            cp(&qft->seq[layer][qft->gates_per_layer[layer]++], offset + j, offset + (j + i + 1),
+            cp(&qft->seq[layer][qft->gates_per_layer[layer]++], offset + q, offset + q - i - 1,
                -M_PI / pow(2, i + 1));
         }
         num_t layer = qft->used_layer + 2 * num_qubits - 1 - 2 * j - 1;
-        h(&qft->seq[layer][qft->gates_per_layer[layer]++], offset + j);
+        h(&qft->seq[layer][qft->gates_per_layer[layer]++], offset + q);
     }
     qft->used_layer += 2 * num_qubits - 1;
 

@@ -59,18 +59,19 @@ sequence_t *CQ_add(int bits, int64_t value) {
             NonZeroCount++;
     }
     free(bin);
-    int start_layer = bits;
+    // Phase rotations start after QFT (which uses 2*bits-1 layers)
+    int start_layer = 2 * bits - 1;
 
     // Check cache for this width (use width-parameterized cache)
     if (precompiled_CQ_add_width[bits] != NULL) {
         sequence_t *add = precompiled_CQ_add_width[bits];
 
-        // Reversed rotation mapping: qubit i gets rotations[bits-1-i]
-        // Compensates for qubit_array reversal in Python layer, together
-        // implementing the missing QFT swap gates for correct Draper addition.
+        // Direct rotation mapping: with textbook QFT (no swaps, MSB-first processing),
+        // the Fourier-domain qubit ordering matches the computational-basis qubit ordering.
+        // rotations[i] applies to physical qubit i.
         for (int i = 0; i < bits; ++i) {
             add->seq[start_layer + i][add->gates_per_layer[start_layer + i] - 1].GateValue =
-                rotations[bits - 1 - i];
+                rotations[i];
         }
         free(rotations);
         return add;
@@ -82,8 +83,9 @@ sequence_t *CQ_add(int bits, int64_t value) {
         return NULL;
     }
     // allocate exact number of layer and enough gates per layer
+    // Total: QFT(2*bits-1) + rotations(bits) + IQFT(2*bits-1) = 5*bits-2
     add->used_layer = 0;
-    add->num_layer = 4 * bits - 1;
+    add->num_layer = 5 * bits - 2;
     add->gates_per_layer = calloc(add->num_layer, sizeof(num_t));
     if (add->gates_per_layer == NULL) {
         free(rotations);
@@ -113,16 +115,13 @@ sequence_t *CQ_add(int bits, int64_t value) {
     }
     QFT(add, bits);
 
-    // Phase rotation gates: target qubits are at indices [0, bits-1]
-    // Reversed rotation mapping to compensate for qubit_array reversal in Python layer.
-    // Together with the Python-side qubit reversal, this implements the missing QFT swap
-    // gates needed for correct Draper QFT addition.
+    // Phase rotation gates: direct mapping. With textbook QFT (no swaps),
+    // rotations[i] applies to physical qubit i.
     for (int i = 0; i < bits; ++i) {
-        p(&add->seq[start_layer + i][add->gates_per_layer[start_layer + i]++], i,
-          rotations[bits - 1 - i]);
+        p(&add->seq[start_layer + i][add->gates_per_layer[start_layer + i]++], i, rotations[i]);
     }
     free(rotations);
-    add->used_layer++;
+    add->used_layer += bits;
 
     QFT_inverse(add, bits);
 
@@ -187,16 +186,16 @@ sequence_t *QQ_add(int bits) {
     }
     QFT(add, bits);
     int rounds = 0;
-    // QFT addition: apply controlled phase gates from second operand (control) to first operand
-    // (target) Qubit layout: [0..bits-1]=target LSB..MSB, [bits..2*bits-1]=control LSB..MSB Fixed
-    // bit-ordering: outer loop 'bit' iterates MSB-first but needs to access control qubits
-    // LSB-first
+    // Draper QFT addition: apply controlled phase gates from second operand (control)
+    // to first operand (target) in Fourier domain.
+    // After textbook QFT (no swaps, MSB-first processing), physical qubit j corresponds
+    // to Fourier mode j. Control bit k applies phase 2*pi/2^(j+1-k) to Fourier qubit j
+    // for j >= k.
     for (int bit = (int)bits - 1; bit >= 0; --bit) {
         for (int i = 0; i < bits - rounds; ++i) {
             num_t layer = 2 * bits + i + 2 * rounds - 1;
-            num_t target = bits - i - 1 - rounds;
-            // Reverse control mapping: when bit=bits-1 (first iter), use LSB qubit (bits)
-            // When bit=0 (last iter), use MSB qubit (2*bits-1)
+            num_t target = rounds + i;
+            // Control mapping: bit iterates MSB-first, maps to control qubits LSB-first
             num_t control = bits + (bits - 1 - bit); // Equivalent to: 2*bits - 1 - bit
             double value = 2 * M_PI / (pow(2, i + 1));
             gate_t *g = &add->seq[layer][add->gates_per_layer[layer]++];
@@ -257,16 +256,17 @@ sequence_t *cCQ_add(int bits, int64_t value) {
             NonZeroCount++;
     }
     free(bin);
-    int start_layer = bits;
+    // Phase rotations start after QFT (which uses 2*bits-1 layers)
+    int start_layer = 2 * bits - 1;
 
     // Check cache for this width (use width-parameterized cache)
     if (precompiled_cCQ_add_width[bits] != NULL) {
         sequence_t *add = precompiled_cCQ_add_width[bits];
 
-        // Reversed rotation mapping (same as CQ_add)
+        // Direct rotation mapping (same as CQ_add: textbook QFT convention)
         for (int i = 0; i < bits; ++i) {
             add->seq[start_layer + i][add->gates_per_layer[start_layer + i] - 1].GateValue =
-                rotations[bits - 1 - i];
+                rotations[i];
         }
         free(rotations);
         return add;
@@ -278,8 +278,9 @@ sequence_t *cCQ_add(int bits, int64_t value) {
         return NULL;
     }
     // allocate exact number of layer and enough gates per layer
+    // Total: QFT(2*bits-1) + rotations(bits) + IQFT(2*bits-1) = 5*bits-2
     add->used_layer = 0;
-    add->num_layer = 4 * bits - 1;
+    add->num_layer = 5 * bits - 2;
     add->gates_per_layer = calloc(add->num_layer, sizeof(num_t));
     if (add->gates_per_layer == NULL) {
         free(rotations);
@@ -310,13 +311,13 @@ sequence_t *cCQ_add(int bits, int64_t value) {
     QFT(add, bits);
 
     // Controlled phase rotation gates: target at [0, bits-1], control at [bits]
-    // Reversed rotation mapping (same as CQ_add)
+    // Direct rotation mapping (same as CQ_add: textbook QFT convention)
     for (int i = 0; i < bits; ++i) {
         cp(&add->seq[start_layer + i][add->gates_per_layer[start_layer + i]++], i, bits,
-           rotations[bits - 1 - i]);
+           rotations[i]);
     }
     free(rotations);
-    add->used_layer++;
+    add->used_layer += bits;
 
     QFT_inverse(add, bits);
 
@@ -387,18 +388,20 @@ sequence_t *cQQ_add(int bits) {
     int rounds;
     int layer = 2 * bits - 1;
 
-    // block 1
+    // block 1: unconditional half-rotations on Fourier qubits
+    // With textbook QFT convention, reverse target qubit ordering
     for (int bit = (int)bits - 1; bit >= 0; --bit) {
+        int target_q = bits - 1 - bit; // reversed for textbook QFT
         double value = 0;
         for (int i = 0; i < bits - bit; ++i) {
             value += 2 * M_PI / (pow(2, i + 1)) / 2;
         }
         gate_t *g = &add->seq[layer][add->gates_per_layer[layer]++];
-        cp(g, bit, control, value);
+        cp(g, target_q, control, value);
         layer++;
     }
 
-    // block 2
+    // block 2: CNOT + negative half-rotations + CNOT
     rounds = 0;
     for (int bit = (int)bits - 1; bit >= 0; --bit) {
         gate_t *g = &add->seq[layer][add->gates_per_layer[layer]++];
@@ -406,8 +409,9 @@ sequence_t *cQQ_add(int bits) {
         layer++;
         for (int i = 0; i < bits - rounds; ++i) {
             double value = 2 * M_PI / (pow(2, i + 1)) / 2;
+            int target_q = rounds + i; // reversed for textbook QFT
             g = &add->seq[layer][add->gates_per_layer[layer]++];
-            cp(g, bit - i, control, -value);
+            cp(g, target_q, control, -value);
             layer++;
         }
         g = &add->seq[layer][add->gates_per_layer[layer]++];
@@ -416,13 +420,14 @@ sequence_t *cQQ_add(int bits) {
         rounds++;
     }
 
-    // block 3
+    // block 3: controlled rotations from b register
     rounds = 0;
     for (int bit = (int)bits - 1; bit >= 0; --bit) {
         for (int i = 0; i < bits - rounds; ++i) {
             double value = 2 * M_PI / (pow(2, i + 1)) / 2;
+            int target_q = rounds + i; // reversed for textbook QFT
             gate_t *g = &add->seq[layer][add->gates_per_layer[layer]++];
-            cp(g, bit - i, bits + bit, value);
+            cp(g, target_q, bits + bit, value);
             layer++;
         }
         layer -= bits - rounds;
