@@ -1781,7 +1781,8 @@ cdef class qint(circuit):
 			# In-place subtraction on self
 			self -= other
 			# Check MSB (sign bit) - if 1, result is negative (self < other)
-			msb = self[64 - self.bits]
+			# MSB is at index 63 (right-aligned storage: LSB at 64-width, MSB at 63)
+			msb = self[63]
 			result = qbool()
 			result ^= msb  # Copy MSB to result
 			# Restore operand
@@ -1790,9 +1791,9 @@ cdef class qint(circuit):
 			result.add_dependency(self)
 			result.add_dependency(other)
 			result.operation_type = 'LT'
-			# Capture layer boundaries
-			result._start_layer = start_layer
-			result._end_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
+			# Note: deliberately NOT setting _start_layer/_end_layer here.
+			# Comparison results must persist in the circuit even when GC'd,
+			# matching the pattern of arithmetic results (no auto-uncompute).
 			return result
 
 		# Handle int operand
@@ -1806,7 +1807,8 @@ cdef class qint(circuit):
 
 			# In-place subtraction with classical value
 			self -= other
-			msb = self[64 - self.bits]
+			# MSB is at index 63 (right-aligned storage: LSB at 64-width, MSB at 63)
+			msb = self[63]
 			result = qbool()
 			result ^= msb
 			# Restore operand
@@ -1814,9 +1816,6 @@ cdef class qint(circuit):
 			# Track dependency on qint
 			result.add_dependency(self)
 			result.operation_type = 'LT'
-			# Capture layer boundaries
-			result._start_layer = start_layer
-			result._end_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
 			return result
 
 		raise TypeError("Comparison requires qint or int")
@@ -1850,6 +1849,7 @@ cdef class qint(circuit):
 		"""
 		from .qbool import qbool
 		cdef int start_layer
+		cdef int comp_width
 		cdef circuit_t *_circuit = <circuit_t*><unsigned long long>_get_circuit()
 		cdef bint _circuit_initialized = _get_circuit_initialized()
 
@@ -1867,21 +1867,29 @@ cdef class qint(circuit):
 
 		# Handle qint operand
 		if type(other) == qint:
-			# a > b means (b - a) is negative
-			# Subtract self from other (in-place on other, then restore)
-			other -= self
-			msb = other[64 - (<qint>other).bits]
+			# a > b means (b - a) is negative in signed interpretation.
+			# To handle full unsigned range, use (n+1)-bit subtraction:
+			# extend both operands by 1 bit (MSB=0 = unsigned) so the sign bit
+			# is never polluted by valid data bits.
+			comp_width = max(self.bits, (<qint>other).bits) + 1
+			# Create widened copies (zero-extended to comp_width)
+			temp_other = qint(0, width=comp_width)
+			temp_other ^= other  # Copy other's bits into widened temp
+			temp_self = qint(0, width=comp_width)
+			temp_self ^= self  # Copy self's bits into widened temp
+			# Subtract: temp_other -= temp_self
+			temp_other -= temp_self
+			# MSB of widened result is the true sign bit
+			msb = temp_other[63]
 			result = qbool()
 			result ^= msb
-			# Restore operand
-			other += self
-			# Track dependencies
+			# Track dependencies on original operands
 			result.add_dependency(self)
 			result.add_dependency(other)
 			result.operation_type = 'GT'
-			# Capture layer boundaries
-			result._start_layer = start_layer
-			result._end_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
+			# Note: deliberately NOT setting _start_layer/_end_layer here.
+			# Comparison results must persist in the circuit even when GC'd.
+			# temp_other and temp_self will be cleaned up by GC.
 			return result
 
 		# Handle int operand
@@ -1893,8 +1901,10 @@ cdef class qint(circuit):
 			if other > max_val:
 				return qbool(False)  # qint always < large value, so not >
 
-			# For int: a > b is NOT(a <= b)
-			return ~(self <= other)
+			# Create temp qint to use the qint-qint __gt__ path
+			# (avoids circular __gt__ -> __le__ -> __gt__ dependency)
+			temp = qint(other, width=self.bits)
+			return self > temp
 
 		raise TypeError("Comparison requires qint or int")
 
@@ -1944,27 +1954,8 @@ cdef class qint(circuit):
 
 		# Handle qint operand
 		if type(other) == qint:
-			self -= other
-			# Check MSB (negative)
-			is_negative = self[64 - self.bits]
-			# Check zero using Phase 13 pattern
-			is_zero = (self == 0)
-			# OR combination: result = is_negative | is_zero
-			result = qbool()
-			result ^= is_negative
-			temp_zero = qbool()
-			temp_zero ^= is_zero
-			result |= temp_zero
-			# Restore operand
-			self += other
-			# Track dependencies
-			result.add_dependency(self)
-			result.add_dependency(other)
-			result.operation_type = 'LE'
-			# Capture layer boundaries
-			result._start_layer = start_layer
-			result._end_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
-			return result
+			# a <= b is equivalent to NOT(a > b)
+			return ~(self > other)
 
 		# Handle int operand
 		if type(other) == int:
@@ -1975,23 +1966,8 @@ cdef class qint(circuit):
 			if other > max_val:
 				return qbool(True)  # qint always <= large value
 
-			self -= other
-			is_negative = self[64 - self.bits]
-			is_zero = (self == 0)
-			result = qbool()
-			result ^= is_negative
-			temp_zero = qbool()
-			temp_zero ^= is_zero
-			result |= temp_zero
-			# Restore operand
-			self += other
-			# Track dependency on qint
-			result.add_dependency(self)
-			result.operation_type = 'LE'
-			# Capture layer boundaries
-			result._start_layer = start_layer
-			result._end_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
-			return result
+			# a <= b is equivalent to NOT(a > b)
+			return ~(self > other)
 
 		raise TypeError("Comparison requires qint or int")
 
