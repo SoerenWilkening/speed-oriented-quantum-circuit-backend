@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-01-30)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v1.5 Bug Fixes & Exhaustive Verification -- Phase 30 complete
+**Current focus:** v1.5 Bug Fixes & Exhaustive Verification -- Phase 31 in progress
 
 ## Current Position
 
-Phase: 30 of 33 (Arithmetic Verification)
-Plan: 4 of 4 (COMPLETE)
-Status: Phase 30 complete -- all 4 plans executed
-Last activity: 2026-01-31 -- Completed 30-03-PLAN.md (division and modulo verification)
+Phase: 31 of 33 (Comparison Verification)
+Plan: 2 of 2
+Status: Plan 31-02 complete
+Last activity: 2026-01-31 -- Completed 31-02-PLAN.md (operand preservation verification)
 
-Progress: [████░░░░░░] 34%
+Progress: [█████░░░░░] 36%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 108 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 22)
+- Total plans completed: 109 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 23)
 - Average duration: ~10 min/plan
 - Total execution time: ~18.6 hours
 
@@ -40,15 +40,12 @@ Progress: [████░░░░░░] 34%
 
 Milestone decisions archived. See PROJECT.md Key Decisions table for full history.
 
-**Recent (Phase 30):**
+**Recent (Phase 31):**
 
 | Phase | Decision | Rationale |
 |-------|----------|-----------|
-| 30-03 | Custom extraction at bs[n-2w:n-w] for div/mod | Quotient/remainder register at qubits w..2w-1; verify_circuit's bs[:w] extracts wrong register |
-| 30-03 | Strict xfail for 13 known div/mod bugs per operation | Documents two bug classes (overflow + MSB leak) while keeping suite green |
-| 30-04 | Calibration-based extraction for qint_mod | Result position is non-standard due to intermediate qubit allocations in _reduce_mod |
-| 30-04 | xfail for known _reduce_mod bugs | Documents bugs while keeping test suite green; provides regression tracking |
-| 30-04 | All subtraction tests xfail except calibration case | Extraction positions are input-dependent (dynamic circuit layout) |
+| 31-02 | Module-level calibration with empirical position detection | gt uses widened temporaries; empirical detection handles all variants uniformly |
+| 31-02 | No xfails needed for preservation tests | All 6 operators preserve operands correctly in both QQ and CQ variants |
 
 ### Blockers/Concerns
 
@@ -68,9 +65,9 @@ Milestone decisions archived. See PROJECT.md Key Decisions table for full histor
 ## Session Continuity
 
 Last session: 2026-01-31
-Stopped at: Phase 30 complete -- all 4 plans executed, verified (5/5 must-haves passed)
+Stopped at: Completed 31-02-PLAN.md (operand preservation verification)
 Resume file: None
-Resume action: Proceed to Phase 31 (Comparison Verification)
+Resume action: Continue Phase 31 or proceed to Phase 32
 
 ---
-*State updated: 2026-01-31 after Phase 30 verification (2460 tests: 2283 pass, 177 xfail)*
+*State updated: 2026-01-31 after 31-02 completion (2568 tests: 2391 pass, 177 xfail)*
