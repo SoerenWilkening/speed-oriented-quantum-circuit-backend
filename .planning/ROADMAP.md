@@ -49,7 +49,7 @@ Plans:
   3. Multiplication operations complete without segfault across all tested bit widths (1-4 bits exhaustive)
   4. QFT-based addition of two nonzero operands (e.g., `qint(3) + qint(5)`) returns the correct sum
   5. All four fixes pass through the full verification pipeline (OpenQASM export -> Qiskit simulate -> result check)
-**Plans**: 12 plans
+**Plans**: 14 plans
 
 Plans:
 - [x] 29-01-PLAN.md -- Investigate BUG-01 & BUG-02, create test files
@@ -60,10 +60,12 @@ Plans:
 - [x] 29-06-PLAN.md -- Fix QQ_add bit-ordering + investigate CQ_add regression (gap closure)
 - [x] 29-07-PLAN.md -- Fix BUG-03 multiplication phase formula (gap closure)
 - [x] 29-08-PLAN.md -- Verify BUG-01 subtraction + BUG-02 comparison after QQ_add fix (gap closure)
-- [ ] 29-09-PLAN.md -- Fix QQ_add target qubit mapping (Draper derivation) — BUG-01/BUG-02 root cause
-- [ ] 29-10-PLAN.md -- Investigate and fix CQ_add cache pollution / asymmetry — BUG-04 completion
-- [ ] 29-11-PLAN.md -- Fix QQ_mul target qubit mapping — BUG-03 correctness
-- [ ] 29-12-PLAN.md -- Full end-to-end verification of all four bugs
+- [x] 29-09-PLAN.md -- Fix QQ_add target qubit mapping (Draper derivation) — BUG-01/BUG-02 root cause
+- [x] 29-10-PLAN.md -- Investigate and fix CQ_add cache pollution / asymmetry — BUG-04 completion
+- [x] 29-11-PLAN.md -- Fix QQ_mul target qubit mapping — BUG-03 correctness
+- [x] 29-12-PLAN.md -- Full end-to-end verification of all four bugs
+- [ ] 29-13-PLAN.md -- Rebuild/reinstall package with BUG-02 and BUG-03 fixes, run full verification (gap closure)
+- [ ] 29-14-PLAN.md -- Deeper QQ_mul algorithm investigation if non-trivial products still fail (gap closure)
 
 ### Phase 30: Arithmetic Verification
 **Goal**: Every arithmetic operation (add, subtract, multiply, divide, modulo, modular arithmetic) is exhaustively verified at small bit widths and representatively tested at larger widths.
