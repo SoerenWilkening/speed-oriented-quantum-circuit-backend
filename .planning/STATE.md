@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-01-30)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v1.5 Bug Fixes & Exhaustive Verification -- Phase 30 in progress
+**Current focus:** v1.5 Bug Fixes & Exhaustive Verification -- Phase 30 complete
 
 ## Current Position
 
 Phase: 30 of 33 (Arithmetic Verification)
-Plan: 4 of 4 (plans 01-04 complete)
-Status: Phase 30 in progress (plan 04 complete, awaiting plan 03 if not done)
-Last activity: 2026-01-31 -- Completed 30-04-PLAN.md (modular arithmetic verification)
+Plan: 4 of 4 (COMPLETE)
+Status: Phase 30 complete -- all 4 plans executed
+Last activity: 2026-01-31 -- Completed 30-03-PLAN.md (division and modulo verification)
 
-Progress: [████░░░░░░] 33%
+Progress: [████░░░░░░] 34%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 107 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 21)
+- Total plans completed: 108 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 22)
 - Average duration: ~10 min/plan
-- Total execution time: ~18.3 hours
+- Total execution time: ~18.6 hours
 
 **By Milestone:**
 
@@ -44,6 +44,8 @@ Milestone decisions archived. See PROJECT.md Key Decisions table for full histor
 
 | Phase | Decision | Rationale |
 |-------|----------|-----------|
+| 30-03 | Custom extraction at bs[n-2w:n-w] for div/mod | Quotient/remainder register at qubits w..2w-1; verify_circuit's bs[:w] extracts wrong register |
+| 30-03 | Strict xfail for 13 known div/mod bugs per operation | Documents two bug classes (overflow + MSB leak) while keeping suite green |
 | 30-04 | Calibration-based extraction for qint_mod | Result position is non-standard due to intermediate qubit allocations in _reduce_mod |
 | 30-04 | xfail for known _reduce_mod bugs | Documents bugs while keeping test suite green; provides regression tracking |
 | 30-04 | All subtraction tests xfail except calibration case | Extraction positions are input-dependent (dynamic circuit layout) |
@@ -57,16 +59,18 @@ Milestone decisions archived. See PROJECT.md Key Decisions table for full histor
 - **BUG-01 (FULLY FIXED):** All 5 subtraction tests pass.
 - **BUG-02 (FULLY FIXED):** All 6 comparison tests pass. Three root causes fixed: MSB index, GC gate reversal, unsigned overflow. Fixed in plan 29-16.
 
-**New bugs discovered (Phase 30-04):**
+**New bugs discovered (Phase 30):**
 - **BUG-06 (_reduce_mod result corruption):** When modular result is 0, output is N-2; larger moduli have widespread failures. Affects all qint_mod operations.
 - **BUG-07 (subtraction extraction instability):** qint_mod subtraction circuit layout varies by input, making position-based result extraction unreliable.
+- **BUG-DIV-01 (comparison overflow in restoring division):** When divisor<<bit_pos >= 2^width, comparison produces wrong results. Affects widths >= 2.
+- **BUG-DIV-02 (MSB comparison leak in division):** For values >= 2^(w-1), comparison ancillae from MSB iteration leak into LSB iteration. Affects a//1 for large a.
 
 ## Session Continuity
 
 Last session: 2026-01-31
-Stopped at: Completed 30-04-PLAN.md (modular arithmetic verification)
+Stopped at: Completed 30-03-PLAN.md (Phase 30 complete -- all 4 plans done)
 Resume file: None
-Resume action: Continue Phase 30 (check if plan 03 still needed)
+Resume action: Proceed to Phase 31+
 
 ---
-*State updated: 2026-01-31 after completing plan 30-04 (modular arithmetic verification, 83 passing + 129 xfail)*
+*State updated: 2026-01-31 after completing plan 30-03 (division and modulo verification, 152 passing + 48 xfail)*
