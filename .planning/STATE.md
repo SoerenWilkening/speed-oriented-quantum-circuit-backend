@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-30)
 ## Current Position
 
 Phase: 29 of 33 (C Backend Bug Fixes)
-Plan: 16 of 18 (gap closure round)
-Status: In progress -- BUG-02 fixed, BUG-03 remains
-Last activity: 2026-01-31 -- Completed 29-16-PLAN.md (comparison fix)
+Plan: 17 of 18 (gap closure round)
+Status: In progress -- BUG-01 through BUG-05 all fixed, final verification remains
+Last activity: 2026-01-31 -- Completed 29-17-PLAN.md (QQ_mul multiplication fix)
 
 Progress: [████░░░░░░] 30%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 102 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 16)
+- Total plans completed: 103 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 17)
 - Average duration: ~10 min/plan
-- Total execution time: ~17.8 hours
+- Total execution time: ~18.1 hours
 
 **By Milestone:**
 
@@ -50,22 +50,24 @@ Milestone decisions archived. See PROJECT.md Key Decisions table for full histor
 | 29-16 | Use (n+1)-bit widened temporaries in __gt__ | n-bit modular subtraction wraps for differences >= 2^(n-1), corrupting sign bit |
 | 29-16 | Remove layer tracking from comparison results | GC triggers gate reversal via __del__ -> _do_uncompute |
 | 29-16 | Simplify __le__ to ~(self > other) delegation | Eliminates fragile OR logic; correctness follows from __gt__ |
+| 29-17 | Rewrite QQ_mul with explicit CCP decomposition | Helper functions had two independent bugs (inverted targets + inverted b-qubit mapping); clean rewrite safer |
+| 29-17 | Use b_ctrl = 2*bits+j for b qubit at weight 2^j | Right-aligned storage: LSB at lowest index in each register |
 
 ### Blockers/Concerns
 
 **Known C backend bugs (v1.5 targets):**
 - **BUG-05 (FULLY FIXED):** circuit() now properly frees old circuit and resets all Python globals. Fixed in plan 29-15.
 - **BUG-04 (FULLY FIXED):** All 7 QFT addition tests pass deterministically.
-- **BUG-03 (PARTIALLY FIXED):** CQ_mul 100% correct. QQ_mul: trivial cases pass (0*x, 1*1), non-trivial wrong. Algorithm needs deeper redesign.
+- **BUG-03 (FULLY FIXED):** QQ_mul rewrote with correct CCP decomposition and qubit mapping. 5/5 multiplication tests pass. Fixed in plan 29-17.
 - **BUG-01 (FULLY FIXED):** All 5 subtraction tests pass.
 - **BUG-02 (FULLY FIXED):** All 6 comparison tests pass. Three root causes fixed: MSB index, GC gate reversal, unsigned overflow. Fixed in plan 29-16.
 
 ## Session Continuity
 
 Last session: 2026-01-31
-Stopped at: Completed 29-16-PLAN.md (BUG-02 comparison fix)
+Stopped at: Completed 29-17-PLAN.md (BUG-03 QQ_mul multiplication fix)
 Resume file: None
-Resume action: Execute 29-17-PLAN.md (BUG-03 QQ_mul investigation)
+Resume action: Execute 29-18-PLAN.md (final verification)
 
 ---
-*State updated: 2026-01-31 after completing plan 29-16 (BUG-02 fix)*
+*State updated: 2026-01-31 after completing plan 29-17 (BUG-03 QQ_mul fix)*
