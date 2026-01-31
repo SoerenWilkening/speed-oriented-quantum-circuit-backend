@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-01-30)
 ## Current Position
 
 Phase: 29 of 33 (C Backend Bug Fixes)
-Plan: 5 of 5 (all plans executed)
-Status: Gaps found — 1/5 must-haves verified
-Last activity: 2026-01-30 -- Phase 29 execution complete, verification found gaps
+Plan: 7 of 8 (gap closure in progress)
+Status: Gap closure execution — multiplication control reversal attempted
+Last activity: 2026-01-30 -- Completed 29-07-PLAN.md (control qubit fix attempted)
 
 Progress: [███░░░░░░░] 20%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 92 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 6)
+- Total plans completed: 93 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 7)
 - Average duration: ~10 min/plan
-- Total execution time: ~15.3 hours
+- Total execution time: ~15.5 hours
 
 **By Milestone:**
 
@@ -63,6 +63,8 @@ Milestone decisions archived. See PROJECT.md Key Decisions table for full histor
 | 29-05 | Disable GCC LTO due to compiler bug | GCC 15 -flto triggers internal error, disabled until toolchain fixed |
 | 29-04 | BUG-04 fix scope limited to CQ_add only | QQ_add (qint+qint) uses different implementation, needs separate fix |
 | 29-04 | BUG-01 and BUG-02 remain blocked by incomplete BUG-04 | Cannot test/fix until QQ_add bit-ordering corrected |
+| 29-07 | Applied QQ_add control reversal pattern (2*bits-1-bit) to all multiplication helper functions | Systematic consistency even though tests still fail |
+| 29-07 | Accepted partial investigation for multiplication | Control reversal alone insufficient, algorithm needs deeper redesign |
 
 ### Pending Todos
 
@@ -73,7 +75,7 @@ None.
 **Known C backend bugs (v1.5 targets):**
 - **BUG-05 (CRITICAL):** circuit() does not properly reset state - causes memory explosion, blocks exhaustive testing AND prevents verification of fixes
 - **BUG-04 (PARTIALLY FIXED):** CQ_add bit-ordering fixed (29-03), but QQ_add still broken - qint+qint addition/subtraction fails
-- **BUG-03 (INVESTIGATED):** Multiplication returns 0 - root cause identified (bit-ordering), fix attempted but still fails (29-05)
+- **BUG-03 (INVESTIGATED):** Multiplication returns 0 - control reversal applied (29-07), tests still fail - algorithm needs redesign or reference comparison
 - **BUG-01 (BLOCKED):** Subtraction underflow (3-7 returns 7 instead of 12) - blocked by QQ_add fix needed (29-04)
 - **BUG-02 (BLOCKED):** Less-or-equal comparison (5<=5 returns 0) - transitively blocked by BUG-01 (29-04)
 
@@ -85,9 +87,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-01-30
-Stopped at: Phase 29 execution complete — gaps found (1/5 verified)
+Stopped at: Completed 29-07-PLAN.md — multiplication control reversal attempted, tests still fail
 Resume file: None
-Resume action: Run /gsd:plan-phase 29 --gaps to create gap closure plans for QQ_add fix, multiplication logic, and full pipeline verification
+Resume action: Continue with 29-08 (QQ_add fix) or create deeper multiplication investigation plan
 
 ---
 *State updated: 2026-01-30 after Phase 29 execution + verification*
