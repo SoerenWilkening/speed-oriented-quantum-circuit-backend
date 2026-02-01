@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 ## Current Position
 
 Phase: 34 of 36 (Array Fixes)
-Plan: 0 of 2 in current phase
-Status: Ready to plan
-Last activity: 2026-02-01 — Roadmap created for v1.6
+Plan: 1 of 1 in current phase
+Status: Phase complete
+Last activity: 2026-02-01 — Completed 34-01-PLAN.md
 
-Progress: [░░░░░░░░░░] 0% (v1.6: 0/5 plans)
+Progress: [██░░░░░░░░] 20% (v1.6: 1/5 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 119 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33)
+- Total plans completed: 120 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 1)
 - Average duration: ~10 min/plan
-- Total execution time: ~19.8 hours
+- Total execution time: ~19.9 hours
 
 **By Milestone:**
 
@@ -41,11 +41,14 @@ Progress: [░░░░░░░░░░] 0% (v1.6: 0/5 plans)
 
 See PROJECT.md Key Decisions table for full history.
 
+**Recent (v1.6):**
+- Positional value + keyword width pattern for qint constructor calls in arrays (34-01)
+
 ### Blockers/Concerns
 
 **v1.6 targets (3 phases, 5 plans):**
-- BUG-ARRAY-INIT: Array constructor passes width as value instead of user data
-- Array element-wise ops produce wrong circuits due to width mismatches from BUG-ARRAY-INIT
+- ✓ BUG-ARRAY-INIT: Fixed in 34-01 (qint constructor parameter swap)
+- ✓ Array element-wise ops: Fixed by BUG-ARRAY-INIT resolution (9 tests pass)
 - BUG-CMP-01: eq/ne return inverted results (488 xfail tests)
 - BUG-CMP-02: Ordering comparison errors at MSB boundary
 - BUG-CMP-03: Circuit size explosion at widths >= 6 for gt/le
@@ -56,9 +59,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-01
-Stopped at: v1.6 roadmap created
+Stopped at: Completed 34-01-PLAN.md (Phase 34 complete)
 Resume file: None
-Resume action: Plan Phase 34 via `/gsd:plan-phase 34`
+Resume action: Continue to Phase 35 (Comparison Bug Fixes)
 
 ---
-*State updated: 2026-02-01 after v1.6 roadmap creation*
+*State updated: 2026-02-01 after 34-01 execution*
