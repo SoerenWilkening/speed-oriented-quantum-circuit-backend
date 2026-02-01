@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-01-30)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v1.5 Bug Fixes & Exhaustive Verification -- Phase 32 complete
+**Current focus:** v1.5 Bug Fixes & Exhaustive Verification -- Phase 32 gap closure in progress
 
 ## Current Position
 
 Phase: 32 of 33 (Bitwise Verification)
-Plan: 2 of 2 (COMPLETE)
-Status: Phase 32 executed -- gaps found (3/5 must-haves verified, BUG-BIT-01 blocks CQ + mixed-width)
-Last activity: 2026-02-01 -- Phase 32 verification: gaps_found
+Plan: 3 of 4 (gap closure)
+Status: BUG-BIT-01 fixed (CQ same-width + QQ mixed-width), plan 32-04 remaining
+Last activity: 2026-02-01 -- Completed 32-03-PLAN.md (BUG-BIT-01 gap closure)
 
-Progress: [████████░░] 54%
+Progress: [████████░░] 55%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 112 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 26)
+- Total plans completed: 113 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 27)
 - Average duration: ~10 min/plan
 - Total execution time: ~18.8 hours
 
@@ -49,6 +49,9 @@ Milestone decisions archived. See PROJECT.md Key Decisions table for full histor
 | 32-02 | Non-strict xfail for all mixed-width tests | Some AND cases accidentally pass; strict would cause xpass failures |
 | 32-02 | BUG-BIT-01 covers both allocation and logic bugs | Same root cause: width-extension code in C backend |
 | 32-02 | Skip (not xfail) for degenerate circuit preservation | CQ ops with classical 0 legitimately produce smaller circuits |
+| 32-03 | Reverse two_complement index (bin[bits-1-i]) for CQ ops | MSB-first from two_complement vs LSB-first qubit_array iteration |
+| 32-03 | Allocate padding BEFORE result for mixed-width ops | Result must get highest qubit indices for bitstring[:width] extraction |
+| 32-03 | CQ mixed-width xfail kept (design limitation) | Plain int has no width metadata; b.bit_length() < intended_width causes narrower result |
 
 ### Blockers/Concerns
 
@@ -71,14 +74,14 @@ Milestone decisions archived. See PROJECT.md Key Decisions table for full histor
 - **BUG-CMP-03 (Circuit Size Explosion):** gt/le circuits exceed simulation memory at widths >= 7.
 
 **New bugs discovered (Phase 32):**
-- **BUG-BIT-01 (CQ Bitwise Result Layout + Mixed-width broken):** CQ bitwise ops allocate result qubits only per set bit of classical operand, not full width. Also, all mixed-width AND/OR/XOR produce incorrect results. Root cause in C backend LogicOperations width-extension code.
+- **BUG-BIT-01 (FIXED in 32-03):** CQ bit ordering mismatch (MSB/LSB) and mixed-width padding allocation order. Same-width CQ: 2418/2418 pass. QQ mixed-width: all pass. CQ mixed-width: design limitation (plain int has no width metadata).
 
 ## Session Continuity
 
 Last session: 2026-02-01
-Stopped at: Phase 32 gaps_found -- 3/5 must-haves verified, BUG-BIT-01 blocks CQ + mixed-width
+Stopped at: Completed 32-03-PLAN.md (BUG-BIT-01 gap closure)
 Resume file: None
-Resume action: /gsd:plan-phase 32 --gaps to close BUG-BIT-01 gaps, or proceed to Phase 33
+Resume action: Execute 32-04 or proceed to Phase 33
 
 ---
-*State updated: 2026-02-01 after 32-01 execution (Phase 32 complete)*
+*State updated: 2026-02-01 after 32-03 execution (BUG-BIT-01 fixed)*
