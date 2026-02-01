@@ -19,7 +19,7 @@
 - [x] **Phase 29: C Backend Bug Fixes** - Fix subtraction, comparison, multiplication, and QFT addition bugs
 - [x] **Phase 30: Arithmetic Verification** - Exhaustive verification of all arithmetic operations
 - [x] **Phase 31: Comparison Verification** - Exhaustive verification of all comparison operators and variants
-- [ ] **Phase 32: Bitwise Verification** - Verification of all bitwise operations across widths (gaps: BUG-BIT-01)
+- [x] **Phase 32: Bitwise Verification** - Verification of all bitwise operations across widths
 - [ ] **Phase 33: Advanced Feature Verification** - Verify uncomputation, conditionals, and array operations
 
 ## Phase Details
@@ -115,8 +115,8 @@ Plans:
 Plans:
 - [x] 32-01-PLAN.md -- Exhaustive and sampled bitwise correctness (AND/OR/XOR/NOT, QQ+CQ, same-width)
 - [x] 32-02-PLAN.md -- Mixed-width bitwise, NOT compositions, and operand preservation
-- [ ] 32-03-PLAN.md -- Fix BUG-BIT-01: CQ bitwise + mixed-width qubit array bugs (gap closure)
-- [ ] 32-04-PLAN.md -- Remove xfail markers and verify 100% pass rate (gap closure)
+- [x] 32-03-PLAN.md -- Fix BUG-BIT-01: CQ bitwise + mixed-width qubit array bugs (gap closure)
+- [x] 32-04-PLAN.md -- Remove xfail markers and verify 100% pass rate (gap closure)
 
 ### Phase 33: Advanced Feature Verification
 **Goal**: Automatic uncomputation, quantum conditionals, and array operations are verified through the full pipeline.
@@ -143,9 +143,9 @@ Plans:
 | 29. C Backend Bug Fixes | v1.5 | 18/18 | ✓ Complete | 2026-01-31 |
 | 30. Arithmetic Verification | v1.5 | 4/4 | ✓ Complete | 2026-01-31 |
 | 31. Comparison Verification | v1.5 | 2/2 | ✓ Complete | 2026-01-31 |
-| 32. Bitwise Verification | v1.5 | 2/4 | ⚠ Gap closure planned (BUG-BIT-01) | 2026-02-01 |
+| 32. Bitwise Verification | v1.5 | 4/4 | ✓ Complete | 2026-02-01 |
 | 33. Advanced Feature Verification | v1.5 | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-01-30*
-*Last updated: 2026-02-01 (Phase 32 executed, gaps found)*
+*Last updated: 2026-02-01 (Phase 32 complete, gap closure verified)*

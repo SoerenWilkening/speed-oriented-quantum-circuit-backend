@@ -38,8 +38,8 @@
 
 ### Verification — Bitwise
 
-- [ ] **VBIT-01**: Verify AND, OR, XOR, NOT operations
-- [ ] **VBIT-02**: Verify bitwise operations with variable-width operands
+- [x] **VBIT-01**: Verify AND, OR, XOR, NOT operations
+- [x] **VBIT-02**: Verify bitwise operations with variable-width operands
 
 ### Verification — Advanced
 
@@ -83,8 +83,8 @@
 | VCMP-01 | Phase 31 | Complete |
 | VCMP-02 | Phase 31 | Complete |
 | VCMP-03 | Phase 31 | Complete |
-| VBIT-01 | Phase 32 | Pending |
-| VBIT-02 | Phase 32 | Pending |
+| VBIT-01 | Phase 32 | Complete |
+| VBIT-02 | Phase 32 | Complete |
 | VADV-01 | Phase 33 | Pending |
 | VADV-02 | Phase 33 | Pending |
 | VADV-03 | Phase 33 | Pending |
@@ -96,4 +96,4 @@
 
 ---
 *Requirements defined: 2026-01-30*
-*Last updated: 2026-01-31 after Phase 30 completion*
+*Last updated: 2026-02-01 after Phase 32 completion*
