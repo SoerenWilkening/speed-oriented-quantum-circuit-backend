@@ -25,12 +25,6 @@ to_openqasm() is called, corrupting the circuit. This is a known interaction
 between the C backend's garbage collection (uncomputation) feature and Python's
 reference counting.
 
-Known bugs documented here:
-
-BUG-BIT-01 (CQ Bitwise Result Layout): FIXED. Classical-quantum bitwise
-    operations now correctly handle bit ordering (MSB-first from two_complement
-    vs LSB-first qubit arrays) and ensure all allocated qubits appear in QASM
-    export via used_qubits tracking.
 """
 
 import warnings
@@ -131,7 +125,6 @@ SAMPLED_BINARY = _sampled_binary_cases()
 EXHAUSTIVE_NOT = _exhaustive_not_cases()
 SAMPLED_NOT = _sampled_not_cases()
 
-# BUG-BIT-01 FIXED: CQ tests no longer need xfail markers
 EXHAUSTIVE_CQ = _exhaustive_binary_cases()
 SAMPLED_CQ = _sampled_binary_cases()
 
