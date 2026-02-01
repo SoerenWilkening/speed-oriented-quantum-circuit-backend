@@ -17,7 +17,7 @@ v1.6 fixes three categories of bugs discovered during v1.5 exhaustive verificati
 ## Phases
 
 - [x] **Phase 34: Array Fixes** - Fix constructor value initialization and element-wise operations
-- [ ] **Phase 35: Comparison Bug Fixes** - Fix eq/ne inversion, MSB boundary errors, and circuit explosion
+- [x] **Phase 35: Comparison Bug Fixes** - Fix eq/ne inversion, MSB boundary errors, and circuit explosion
 - [ ] **Phase 36: Verification & Regression** - Convert xfail tests to passing and confirm no regressions
 
 ## Phase Details
@@ -51,7 +51,7 @@ Plans:
 Plans:
 - [x] 35-01: Fix eq/ne comparison inversion (remove GC-triggering layer tracking from __eq__)
 - [x] 35-02: Fix ordering comparison MSB boundary errors (widen __lt__) and investigate circuit explosion
-- [ ] 35-03: Fix XOR bit-copy alignment in widened comparisons (gap closure for 44 regressions)
+- [x] 35-03: Fix XOR bit-copy alignment in widened comparisons (gap closure for 44 regressions)
 
 ### Phase 36: Verification & Regression
 **Goal**: All fixed bugs are verified passing and no existing tests regress
@@ -73,7 +73,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 34. Array Fixes | v1.6 | 1/1 | Complete | 2026-02-01 |
-| 35. Comparison Bug Fixes | v1.6 | 2/3 | In Progress | - |
+| 35. Comparison Bug Fixes | v1.6 | 3/3 | Complete | 2026-02-01 |
 | 36. Verification & Regression | v1.6 | 0/1 | Not started | - |
 
 ---

@@ -17,9 +17,9 @@ Requirements for Array & Comparison Fixes milestone. Each maps to roadmap phases
 
 ### Comparison Fixes
 
-- [ ] **CMP-FIX-01**: eq/ne comparisons return correct (non-inverted) results for all value pairs (BUG-CMP-01, 488 xfail tests)
-- [ ] **CMP-FIX-02**: Ordering comparisons produce correct results at MSB boundary values (BUG-CMP-02)
-- [ ] **CMP-FIX-03**: gt/le operations produce reasonable circuit sizes at widths >= 6 (BUG-CMP-03)
+- [x] **CMP-FIX-01**: eq/ne comparisons return correct (non-inverted) results for all value pairs (BUG-CMP-01, 488 xfail tests)
+- [x] **CMP-FIX-02**: Ordering comparisons produce correct results at MSB boundary values (BUG-CMP-02)
+- [x] **CMP-FIX-03**: gt/le operations produce reasonable circuit sizes at widths >= 6 (BUG-CMP-03)
 
 ### Verification
 
@@ -57,9 +57,9 @@ Deferred to later milestones.
 | ARR-FIX-03 | Phase 34 | Complete |
 | ARR-FIX-04 | Phase 34 | Complete |
 | ARR-FIX-05 | Phase 34 | Complete |
-| CMP-FIX-01 | Phase 35 | Pending |
-| CMP-FIX-02 | Phase 35 | Pending |
-| CMP-FIX-03 | Phase 35 | Pending |
+| CMP-FIX-01 | Phase 35 | Complete |
+| CMP-FIX-02 | Phase 35 | Complete |
+| CMP-FIX-03 | Phase 35 | Complete |
 | VER-01 | Phase 36 | Pending |
 | VER-02 | Phase 36 | Pending |
 
@@ -70,4 +70,4 @@ Deferred to later milestones.
 
 ---
 *Requirements defined: 2026-02-01*
-*Last updated: 2026-02-01 after Phase 34 completion*
+*Last updated: 2026-02-01 after Phase 35 completion*
