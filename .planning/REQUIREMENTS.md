@@ -43,9 +43,9 @@
 
 ### Verification — Advanced
 
-- [ ] **VADV-01**: Verify automatic uncomputation (ancilla qubits return to |0>)
-- [ ] **VADV-02**: Verify quantum conditionals (`with` blocks)
-- [ ] **VADV-03**: Verify ql.array operations (reductions, element-wise)
+- [x] **VADV-01**: Verify automatic uncomputation (ancilla qubits return to |0>)
+- [x] **VADV-02**: Verify quantum conditionals (`with` blocks)
+- [x] **VADV-03**: Verify ql.array operations (reductions, element-wise)
 
 ## Future Requirements
 
@@ -85,9 +85,9 @@
 | VCMP-03 | Phase 31 | Complete |
 | VBIT-01 | Phase 32 | Complete |
 | VBIT-02 | Phase 32 | Complete |
-| VADV-01 | Phase 33 | Pending |
-| VADV-02 | Phase 33 | Pending |
-| VADV-03 | Phase 33 | Pending |
+| VADV-01 | Phase 33 | Complete |
+| VADV-02 | Phase 33 | Complete |
+| VADV-03 | Phase 33 | Complete |
 
 **Coverage:**
 - v1.5 requirements: 21 total
@@ -96,4 +96,4 @@
 
 ---
 *Requirements defined: 2026-01-30*
-*Last updated: 2026-02-01 after Phase 32 completion*
+*Last updated: 2026-02-01 after Phase 33 completion (all v1.5 requirements complete)*

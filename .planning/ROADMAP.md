@@ -7,7 +7,7 @@
 - v1.2 Uncomputation - Phases 16-20 (shipped 2026-01-28)
 - v1.3 Package & Array - Phases 21-24 (shipped 2026-01-29)
 - v1.4 OpenQASM Export - Phases 25-27 (shipped 2026-01-30)
-- **v1.5 Bug Fixes & Exhaustive Verification** - Phases 28-33 (in progress)
+- **v1.5 Bug Fixes & Exhaustive Verification** - Phases 28-33 (shipped 2026-02-01)
 
 ## v1.5 Bug Fixes & Exhaustive Verification
 
@@ -20,7 +20,7 @@
 - [x] **Phase 30: Arithmetic Verification** - Exhaustive verification of all arithmetic operations
 - [x] **Phase 31: Comparison Verification** - Exhaustive verification of all comparison operators and variants
 - [x] **Phase 32: Bitwise Verification** - Verification of all bitwise operations across widths
-- [ ] **Phase 33: Advanced Feature Verification** - Verify uncomputation, conditionals, and array operations
+- [x] **Phase 33: Advanced Feature Verification** - Verify uncomputation, conditionals, and array operations
 
 ## Phase Details
 
@@ -129,9 +129,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 33-01-PLAN.md -- Uncomputation verification (VADV-01: ancilla cleanup + result correctness)
-- [ ] 33-02-PLAN.md -- Quantum conditional verification (VADV-02: with qbool gating)
-- [ ] 33-03-PLAN.md -- Array operations verification (VADV-03: reductions + element-wise)
+- [x] 33-01-PLAN.md -- Uncomputation verification (VADV-01: ancilla cleanup + result correctness)
+- [x] 33-02-PLAN.md -- Quantum conditional verification (VADV-02: with qbool gating)
+- [x] 33-03-PLAN.md -- Array operations verification (VADV-03: reductions + element-wise)
 
 ## Progress
 
@@ -145,8 +145,8 @@ Plans:
 | 30. Arithmetic Verification | v1.5 | 4/4 | ✓ Complete | 2026-01-31 |
 | 31. Comparison Verification | v1.5 | 2/2 | ✓ Complete | 2026-01-31 |
 | 32. Bitwise Verification | v1.5 | 4/4 | ✓ Complete | 2026-02-01 |
-| 33. Advanced Feature Verification | v1.5 | 0/3 | Not started | - |
+| 33. Advanced Feature Verification | v1.5 | 3/3 | ✓ Complete | 2026-02-01 |
 
 ---
 *Roadmap created: 2026-01-30*
-*Last updated: 2026-02-01 (Phase 32 complete, gap closure verified)*
+*Last updated: 2026-02-01 (Phase 33 complete, milestone v1.5 shipped)*
