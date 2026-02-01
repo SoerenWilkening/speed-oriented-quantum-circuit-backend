@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-01-30)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v1.5 Bug Fixes & Exhaustive Verification -- Phase 32 in progress
+**Current focus:** v1.5 Bug Fixes & Exhaustive Verification -- Phase 32 complete
 
 ## Current Position
 
 Phase: 32 of 33 (Bitwise Verification)
-Plan: 2 of 2
-Status: Plan 32-02 complete
-Last activity: 2026-02-01 -- Completed 32-02-PLAN.md
+Plan: 2 of 2 (COMPLETE)
+Status: Phase 32 complete -- all 2 plans executed
+Last activity: 2026-02-01 -- Completed 32-01-PLAN.md
 
-Progress: [███████░░░] 52%
+Progress: [████████░░] 54%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 111 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 25)
+- Total plans completed: 112 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 26)
 - Average duration: ~10 min/plan
 - Total execution time: ~18.8 hours
 
@@ -44,6 +44,8 @@ Milestone decisions archived. See PROJECT.md Key Decisions table for full histor
 
 | Phase | Decision | Rationale |
 |-------|----------|-----------|
+| 32-01 | gc.collect() + keepalive refs in verify_circuit | Bitwise ops use uncomputation GC; qint destructors inject gates into new circuit |
+| 32-01 | Non-strict xfail for CQ tests (b != max_val) | BUG-BIT-01 failure pattern too complex to predict exactly |
 | 32-02 | Non-strict xfail for all mixed-width tests | Some AND cases accidentally pass; strict would cause xpass failures |
 | 32-02 | BUG-BIT-01 covers both allocation and logic bugs | Same root cause: width-extension code in C backend |
 | 32-02 | Skip (not xfail) for degenerate circuit preservation | CQ ops with classical 0 legitimately produce smaller circuits |
@@ -69,14 +71,14 @@ Milestone decisions archived. See PROJECT.md Key Decisions table for full histor
 - **BUG-CMP-03 (Circuit Size Explosion):** gt/le circuits exceed simulation memory at widths >= 7.
 
 **New bugs discovered (Phase 32):**
-- **BUG-BIT-01 (Mixed-width bitwise broken):** All mixed-width AND/OR/XOR produce incorrect results. Two forms: (a) ~32K qubit allocation for some width pairs, (b) incorrect circuit logic for others. Root cause in C backend LogicOperations width-extension code.
+- **BUG-BIT-01 (CQ Bitwise Result Layout + Mixed-width broken):** CQ bitwise ops allocate result qubits only per set bit of classical operand, not full width. Also, all mixed-width AND/OR/XOR produce incorrect results. Root cause in C backend LogicOperations width-extension code.
 
 ## Session Continuity
 
 Last session: 2026-02-01
-Stopped at: Completed 32-02-PLAN.md (1608 tests: 344 pass, 4 skip, 1110 xfail, 150 xpass)
+Stopped at: Phase 32 complete (32-01: 2418 tests, 32-02: 1608 tests)
 Resume file: None
-Resume action: Continue Phase 32 or proceed to Phase 33
+Resume action: Proceed to Phase 33
 
 ---
-*State updated: 2026-02-01 after 32-02 execution*
+*State updated: 2026-02-01 after 32-01 execution (Phase 32 complete)*
