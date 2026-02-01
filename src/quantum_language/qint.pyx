@@ -1113,7 +1113,17 @@ cdef class qint(circuit):
 		else:
 			raise TypeError("Operand must be qint or int")
 
-		# Allocate result (ancilla qubits)
+		# Allocate padding ancilla BEFORE result so result gets highest qubit indices
+		# (result must be last-allocated for bitstring[:width] extraction to work)
+		_self_pad_qint = None
+		_other_pad_qint = None
+		if self.bits < result_bits:
+			_self_pad_qint = qint(width=result_bits - self.bits)
+		if type(other) != int and isinstance(other, qint):
+			if (<qint>other).bits < result_bits:
+				_other_pad_qint = qint(width=result_bits - (<qint>other).bits)
+
+		# Allocate result (ancilla qubits) -- must be last for extraction
 		result = qint(width=result_bits)
 
 		# Register dependencies
@@ -1124,13 +1134,18 @@ cdef class qint(circuit):
 
 		# Build qubit array: [output:N], [self:N], [other:N]
 		# Q_and expects: [0:bits] = output, [bits:2*bits] = A, [2*bits:3*bits] = B
+		# Qubit storage is LSB-first: index 0 = LSB
 		self_offset = 64 - self.bits
 		result_offset = 64 - result_bits
 
 		# Output qubits (result) - at position 0
 		qubit_array[:result_bits] = result.qubits[result_offset:64]
-		# Self qubits (zero-extended if smaller) - at position result_bits
+		# Self qubits (LSB positions) - at position result_bits
 		qubit_array[result_bits:result_bits + self.bits] = self.qubits[self_offset:64]
+		# Zero-extend self if narrower: use pre-allocated padding for MSB
+		if _self_pad_qint is not None:
+			_self_pad = result_bits - self.bits
+			qubit_array[result_bits + self.bits:2*result_bits] = _self_pad_qint.qubits[64 - _self_pad:64]
 
 		if type(other) == int:
 			# Classical-quantum AND
@@ -1143,6 +1158,10 @@ cdef class qint(circuit):
 			# Quantum-quantum AND
 			other_offset = 64 - (<qint>other).bits
 			qubit_array[2*result_bits:2*result_bits + (<qint>other).bits] = (<qint>other).qubits[other_offset:64]
+			# Zero-extend other if narrower: use pre-allocated padding for MSB
+			if _other_pad_qint is not None:
+				_other_pad = result_bits - (<qint>other).bits
+				qubit_array[2*result_bits + (<qint>other).bits:3*result_bits] = _other_pad_qint.qubits[64 - _other_pad:64]
 
 			if _controlled:
 				raise NotImplementedError("Controlled quantum-quantum AND not yet supported")
@@ -1239,7 +1258,16 @@ cdef class qint(circuit):
 		else:
 			raise TypeError("Operand must be qint or int")
 
-		# Allocate result (ancilla qubits)
+		# Allocate padding ancilla BEFORE result so result gets highest qubit indices
+		_self_pad_qint = None
+		_other_pad_qint = None
+		if self.bits < result_bits:
+			_self_pad_qint = qint(width=result_bits - self.bits)
+		if type(other) != int and isinstance(other, qint):
+			if (<qint>other).bits < result_bits:
+				_other_pad_qint = qint(width=result_bits - (<qint>other).bits)
+
+		# Allocate result (ancilla qubits) -- must be last for extraction
 		result = qint(width=result_bits)
 
 		# Register dependencies
@@ -1250,13 +1278,18 @@ cdef class qint(circuit):
 
 		# Build qubit array: [output:N], [self:N], [other:N]
 		# Q_or expects: [0:bits] = output, [bits:2*bits] = A, [2*bits:3*bits] = B
+		# Qubit storage is LSB-first: index 0 = LSB
 		self_offset = 64 - self.bits
 		result_offset = 64 - result_bits
 
 		# Output qubits (result) - at position 0
 		qubit_array[:result_bits] = result.qubits[result_offset:64]
-		# Self qubits (zero-extended if smaller) - at position result_bits
+		# Self qubits (LSB positions) - at position result_bits
 		qubit_array[result_bits:result_bits + self.bits] = self.qubits[self_offset:64]
+		# Zero-extend self if narrower
+		if _self_pad_qint is not None:
+			_self_pad = result_bits - self.bits
+			qubit_array[result_bits + self.bits:2*result_bits] = _self_pad_qint.qubits[64 - _self_pad:64]
 
 		if type(other) == int:
 			# Classical-quantum OR
@@ -1269,6 +1302,10 @@ cdef class qint(circuit):
 			# Quantum-quantum OR
 			other_offset = 64 - (<qint>other).bits
 			qubit_array[2*result_bits:2*result_bits + (<qint>other).bits] = (<qint>other).qubits[other_offset:64]
+			# Zero-extend other if narrower
+			if _other_pad_qint is not None:
+				_other_pad = result_bits - (<qint>other).bits
+				qubit_array[2*result_bits + (<qint>other).bits:3*result_bits] = _other_pad_qint.qubits[64 - _other_pad:64]
 
 			if _controlled:
 				raise NotImplementedError("Controlled quantum-quantum OR not yet supported")
@@ -1384,9 +1421,10 @@ cdef class qint(circuit):
 		result_offset = 64 - result_bits
 
 		# First, copy self to result by XORing self into result (result starts at 0)
-		# Copy self qubits into result: result ^= self (where result is 0, so result = self)
-		qubit_array[:result_bits] = result.qubits[result_offset:64]
-		qubit_array[result_bits:result_bits + self.bits] = self.qubits[self_offset:64]
+		# Q_xor(n) expects: [0:n]=target, [n:2n]=source
+		# Only copy self.bits LSBs; upper result bits stay |0> (zero-extension)
+		qubit_array[:self.bits] = result.qubits[result_offset:result_offset + self.bits]
+		qubit_array[self.bits:2*self.bits] = self.qubits[self_offset:64]
 		arr = qubit_array
 		seq = Q_xor(self.bits)  # XOR self into result (copying self to result)
 		run_instruction(seq, &arr[0], False, _circuit)
@@ -1415,9 +1453,11 @@ cdef class qint(circuit):
 						run_instruction(seq, &arr[0], False, _circuit)
 		else:
 			# Quantum-quantum XOR: result ^= other
+			# Q_xor(n) expects: [0:n]=target, [n:2n]=source
+			# We only need to XOR the other.bits LSBs of result
 			other_offset = 64 - (<qint>other).bits
-			qubit_array[:result_bits] = result.qubits[result_offset:64]
-			qubit_array[result_bits:result_bits + (<qint>other).bits] = (<qint>other).qubits[other_offset:64]
+			qubit_array[:(<qint>other).bits] = result.qubits[result_offset:result_offset + (<qint>other).bits]
+			qubit_array[(<qint>other).bits:2*(<qint>other).bits] = (<qint>other).qubits[other_offset:64]
 
 			if _controlled:
 				raise NotImplementedError("Controlled quantum-quantum XOR not yet supported")

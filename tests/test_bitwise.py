@@ -27,17 +27,10 @@ reference counting.
 
 Known bugs documented here:
 
-BUG-BIT-01 (CQ Bitwise Result Layout): Classical-quantum bitwise operations
-    (AND, OR, XOR with qint op int) produce incorrect result register layouts.
-    The C backend allocates result qubits only for bits that are SET in the
-    classical operand, rather than always allocating a full-width result
-    register. This means:
-    - When popcount(classical_value) < width, fewer result qubits are allocated
-    - bitstring[:width] extracts the wrong bits
-    - The failure pattern depends on both operands and the operation
-    CQ tests are marked xfail(strict=False) since some cases pass
-    coincidentally (e.g., when both operands are 0, or when all bits of the
-    classical value are set).
+BUG-BIT-01 (CQ Bitwise Result Layout): FIXED. Classical-quantum bitwise
+    operations now correctly handle bit ordering (MSB-first from two_complement
+    vs LSB-first qubit arrays) and ensure all allocated qubits appear in QASM
+    export via used_qubits tracking.
 """
 
 import warnings
@@ -77,14 +70,6 @@ QL_OPS_CQ = {
     "or": lambda qa, b: qa | b,
     "xor": lambda qa, b: qa ^ b,
 }
-
-
-# --- BUG-BIT-01 xfail marker ---
-_XFAIL_CQ = pytest.mark.xfail(
-    reason="BUG-BIT-01: CQ bitwise ops produce incorrect result register layout "
-    "when classical operand has fewer set bits than operand width",
-    strict=False,
-)
 
 
 # --- Module-level test data generation ---
@@ -141,32 +126,14 @@ def _sampled_not_cases():
     return cases
 
 
-def _mark_cq_cases(cases):
-    """Apply BUG-BIT-01 xfail markers to CQ cases.
-
-    CQ bitwise ops fail when popcount(classical_value) < width, but some
-    cases pass coincidentally. Use non-strict xfail for all CQ cases since
-    the failure pattern is hard to predict exactly.
-    """
-    marked = []
-    for case in cases:
-        width, a, b, op_name = case
-        max_val = (1 << width) - 1
-        # CQ passes reliably when classical value has all bits set
-        if b == max_val:
-            marked.append(case)
-        else:
-            marked.append(pytest.param(*case, marks=_XFAIL_CQ))
-    return marked
-
-
 EXHAUSTIVE_BINARY = _exhaustive_binary_cases()
 SAMPLED_BINARY = _sampled_binary_cases()
 EXHAUSTIVE_NOT = _exhaustive_not_cases()
 SAMPLED_NOT = _sampled_not_cases()
 
-EXHAUSTIVE_CQ = _mark_cq_cases(_exhaustive_binary_cases())
-SAMPLED_CQ = _mark_cq_cases(_sampled_binary_cases())
+# BUG-BIT-01 FIXED: CQ tests no longer need xfail markers
+EXHAUSTIVE_CQ = _exhaustive_binary_cases()
+SAMPLED_CQ = _sampled_binary_cases()
 
 
 # --- QQ Binary Exhaustive Tests ---
@@ -209,9 +176,6 @@ def test_cq_bitwise_exhaustive(verify_circuit, width, a, b, op_name):
 
     Exhaustive coverage of all input pairs x all 3 binary operators (AND, OR, XOR).
     Classical-quantum variant where second operand is a plain integer.
-
-    Note: Most cases are xfail due to BUG-BIT-01 (CQ result register layout bug).
-    Cases where classical value has all bits set pass correctly.
     """
     expected = BINARY_OPS[op_name](a, b, width)
     ql_op = QL_OPS_CQ[op_name]
@@ -291,8 +255,6 @@ def test_cq_bitwise_sampled(verify_circuit, width, a, b, op_name):
     """CQ bitwise: qint(a) op int(b) at widths 5-6 bits.
 
     Sampled coverage for the classical-quantum variant at larger bit widths.
-
-    Note: Most cases are xfail due to BUG-BIT-01 (CQ result register layout bug).
     """
     expected = BINARY_OPS[op_name](a, b, width)
     ql_op = QL_OPS_CQ[op_name]

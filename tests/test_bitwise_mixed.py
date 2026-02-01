@@ -12,17 +12,11 @@ qint objects alive until after OpenQASM export. Without this, Python's garbage
 collector may run qint destructors (which add uncomputation gates) before
 to_openqasm() is called, corrupting the circuit.
 
-Known bugs:
-- BUG-BIT-01: Mixed-width bitwise operations (AND, OR, XOR) produce incorrect results
-  when operand widths differ. Two manifestations:
-  (a) Qubit allocation overflow (~32K qubits) for QQ AND, CQ AND, QQ OR with width
-      pairs (1,2), (4,5), (5,6).
-  (b) Incorrect circuit logic for all other mixed-width combinations -- OR and XOR
-      produce wrong results for all tested adjacent width pairs; AND fails for ~44%
-      of input values at (2,3) and (3,4).
-  Root cause: C backend LogicOperations width-extension code does not correctly handle
-  operands of different widths. All mixed-width tests are marked xfail (non-strict
-  since some AND cases accidentally produce correct results).
+Bug status:
+- BUG-BIT-01: FIXED. QQ mixed-width bitwise operations now work correctly.
+  CQ mixed-width has a design limitation: plain int operands have no width
+  metadata, so result width is determined by b.bit_length() rather than an
+  intended width. CQ tests where b.bit_length() < intended_width are xfail.
 """
 
 import random
@@ -60,14 +54,18 @@ QL_OPS_CQ = {
 }
 
 # ---------------------------------------------------------------------------
-# BUG-BIT-01: All mixed-width bitwise operations are broken
-# See module docstring for details.
+# BUG-BIT-01: QQ mixed-width FIXED. CQ mixed-width has design limitation:
+# CQ path uses b.bit_length() to determine classical width, so when b is
+# small (e.g., b=1 with intended width 3), result_bits = max(qa.bits, 1)
+# instead of max(qa.bits, 3). The test expects max(wa, wb) extraction width
+# but the code can only use max(wa, b.bit_length()). This is a known
+# limitation of the plain-int CQ interface.
 # ---------------------------------------------------------------------------
 
-_BUG_BIT_01_XFAIL = pytest.mark.xfail(
-    reason="BUG-BIT-01: C backend mixed-width bitwise ops produce incorrect results "
-    "or allocate ~32K qubits when operand widths differ",
-    strict=False,  # Non-strict: some AND cases accidentally pass
+_CQ_MIXED_WIDTH_XFAIL = pytest.mark.xfail(
+    reason="CQ mixed-width: plain int has no width metadata, result width "
+    "determined by b.bit_length() not intended width",
+    strict=False,
 )
 
 # ---------------------------------------------------------------------------
@@ -113,20 +111,28 @@ MIXED_WIDTH_CASES = _mixed_width_cases()
 
 
 def _make_qq_mixed_params():
-    """Build parametrize list -- all cases xfail due to BUG-BIT-01."""
+    """Build parametrize list -- BUG-BIT-01 FIXED, QQ mixed-width works."""
     params = []
     for wa, wb, a, b, op_name in MIXED_WIDTH_CASES:
         test_id = f"w{wa}x{wb}_{op_name}_{a}v{b}"
-        params.append(pytest.param(wa, wb, a, b, op_name, id=test_id, marks=_BUG_BIT_01_XFAIL))
+        params.append(pytest.param(wa, wb, a, b, op_name, id=test_id))
     return params
 
 
 def _make_cq_mixed_params():
-    """Build parametrize list -- all cases xfail due to BUG-BIT-01."""
+    """Build parametrize list -- CQ mixed-width has design limitation with plain int width."""
     params = []
     for wa, wb, a, b, op_name in MIXED_WIDTH_CASES:
         test_id = f"cq_w{wa}x{wb}_{op_name}_{a}v{b}"
-        params.append(pytest.param(wa, wb, a, b, op_name, id=test_id, marks=_BUG_BIT_01_XFAIL))
+        # CQ passes when b.bit_length() >= wb (classical value uses full width)
+        # Fails when b is small and b.bit_length() < wb (result narrower than expected)
+        b_width = b.bit_length() if b > 0 else 1
+        if b_width >= wb:
+            params.append(pytest.param(wa, wb, a, b, op_name, id=test_id))
+        else:
+            params.append(
+                pytest.param(wa, wb, a, b, op_name, id=test_id, marks=_CQ_MIXED_WIDTH_XFAIL)
+            )
     return params
 
 
