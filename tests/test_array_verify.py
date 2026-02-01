@@ -4,26 +4,18 @@ Verifies ql.array operations (reductions and element-wise) produce correct
 results through the full pipeline: Python API -> C backend -> OpenQASM 3.0 ->
 Qiskit simulation -> result extraction.
 
-BUG-ARRAY-INIT: The ql.array([values], width=w) constructor has a confirmed bug
-where it passes self._width as the VALUE to qint() instead of as the width
-parameter. This means:
-  - ql.array([1, 2], width=3) creates two qint(3) => 2-bit qints with value 3
-  - All elements get the same quantum value (= width), ignoring user data
-  - Element widths are auto-inferred from width value, not the specified width
-
-Additionally, ql.array cannot wrap existing qint objects because qint has no
-.value attribute accessible from Python (the constructor tries q.value = value.value).
-
-As a result, all tests that depend on correct array value initialization are
-marked with xfail(reason="BUG-ARRAY-INIT"). Tests are written to document the
-INTENDED behavior so they will automatically pass once the bug is fixed.
+BUG-ARRAY-INIT was fixed in v1.6 Phase 34. The constructor now correctly
+passes value and width parameters to qint():
+  - ql.array([1, 2], width=3) creates two 3-bit qints with values 1 and 2
+  - Element widths match the specified width parameter
+  - All array operations produce correct quantum circuits
 
 Coverage:
 - Sum reduction: 2-element, 1-element (identity), overflow
 - AND reduction (.all()): 2-element, 1-element (identity)
 - OR reduction (.any()): 2-element, 1-element (identity)
 - Element-wise: array + scalar, array - scalar
-- Calibration: documents actual bug behavior empirically
+- Calibration: verifies constructor fix works correctly
 """
 
 import gc
@@ -89,14 +81,12 @@ class TestArrayCalibration:
     """Calibration tests documenting BUG-ARRAY-INIT behavior."""
 
     def test_array_calibration_constructor(self):
-        """Document: ql.array([1,2], width=3) produces wrong QASM.
+        """Verify: ql.array([1,2], width=3) produces correct QASM.
 
-        BUG-ARRAY-INIT: constructor creates qint(width) instead of
-        qint(value, width=width). So all elements get quantum value = width
-        with auto-inferred width from that value's bit_length().
+        BUG-ARRAY-INIT was fixed in v1.6 Phase 34. Now constructor correctly
+        creates qint(value, width=width) instead of qint(width).
 
-        For width=3: each element becomes qint(3) = 2-bit qint with value 3.
-        Expected: 3-bit qints with values 1 and 2 respectively.
+        Both array and manual construction should use 6 qubits (2 * 3-bit).
         """
         gc.collect()
         ql.circuit()
@@ -111,7 +101,7 @@ class TestArrayCalibration:
         qasm_manual = ql.to_openqasm()
         _keepalive = None
 
-        # Array QASM should have 6 qubits (2 * 3-bit), but has 4 (2 * 2-bit)
+        # Both should have 6 qubits (2 * 3-bit)
         arr_qubits = None
         manual_qubits = None
         for line in qasm_arr.splitlines():
@@ -121,24 +111,28 @@ class TestArrayCalibration:
             if "qubit[" in line:
                 manual_qubits = int(line.split("[")[1].split("]")[0])
 
-        # Document the bug: array uses fewer qubits than manual construction
+        # Verify the fix: array now uses same qubits as manual construction
         assert manual_qubits == 6, "Manual construction should use 6 qubits"
-        # This assertion documents the bug (array uses 4, not 6)
-        assert arr_qubits != manual_qubits, (
-            "BUG-ARRAY-INIT: array constructor should differ from manual "
+        assert arr_qubits == manual_qubits, (
+            "Array constructor should match manual construction "
             f"(arr={arr_qubits}, manual={manual_qubits})"
         )
 
-    def test_array_qint_wrapping_unsupported(self):
-        """Document: ql.array cannot wrap existing qint objects.
+    def test_array_qint_wrapping_limitation(self):
+        """Document: ql.array cannot wrap existing qint objects when width is not explicit.
 
-        qint has no .value attribute accessible from Python, so the array
-        constructor crashes when given qint objects.
+        qint.value is a cdef attribute not accessible from Python, so the
+        width inference code (lines 290-295) fails when trying to access v.value.
+
+        This is a known limitation: wrapping qints only works if explicit width
+        is provided to bypass the inference logic, but that path also tries to
+        access v.value for validation. This is separate from BUG-ARRAY-INIT.
         """
         gc.collect()
         ql.circuit()
         a = ql.qint(1, width=3)
         b = ql.qint(2, width=3)
+        # Fails due to .value access in width inference/validation
         with pytest.raises(AttributeError, match="value"):
             ql.array([a, b])
 
@@ -151,9 +145,6 @@ class TestArrayCalibration:
 class TestArraySum:
     """Sum reduction: arr.sum() should return element sum."""
 
-    @pytest.mark.xfail(
-        reason="BUG-ARRAY-INIT: array elements initialized to wrong values", strict=False
-    )
     def test_array_sum_2elem(self, verify_circuit):
         """Sum of [1, 2] (width=3) should equal 3."""
 
@@ -165,9 +156,6 @@ class TestArraySum:
         actual, expected = verify_circuit(build, width=3)
         assert actual == expected, f"Expected {expected}, got {actual}"
 
-    @pytest.mark.xfail(
-        reason="BUG-ARRAY-INIT: array elements initialized to wrong values", strict=False
-    )
     def test_array_sum_1elem(self, verify_circuit):
         """Sum of [3] (width=3) should equal 3 (identity)."""
 
@@ -180,9 +168,6 @@ class TestArraySum:
         actual, expected = verify_circuit(build, width=3)
         assert actual == expected, f"Expected {expected}, got {actual}"
 
-    @pytest.mark.xfail(
-        reason="BUG-ARRAY-INIT: array elements initialized to wrong values", strict=False
-    )
     def test_array_sum_overflow(self, verify_circuit):
         """Sum of [3, 3] (width=2) should equal (3+3)%4 = 2 (overflow wrapping)."""
 
@@ -203,9 +188,6 @@ class TestArraySum:
 class TestArrayAND:
     """AND reduction: arr.all() should return bitwise AND of all elements."""
 
-    @pytest.mark.xfail(
-        reason="BUG-ARRAY-INIT: array elements initialized to wrong values", strict=False
-    )
     def test_array_and_2elem(self, verify_circuit):
         """AND of [3, 1] (width=2) should equal 3 & 1 = 1."""
 
@@ -217,9 +199,6 @@ class TestArrayAND:
         actual, expected = verify_circuit(build, width=2)
         assert actual == expected, f"Expected {expected}, got {actual}"
 
-    @pytest.mark.xfail(
-        reason="BUG-ARRAY-INIT: array elements initialized to wrong values", strict=False
-    )
     def test_array_and_1elem(self, verify_circuit):
         """AND of [3] (width=2) should equal 3 (identity)."""
 
@@ -241,9 +220,6 @@ class TestArrayAND:
 class TestArrayOR:
     """OR reduction: arr.any() should return bitwise OR of all elements."""
 
-    @pytest.mark.xfail(
-        reason="BUG-ARRAY-INIT: array elements initialized to wrong values", strict=False
-    )
     def test_array_or_2elem(self, verify_circuit):
         """OR of [1, 2] (width=2) should equal 1 | 2 = 3."""
 
@@ -255,9 +231,6 @@ class TestArrayOR:
         actual, expected = verify_circuit(build, width=2)
         assert actual == expected, f"Expected {expected}, got {actual}"
 
-    @pytest.mark.xfail(
-        reason="BUG-ARRAY-INIT: array elements initialized to wrong values", strict=False
-    )
     def test_array_or_1elem(self, verify_circuit):
         """OR of [2] (width=2) should equal 2 (identity)."""
 
@@ -279,9 +252,6 @@ class TestArrayOR:
 class TestArrayElementwise:
     """Element-wise operations: array +/- scalar."""
 
-    @pytest.mark.xfail(
-        reason="BUG-ARRAY-INIT: array elements initialized to wrong values", strict=False
-    )
     def test_array_add_scalar(self, verify_circuit):
         """[1, 2] + 1 should give [2, 3]. Last element = 3."""
 
@@ -295,9 +265,6 @@ class TestArrayElementwise:
         actual, expected = verify_circuit(build, width=3)
         assert actual == expected, f"Expected {expected}, got {actual}"
 
-    @pytest.mark.xfail(
-        reason="BUG-ARRAY-INIT: array elements initialized to wrong values", strict=False
-    )
     def test_array_sub_scalar(self, verify_circuit):
         """[3, 2] - 1 should give [2, 1]. Last element = 1."""
 
