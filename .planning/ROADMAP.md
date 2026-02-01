@@ -126,11 +126,12 @@ Plans:
   1. After operations with uncomputation enabled, ancilla qubits are measured in |0> state (verified via Qiskit simulation)
   2. Quantum conditional blocks (`with qbool:`) correctly gate operations on the condition qubit's value
   3. ql.array reductions (sum, AND-reduce, OR-reduce) and element-wise operations produce correct results
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 33-01: TBD
-- [ ] 33-02: TBD
+- [ ] 33-01-PLAN.md -- Uncomputation verification (VADV-01: ancilla cleanup + result correctness)
+- [ ] 33-02-PLAN.md -- Quantum conditional verification (VADV-02: with qbool gating)
+- [ ] 33-03-PLAN.md -- Array operations verification (VADV-03: reductions + element-wise)
 
 ## Progress
 
@@ -144,7 +145,7 @@ Plans:
 | 30. Arithmetic Verification | v1.5 | 4/4 | ✓ Complete | 2026-01-31 |
 | 31. Comparison Verification | v1.5 | 2/2 | ✓ Complete | 2026-01-31 |
 | 32. Bitwise Verification | v1.5 | 4/4 | ✓ Complete | 2026-02-01 |
-| 33. Advanced Feature Verification | v1.5 | 0/TBD | Not started | - |
+| 33. Advanced Feature Verification | v1.5 | 0/3 | Not started | - |
 
 ---
 *Roadmap created: 2026-01-30*
