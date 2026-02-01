@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-01)
 ## Current Position
 
 Phase: 35 of 36 (Comparison Bug Fixes)
-Plan: 2 of 2 in current phase
-Status: Plan 35-02 complete (with regressions)
-Last activity: 2026-02-01 — Completed 35-02-PLAN.md
+Plan: 3 of 3 in current phase
+Status: Phase 35 complete
+Last activity: 2026-02-01 — Completed 35-03-PLAN.md (gap closure)
 
-Progress: [████░░░░░░] 40% (v1.6: 3/5 plans)
+Progress: [█████░░░░░] 50% (v1.6: 4/5 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 122 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 3)
-- Average duration: ~12 min/plan
-- Total execution time: ~20.7 hours
+- Total plans completed: 123 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 4)
+- Average duration: ~13 min/plan
+- Total execution time: ~21.3 hours
 
 **By Milestone:**
 
@@ -47,6 +47,8 @@ See PROJECT.md Key Decisions table for full history.
 - MSB-first qubit ordering for C backend comparison operations (35-01)
 - Widened (n+1)-bit comparison applied to __lt__ (35-02)
 - Right-aligned storage means index [63] is always MSB (35-02)
+- LSB-aligned CNOT bit copies for widened comparisons (35-03)
+- Target index formula: 64 - comp_width + i_bit for proper zero-extension (35-03)
 
 ### Blockers/Concerns
 
@@ -54,15 +56,14 @@ See PROJECT.md Key Decisions table for full history.
 - ✓ BUG-ARRAY-INIT: Fixed in 34-01 (qint constructor parameter swap)
 - ✓ Array element-wise ops: Fixed by BUG-ARRAY-INIT resolution (9 tests pass)
 - ✓ BUG-CMP-01: Fixed in 35-01 (dual-bug: GC gate reversal + bit-order reversal, 488 tests now pass)
-- ⚠ BUG-CMP-02: Attempted fix in 35-02 (widened __lt__) but introduced regressions (signed/unsigned issue)
+- ✓ BUG-CMP-02: Fixed in 35-03 (LSB-aligned CNOT copies for unsigned comparison semantics)
 - ✓ BUG-CMP-03: Confirmed as non-issue (linear circuit growth, not exponential)
 
-**Critical issue discovered:**
-- Signed/unsigned interpretation mismatch in widened comparisons
-- qint docstring says signed range [-2^(w-1), 2^(w-1)-1]
-- Test oracle expects unsigned comparison
-- 44 new test failures at MSB boundary
-- Requires resolution before Phase 36 (test cleanup)
+**All comparison bugs resolved:**
+- Phase 35-03 fixed XOR alignment bug in widened comparisons
+- Proper LSB-aligned zero-extension now produces unsigned semantics
+- All MSB-boundary tests passing (232 lt, 232 gt, 265 eq, 265 ne)
+- Ready for Phase 36 (xfail marker cleanup)
 
 **Deferred to future milestone:**
 - BUG-DIV-01, BUG-MOD-REDUCE, BUG-COND-MUL-01
@@ -70,9 +71,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-01
-Stopped at: Completed 35-02-PLAN.md (Phase 35 complete with regressions)
+Stopped at: Completed 35-03-PLAN.md (Phase 35 complete)
 Resume file: None
-Resume action: Create Phase 35-03 to fix signed/unsigned issue before Phase 36
+Resume action: Proceed to Phase 36 (comparison test cleanup)
 
 ---
-*State updated: 2026-02-01 after 35-02 execution*
+*State updated: 2026-02-01 after 35-03 execution*
