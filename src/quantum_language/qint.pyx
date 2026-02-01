@@ -1648,7 +1648,6 @@ cdef class qint(circuit):
 		cdef unsigned int[:] arr
 		cdef int self_offset
 		cdef int start
-		cdef int start_layer
 		cdef circuit_t *_circuit = <circuit_t*><unsigned long long>_get_circuit()
 		cdef bint _circuit_initialized = _get_circuit_initialized()
 		cdef bint _controlled = _get_controlled()
@@ -1658,9 +1657,6 @@ cdef class qint(circuit):
 		self._check_not_uncomputed()
 		if isinstance(other, qint):
 			(<qint>other)._check_not_uncomputed()
-
-		# Capture start layer
-		start_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
 
 		# Handle qint == qint case first (must come before int check)
 		if type(other) == qint:
@@ -1685,9 +1681,10 @@ cdef class qint(circuit):
 			result.add_dependency(other)
 			result.operation_type = 'EQ'
 
-			# Capture layer boundaries
-			result._start_layer = start_layer
-			result._end_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
+			# Note: deliberately NOT setting _start_layer/_end_layer here.
+			# Comparison results must persist in the circuit even when GC'd,
+			# matching the pattern of arithmetic results (no auto-uncompute).
+			# See Phase 29-16 D29-16-2 for rationale.
 
 			return result
 
@@ -1744,9 +1741,10 @@ cdef class qint(circuit):
 			result.add_dependency(self)
 			result.operation_type = 'EQ'
 
-			# Capture layer boundaries
-			result._start_layer = start_layer
-			result._end_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
+			# Note: deliberately NOT setting _start_layer/_end_layer here.
+			# Comparison results must persist in the circuit even when GC'd,
+			# matching the pattern of arithmetic results (no auto-uncompute).
+			# See Phase 29-16 D29-16-2 for rationale.
 
 			return result
 
