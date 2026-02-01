@@ -350,14 +350,13 @@ def __xor__(self, other):
 			raise NotImplementedError("Controlled classical-quantum XOR not yet supported")
 		else:
 			# Apply X gates for each 1 bit in the classical value
-			# Note: We need to do this at Python level since CQ_xor is not exposed
-			# For now, apply individual X gates through Q_not on single bits
-			# This is inefficient but works
+			# Qubit storage is LSB-first: qubits[64-width] = bit 0 (LSB),
+			# qubits[63] = bit (width-1) (MSB)
 			for i in range(result_bits):
 				if (other >> i) & 1:
 					# Apply X to result bit i (from LSB)
-					# result.qubits[63-i] is the i-th bit from LSB
-					qubit_array[0] = result.qubits[64 - result_bits + (result_bits - 1 - i)]
+					# result.qubits[64 - result_bits + i] is the i-th bit from LSB
+					qubit_array[0] = result.qubits[64 - result_bits + i]
 					arr = qubit_array
 					seq = Q_not(1)
 					run_instruction(seq, &arr[0], False, _circuit)
@@ -419,7 +418,8 @@ def __ixor__(self, other):
 			for i in range(self.bits):
 				if (other >> i) & 1:
 					# Apply X to self bit i (from LSB)
-					qubit_array[0] = self.qubits[64 - self.bits + (self.bits - 1 - i)]
+					# qubits[64 - width + i] is bit i (LSB-first storage)
+					qubit_array[0] = self.qubits[64 - self.bits + i]
 					arr = qubit_array
 					seq = Q_not(1)
 					run_instruction(seq, &arr[0], False, _circuit)

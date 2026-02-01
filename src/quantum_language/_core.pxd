@@ -84,6 +84,7 @@ cdef extern from "qubit_allocator.h":
 	# Forward declaration to match C header
 	cdef struct circuit_s:
 		unsigned int used_layer
+		unsigned int used_qubits
 
 	ctypedef struct allocator_stats_t:
 		unsigned int peak_allocated

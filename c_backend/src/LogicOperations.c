@@ -1128,8 +1128,10 @@ sequence_t *CQ_and(int bits, int64_t value) {
     // Apply CNOT only for bits where classical value is 1
     // For classical 1: output = quantum bit (CNOT copies)
     // For classical 0: output stays |0> (no gate needed)
+    // Note: two_complement returns MSB-first (bin[0]=MSB, bin[bits-1]=LSB)
+    // but qubit_array uses LSB-first (index 0=LSB), so we use bin[bits-1-i]
     for (int i = 0; i < bits; i++) {
-        if (bin[i] == 1) {
+        if (bin[bits - 1 - i] == 1) {
             // target = i (output bit)
             // control = bits + i (quantum operand bit)
             cx(&seq->seq[0][seq->gates_per_layer[0]++], i, bits + i);
@@ -1290,8 +1292,10 @@ sequence_t *CQ_or(int bits, int64_t value) {
     seq->gates_per_layer[0] = 0;
 
     // Apply gates based on classical bit values
+    // Note: two_complement returns MSB-first (bin[0]=MSB, bin[bits-1]=LSB)
+    // but qubit_array uses LSB-first (index 0=LSB), so we use bin[bits-1-i]
     for (int i = 0; i < bits; i++) {
-        if (bin[i] == 1) {
+        if (bin[bits - 1 - i] == 1) {
             // Classical 1: output is always 1 (1 OR x = 1)
             // Apply X gate to set output to |1>
             x(&seq->seq[0][seq->gates_per_layer[0]++], i);
