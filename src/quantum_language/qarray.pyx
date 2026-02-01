@@ -213,7 +213,7 @@ cdef class qarray:
                 self._elements = [qbool() for _ in range(total)]
                 self._width = 1
             else:
-                self._elements = [qint(width or INTEGERSIZE) for _ in range(total)]
+                self._elements = [qint(0, width=(width or INTEGERSIZE)) for _ in range(total)]
                 self._width = width or INTEGERSIZE
 
             self._shape = shape
@@ -299,12 +299,10 @@ cdef class qarray:
             for value in flat_data:
                 if isinstance(value, qint):
                     # Use existing qint but ensure correct width
-                    q = qint(self._width)
-                    q.value = value.value
+                    q = qint(value.value, width=self._width)
                     self._elements.append(q)
                 else:
-                    q = qint(self._width)
-                    q.value = value
+                    q = qint(value, width=self._width)
                     self._elements.append(q)
 
         # Store dtype reference
