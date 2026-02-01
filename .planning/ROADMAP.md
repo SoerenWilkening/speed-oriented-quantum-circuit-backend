@@ -61,7 +61,7 @@ Plans:
   1. All previously xfail tests for ARR-FIX and CMP-FIX bugs are converted to normal passing tests (xfail markers removed)
   2. Full test suite (`pytest`) passes with zero failures and zero unexpected failures
   3. No previously passing tests have regressed to failing
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
 - [ ] 36-01: Convert xfail tests to passing and run full regression suite
