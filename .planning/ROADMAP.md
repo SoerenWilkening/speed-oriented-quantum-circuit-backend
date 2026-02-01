@@ -16,7 +16,7 @@ v1.6 fixes three categories of bugs discovered during v1.5 exhaustive verificati
 
 ## Phases
 
-- [ ] **Phase 34: Array Fixes** - Fix constructor value initialization and element-wise operations
+- [x] **Phase 34: Array Fixes** - Fix constructor value initialization and element-wise operations
 - [ ] **Phase 35: Comparison Bug Fixes** - Fix eq/ne inversion, MSB boundary errors, and circuit explosion
 - [ ] **Phase 36: Verification & Regression** - Convert xfail tests to passing and confirm no regressions
 
@@ -35,7 +35,7 @@ v1.6 fixes three categories of bugs discovered during v1.5 exhaustive verificati
 **Plans**: 1 plan
 
 Plans:
-- [ ] 34-01: Fix array constructor and verify all array operations
+- [x] 34-01: Fix array constructor and verify all array operations
 
 ### Phase 35: Comparison Bug Fixes
 **Goal**: All six comparison operators produce correct results for all value pairs and reasonable circuit sizes
@@ -71,7 +71,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 34. Array Fixes | v1.6 | 0/1 | Not started | - |
+| 34. Array Fixes | v1.6 | 1/1 | Complete | 2026-02-01 |
 | 35. Comparison Bug Fixes | v1.6 | 0/2 | Not started | - |
 | 36. Verification & Regression | v1.6 | 0/1 | Not started | - |
 

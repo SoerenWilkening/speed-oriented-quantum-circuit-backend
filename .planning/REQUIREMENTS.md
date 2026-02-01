@@ -9,11 +9,11 @@ Requirements for Array & Comparison Fixes milestone. Each maps to roadmap phases
 
 ### Array Fixes
 
-- [ ] **ARR-FIX-01**: Array constructor initializes elements with correct value AND width (`qint(value, width=self._width)` instead of `qint(self._width)`)
-- [ ] **ARR-FIX-02**: Array elements have correct qubit count matching specified width (e.g., `width=3` allocates 3 qubits per element)
-- [ ] **ARR-FIX-03**: In-place element-wise operations (`+=`, `-=`) produce correct circuits when element widths match `self._width`
-- [ ] **ARR-FIX-04**: Non-in-place element-wise operations (`+`, `-`) produce correct circuits
-- [ ] **ARR-FIX-05**: All previously xfail array verification tests pass after fixes
+- [x] **ARR-FIX-01**: Array constructor initializes elements with correct value AND width (`qint(value, width=self._width)` instead of `qint(self._width)`)
+- [x] **ARR-FIX-02**: Array elements have correct qubit count matching specified width (e.g., `width=3` allocates 3 qubits per element)
+- [x] **ARR-FIX-03**: In-place element-wise operations (`+=`, `-=`) produce correct circuits when element widths match `self._width`
+- [x] **ARR-FIX-04**: Non-in-place element-wise operations (`+`, `-`) produce correct circuits
+- [x] **ARR-FIX-05**: All previously xfail array verification tests pass after fixes
 
 ### Comparison Fixes
 
@@ -52,11 +52,11 @@ Deferred to later milestones.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ARR-FIX-01 | Phase 34 | Pending |
-| ARR-FIX-02 | Phase 34 | Pending |
-| ARR-FIX-03 | Phase 34 | Pending |
-| ARR-FIX-04 | Phase 34 | Pending |
-| ARR-FIX-05 | Phase 34 | Pending |
+| ARR-FIX-01 | Phase 34 | Complete |
+| ARR-FIX-02 | Phase 34 | Complete |
+| ARR-FIX-03 | Phase 34 | Complete |
+| ARR-FIX-04 | Phase 34 | Complete |
+| ARR-FIX-05 | Phase 34 | Complete |
 | CMP-FIX-01 | Phase 35 | Pending |
 | CMP-FIX-02 | Phase 35 | Pending |
 | CMP-FIX-03 | Phase 35 | Pending |
@@ -70,4 +70,4 @@ Deferred to later milestones.
 
 ---
 *Requirements defined: 2026-02-01*
-*Last updated: 2026-02-01 after initial definition*
+*Last updated: 2026-02-01 after Phase 34 completion*
