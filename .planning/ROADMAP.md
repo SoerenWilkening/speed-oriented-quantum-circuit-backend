@@ -20,10 +20,10 @@ v1.7 addresses three deferred bugs from v1.5/v1.6 verification (division overflo
   2. User can divide qint(7, width=4) / qint(8, width=4) and get correct result (0)
   3. Division operations with divisor >= 2^(w-1) produce mathematically correct quotients
   4. All previously-xfail division tests pass without xfail markers
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 37-01: TBD
+- [ ] 37-01-PLAN.md — Fix division loop bounds and remove xfail markers
 
 ### Phase 38: Modular Reduction Fix
 
