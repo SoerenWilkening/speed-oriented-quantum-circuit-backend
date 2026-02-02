@@ -15,7 +15,7 @@
 - Integer phases (41, 42, 43, 44): Planned milestone work
 - Decimal phases (e.g., 42.1): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 41: Uncomputation Fix** - Investigate and fix the uncomputation regression
+- [x] **Phase 41: Uncomputation Fix** - Investigate and fix the uncomputation regression
 - [ ] **Phase 42: Quantum Copy Foundation** - CNOT-based quantum state copy for qint
 - [ ] **Phase 43: Copy-Aware Binary Operations** - Binary ops use quantum copy instead of classical initialization
 - [ ] **Phase 44: Array Mutability** - In-place augmented assignment for qarray elements
@@ -34,8 +34,8 @@
 **Plans**: 2 plans
 
 Plans:
-- [ ] 41-01-PLAN.md — Integrate .pxi files, add layer tracking, fix uncomputation regression
-- [ ] 41-02-PLAN.md — Gap closure: add layer tracking to __lt__/__gt__ widened-temp comparisons
+- [x] 41-01-PLAN.md — Integrate .pxi files, add layer tracking, fix uncomputation regression
+- [x] 41-02-PLAN.md — Gap closure: add layer tracking to __lt__/__gt__ widened-temp comparisons
 
 ### Phase 42: Quantum Copy Foundation
 **Goal**: Users can create quantum copies of qint values using CNOT-based entanglement
@@ -89,7 +89,7 @@ Phases execute in numeric order: 41 -> 42 -> 43 -> 44
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 41. Uncomputation Fix | 0/1 | In progress | - |
+| 41. Uncomputation Fix | 2/2 | ✓ Complete | 2026-02-02 |
 | 42. Quantum Copy Foundation | 0/TBD | Not started | - |
 | 43. Copy-Aware Binary Ops | 0/TBD | Not started | - |
 | 44. Array Mutability | 0/TBD | Not started | - |

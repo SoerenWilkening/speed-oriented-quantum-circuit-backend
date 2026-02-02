@@ -21,8 +21,8 @@ Requirements for v1.8 release. Each maps to roadmap phases.
 
 ### Uncomputation Fix
 
-- [ ] **UNCOMP-01**: Investigate and identify the uncomputation regression
-- [ ] **UNCOMP-02**: Fix automatic uncomputation so expressions uncompute correctly on scope exit
+- [x] **UNCOMP-01**: Investigate and identify the uncomputation regression
+- [x] **UNCOMP-02**: Fix automatic uncomputation so expressions uncompute correctly on scope exit
 
 ## Future Requirements
 
@@ -43,8 +43,8 @@ Requirements for v1.8 release. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| UNCOMP-01 | Phase 41 | Pending |
-| UNCOMP-02 | Phase 41 | Pending |
+| UNCOMP-01 | Phase 41 | Complete |
+| UNCOMP-02 | Phase 41 | Complete |
 | COPY-01 | Phase 42 | Pending |
 | COPY-02 | Phase 43 | Pending |
 | COPY-03 | Phase 43 | Pending |
