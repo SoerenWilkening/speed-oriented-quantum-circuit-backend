@@ -1,5 +1,31 @@
 # Project Milestones: Quantum Assembly
 
+## v1.7 Bug Fixes & Array Optimization (Shipped: 2026-02-02)
+
+**Delivered:** Fixed division overflow bug (BUG-DIV-01) and eliminated temporary qint allocations in qarray classical element-wise operations, with two bug fixes (modular reduction, controlled multiplication) deferred due to scaling issues.
+
+**Phases completed:** 37, 40 (2 plans total)
+
+**Key accomplishments:**
+
+- Fixed division overflow (BUG-DIV-01) with safe loop bounds preventing divisor<<bit_pos overflow
+- Identified and documented MSB comparison leak as separate bug (BUG-DIV-02)
+- Eliminated temporary qint allocations in all 6 qarray in-place operators for classical operands
+- Switched division test simulator to matrix_product_state for 44+ qubit circuits
+
+**Stats:**
+
+- 20 files created/modified (+2,460 / -95 lines)
+- ~257,678 total LOC (Python, Cython, C)
+- 2 phases, 2 plans, ~4 tasks
+- 1 day (2026-02-02)
+
+**Git range:** `docs(37) 82b7245` → `docs(40) 3058528`
+
+**What's next:** TBD — next milestone planning via `/gsd:new-milestone`
+
+---
+
 ## v1.6 Array & Comparison Fixes (Shipped: 2026-02-02)
 
 **Delivered:** Fixed array constructor parameter swap and three comparison operator bugs (equality inversion, ordering MSB boundary errors, circuit explosion investigation), with full verification confirming 1529 comparison tests pass and zero regressions.

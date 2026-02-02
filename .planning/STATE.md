@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** Phase 40 array optimization complete; phases 38-39, 41 deferred
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 40 of 41 (Array Classical Optimization) — complete
-Plan: 1 of 1 (complete)
-Status: Phase 40 complete; phases 38-39, 41 deferred
-Last activity: 2026-02-02 — Completed 40-01-PLAN.md
+Phase: N/A — between milestones
+Plan: N/A
+Status: v1.7 complete, ready for next milestone
+Last activity: 2026-02-02 — v1.7 milestone complete
 
-Progress: [███░░░░░░░] 22% (v1.7)
+Progress: Milestone complete
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 126 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2)
+- Total plans completed: 128 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs)
 - Average duration: ~13 min/plan
-- Total execution time: ~21.6 hours
+- Total execution time: ~22 hours
 
 **By Milestone:**
 
@@ -34,7 +34,7 @@ Progress: [███░░░░░░░] 22% (v1.7)
 | v1.4 OpenQASM Export | 25-27 | 6 | Complete (2026-01-30) |
 | v1.5 Bug Fixes & Verification | 28-33 | 33 | Complete (2026-02-01) |
 | v1.6 Array & Comparison Fixes | 34-36 | 5 | Complete (2026-02-02) |
-| v1.7 Bug Fixes & Array Optimization | 37-41 | TBD | In Progress |
+| v1.7 Bug Fixes & Array Optimization | 37, 40 | 2 | Complete (2026-02-02) |
 
 ## Accumulated Context
 
@@ -42,31 +42,21 @@ Progress: [███░░░░░░░] 22% (v1.7)
 
 See PROJECT.md Key Decisions table for full history.
 
-Recent decisions:
-- Phase 40: Remove all temporary qint wrapping in _inplace_binary_op; qint operators handle int natively via CQ_*
-- Phase 38: DEFERRED — Beauregard-style fix attempted but incomplete (see findings below)
-- Phase 37: max_bit_pos = self.bits - divisor.bit_length() for safe division loop bounds
-- Phase 37: BUG-DIV-02 identified as separate MSB comparison leak (9 cases per test file)
-- Phase 36: Target index formula (64 - comp_width + i_bit) for proper LSB alignment in widened comparisons
-- Phase 35: MSB-first qubit ordering for C backend comparison operations
-
 ### Blockers/Concerns
 
-**Active (targeted for v1.7):**
-- ~~BUG-DIV-01: Division overflow for divisor >= 2^(w-1) → Phase 37~~ FIXED
-- BUG-DIV-02: MSB comparison leak in division (9 cases, values >= 2^(w-1))
-- BUG-MOD-REDUCE: _reduce_mod result corruption → Phase 38 (DEFERRED)
-- BUG-COND-MUL-01: Controlled multiplication corruption → Phase 39 (DEFERRED)
+**Deferred from v1.7 (carry forward to future milestone):**
+- BUG-DIV-02: MSB comparison leak in division (9 cases per test file, values >= 2^(w-1))
+- BUG-MOD-REDUCE: _reduce_mod result corruption (Beauregard approach has scaling issues — needs different circuit structure)
+- BUG-COND-MUL-01: Controlled multiplication corruption (not yet investigated)
 
 **Phase 38 Attempt Findings (for future reference):**
 - Beauregard-style subtract-and-check-sign pattern was implemented
 - Add/mul mostly work for small moduli (N=3,5) but:
-  - __sub__ fix causes "duplicate qubit arguments" errors for N>=7 (MSB sign bit creates view that shares physical qubit, causing conflicts in controlled operations)
-  - N=13 multiplication circuits require 524GB+ memory for simulation (too many qubits from iterative widening)
-  - The iteration count (max_subtractions = (max_val-1)//N) creates too many iterations for larger moduli, each widening adds qubits
-- Test run: 83 passed, 22 failed (memory), 107 xfailed out of 212
-- Root issue: the widening-per-iteration approach doesn't scale; needs a fundamentally different circuit structure for larger moduli
-- Research and plan exist at .planning/phases/38-modular-reduction-fix/ for when this is reprioritized
+  - __sub__ fix causes "duplicate qubit arguments" errors for N>=7
+  - N=13 multiplication circuits require 524GB+ memory for simulation
+  - The iteration count creates too many iterations for larger moduli
+- Root issue: widening-per-iteration approach doesn't scale
+- Research and plan exist at .planning/phases/38-modular-reduction-fix/
 
 **Known limitations (not bugs):**
 - Dirty ancilla in gt/le comparisons (by design, 2 xfail preserved)
@@ -74,9 +64,9 @@ Recent decisions:
 ## Session Continuity
 
 Last session: 2026-02-02
-Stopped at: Completed 40-01-PLAN.md
+Stopped at: v1.7 milestone completion
 Resume file: None
-Resume action: User decides next priority (phases 38-39, 41 still deferred)
+Resume action: `/gsd:new-milestone` to start next milestone
 
 ---
-*State updated: 2026-02-02 — Phase 40 complete, array classical optimization*
+*State updated: 2026-02-02 — v1.7 milestone complete*
