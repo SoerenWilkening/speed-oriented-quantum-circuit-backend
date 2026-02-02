@@ -35,10 +35,10 @@ Plans:
   2. _reduce_mod preserves result register integrity across all test cases
   3. Modular arithmetic operations produce correct values for all reasonable inputs
   4. All previously-xfail modular reduction tests pass without xfail markers
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 38-01: TBD
+- [ ] 38-01-PLAN.md — Fix _reduce_mod with Beauregard-style subtract-check-sign, remove xfail markers
 
 ### Phase 39: Controlled Multiplication Fix
 
