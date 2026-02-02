@@ -31,10 +31,11 @@
   2. Expressions inside `with` blocks uncompute correctly when the scope exits
   3. Existing uncomputation tests pass (no new regressions introduced)
   4. Temporary qubits allocated during expressions are properly cleaned up
-**Plans**: 1 plan
+**Plans**: 2 plans
 
 Plans:
 - [ ] 41-01-PLAN.md — Integrate .pxi files, add layer tracking, fix uncomputation regression
+- [ ] 41-02-PLAN.md — Gap closure: add layer tracking to __lt__/__gt__ widened-temp comparisons
 
 ### Phase 42: Quantum Copy Foundation
 **Goal**: Users can create quantum copies of qint values using CNOT-based entanglement
