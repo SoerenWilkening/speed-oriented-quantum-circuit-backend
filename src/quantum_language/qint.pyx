@@ -945,6 +945,163 @@ cdef class qint(circuit):
 		# in place addition
 		return self.addition_inplace(other, invert = True)
 
+	def __neg__(self):
+		"""Two's complement negation: -self
+
+		Returns a new qint whose value is (-self) % (2**width).
+
+		Returns
+		-------
+		qint
+			New quantum integer with negated value.
+
+		Examples
+		--------
+		>>> a = qint(5, width=4)
+		>>> b = -a
+		>>> # b represents |(-5) % 16> = |11>
+		"""
+		cdef int start_layer
+		cdef circuit_t *_circ = <circuit_t*><unsigned long long>_get_circuit()
+		cdef bint _circ_init = _get_circuit_initialized()
+		start_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
+
+		result = qint(width=self.bits)
+		result -= self  # 0 - self = two's complement negation
+
+		result._start_layer = start_layer
+		result._end_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
+		result.operation_type = 'NEG'
+		result.add_dependency(self)
+		return result
+
+	def __rsub__(self, other):
+		"""Reverse subtraction: other - self
+
+		Handles the case where Python dispatches int - qint to qint.__rsub__.
+
+		Parameters
+		----------
+		other : int or qint
+			Left operand.
+
+		Returns
+		-------
+		qint
+			New quantum integer with value (other - self) % (2**width).
+
+		Examples
+		--------
+		>>> a = qint(3, width=4)
+		>>> b = 10 - a
+		>>> # b represents |7>
+		"""
+		cdef int start_layer
+		cdef circuit_t *_circ = <circuit_t*><unsigned long long>_get_circuit()
+		cdef bint _circ_init = _get_circuit_initialized()
+		start_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
+
+		result = qint(width=self.bits)
+		if type(other) == int:
+			result += other   # classical add into zero-init (OK, other is classical)
+		else:
+			result ^= other   # quantum copy other
+		result -= self         # result = other - self
+
+		result._start_layer = start_layer
+		result._end_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
+		result.operation_type = 'SUB'
+		result.add_dependency(self)
+		if type(other) == qint:
+			result.add_dependency(other)
+		return result
+
+	def __lshift__(self, int other):
+		"""Left shift: self << other (other must be classical int).
+
+		Implements left shift as multiplication by 2^other.
+
+		Parameters
+		----------
+		other : int
+			Shift amount (must be non-negative).
+
+		Returns
+		-------
+		qint
+			New quantum integer with value (self << other) % (2**width).
+
+		Raises
+		------
+		ValueError
+			If other is negative.
+
+		Examples
+		--------
+		>>> a = qint(3, width=8)
+		>>> b = a << 2
+		>>> # b represents |12>
+		"""
+		if other < 0:
+			raise ValueError("Negative shift count")
+		cdef int start_layer
+		cdef circuit_t *_circ = <circuit_t*><unsigned long long>_get_circuit()
+		cdef bint _circ_init = _get_circuit_initialized()
+		start_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
+
+		result = qint(width=self.bits)
+		result ^= self  # quantum copy
+		result *= (1 << other)
+
+		result._start_layer = start_layer
+		result._end_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
+		result.operation_type = 'LSHIFT'
+		result.add_dependency(self)
+		return result
+
+	def __rshift__(self, int other):
+		"""Right shift: self >> other (other must be classical int).
+
+		Implements right shift as floor division by 2^other.
+
+		Parameters
+		----------
+		other : int
+			Shift amount (must be non-negative).
+
+		Returns
+		-------
+		qint
+			New quantum integer with value self >> other.
+
+		Raises
+		------
+		ValueError
+			If other is negative.
+
+		Examples
+		--------
+		>>> a = qint(12, width=8)
+		>>> b = a >> 2
+		>>> # b represents |3>
+		"""
+		if other < 0:
+			raise ValueError("Negative shift count")
+		cdef int start_layer
+		cdef circuit_t *_circ = <circuit_t*><unsigned long long>_get_circuit()
+		cdef bint _circ_init = _get_circuit_initialized()
+		start_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
+
+		result = qint(width=self.bits)
+		result ^= self  # quantum copy
+		result //= (1 << other)
+
+		result._start_layer = start_layer
+		result._end_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
+		result.operation_type = 'RSHIFT'
+		result.add_dependency(self)
+		return result
+
 
 	cdef multiplication_inplace(self, other, qint ret):
 		cdef sequence_t *seq
