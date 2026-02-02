@@ -7,7 +7,7 @@
 
 ### Bug Fixes
 
-- [ ] **FIX-01**: Division produces correct results when divisor >= 2^(w-1) (BUG-DIV-01)
+- [x] **FIX-01**: Division produces correct results when divisor >= 2^(w-1) (BUG-DIV-01)
 - [ ] **FIX-02**: _reduce_mod produces correct reduced values without result corruption (BUG-MOD-REDUCE)
 - [ ] **FIX-03**: Controlled multiplication preserves result register integrity (BUG-COND-MUL-01)
 
@@ -32,7 +32,7 @@ None currently identified.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FIX-01 | Phase 37 | Pending |
+| FIX-01 | Phase 37 | Complete |
 | FIX-02 | Phase 38 | Pending |
 | FIX-03 | Phase 39 | Pending |
 | OPT-01 | Phase 40 | Pending |

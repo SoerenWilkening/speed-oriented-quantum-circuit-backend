@@ -23,7 +23,7 @@ v1.7 addresses three deferred bugs from v1.5/v1.6 verification (division overflo
 **Plans**: 1 plan
 
 Plans:
-- [ ] 37-01-PLAN.md — Fix division loop bounds and remove xfail markers
+- [x] 37-01-PLAN.md — Fix division loop bounds and remove xfail markers
 
 ### Phase 38: Modular Reduction Fix
 
@@ -91,7 +91,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 37. Division Overflow Fix | 0/TBD | Not started | - |
+| 37. Division Overflow Fix | 1/1 | ✓ Complete | 2026-02-02 |
 | 38. Modular Reduction Fix | 0/TBD | Not started | - |
 | 39. Controlled Multiplication Fix | 0/TBD | Not started | - |
 | 40. Array Classical Optimization | 0/TBD | Not started | - |
