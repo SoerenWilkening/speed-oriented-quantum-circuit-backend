@@ -60,18 +60,14 @@ Write quantum algorithms in natural programming style that compiles to efficient
 - ✓ Verification of quantum conditionals — v1.5
 - ✓ Verification of ql.array operations — v1.5
 
+- ✓ Fix array constructor value initialization (BUG-ARRAY-INIT) — v1.6
+- ✓ Fix array element-wise arithmetic producing wrong circuits — v1.6
+- ✓ Fix array in-place operations with width mismatches — v1.6
+- ✓ Fix eq/ne comparison inversion (BUG-CMP-01, 488 tests) — v1.6
+- ✓ Fix ordering comparison errors at MSB boundary (BUG-CMP-02) — v1.6
+- ✓ Confirm circuit size for gt/le is linear, not exponential (BUG-CMP-03) — v1.6
+
 ### Active
-
-#### Current Milestone: v1.6 Array & Comparison Fixes
-
-**Goal:** Fix array constructor and element-wise operations to produce correct circuits, then fix comparison operator bugs.
-
-- [ ] Fix array constructor value initialization (BUG-ARRAY-INIT)
-- [ ] Fix array element-wise arithmetic producing wrong circuits
-- [ ] Fix array in-place operations with width mismatches
-- [ ] Fix eq/ne comparison inversion (BUG-CMP-01)
-- [ ] Fix ordering comparison errors at MSB boundary (BUG-CMP-02)
-- [ ] Fix circuit size explosion for gt/le at widths >= 6 (BUG-CMP-03)
 
 #### Deferred (future milestone)
 
@@ -93,7 +89,7 @@ Write quantum algorithms in natural programming style that compiles to efficient
 
 **Architecture:** Three-layer stateless design — C backend (gate primitives, circuit management, integer operations) -> Cython bindings -> Python frontend (qint/qbool classes, operator overloading). All functions take explicit parameters; no global state.
 
-**Current state:** v1.5 shipped. All known C backend bugs fixed (subtraction, comparison, multiplication, QFT addition). Exhaustive verification suite with 8,365 tests covering every operation category through the full pipeline (Python -> C circuit -> OpenQASM 3.0 -> Qiskit simulate -> result check). 7,410 tests pass; 968 xfail document newly discovered bugs for future fixing. Clean modular C backend with types.h, circuit.h, arithmetic_ops.h, comparison_ops.h, bitwise_ops.h, circuit_output.h. Centralized qubit allocator with ownership tracking. Variable-width quantum integers (1-64 bits) with complete arithmetic, comparison, and initialization operations. Automatic uncomputation with dependency tracking, mode control (lazy/eager), and user override methods. Proper package structure with ql.array supporting multi-dimensional arrays, reductions, and element-wise operations. Memory-safe Python-to-C bridge with Cython try-finally cleanup.
+**Current state:** v1.6 shipped. Array constructor and comparison operator bugs fixed. Exhaustive verification suite with 8,365+ tests covering every operation category through the full pipeline (Python -> C circuit -> OpenQASM 3.0 -> Qiskit simulate -> result check). 1529 comparison tests pass cleanly (xfail markers removed for fixed bugs). Remaining xfail tests document 3 deferred bugs (BUG-DIV-01, BUG-MOD-REDUCE, BUG-COND-MUL-01). Clean modular C backend with types.h, circuit.h, arithmetic_ops.h, comparison_ops.h, bitwise_ops.h, circuit_output.h. Centralized qubit allocator with ownership tracking. Variable-width quantum integers (1-64 bits) with complete arithmetic, comparison, and initialization operations. Automatic uncomputation with dependency tracking, mode control (lazy/eager), and user override methods. Proper package structure with ql.array supporting multi-dimensional arrays, reductions, and element-wise operations. Memory-safe Python-to-C bridge with Cython try-finally cleanup.
 
 **Codebase:**
 - ~166,585 lines of code (Python, Cython, C)
@@ -114,13 +110,10 @@ Write quantum algorithms in natural programming style that compiles to efficient
 - qint_mod * qint_mod raises NotImplementedError (by design)
 - apply_merge() placeholder for future phase rotation merging
 - Nested quantum conditionals require quantum-quantum AND implementation (future work)
-- eq/ne comparisons return inverted results (BUG-CMP-01 — 488 xfail tests)
-- Ordering comparisons fail at MSB boundary for specific value pairs (BUG-CMP-02)
-- gt/le circuit size explodes at widths >= 6 (BUG-CMP-03)
 - Division overflow for divisor >= 2^(w-1) (BUG-DIV-01)
 - _reduce_mod result corruption (BUG-MOD-REDUCE)
 - Controlled multiplication corrupts result register (BUG-COND-MUL-01)
-- Array constructor passes width as value instead of user data (BUG-ARRAY-INIT)
+- Dirty ancilla from widened comparisons (gt/le) — known limitation, not a correctness bug
 
 ## Constraints
 
@@ -156,6 +149,11 @@ Write quantum algorithms in natural programming style that compiles to efficient
 | CCP decomposition for QQ_mul | Original multiplication algorithm was flawed | ✓ Good — 272/272 multiplication tests pass |
 | xfail for discovered bugs | Document bugs without blocking test runs | ✓ Good — 968 xfail create future fix backlog |
 | Separate result vs ancilla verification | gt/le leave ancilla dirty by design | ✓ Good — clear test expectations |
+| Positional value + keyword width for qint in arrays | Fixes constructor parameter swap | ✓ Good — correct array initialization |
+| Comparison results persist without auto-uncompute | Matches Phase 29-16 pattern, prevents GC gate reversal | ✓ Good — fixes equality inversion |
+| MSB-first qubit ordering for C backend comparisons | C backend expects MSB-first, Python was passing LSB-first | ✓ Good — fixes bit-order reversal |
+| LSB-aligned CNOT bit copies for widened comparisons | Zero-extension for proper unsigned semantics | ✓ Good — fixes MSB boundary errors |
+| Target index formula: 64 - comp_width + i_bit | Correct LSB alignment for mixed-width operations | ✓ Good — all ordering tests pass |
 
 ---
-*Last updated: 2026-02-01 after v1.6 milestone initialization*
+*Last updated: 2026-02-02 after v1.6 milestone*

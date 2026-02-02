@@ -1,5 +1,33 @@
 # Project Milestones: Quantum Assembly
 
+## v1.6 Array & Comparison Fixes (Shipped: 2026-02-02)
+
+**Delivered:** Fixed array constructor parameter swap and three comparison operator bugs (equality inversion, ordering MSB boundary errors, circuit explosion investigation), with full verification confirming 1529 comparison tests pass and zero regressions.
+
+**Phases completed:** 34-36 (5 plans total)
+
+**Key accomplishments:**
+
+- Fixed array constructor to create elements with correct values and widths (BUG-ARRAY-INIT)
+- Fixed dual-bug in equality operators: GC gate reversal + bit-order reversal (BUG-CMP-01, 488 tests)
+- Fixed ordering comparison MSB boundary errors with LSB-aligned CNOT bit copies (BUG-CMP-02)
+- Confirmed circuit size explosion is non-issue — linear growth verified (BUG-CMP-03)
+- Cleaned test suite: removed 324 lines of xfail logic, 1529 comparison tests pass cleanly
+- Zero regressions across entire test suite
+
+**Stats:**
+
+- 25 files created/modified
+- +3,766 / -537 lines (166,585 total LOC)
+- 3 phases, 5 plans, ~9 tasks
+- 2 days (2026-02-01 → 2026-02-02)
+
+**Git range:** `docs(34) 442681a` → `test(36) 2990b29`
+
+**What's next:** TBD — next milestone planning via `/gsd:new-milestone`
+
+---
+
 ## v1.5 Bug Fixes & Exhaustive Verification (Shipped: 2026-02-01)
 
 **Delivered:** Fixed all 4 known C backend bugs and exhaustively verified every operation category (arithmetic, comparison, bitwise, advanced features) through the full pipeline, creating 8,365 tests with 7,410 passing and 968 xfail documenting newly discovered bugs.
