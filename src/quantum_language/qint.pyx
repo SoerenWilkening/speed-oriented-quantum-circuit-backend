@@ -1876,6 +1876,9 @@ cdef class qint(circuit):
 		if isinstance(other, qint):
 			(<qint>other)._check_not_uncomputed()
 
+		# Capture start layer for uncomputation tracking
+		start_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
+
 		# Self-comparison optimization
 		if self is other:
 			return qbool(False)  # x < x is always false
@@ -1922,9 +1925,11 @@ cdef class qint(circuit):
 			result.add_dependency(self)
 			result.add_dependency(other)
 			result.operation_type = 'LT'
-			# Note: NOT setting _start_layer/_end_layer for widened-temp comparisons.
-			# The widened temps (temp_self, temp_other) self-uncompute via GC.
-			# Setting layer tracking here would double-reverse those gates.
+			# Phase 41 gap closure: Add layer tracking so widened-temp gates are
+			# reversed when result is uncomputed. The widened temps themselves have
+			# no layer tracking, so there is no double-reversal risk.
+			result._start_layer = start_layer
+			result._end_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
 			return result
 
 		# Handle int operand
@@ -1978,6 +1983,9 @@ cdef class qint(circuit):
 		if isinstance(other, qint):
 			(<qint>other)._check_not_uncomputed()
 
+		# Capture start layer for uncomputation tracking
+		start_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
+
 		# Self-comparison optimization
 		if self is other:
 			return qbool(False)  # x > x is always false
@@ -2019,8 +2027,11 @@ cdef class qint(circuit):
 			result.add_dependency(self)
 			result.add_dependency(other)
 			result.operation_type = 'GT'
-			# Note: NOT setting _start_layer/_end_layer for widened-temp comparisons.
-			# The widened temps self-uncompute via GC.
+			# Phase 41 gap closure: Add layer tracking so widened-temp gates are
+			# reversed when result is uncomputed. The widened temps themselves have
+			# no layer tracking, so there is no double-reversal risk.
+			result._start_layer = start_layer
+			result._end_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
 			return result
 
 		# Handle int operand
