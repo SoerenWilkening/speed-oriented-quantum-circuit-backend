@@ -17,7 +17,7 @@
 
 - [x] **Phase 41: Uncomputation Fix** - Investigate and fix the uncomputation regression
 - [x] **Phase 42: Quantum Copy Foundation** - CNOT-based quantum state copy for qint
-- [ ] **Phase 43: Copy-Aware Binary Operations** - Binary ops use quantum copy instead of classical initialization
+- [x] **Phase 43: Copy-Aware Binary Operations** - Binary ops use quantum copy instead of classical initialization
 - [ ] **Phase 44: Array Mutability** - In-place augmented assignment for qarray elements
 
 ## Phase Details
@@ -63,8 +63,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 43-01-PLAN.md — Fix __add__, __radd__, __sub__ to use XOR-copy instead of classical init + tests
-- [ ] 43-02-PLAN.md — Add missing qint ops (neg, rsub, lshift, rshift) + missing qarray ops + tests
+- [x] 43-01-PLAN.md — Fix __add__, __radd__, __sub__ to use XOR-copy instead of classical init + tests
+- [x] 43-02-PLAN.md — Add missing qint ops (neg, rsub, lshift, rshift) + missing qarray ops + tests
 
 ### Phase 44: Array Mutability
 **Goal**: Users can modify qarray elements in-place using augmented assignment operators
@@ -91,7 +91,7 @@ Phases execute in numeric order: 41 -> 42 -> 43 -> 44
 |-------|----------------|--------|-----------|
 | 41. Uncomputation Fix | 2/2 | ✓ Complete | 2026-02-02 |
 | 42. Quantum Copy Foundation | 1/1 | ✓ Complete | 2026-02-02 |
-| 43. Copy-Aware Binary Ops | 0/TBD | Not started | - |
+| 43. Copy-Aware Binary Ops | 2/2 | ✓ Complete | 2026-02-02 |
 | 44. Array Mutability | 0/TBD | Not started | - |
 
 ---
