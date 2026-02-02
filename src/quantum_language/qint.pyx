@@ -609,6 +609,16 @@ cdef class qint(circuit):
 		current_scope_depth.set(current_scope_depth.get() + 1)
 		_scope_stack.append([])  # New empty scope frame
 
+		# Update creation_scope for intermediate expressions used as conditions.
+		# Python evaluates `with EXPR:` BEFORE calling __enter__, so the expression's
+		# temporaries are created at the outer scope (often scope 0) and never
+		# registered in any scope frame. By bumping creation_scope to the new inner
+		# scope depth, the LAZY __del__ check (current < creation_scope) will trigger
+		# uncomputation when the with-statement drops its reference. User-created
+		# variables (operation_type=None) are left unchanged.
+		if self.operation_type is not None:
+			self.creation_scope = current_scope_depth.get()
+
 		return self
 
 	def __exit__(self, exc__type, exc, tb):
