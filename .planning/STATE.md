@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v1.7 Bug Fixes & Efficient Array Init
+**Current focus:** Phase 37 - Division Overflow Fix
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 37 of 41 (Division Overflow Fix)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-02-02 — Milestone v1.7 started
+Status: Ready to plan
+Last activity: 2026-02-02 — Roadmap created for v1.7
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -34,7 +34,7 @@ Progress: [░░░░░░░░░░] 0%
 | v1.4 OpenQASM Export | 25-27 | 6 | Complete (2026-01-30) |
 | v1.5 Bug Fixes & Verification | 28-33 | 33 | Complete (2026-02-01) |
 | v1.6 Array & Comparison Fixes | 34-36 | 5 | Complete (2026-02-02) |
-| v1.7 Bug Fixes & Efficient Array Init | 37+ | — | In Progress |
+| v1.7 Bug Fixes & Array Optimization | 37-41 | TBD | In Progress |
 
 ## Accumulated Context
 
@@ -42,20 +42,27 @@ Progress: [░░░░░░░░░░] 0%
 
 See PROJECT.md Key Decisions table for full history.
 
+Recent decisions:
+- Phase 36: Target index formula (64 - comp_width + i_bit) for proper LSB alignment in widened comparisons
+- Phase 35: MSB-first qubit ordering for C backend comparison operations
+- Phase 34: Positional value + keyword width pattern for qint constructor in arrays
+
 ### Blockers/Concerns
 
-**Targeted for v1.7:**
-- BUG-DIV-01: Division overflow for divisor >= 2^(w-1)
-- BUG-MOD-REDUCE: _reduce_mod result corruption
-- BUG-COND-MUL-01: Controlled multiplication corruption
-- Dirty ancilla in gt/le comparisons (known limitation, not a bug)
+**Active (targeted for v1.7):**
+- BUG-DIV-01: Division overflow for divisor >= 2^(w-1) → Phase 37
+- BUG-MOD-REDUCE: _reduce_mod result corruption → Phase 38
+- BUG-COND-MUL-01: Controlled multiplication corruption → Phase 39
+
+**Known limitations (not bugs):**
+- Dirty ancilla in gt/le comparisons (by design, 2 xfail preserved)
 
 ## Session Continuity
 
 Last session: 2026-02-02
-Stopped at: Defining v1.7 requirements
+Stopped at: Roadmap creation complete
 Resume file: None
-Resume action: Continue milestone setup
+Resume action: Begin Phase 37 planning with `/gsd:plan-phase 37`
 
 ---
-*State updated: 2026-02-02 after v1.7 milestone start*
+*State updated: 2026-02-02 after roadmap creation*

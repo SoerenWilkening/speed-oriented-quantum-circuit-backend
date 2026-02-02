@@ -32,17 +32,17 @@ None currently identified.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FIX-01 | — | Pending |
-| FIX-02 | — | Pending |
-| FIX-03 | — | Pending |
-| OPT-01 | — | Pending |
-| OPT-02 | — | Pending |
+| FIX-01 | Phase 37 | Pending |
+| FIX-02 | Phase 38 | Pending |
+| FIX-03 | Phase 39 | Pending |
+| OPT-01 | Phase 40 | Pending |
+| OPT-02 | Phase 40 | Pending |
 
 **Coverage:**
 - v1.7 requirements: 5 total
-- Mapped to phases: 0
-- Unmapped: 5 ⚠️
+- Mapped to phases: 5
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-02*
-*Last updated: 2026-02-02 after initial definition*
+*Last updated: 2026-02-02 after roadmap creation*
