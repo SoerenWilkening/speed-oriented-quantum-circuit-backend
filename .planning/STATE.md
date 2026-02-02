@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-02)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v1.8 Quantum Copy, Array Mutability & Uncomputation Fix
+**Current focus:** v1.8 Phase 41 - Uncomputation Fix
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-02 — Milestone v1.8 started
+Phase: 41 of 44 (Uncomputation Fix)
+Plan: 0 of TBD in current phase
+Status: Ready to plan
+Last activity: 2026-02-02 — Roadmap created for v1.8
 
-Progress: Defining requirements
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -35,6 +35,7 @@ Progress: Defining requirements
 | v1.5 Bug Fixes & Verification | 28-33 | 33 | Complete (2026-02-01) |
 | v1.6 Array & Comparison Fixes | 34-36 | 5 | Complete (2026-02-02) |
 | v1.7 Bug Fixes & Array Optimization | 37, 40 | 2 | Complete (2026-02-02) |
+| v1.8 Copy, Mutability & Uncomp Fix | 41-44 | TBD | In progress |
 
 ## Accumulated Context
 
@@ -45,18 +46,9 @@ See PROJECT.md Key Decisions table for full history.
 ### Blockers/Concerns
 
 **Deferred from v1.7 (carry forward to future milestone):**
-- BUG-DIV-02: MSB comparison leak in division (9 cases per test file, values >= 2^(w-1))
-- BUG-MOD-REDUCE: _reduce_mod result corruption (Beauregard approach has scaling issues — needs different circuit structure)
+- BUG-DIV-02: MSB comparison leak in division
+- BUG-MOD-REDUCE: _reduce_mod result corruption (needs different circuit structure)
 - BUG-COND-MUL-01: Controlled multiplication corruption (not yet investigated)
-
-**Phase 38 Attempt Findings (for future reference):**
-- Beauregard-style subtract-and-check-sign pattern was implemented
-- Add/mul mostly work for small moduli (N=3,5) but:
-  - __sub__ fix causes "duplicate qubit arguments" errors for N>=7
-  - N=13 multiplication circuits require 524GB+ memory for simulation
-  - The iteration count creates too many iterations for larger moduli
-- Root issue: widening-per-iteration approach doesn't scale
-- Research and plan exist at .planning/phases/38-modular-reduction-fix/
 
 **Known limitations (not bugs):**
 - Dirty ancilla in gt/le comparisons (by design, 2 xfail preserved)
@@ -64,9 +56,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-02
-Stopped at: v1.8 milestone definition
+Stopped at: v1.8 roadmap created
 Resume file: None
-Resume action: Define requirements and roadmap for v1.8
+Resume action: Plan Phase 41 (Uncomputation Fix)
 
 ---
-*State updated: 2026-02-02 — v1.8 milestone started*
+*State updated: 2026-02-02 — v1.8 roadmap created*

@@ -43,20 +43,20 @@ Requirements for v1.8 release. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| COPY-01 | TBD | Pending |
-| COPY-02 | TBD | Pending |
-| COPY-03 | TBD | Pending |
-| AMUT-01 | TBD | Pending |
-| AMUT-02 | TBD | Pending |
-| AMUT-03 | TBD | Pending |
-| UNCOMP-01 | TBD | Pending |
-| UNCOMP-02 | TBD | Pending |
+| UNCOMP-01 | Phase 41 | Pending |
+| UNCOMP-02 | Phase 41 | Pending |
+| COPY-01 | Phase 42 | Pending |
+| COPY-02 | Phase 43 | Pending |
+| COPY-03 | Phase 43 | Pending |
+| AMUT-01 | Phase 44 | Pending |
+| AMUT-02 | Phase 44 | Pending |
+| AMUT-03 | Phase 44 | Pending |
 
 **Coverage:**
 - v1.8 requirements: 8 total
-- Mapped to phases: 0
-- Unmapped: 8 (pending roadmap)
+- Mapped to phases: 8
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-02*
-*Last updated: 2026-02-02 after initial definition*
+*Last updated: 2026-02-02 after roadmap creation*
