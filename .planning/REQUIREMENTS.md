@@ -14,16 +14,16 @@ Requirements for pixel-art circuit visualization milestone.
 
 ### Rendering
 
-- [ ] **REND-01**: Horizontal qubit wire lines rendered for each active qubit
-- [ ] **REND-02**: Distinct 2-3px gate icons with color-coding for all 10 gate types (X, Y, Z, R, H, Rx, Ry, Rz, P, M)
-- [ ] **REND-03**: Vertical control-target connection lines for multi-qubit gates (CNOT, CCX, MCX)
-- [ ] **REND-04**: Control dots rendered at control qubit positions
-- [ ] **REND-05**: NumPy array-based bulk rendering (not per-pixel ImageDraw)
-- [ ] **REND-06**: Circuits up to 200+ qubits and 10,000+ gates render successfully
+- [x] **REND-01**: Horizontal qubit wire lines rendered for each active qubit
+- [x] **REND-02**: Distinct 2-3px gate icons with color-coding for all 10 gate types (X, Y, Z, R, H, Rx, Ry, Rz, P, M)
+- [x] **REND-03**: Vertical control-target connection lines for multi-qubit gates (CNOT, CCX, MCX)
+- [x] **REND-04**: Control dots rendered at control qubit positions
+- [x] **REND-05**: NumPy array-based bulk rendering (not per-pixel ImageDraw)
+- [x] **REND-06**: Circuits up to 200+ qubits and 10,000+ gates render successfully
 
 ### Zoom
 
-- [ ] **ZOOM-01**: Overview mode — 2-3px per gate, full circuit visible
+- [x] **ZOOM-01**: Overview mode — 2-3px per gate, full circuit visible
 - [ ] **ZOOM-02**: Detail mode — 8-12px per gate, readable gate labels
 - [ ] **ZOOM-03**: Auto zoom selection based on circuit size (detail <= 30 qubits/200 layers, overview otherwise)
 - [ ] **ZOOM-04**: User override via `mode` parameter ("overview" or "detail")
@@ -66,13 +66,13 @@ Deferred to later milestones.
 |-------------|-------|--------|
 | DATA-01 | Phase 45 | Complete |
 | DATA-02 | Phase 45 | Complete |
-| REND-01 | Phase 46 | Pending |
-| REND-02 | Phase 46 | Pending |
-| REND-03 | Phase 46 | Pending |
-| REND-04 | Phase 46 | Pending |
-| REND-05 | Phase 46 | Pending |
-| REND-06 | Phase 46 | Pending |
-| ZOOM-01 | Phase 46 | Pending |
+| REND-01 | Phase 46 | Complete |
+| REND-02 | Phase 46 | Complete |
+| REND-03 | Phase 46 | Complete |
+| REND-04 | Phase 46 | Complete |
+| REND-05 | Phase 46 | Complete |
+| REND-06 | Phase 46 | Complete |
+| ZOOM-01 | Phase 46 | Complete |
 | ZOOM-02 | Phase 47 | Pending |
 | ZOOM-03 | Phase 47 | Pending |
 | ZOOM-04 | Phase 47 | Pending |
