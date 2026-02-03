@@ -39,8 +39,8 @@
 **Plans**: 2 plans
 
 Plans:
-- [ ] 45-01: C extraction function and Cython bridge
-- [ ] 45-02: Qubit index compaction and integration tests
+- [ ] 45-01-PLAN.md -- C extraction function (draw_data_t) and Cython bridge (draw_data() method)
+- [ ] 45-02-PLAN.md -- Integration tests: compaction, controls, scale, gate types
 
 ### Phase 46: Core Renderer
 **Goal**: Users can render any quantum circuit as a compact pixel-art PNG showing all gates, wires, and control connections at overview scale
