@@ -683,3 +683,95 @@ class TestDrawCircuitReturnsPilImage:
         circuit = _mock_circuit(10, 5)
         img = draw_circuit(circuit)
         assert isinstance(img, Image.Image)
+
+
+# ---------------------------------------------------------------------------
+# Quick-012: Control dot color distinction tests
+# ---------------------------------------------------------------------------
+
+
+class TestControlDotColorDistinct:
+    def test_ctrl_dot_color_differs_from_ctrl_color(self):
+        """CTRL_DOT_COLOR must differ from CTRL_COLOR."""
+        assert CTRL_DOT_COLOR != CTRL_COLOR
+
+    def test_overview_dot_uses_dot_color(self):
+        """Overview mode: control dot pixel uses CTRL_DOT_COLOR, line uses CTRL_COLOR."""
+        gate = make_gate(layer=0, target=2, gate_type=0, controls=[0])
+        dd = make_draw_data(1, 3, [gate])
+        img = render(dd)
+        arr = np.array(img)
+
+        # Control dot at qubit 0 wire center (y=1, x=0)
+        cy = 0 * CELL_H + CELL_H // 2
+        np.testing.assert_array_equal(arr[cy, 0], np.array(CTRL_DOT_COLOR, dtype=np.uint8))
+
+        # A pixel on the control line between control and target (e.g. y=2)
+        # should be CTRL_COLOR (not dot color)
+        line_y = cy + 1
+        np.testing.assert_array_equal(arr[line_y, 0], np.array(CTRL_COLOR, dtype=np.uint8))
+
+    def test_detail_dot_uses_dot_color(self):
+        """Detail mode: control dot center pixel uses CTRL_DOT_COLOR."""
+        gate = make_gate(layer=1, target=2, gate_type=0, controls=[0])
+        dd = make_draw_data(3, 3, [gate])
+        img = render_detail(dd)
+
+        # Control dot center at qubit 0 wire center
+        cx = LABEL_MARGIN + 1 * DETAIL_CELL + DETAIL_CELL // 2
+        cy = 0 * DETAIL_CELL + DETAIL_CELL // 2
+        pixel = img.getpixel((cx, cy))
+        assert pixel == CTRL_DOT_COLOR, f"Detail dot pixel is {pixel}, expected {CTRL_DOT_COLOR}"
+
+
+# ---------------------------------------------------------------------------
+# Quick-012: Non-overlapping mode tests
+# ---------------------------------------------------------------------------
+
+
+class TestNonOverlappingMode:
+    def test_no_overlap_expands_layers(self):
+        """Overlapping gates in same layer expand to wider image with overlap=False."""
+        # Gate A: target=0, controls=[2] -> span [0,2]
+        # Gate B: target=1, no controls -> span [1,1] (within A's span)
+        gate_a = make_gate(layer=0, target=0, gate_type=0, controls=[2])
+        gate_b = make_gate(layer=0, target=1, gate_type=4, controls=[])
+        dd = make_draw_data(1, 3, [gate_a, gate_b])
+        img = render(dd, overlap=False)
+        # Should be wider than 1 layer since overlap forced expansion
+        assert img.size[0] > 1 * CELL_W, (
+            f"Image width {img.size[0]} should be > {1 * CELL_W} after expansion"
+        )
+
+    def test_no_overlap_no_change_when_no_conflicts(self):
+        """Non-conflicting gates in same layer: no expansion needed."""
+        gate_a = make_gate(layer=0, target=0, gate_type=0, controls=[])
+        gate_b = make_gate(layer=0, target=3, gate_type=4, controls=[])
+        dd = make_draw_data(1, 4, [gate_a, gate_b])
+        img_overlap = render(dd, overlap=True)
+        img_no_overlap = render(dd, overlap=False)
+        # Width should be the same (1 layer, no expansion)
+        assert img_no_overlap.size[0] == img_overlap.size[0]
+
+    def test_overlap_true_is_default(self):
+        """Default overlap=True: overlapping gates stay in same layer (no expansion)."""
+        gate_a = make_gate(layer=0, target=0, gate_type=0, controls=[2])
+        gate_b = make_gate(layer=0, target=1, gate_type=4, controls=[])
+        dd = make_draw_data(1, 3, [gate_a, gate_b])
+        img = render(dd)  # default overlap=True
+        # Should be exactly 1 layer wide (no expansion)
+        assert img.size[0] == 1 * CELL_W
+
+    def test_draw_circuit_passes_overlap(self):
+        """draw_circuit(overlap=False) produces wider image than overlap=True."""
+        gate_a = make_gate(layer=0, target=0, gate_type=0, controls=[2])
+        gate_b = make_gate(layer=0, target=1, gate_type=4, controls=[])
+        gates = [gate_a, gate_b]
+        circuit_overlap = _mock_circuit(1, 3, gates)
+        circuit_no_overlap = _mock_circuit(1, 3, gates)
+        img_overlap = draw_circuit(circuit_overlap, mode="overview", overlap=True)
+        img_no_overlap = draw_circuit(circuit_no_overlap, mode="overview", overlap=False)
+        assert img_no_overlap.size[0] > img_overlap.size[0], (
+            f"overlap=False width {img_no_overlap.size[0]} should be > "
+            f"overlap=True width {img_overlap.size[0]}"
+        )
