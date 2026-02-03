@@ -24,15 +24,15 @@ Requirements for pixel-art circuit visualization milestone.
 ### Zoom
 
 - [x] **ZOOM-01**: Overview mode — 2-3px per gate, full circuit visible
-- [ ] **ZOOM-02**: Detail mode — 8-12px per gate, readable gate labels
-- [ ] **ZOOM-03**: Auto zoom selection based on circuit size (detail <= 30 qubits/200 layers, overview otherwise)
-- [ ] **ZOOM-04**: User override via `mode` parameter ("overview" or "detail")
+- [x] **ZOOM-02**: Detail mode — 8-12px per gate, readable gate labels
+- [x] **ZOOM-03**: Auto zoom selection based on circuit size (detail <= 30 qubits/200 layers, overview otherwise)
+- [x] **ZOOM-04**: User override via `mode` parameter ("overview" or "detail")
 
 ### Output
 
-- [ ] **OUT-01**: `ql.draw_circuit()` Python API returning PIL Image
-- [ ] **OUT-02**: Save to PNG via `.save()` method on returned Image
-- [ ] **OUT-03**: Lazy Pillow import with helpful error if not installed
+- [x] **OUT-01**: `ql.draw_circuit()` Python API returning PIL Image
+- [x] **OUT-02**: Save to PNG via `.save()` method on returned Image
+- [x] **OUT-03**: Lazy Pillow import with helpful error if not installed
 
 ## Future Requirements
 
@@ -73,12 +73,12 @@ Deferred to later milestones.
 | REND-05 | Phase 46 | Complete |
 | REND-06 | Phase 46 | Complete |
 | ZOOM-01 | Phase 46 | Complete |
-| ZOOM-02 | Phase 47 | Pending |
-| ZOOM-03 | Phase 47 | Pending |
-| ZOOM-04 | Phase 47 | Pending |
-| OUT-01 | Phase 47 | Pending |
-| OUT-02 | Phase 47 | Pending |
-| OUT-03 | Phase 47 | Pending |
+| ZOOM-02 | Phase 47 | Complete |
+| ZOOM-03 | Phase 47 | Complete |
+| ZOOM-04 | Phase 47 | Complete |
+| OUT-01 | Phase 47 | Complete |
+| OUT-02 | Phase 47 | Complete |
+| OUT-03 | Phase 47 | Complete |
 
 **Coverage:**
 - v1.9 requirements: 15 total

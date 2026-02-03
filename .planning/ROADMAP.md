@@ -4,7 +4,7 @@
 
 - v1.0 through v1.7: See milestone archives
 - v1.8 Quantum Copy, Array Mutability & Uncomputation Fix -- Phases 41-44 (shipped 2026-02-03) -- See `milestones/v1.8-ROADMAP.md`
-- **v1.9 Pixel-Art Circuit Visualization** -- Phases 45-47 (in progress)
+- **v1.9 Pixel-Art Circuit Visualization** -- Phases 45-47 (shipped 2026-02-03) -- See `milestones/v1.9-ROADMAP.md`
 
 ## Phases
 
@@ -18,13 +18,13 @@
 
 </details>
 
-### v1.9 Pixel-Art Circuit Visualization (In Progress)
+### v1.9 Pixel-Art Circuit Visualization (Complete)
 
 **Milestone Goal:** Add compact pixel-art circuit visualization that scales to 200+ qubits where existing tools fail.
 
 - [x] **Phase 45: Data Extraction Bridge** - Cython binding exposing per-gate circuit data to Python -- completed 2026-02-03
 - [x] **Phase 46: Core Renderer** - NumPy-based pixel-art rendering of complete circuits at overview scale -- completed 2026-02-03
-- [ ] **Phase 47: Detail Mode & Public API** - Detail zoom, auto-selection, and ql.draw_circuit() API
+- [x] **Phase 47: Detail Mode & Public API** - Detail zoom, auto-selection, and ql.draw_circuit() API -- completed 2026-02-03
 
 ## Phase Details
 
@@ -72,8 +72,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 47-01-PLAN.md -- Detail mode rendering with gate labels (render_detail function + tests)
-- [ ] 47-02-PLAN.md -- Auto-zoom selection and public API (ql.draw_circuit, lazy Pillow import)
+- [x] 47-01-PLAN.md -- Detail mode rendering with gate labels (render_detail function + tests)
+- [x] 47-02-PLAN.md -- Auto-zoom selection and public API (ql.draw_circuit, lazy Pillow import)
 
 ## Progress
 
@@ -87,7 +87,7 @@ Plans:
 | 44. Array Mutability | v1.8 | 2/2 | Complete | 2026-02-03 |
 | 45. Data Extraction Bridge | v1.9 | 2/2 | Complete | 2026-02-03 |
 | 46. Core Renderer | v1.9 | 3/3 | Complete | 2026-02-03 |
-| 47. Detail Mode & Public API | v1.9 | 0/2 | Not started | - |
+| 47. Detail Mode & Public API | v1.9 | 2/2 | Complete | 2026-02-03 |
 
 ---
 *Roadmap created: 2026-02-02*
