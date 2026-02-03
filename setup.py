@@ -12,6 +12,8 @@ from pathlib import Path
 from Cython.Build import cythonize
 from setuptools import Extension, find_packages, setup
 
+from build_preprocessor import preprocess_all
+
 # Shared C sources from c_backend
 # Project root is the current directory
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -43,18 +45,31 @@ include_dirs = [
     SRC_DIR,  # CRITICAL: Allows cimport to find .pxd files in package
 ]
 
+# Preprocess .pyx files that use include directives (Cython 3.x workaround)
+# This inlines .pxi content into *_preprocessed.pyx files before compilation.
+preprocessed_map = {}  # original stem -> preprocessed path
+for orig, preprocessed in preprocess_all(Path(SRC_DIR) / "quantum_language"):
+    preprocessed_map[orig.stem] = str(preprocessed)
+
 # Auto-discover all .pyx files in package
 extensions = []
 for pyx_file in glob.glob(os.path.join(SRC_DIR, "quantum_language", "**", "*.pyx"), recursive=True):
+    pyx_path = Path(pyx_file)
+    # Skip preprocessed files from discovery (they're used as sources below)
+    if pyx_path.stem.endswith("_preprocessed"):
+        continue
     # Convert path to module name:
     # src/quantum_language/qint.pyx -> quantum_language.qint
     # src/quantum_language/state/qpu.pyx -> quantum_language.state.qpu
-    module_name = Path(pyx_file).relative_to(SRC_DIR).with_suffix("").as_posix().replace("/", ".")
+    module_name = pyx_path.relative_to(SRC_DIR).with_suffix("").as_posix().replace("/", ".")
+
+    # Use preprocessed source if this file had include directives
+    source = preprocessed_map.get(pyx_path.stem, pyx_file)
 
     extensions.append(
         Extension(
             name=module_name,
-            sources=[pyx_file] + c_sources,
+            sources=[source] + c_sources,
             language="c",
             extra_compile_args=compiler_args,
             include_dirs=include_dirs,
