@@ -9,8 +9,8 @@ Requirements for pixel-art circuit visualization milestone.
 
 ### Data Access
 
-- [ ] **DATA-01**: Cython function extracts circuit gate data as Python dict (gate type, target, controls, angle, layer)
-- [ ] **DATA-02**: Qubit index compaction — skip unused qubits, remap sparse indices to dense rows
+- [x] **DATA-01**: Cython function extracts circuit gate data as Python dict (gate type, target, controls, angle, layer)
+- [x] **DATA-02**: Qubit index compaction — skip unused qubits, remap sparse indices to dense rows
 
 ### Rendering
 
@@ -64,8 +64,8 @@ Deferred to later milestones.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | Phase 45 | Pending |
-| DATA-02 | Phase 45 | Pending |
+| DATA-01 | Phase 45 | Complete |
+| DATA-02 | Phase 45 | Complete |
 | REND-01 | Phase 46 | Pending |
 | REND-02 | Phase 46 | Pending |
 | REND-03 | Phase 46 | Pending |
