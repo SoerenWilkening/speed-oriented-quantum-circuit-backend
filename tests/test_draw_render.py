@@ -15,9 +15,12 @@ from quantum_language.draw import (
     CELL_H,
     CELL_W,
     CTRL_COLOR,
+    DETAIL_CELL,
     GATE_COLORS,
+    LABEL_MARGIN,
     WIRE_COLOR,
     render,
+    render_detail,
 )
 
 
@@ -440,3 +443,124 @@ class TestIntegrationRealCircuit:
         finally:
             if os.path.exists(tmp_path):
                 os.remove(tmp_path)
+
+
+# ---------------------------------------------------------------------------
+# Plan 47-01: Detail mode rendering tests
+# ---------------------------------------------------------------------------
+
+
+class TestDetailCanvasDimensions:
+    def test_detail_canvas_dimensions(self):
+        """Canvas size is LABEL_MARGIN + num_layers * DETAIL_CELL wide, num_qubits * DETAIL_CELL tall."""
+        dd = make_draw_data(5, 3)
+        img = render_detail(dd)
+        expected_w = LABEL_MARGIN + 5 * DETAIL_CELL
+        expected_h = 3 * DETAIL_CELL
+        assert img.size == (expected_w, expected_h)
+
+
+class TestDetailGateBlockPresent:
+    def test_detail_gate_block_present(self):
+        """H gate at layer=1, target=0 renders visible content at gate center."""
+        gate = make_gate(layer=1, target=0, gate_type=4)
+        dd = make_draw_data(3, 2, [gate])
+        img = render_detail(dd)
+
+        # Gate center pixel
+        gx = LABEL_MARGIN + 1 * DETAIL_CELL + DETAIL_CELL // 2
+        gy = 0 * DETAIL_CELL + DETAIL_CELL // 2
+        pixel = img.getpixel((gx, gy))
+        assert pixel != BG_COLOR, f"Gate center pixel is BG_COLOR: {pixel}"
+
+
+class TestDetailMeasurementNotText:
+    def test_detail_measurement_not_text(self):
+        """Measurement gate renders checkerboard, not white text."""
+        gate = make_gate(layer=0, target=0, gate_type=9)
+        dd = make_draw_data(1, 1, [gate])
+        img = render_detail(dd)
+
+        # Check center of measurement cell - should be checkerboard pattern
+        gx = LABEL_MARGIN + DETAIL_CELL // 2
+        gy = DETAIL_CELL // 2
+        pixel = img.getpixel((gx, gy))
+        # Should be either GATE_COLORS[9] or BG_COLOR (checkerboard), NOT white text
+        assert pixel != (255, 255, 255), f"Measurement center has white text color: {pixel}"
+        assert pixel == GATE_COLORS[9] or pixel == BG_COLOR, (
+            f"Measurement center unexpected color: {pixel}"
+        )
+
+
+class TestDetailControlDotCircle:
+    def test_detail_control_dot_circle(self):
+        """CNOT control dot at control qubit wire center is CTRL_COLOR."""
+        gate = make_gate(layer=1, target=2, gate_type=0, controls=[0])
+        dd = make_draw_data(3, 3, [gate])
+        img = render_detail(dd)
+
+        # Control dot center at qubit 0 wire center
+        cx = LABEL_MARGIN + 1 * DETAIL_CELL + DETAIL_CELL // 2
+        cy = 0 * DETAIL_CELL + DETAIL_CELL // 2
+        pixel = img.getpixel((cx, cy))
+        assert pixel == CTRL_COLOR, f"Control dot pixel is {pixel}, expected {CTRL_COLOR}"
+
+
+class TestDetailQubitLabels:
+    def test_detail_qubit_labels(self):
+        """Qubit labels render non-BG pixels in left margin for each qubit row."""
+        dd = make_draw_data(3, 3)
+        img = render_detail(dd)
+
+        for q in range(3):
+            # Check a strip in the label area for this qubit row
+            row_y_start = q * DETAIL_CELL
+            row_y_end = (q + 1) * DETAIL_CELL
+            found_label_pixel = False
+            for y in range(row_y_start, row_y_end):
+                for x in range(LABEL_MARGIN):
+                    if img.getpixel((x, y)) != BG_COLOR:
+                        found_label_pixel = True
+                        break
+                if found_label_pixel:
+                    break
+            assert found_label_pixel, f"No label pixels found for qubit {q}"
+
+
+class TestDetailWireTerminationAfterMeasurement:
+    def test_detail_wire_termination_after_measurement(self):
+        """Wire stops after measurement gate - pixel well past measurement is BG."""
+        gate = make_gate(layer=2, target=0, gate_type=9)
+        dd = make_draw_data(5, 1, [gate])
+        img = render_detail(dd)
+
+        # Wire y center for qubit 0
+        wire_y = DETAIL_CELL // 2
+        # Check pixel at layer 4 (well past measurement at layer 2)
+        wire_x = LABEL_MARGIN + 4 * DETAIL_CELL + DETAIL_CELL // 2
+        pixel = img.getpixel((wire_x, wire_y))
+        assert pixel == BG_COLOR, (
+            f"Wire pixel after measurement is {pixel}, expected BG_COLOR {BG_COLOR}"
+        )
+
+
+class TestDetailGateBorder:
+    def test_detail_gate_border(self):
+        """H gate box edge pixel is not BG_COLOR (border or fill present)."""
+        gate = make_gate(layer=0, target=0, gate_type=4)
+        dd = make_draw_data(1, 1, [gate])
+        img = render_detail(dd)
+
+        # Edge of gate box (gx+1, gy+1 is the top-left of the rectangle)
+        gx = LABEL_MARGIN + 1
+        gy = 1
+        pixel = img.getpixel((gx, gy))
+        assert pixel != BG_COLOR, f"Gate border/fill pixel at ({gx},{gy}) is BG_COLOR: {pixel}"
+
+
+class TestDetailEmptyCircuit:
+    def test_detail_empty_circuit(self):
+        """Empty circuit in detail mode returns 1x1 image."""
+        dd = make_draw_data(0, 0)
+        img = render_detail(dd)
+        assert img.size == (1, 1)
