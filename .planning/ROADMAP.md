@@ -55,9 +55,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 46-01: Layout engine, wire rendering, and single-qubit gate sprites
-- [ ] 46-02: Multi-qubit gate rendering (control lines, control dots, target symbols)
-- [ ] 46-03: Scale testing and performance validation at 200+ qubits
+- [ ] 46-01-PLAN.md -- draw.py renderer with layout engine, wires, single-qubit gate rendering, Pillow dep, and basic tests
+- [ ] 46-02-PLAN.md -- Multi-qubit control lines, control dots, rendering order, and multi-qubit gate tests
+- [ ] 46-03-PLAN.md -- Scale testing at 200+ qubits / 10K+ gates and real circuit integration test
 
 ### Phase 47: Detail Mode & Public API
 **Goal**: Users can visualize circuits at two zoom levels with automatic selection and a clean public API
