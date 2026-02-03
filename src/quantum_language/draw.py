@@ -32,7 +32,7 @@ AUTO_DETAIL_MAX_LAYERS = 200
 BG_COLOR = (20, 20, 30)
 WIRE_COLOR = (60, 60, 80)
 CTRL_COLOR = (255, 255, 100)  # Used in plan 02 for control lines
-CTRL_DOT_COLOR = (255, 255, 255)  # Bright white: visually distinct control dots
+CTRL_DOT_COLOR = (255, 60, 60)  # Red: high contrast against yellow control lines
 
 # Gate type -> RGB color mapping
 # 0=X, 1=Y, 2=Z, 3=R, 4=H, 5=Rx, 6=Ry, 7=Rz, 8=P, 9=M
