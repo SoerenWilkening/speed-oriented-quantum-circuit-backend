@@ -82,7 +82,15 @@ Write quantum algorithms in natural programming style that compiles to efficient
 
 ### Active
 
-**Deferred from v1.7/v1.8 (carry forward to next milestone):**
+**v1.9 — Pixel-Art Circuit Visualization:**
+- [ ] Pixel-art circuit renderer producing compact images of quantum circuits via PIL/Pillow
+- [ ] Small gate icons (2-3px) with distinct shapes per gate type (X, H, CNOT, phase, rotation, etc.)
+- [ ] Horizontal qubit wire lines with vertical control lines connecting control/target qubits
+- [ ] Two zoom levels: overview mode for large circuits (100+ qubits), detail mode for smaller circuits
+- [ ] Python API `ql.draw_circuit()` returning PIL Image with save-to-PNG support
+- [ ] Color legend mapping gate types to their visual representation
+
+**Deferred bugs (carry forward):**
 - Fix _reduce_mod result corruption (BUG-MOD-REDUCE) — needs fundamentally different circuit structure
 - Fix controlled multiplication corruption (BUG-COND-MUL-01) — not yet investigated
 - Fix MSB comparison leak in division (BUG-DIV-02) — 9 cases per div/mod test file
@@ -94,7 +102,7 @@ Write quantum algorithms in natural programming style that compiles to efficient
 - Hardware integration — OpenQASM export handles most cases
 - ML framework integration — requires stable API first, complex integration
 - Real-time debugging — complex infrastructure requirement
-- GUI interface — programmatic API sufficient
+- GUI interface — programmatic API sufficient (pixel-art visualization is image output, not interactive GUI)
 - Direct quantum state access — violates no-cloning theorem
 - Automatic qubit cloning — physically impossible
 
@@ -102,7 +110,7 @@ Write quantum algorithms in natural programming style that compiles to efficient
 
 **Architecture:** Three-layer stateless design — C backend (gate primitives, circuit management, integer operations) -> Cython bindings -> Python frontend (qint/qbool classes, operator overloading). All functions take explicit parameters; no global state.
 
-**Current state:** v1.8 shipped. Uncomputation regression fixed via layer tracking on all operations. CNOT-based quantum state copy implemented (qint.copy()/copy_onto()). All binary operations now use quantum copy instead of classical value reinitialization, preserving superposition and entanglement. qarray elements support in-place mutation via all 9 augmented assignment operators. 10 new qint operations and 9 new qarray operations added. 659 new tests with zero regressions. Exhaustive verification suite with 8,365+ tests covering every operation category through the full pipeline (Python -> C circuit -> OpenQASM 3.0 -> Qiskit simulate -> result check). Clean modular C backend with types.h, circuit.h, arithmetic_ops.h, comparison_ops.h, bitwise_ops.h, circuit_output.h. Centralized qubit allocator with ownership tracking. Variable-width quantum integers (1-64 bits) with complete arithmetic, comparison, and initialization operations. Automatic uncomputation with dependency tracking, mode control (lazy/eager), and user override methods. Proper package structure with ql.array supporting multi-dimensional arrays, reductions, element-wise operations, and in-place element mutation. Memory-safe Python-to-C bridge with Cython try-finally cleanup.
+**Current state:** v1.9 in progress — pixel-art circuit visualization. v1.8 shipped. Uncomputation regression fixed via layer tracking on all operations. CNOT-based quantum state copy implemented (qint.copy()/copy_onto()). All binary operations now use quantum copy instead of classical value reinitialization, preserving superposition and entanglement. qarray elements support in-place mutation via all 9 augmented assignment operators. 10 new qint operations and 9 new qarray operations added. 659 new tests with zero regressions. Exhaustive verification suite with 8,365+ tests covering every operation category through the full pipeline (Python -> C circuit -> OpenQASM 3.0 -> Qiskit simulate -> result check). Clean modular C backend with types.h, circuit.h, arithmetic_ops.h, comparison_ops.h, bitwise_ops.h, circuit_output.h. Centralized qubit allocator with ownership tracking. Variable-width quantum integers (1-64 bits) with complete arithmetic, comparison, and initialization operations. Automatic uncomputation with dependency tracking, mode control (lazy/eager), and user override methods. Proper package structure with ql.array supporting multi-dimensional arrays, reductions, element-wise operations, and in-place element mutation. Memory-safe Python-to-C bridge with Cython try-finally cleanup.
 
 **Codebase:**
 - ~219,921 lines of code (Python, Cython, C)
@@ -181,4 +189,8 @@ Write quantum algorithms in natural programming style that compiles to efficient
 | qarray __setitem__ enables element mutation | Replaces TypeError with working assignment | ✓ Good — all 9 augmented operators work |
 
 ---
-*Last updated: 2026-02-03 after v1.8 milestone*
+| Pure Python (PIL) renderer first | Simpler to build, optimize to C only if needed | — Pending |
+| Pixel-art over ASCII for large circuits | ASCII unusable beyond ~20 qubits; pixel art scales to 200+ | — Pending |
+
+---
+*Last updated: 2026-02-03 after v1.9 milestone start*
