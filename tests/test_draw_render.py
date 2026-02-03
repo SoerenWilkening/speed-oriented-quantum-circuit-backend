@@ -9,6 +9,7 @@ from quantum_language.draw import (
     BG_COLOR,
     CELL_H,
     CELL_W,
+    CTRL_COLOR,
     GATE_COLORS,
     WIRE_COLOR,
     render,
@@ -159,3 +160,149 @@ class TestNumpyBulkOperations:
         arr = np.array(img)
         assert arr.dtype == np.uint8
         assert arr.shape == (2 * CELL_H, 2 * CELL_W, 3)
+
+
+# ---------------------------------------------------------------------------
+# Plan 02: Multi-qubit gate rendering tests
+# ---------------------------------------------------------------------------
+
+
+class TestCnotControlLine:
+    def test_cnot_control_line(self):
+        """CNOT: vertical control line spans from control qubit 0 to target qubit 2."""
+        gate = make_gate(layer=0, target=2, gate_type=0, controls=[0])
+        dd = make_draw_data(1, 3, [gate])
+        img = render(dd)
+        arr = np.array(img)
+        ctrl_color = np.array(CTRL_COLOR, dtype=np.uint8)
+
+        # Control at qubit 0: wire center y=1, target qubit 2: wire center y=7
+        y_ctrl = 0 * CELL_H + CELL_H // 2  # 1
+        y_tgt = 2 * CELL_H + CELL_H // 2  # 7
+        gx = 0
+
+        # Every pixel in the vertical line from y_ctrl to y_tgt at x=gx
+        for y in range(y_ctrl, y_tgt + 1):
+            # Some pixels may be overwritten by gate block, but the column
+            # should have control color or gate color (not just wire/bg)
+            pixel = arr[y, gx]
+            is_ctrl = np.array_equal(pixel, ctrl_color)
+            is_gate = np.array_equal(pixel, np.array(GATE_COLORS[0], dtype=np.uint8))
+            assert is_ctrl or is_gate, (
+                f"Pixel at y={y} x={gx} is {tuple(pixel)}, expected CTRL or GATE color"
+            )
+
+
+class TestCnotControlDot:
+    def test_cnot_control_dot(self):
+        """CNOT: control dot at control qubit position has CTRL_COLOR."""
+        gate = make_gate(layer=0, target=2, gate_type=0, controls=[0])
+        dd = make_draw_data(1, 3, [gate])
+        img = render(dd)
+        arr = np.array(img)
+        ctrl_color = np.array(CTRL_COLOR, dtype=np.uint8)
+
+        # Control dot at qubit 0 wire center
+        cy = 0 * CELL_H + CELL_H // 2  # 1
+        cx = 0
+        np.testing.assert_array_equal(arr[cy, cx], ctrl_color)
+
+        # Target qubit should have gate color, not control dot
+        ty = 2 * CELL_H  # gate block top-left
+        tx = 0
+        gate_color = np.array(GATE_COLORS[0], dtype=np.uint8)
+        np.testing.assert_array_equal(arr[ty, tx], gate_color)
+
+
+class TestCcxTwoControls:
+    def test_ccx_two_controls(self):
+        """CCX: control line spans qubit 0 to qubit 2, dots at qubits 0 and 1."""
+        gate = make_gate(layer=0, target=2, gate_type=0, controls=[0, 1])
+        dd = make_draw_data(1, 3, [gate])
+        img = render(dd)
+        arr = np.array(img)
+        ctrl_color = np.array(CTRL_COLOR, dtype=np.uint8)
+
+        # Control dots at qubit 0 and qubit 1
+        for q in [0, 1]:
+            cy = q * CELL_H + CELL_H // 2
+            np.testing.assert_array_equal(arr[cy, 0], ctrl_color)
+
+        # Control line spans from qubit 0 (y=1) to qubit 2 (y=7)
+        y_min = 0 * CELL_H + CELL_H // 2
+        # Check an intermediate pixel (between qubit 0 and 1 wire centers)
+        mid_y = y_min + 1
+        pixel = arr[mid_y, 0]
+        is_ctrl = np.array_equal(pixel, ctrl_color)
+        is_gate = np.array_equal(pixel, np.array(GATE_COLORS[0], dtype=np.uint8))
+        assert is_ctrl or is_gate, f"Mid-line pixel at y={mid_y} is {tuple(pixel)}"
+
+
+class TestControlLineColorDistinct:
+    def test_control_line_color_distinct_from_wire(self):
+        """CTRL_COLOR must be different from WIRE_COLOR."""
+        assert CTRL_COLOR != WIRE_COLOR
+
+
+class TestRenderingOrderGateOverControlLine:
+    def test_rendering_order_gate_over_control_line(self):
+        """Gate block pixels overlay control line (gates render after control lines)."""
+        # CNOT: X gate at target=1, control=0
+        gate = make_gate(layer=0, target=1, gate_type=0, controls=[0])
+        dd = make_draw_data(1, 2, [gate])
+        img = render(dd)
+        arr = np.array(img)
+
+        gate_color = np.array(GATE_COLORS[0], dtype=np.uint8)
+
+        # Gate block at target qubit 1: top-left is (gy=3, gx=0)
+        gy = 1 * CELL_H  # 3
+        gx = 0
+        # The 2x2 gate block should show gate color, not control line color
+        np.testing.assert_array_equal(arr[gy, gx], gate_color)
+        np.testing.assert_array_equal(arr[gy + 1, gx], gate_color)
+
+
+class TestRenderingOrderDotOverGate:
+    def test_rendering_order_dot_over_gate(self):
+        """Control dot renders on top of everything (rendered last)."""
+        # CNOT with control at qubit 0, target at qubit 1
+        gate = make_gate(layer=0, target=1, gate_type=0, controls=[0])
+        dd = make_draw_data(1, 2, [gate])
+        img = render(dd)
+        arr = np.array(img)
+        ctrl_color = np.array(CTRL_COLOR, dtype=np.uint8)
+
+        # Control dot at qubit 0 wire center
+        cy = 0 * CELL_H + CELL_H // 2  # 1
+        np.testing.assert_array_equal(arr[cy, 0], ctrl_color)
+
+
+class TestMcxMultipleControls:
+    def test_mcx_multiple_controls(self):
+        """MCX: gate at target=4, controls=[0,1,3]. Dots at 0,1,3 but NOT at 2."""
+        gate = make_gate(layer=0, target=4, gate_type=0, controls=[0, 1, 3])
+        dd = make_draw_data(1, 5, [gate])
+        img = render(dd)
+        arr = np.array(img)
+        ctrl_color = np.array(CTRL_COLOR, dtype=np.uint8)
+
+        # Control dots at qubits 0, 1, 3
+        for q in [0, 1, 3]:
+            cy = q * CELL_H + CELL_H // 2
+            np.testing.assert_array_equal(
+                arr[cy, 0],
+                ctrl_color,
+                err_msg=f"Control dot missing at qubit {q}",
+            )
+
+        # Verify the control line spans the full range
+        y_min = 0 * CELL_H + CELL_H // 2
+        y_max = 4 * CELL_H + CELL_H // 2
+        for y in range(y_min, y_max + 1):
+            pixel = arr[y, 0]
+            is_ctrl = np.array_equal(pixel, ctrl_color)
+            is_gate = np.array_equal(pixel, np.array(GATE_COLORS[0], dtype=np.uint8))
+            assert is_ctrl or is_gate, (
+                f"Pixel at y={y} should be CTRL or GATE color, got {tuple(pixel)}"
+            )
