@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-03)
 Phase: 47 of 47 (all milestones through v1.9 complete)
 Plan: N/A
 Status: Milestone v1.9 shipped
-Last activity: 2026-02-03 -- v1.9 milestone archived
+Last activity: 2026-02-03 -- Completed quick task 010: Split qarray helpers into module
 
 Progress: [████████████████████████████████████████] 100% (all v1.9 plans complete)
 
@@ -55,6 +55,12 @@ See PROJECT.md Key Decisions table for full history.
 **Known limitations (not bugs):**
 - Dirty ancilla in gt/le comparisons (by design)
 - 4 pre-existing uncomputation test failures (architectural: layer counter vs instruction counter)
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 010 | Split qint.pyx and qarray.pyx into smaller modules | 2026-02-03 | 4364090 | [010-split-qint-qarray-into-modules](./quick/010-split-qint-qarray-into-modules/) |
 
 ## Session Continuity
 
