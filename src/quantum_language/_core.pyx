@@ -410,6 +410,56 @@ cdef class circuit:
 			'other': counts.other_gates
 		}
 
+	def draw_data(self):
+		"""Extract circuit gate data as Python dict for rendering.
+
+		Returns a structured dict suitable for pixel-art circuit visualization.
+		Qubit indices are compacted from sparse allocation to dense sequential rows.
+
+		Returns
+		-------
+		dict
+			- num_layers (int): Number of circuit layers
+			- num_qubits (int): Number of active qubits (dense, after compaction)
+			- gates (list[dict]): Per-gate data with keys: layer, target, type, angle, controls
+			- qubit_map (list[int]): Maps dense row index -> original sparse qubit index
+
+		Examples
+		--------
+		>>> c = circuit()
+		>>> a = qint(5, width=4)
+		>>> data = c.draw_data()
+		>>> data['num_qubits']
+		4
+		"""
+		cdef draw_data_t *data = circuit_to_draw_data(<circuit_t*>_circuit)
+		if data == NULL:
+			raise RuntimeError("Failed to extract draw data")
+		try:
+			gates = []
+			for i in range(data.num_gates):
+				controls = []
+				for j in range(data.gate_num_ctrl[i]):
+					controls.append(int(data.ctrl_qubits[data.ctrl_offsets[i] + j]))
+				gates.append({
+					'layer': int(data.gate_layer[i]),
+					'target': int(data.gate_target[i]),
+					'type': int(data.gate_type[i]),
+					'angle': float(data.gate_angle[i]),
+					'controls': controls,
+				})
+			qmap = []
+			for i in range(data.num_qubits):
+				qmap.append(int(data.qubit_map[i]))
+			return {
+				'num_layers': int(data.num_layers),
+				'num_qubits': int(data.num_qubits),
+				'gates': gates,
+				'qubit_map': qmap,
+			}
+		finally:
+			free_draw_data(data)
+
 	@property
 	def available_passes(self):
 		"""List of available optimization passes.

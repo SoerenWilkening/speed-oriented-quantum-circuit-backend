@@ -73,7 +73,23 @@ cdef extern from "QPU.h":
 	void free_circuit(circuit_t *circ);
 
 cdef extern from "circuit_output.h":
-	void circuit_visualize(circuit_t *circ);
+	void circuit_visualize(circuit_t *circ)
+
+	ctypedef struct draw_data_t:
+		unsigned int num_layers
+		unsigned int num_qubits
+		unsigned int num_gates
+		unsigned int *gate_layer
+		unsigned int *gate_target
+		unsigned int *gate_type
+		double *gate_angle
+		unsigned int *gate_num_ctrl
+		unsigned int *ctrl_qubits
+		unsigned int *ctrl_offsets
+		unsigned int *qubit_map
+
+	draw_data_t *circuit_to_draw_data(circuit_t *circ)
+	void free_draw_data(draw_data_t *data);
 
 cdef extern from "execution.h":
 	void qubit_mapping(unsigned int qubit_arrray[], circuit_t *circ);
