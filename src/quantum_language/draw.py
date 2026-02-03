@@ -81,8 +81,16 @@ def render(draw_data, cell_size=3):
         wire_y = q * cell_h + cell_h // 2
         canvas[wire_y, :] = WIRE_COLOR
 
-    # --- Draw control lines (plan 02) ---
-    # Placeholder for multi-qubit control line rendering
+    # --- Draw control lines ---
+    for gate in draw_data.get("gates", []):
+        controls = gate.get("controls", [])
+        if not controls:
+            continue
+        gx = gate["layer"] * cell_w
+        all_qubits = [gate["target"]] + list(controls)
+        y_min = min(all_qubits) * cell_h + cell_h // 2
+        y_max = max(all_qubits) * cell_h + cell_h // 2
+        canvas[y_min : y_max + 1, gx] = CTRL_COLOR
 
     # --- Draw gate blocks ---
     for gate in draw_data.get("gates", []):
@@ -100,7 +108,14 @@ def render(draw_data, cell_size=3):
             # Standard gate: solid 2x2 block
             canvas[gy : gy + 2, gx : gx + 2] = color
 
-    # --- Draw control dots (plan 02) ---
-    # Placeholder for control dot rendering
+    # --- Draw control dots (rendered last so always visible) ---
+    for gate in draw_data.get("gates", []):
+        controls = gate.get("controls", [])
+        if not controls:
+            continue
+        gx = gate["layer"] * cell_w
+        for ctrl in controls:
+            cy = ctrl * cell_h + cell_h // 2
+            canvas[cy, gx] = CTRL_COLOR
 
     return Image.fromarray(canvas, "RGB")
