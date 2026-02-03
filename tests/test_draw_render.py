@@ -6,9 +6,11 @@ Uses synthetic draw_data dicts to avoid Cython build dependency.
 import os
 import random
 import time
+from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
+from PIL import Image
 
 from quantum_language.draw import (
     BG_COLOR,
@@ -19,6 +21,7 @@ from quantum_language.draw import (
     GATE_COLORS,
     LABEL_MARGIN,
     WIRE_COLOR,
+    draw_circuit,
     render,
     render_detail,
 )
@@ -564,3 +567,112 @@ class TestDetailEmptyCircuit:
         dd = make_draw_data(0, 0)
         img = render_detail(dd)
         assert img.size == (1, 1)
+
+
+# ---------------------------------------------------------------------------
+# Plan 47-02: Auto-zoom and public API tests
+# ---------------------------------------------------------------------------
+
+
+def _mock_circuit(num_layers, num_qubits, gates=None):
+    """Create a mock circuit object with draw_data() method."""
+    mock = MagicMock()
+    mock.draw_data.return_value = make_draw_data(num_layers, num_qubits, gates)
+    return mock
+
+
+class TestAutoZoomSelectsDetail:
+    def test_auto_zoom_selects_detail(self):
+        """Small circuit (10 qubits, 50 layers) auto-selects detail mode."""
+        circuit = _mock_circuit(50, 10)
+        img = draw_circuit(circuit)
+        expected_w = LABEL_MARGIN + 50 * DETAIL_CELL
+        expected_h = 10 * DETAIL_CELL
+        assert img.size == (expected_w, expected_h)
+
+
+class TestAutoZoomSelectsOverview:
+    def test_auto_zoom_selects_overview(self):
+        """Large circuit (50 qubits, 500 layers) auto-selects overview mode."""
+        circuit = _mock_circuit(500, 50)
+        img = draw_circuit(circuit)
+        expected_w = 500 * CELL_W
+        expected_h = 50 * CELL_H
+        assert img.size == (expected_w, expected_h)
+
+
+class TestAutoZoomBoundary:
+    def test_one_threshold_exceeded_qubits_only(self):
+        """31 qubits but 100 layers -> detail (only one threshold exceeded)."""
+        circuit = _mock_circuit(100, 31)
+        img = draw_circuit(circuit)
+        expected_w = LABEL_MARGIN + 100 * DETAIL_CELL
+        expected_h = 31 * DETAIL_CELL
+        assert img.size == (expected_w, expected_h)
+
+    def test_one_threshold_exceeded_layers_only(self):
+        """20 qubits but 300 layers -> detail (only one threshold exceeded)."""
+        circuit = _mock_circuit(300, 20)
+        img = draw_circuit(circuit)
+        expected_w = LABEL_MARGIN + 300 * DETAIL_CELL
+        expected_h = 20 * DETAIL_CELL
+        assert img.size == (expected_w, expected_h)
+
+    def test_both_thresholds_exceeded(self):
+        """31 qubits AND 201 layers -> overview (both exceeded)."""
+        circuit = _mock_circuit(201, 31)
+        img = draw_circuit(circuit)
+        expected_w = 201 * CELL_W
+        expected_h = 31 * CELL_H
+        assert img.size == (expected_w, expected_h)
+
+
+class TestModeOverrideOverview:
+    def test_mode_override_overview(self):
+        """Small circuit with mode='overview' uses overview mode."""
+        circuit = _mock_circuit(50, 10)
+        img = draw_circuit(circuit, mode="overview")
+        expected_w = 50 * CELL_W
+        expected_h = 10 * CELL_H
+        assert img.size == (expected_w, expected_h)
+
+
+class TestModeOverrideDetail:
+    def test_mode_override_detail_large(self):
+        """Large circuit with mode='detail' uses detail mode (with warning)."""
+        circuit = _mock_circuit(500, 50)
+        img = draw_circuit(circuit, mode="detail")
+        expected_w = LABEL_MARGIN + 500 * DETAIL_CELL
+        expected_h = 50 * DETAIL_CELL
+        assert img.size == (expected_w, expected_h)
+
+
+class TestModeInvalidRaisesError:
+    def test_mode_invalid_raises_error(self):
+        """Invalid mode raises ValueError."""
+        circuit = _mock_circuit(10, 5)
+        with pytest.raises(ValueError, match="mode must be 'overview' or 'detail'"):
+            draw_circuit(circuit, mode="invalid")
+
+
+class TestSaveParameter:
+    def test_save_parameter(self):
+        """save parameter writes image to disk."""
+        tmp_path = "/tmp/test_draw_api.png"
+        try:
+            circuit = _mock_circuit(10, 5)
+            img = draw_circuit(circuit, save=tmp_path)
+            assert img is not None
+            assert os.path.exists(tmp_path)
+            assert os.path.getsize(tmp_path) > 0
+        finally:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+
+
+class TestDrawCircuitReturnsPilImage:
+    def test_draw_circuit_returns_pil_image(self):
+        """draw_circuit() returns a PIL Image instance."""
+        circuit = _mock_circuit(10, 5)
+        img = draw_circuit(circuit)
+        assert isinstance(img, Image.Image)

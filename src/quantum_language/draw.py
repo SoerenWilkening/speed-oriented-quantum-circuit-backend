@@ -335,8 +335,8 @@ def draw_circuit(circuit, *, mode=None, save=None):
                 f"Rendering may be slow."
             )
     else:
-        # Auto-zoom: detail when circuit is small enough on BOTH axes
-        use_detail = num_qubits <= AUTO_DETAIL_MAX_QUBITS and num_layers <= AUTO_DETAIL_MAX_LAYERS
+        # Auto-zoom: overview only when BOTH thresholds exceeded
+        use_detail = num_qubits <= AUTO_DETAIL_MAX_QUBITS or num_layers <= AUTO_DETAIL_MAX_LAYERS
         if use_detail:
             print(f"Auto-selected detail mode ({num_qubits} qubits, {num_layers} layers)")
         else:
