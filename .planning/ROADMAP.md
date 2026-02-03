@@ -3,7 +3,7 @@
 ## Milestones
 
 - v1.0 through v1.7: See milestone archives
-- **v1.8 Quantum Copy, Array Mutability & Uncomputation Fix** - Phases 41-44 (in progress)
+- **v1.8 Quantum Copy, Array Mutability & Uncomputation Fix** - Phases 41-44 (complete)
 
 ## Phases
 
@@ -18,7 +18,7 @@
 - [x] **Phase 41: Uncomputation Fix** - Investigate and fix the uncomputation regression
 - [x] **Phase 42: Quantum Copy Foundation** - CNOT-based quantum state copy for qint
 - [x] **Phase 43: Copy-Aware Binary Operations** - Binary ops use quantum copy instead of classical initialization
-- [ ] **Phase 44: Array Mutability** - In-place augmented assignment for qarray elements
+- [x] **Phase 44: Array Mutability** - In-place augmented assignment for qarray elements
 
 ## Phase Details
 
@@ -79,8 +79,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 44-01-PLAN.md — Add missing qint in-place ops + qarray __setitem__ + qarray in-place wrappers
-- [ ] 44-02-PLAN.md — Comprehensive mutability tests (all operators, multi-dim, operand types)
+- [x] 44-01-PLAN.md — Add missing qint in-place ops + qarray __setitem__ + qarray in-place wrappers
+- [x] 44-02-PLAN.md — Comprehensive mutability tests (all operators, multi-dim, operand types)
 
 ## Progress
 
@@ -92,7 +92,7 @@ Phases execute in numeric order: 41 -> 42 -> 43 -> 44
 | 41. Uncomputation Fix | 2/2 | ✓ Complete | 2026-02-02 |
 | 42. Quantum Copy Foundation | 1/1 | ✓ Complete | 2026-02-02 |
 | 43. Copy-Aware Binary Ops | 2/2 | ✓ Complete | 2026-02-02 |
-| 44. Array Mutability | 0/2 | Not started | - |
+| 44. Array Mutability | 2/2 | ✓ Complete | 2026-02-03 |
 
 ---
 *Roadmap created: 2026-02-02*

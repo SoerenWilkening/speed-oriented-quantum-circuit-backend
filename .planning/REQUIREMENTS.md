@@ -15,9 +15,9 @@ Requirements for v1.8 release. Each maps to roadmap phases.
 
 ### Array Mutability
 
-- [ ] **AMUT-01**: `qarray[i] += x` modifies the element's existing qubits in-place (where `x` is int, qint, or qbool)
-- [ ] **AMUT-02**: `qarray[i] -= x`, `qarray[i] *= x`, and other augmented assignments work in-place
-- [ ] **AMUT-03**: Multi-dimensional indexing works for in-place ops (`qarray[i, j] += x`)
+- [x] **AMUT-01**: `qarray[i] += x` modifies the element's existing qubits in-place (where `x` is int, qint, or qbool)
+- [x] **AMUT-02**: `qarray[i] -= x`, `qarray[i] *= x`, and other augmented assignments work in-place
+- [x] **AMUT-03**: Multi-dimensional indexing works for in-place ops (`qarray[i, j] += x`)
 
 ### Uncomputation Fix
 
@@ -48,9 +48,9 @@ Requirements for v1.8 release. Each maps to roadmap phases.
 | COPY-01 | Phase 42 | Complete |
 | COPY-02 | Phase 43 | Complete |
 | COPY-03 | Phase 43 | Complete |
-| AMUT-01 | Phase 44 | Pending |
-| AMUT-02 | Phase 44 | Pending |
-| AMUT-03 | Phase 44 | Pending |
+| AMUT-01 | Phase 44 | Complete |
+| AMUT-02 | Phase 44 | Complete |
+| AMUT-03 | Phase 44 | Complete |
 
 **Coverage:**
 - v1.8 requirements: 8 total
@@ -59,4 +59,4 @@ Requirements for v1.8 release. Each maps to roadmap phases.
 
 ---
 *Requirements defined: 2026-02-02*
-*Last updated: 2026-02-02 after roadmap creation*
+*Last updated: 2026-02-03 after Phase 44 completion*
