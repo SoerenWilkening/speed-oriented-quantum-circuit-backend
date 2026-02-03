@@ -9,17 +9,17 @@ See: .planning/PROJECT.md (updated 2026-02-03)
 
 ## Current Position
 
-Phase: 46 of 47 (Core Renderer)
-Plan: 2 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-03 -- Completed 46-02-PLAN.md (Multi-Qubit Gate Rendering)
+Phase: 47 of 47 (Detail Mode & Public API)
+Plan: 0 of 2 in current phase
+Status: Phase 46 complete, Phase 47 not started
+Last activity: 2026-02-03 -- Completed 46-03-PLAN.md (Scale Testing & Integration)
 
-Progress: [█████████████████████░░░░░░░░░░░░░░░░░░░] 57% (4/7 plans)
+Progress: [██████████████████████████████████░░░░░░░] 71% (5/7 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 139 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 4)
+- Total plans completed: 140 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 5)
 - Average duration: ~13 min/plan
 - Total execution time: ~23.4 hours
 
@@ -54,6 +54,7 @@ Recent decisions for v1.9:
 - 3x3 pixel cells (2px gate + 1px gap) for clean pixel art
 - Wires drawn before gates; measurement checkerboard may overlap wire pixels
 - Rendering order: wires -> control lines -> gate blocks -> control dots (VIZ-CTRL-ORDER)
+- Synthetic draw_data dicts for scale tests to avoid Cython build dependency (VIZ-SCALE-SYNTH)
 
 ### Blockers/Concerns
 
@@ -70,9 +71,9 @@ Recent decisions for v1.9:
 ## Session Continuity
 
 Last session: 2026-02-03
-Stopped at: Completed 46-02-PLAN.md (Multi-Qubit Gate Rendering)
+Stopped at: Completed 46-03-PLAN.md (Scale Testing & Integration) -- Phase 46 complete
 Resume file: None
-Resume action: Execute 46-03-PLAN.md
+Resume action: Execute Phase 47 plans
 
 ---
-*State updated: 2026-02-03 -- Completed 46-02 Multi-Qubit Gate Rendering*
+*State updated: 2026-02-03 -- Completed 46-03 Scale Testing & Integration (Phase 46 complete)*

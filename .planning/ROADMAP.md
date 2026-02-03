@@ -23,7 +23,7 @@
 **Milestone Goal:** Add compact pixel-art circuit visualization that scales to 200+ qubits where existing tools fail.
 
 - [x] **Phase 45: Data Extraction Bridge** - Cython binding exposing per-gate circuit data to Python -- completed 2026-02-03
-- [ ] **Phase 46: Core Renderer** - NumPy-based pixel-art rendering of complete circuits at overview scale
+- [x] **Phase 46: Core Renderer** - NumPy-based pixel-art rendering of complete circuits at overview scale -- completed 2026-02-03
 - [ ] **Phase 47: Detail Mode & Public API** - Detail zoom, auto-selection, and ql.draw_circuit() API
 
 ## Phase Details
@@ -55,9 +55,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 46-01-PLAN.md -- draw.py renderer with layout engine, wires, single-qubit gate rendering, Pillow dep, and basic tests
-- [ ] 46-02-PLAN.md -- Multi-qubit control lines, control dots, rendering order, and multi-qubit gate tests
-- [ ] 46-03-PLAN.md -- Scale testing at 200+ qubits / 10K+ gates and real circuit integration test
+- [x] 46-01-PLAN.md -- draw.py renderer with layout engine, wires, single-qubit gate rendering, Pillow dep, and basic tests
+- [x] 46-02-PLAN.md -- Multi-qubit control lines, control dots, rendering order, and multi-qubit gate tests
+- [x] 46-03-PLAN.md -- Scale testing at 200+ qubits / 10K+ gates and real circuit integration test
 
 ### Phase 47: Detail Mode & Public API
 **Goal**: Users can visualize circuits at two zoom levels with automatic selection and a clean public API
@@ -86,7 +86,7 @@ Plans:
 | 43. Copy-Aware Binary Ops | v1.8 | 2/2 | Complete | 2026-02-02 |
 | 44. Array Mutability | v1.8 | 2/2 | Complete | 2026-02-03 |
 | 45. Data Extraction Bridge | v1.9 | 2/2 | Complete | 2026-02-03 |
-| 46. Core Renderer | v1.9 | 0/3 | Not started | - |
+| 46. Core Renderer | v1.9 | 3/3 | Complete | 2026-02-03 |
 | 47. Detail Mode & Public API | v1.9 | 0/2 | Not started | - |
 
 ---
