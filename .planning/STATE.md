@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-03)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** Phase 47 complete - Detail Mode & Public API (v1.9 complete)
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 47 of 47 (Detail Mode & Public API)
-Plan: 2 of 2 in current phase
-Status: Phase complete
-Last activity: 2026-02-03 -- Completed 47-02-PLAN.md (Public API)
+Phase: 47 of 47 (all milestones through v1.9 complete)
+Plan: N/A
+Status: Milestone v1.9 shipped
+Last activity: 2026-02-03 -- v1.9 milestone archived
 
-Progress: [████████████████████████████████████████] 100% (7/7 plans)
+Progress: [████████████████████████████████████████] 100% (all v1.9 plans complete)
 
 ## Performance Metrics
 
@@ -44,25 +44,9 @@ Progress: [███████████████████████
 
 See PROJECT.md Key Decisions table for full history.
 
-Recent decisions for v1.9:
-- Pure Python (PIL) renderer first; optimize to C only if needed
-- Pixel-art over ASCII for large circuits (scales to 200+ qubits)
-- NumPy array-based bulk rendering (not per-pixel ImageDraw)
-- Cython data extraction follows circuit_to_qasm_string() pattern
-- draw_data_t uses calloc + two-pass control counting for safe allocation
-- Qubit compaction via used_occupation_indices_per_qubit detection
-- 3x3 pixel cells (2px gate + 1px gap) for clean pixel art
-- Wires drawn before gates; measurement checkerboard may overlap wire pixels
-- Rendering order: wires -> control lines -> gate blocks -> control dots (VIZ-CTRL-ORDER)
-- Synthetic draw_data dicts for scale tests to avoid Cython build dependency (VIZ-SCALE-SYNTH)
-- 12px cell size with size-8 default font for detail mode gate labels (VIZ-DETAIL-CELL)
-- 40px left margin for qubit labels in detail mode (VIZ-DETAIL-MARGIN)
-- Measurement uses 2x2-block checkerboard at detail scale, not M text (VIZ-MEAS-CHECKER-DETAIL)
-- Overview only when BOTH qubits > 30 AND layers > 200 exceeded; detail otherwise (VIZ-AUTOZOOM-BOTH)
-
 ### Blockers/Concerns
 
-**Carry forward (not in v1.9 scope):**
+**Carry forward (not addressed in v1.9):**
 - BUG-DIV-02: MSB comparison leak in division
 - BUG-MOD-REDUCE: _reduce_mod result corruption (needs different circuit structure)
 - BUG-COND-MUL-01: Controlled multiplication corruption (not yet investigated)
@@ -75,9 +59,9 @@ Recent decisions for v1.9:
 ## Session Continuity
 
 Last session: 2026-02-03
-Stopped at: Completed 47-02-PLAN.md (Public API) - v1.9 milestone complete
+Stopped at: v1.9 milestone archived
 Resume file: None
-Resume action: All planned phases complete
+Resume action: Start next milestone with `/gsd:new-milestone`
 
 ---
-*State updated: 2026-02-03 -- Completed 47-02 Public API, v1.9 milestone complete*
+*State updated: 2026-02-03 -- v1.9 milestone archived*

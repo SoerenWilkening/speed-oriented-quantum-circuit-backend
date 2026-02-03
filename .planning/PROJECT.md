@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A quantum programming framework that enables writing quantum algorithms using standard programming constructs — operator overloading on variable-width quantum integers (qint, 1-64 bits) and quantum booleans (qbool), with Python's `with` statement implementing quantum conditionals. Operations compile to optimized quantum circuits via a C backend with Cython bindings. Includes circuit optimization, visualization, statistics, OpenQASM 3.0 export, and Qiskit-based verification.
+A quantum programming framework that enables writing quantum algorithms using standard programming constructs — operator overloading on variable-width quantum integers (qint, 1-64 bits) and quantum booleans (qbool), with Python's `with` statement implementing quantum conditionals. Operations compile to optimized quantum circuits via a C backend with Cython bindings. Includes circuit optimization, pixel-art circuit visualization scaling to 200+ qubits, statistics, OpenQASM 3.0 export, and Qiskit-based verification.
 
 ## Core Value
 
@@ -80,15 +80,13 @@ Write quantum algorithms in natural programming style that compiles to efficient
 - ✓ New qint operations: neg, rsub, lshift, rshift, ilshift, irshift, ifloordiv — v1.8
 - ✓ New qarray operations: floordiv, mod, invert, neg, lshift, rshift, ilshift, irshift, ifloordiv — v1.8
 
-### Active
+- ✓ Pixel-art circuit renderer with NumPy bulk rendering and 10 color-coded gate types — v1.9
+- ✓ Multi-qubit gate visualization with control lines and control dots — v1.9
+- ✓ Two zoom levels: overview (3px cells, 200+ qubits) and detail (12px cells, text labels) — v1.9
+- ✓ Auto-zoom selection based on circuit size with user override — v1.9
+- ✓ `ql.draw_circuit()` Python API returning PIL Image with save-to-PNG and lazy Pillow import — v1.9
 
-**v1.9 — Pixel-Art Circuit Visualization:**
-- [ ] Pixel-art circuit renderer producing compact images of quantum circuits via PIL/Pillow
-- [ ] Small gate icons (2-3px) with distinct shapes per gate type (X, H, CNOT, phase, rotation, etc.)
-- [ ] Horizontal qubit wire lines with vertical control lines connecting control/target qubits
-- [ ] Two zoom levels: overview mode for large circuits (100+ qubits), detail mode for smaller circuits
-- [ ] Python API `ql.draw_circuit()` returning PIL Image with save-to-PNG support
-- [ ] Color legend mapping gate types to their visual representation
+### Active
 
 **Deferred bugs (carry forward):**
 - Fix _reduce_mod result corruption (BUG-MOD-REDUCE) — needs fundamentally different circuit structure
@@ -110,10 +108,10 @@ Write quantum algorithms in natural programming style that compiles to efficient
 
 **Architecture:** Three-layer stateless design — C backend (gate primitives, circuit management, integer operations) -> Cython bindings -> Python frontend (qint/qbool classes, operator overloading). All functions take explicit parameters; no global state.
 
-**Current state:** v1.9 in progress — pixel-art circuit visualization. v1.8 shipped. Uncomputation regression fixed via layer tracking on all operations. CNOT-based quantum state copy implemented (qint.copy()/copy_onto()). All binary operations now use quantum copy instead of classical value reinitialization, preserving superposition and entanglement. qarray elements support in-place mutation via all 9 augmented assignment operators. 10 new qint operations and 9 new qarray operations added. 659 new tests with zero regressions. Exhaustive verification suite with 8,365+ tests covering every operation category through the full pipeline (Python -> C circuit -> OpenQASM 3.0 -> Qiskit simulate -> result check). Clean modular C backend with types.h, circuit.h, arithmetic_ops.h, comparison_ops.h, bitwise_ops.h, circuit_output.h. Centralized qubit allocator with ownership tracking. Variable-width quantum integers (1-64 bits) with complete arithmetic, comparison, and initialization operations. Automatic uncomputation with dependency tracking, mode control (lazy/eager), and user override methods. Proper package structure with ql.array supporting multi-dimensional arrays, reductions, element-wise operations, and in-place element mutation. Memory-safe Python-to-C bridge with Cython try-finally cleanup.
+**Current state:** v1.9 shipped — pixel-art circuit visualization complete. C-level data extraction with qubit compaction, NumPy pixel-art renderer with 10 gate colors, multi-qubit control lines/dots, two zoom levels (overview 3px + detail 12px with text labels), auto-zoom selection, and `ql.draw_circuit()` public API with lazy Pillow import. 47 visualization tests. Exhaustive verification suite with 8,365+ tests covering every operation category through the full pipeline (Python -> C circuit -> OpenQASM 3.0 -> Qiskit simulate -> result check). Clean modular C backend with types.h, circuit.h, arithmetic_ops.h, comparison_ops.h, bitwise_ops.h, circuit_output.h. Centralized qubit allocator with ownership tracking. Variable-width quantum integers (1-64 bits) with complete arithmetic, comparison, and initialization operations. Automatic uncomputation with dependency tracking, mode control (lazy/eager), and user override methods. Proper package structure with ql.array supporting multi-dimensional arrays, reductions, element-wise operations, and in-place element mutation. CNOT-based quantum copy for binary operations. Memory-safe Python-to-C bridge with Cython try-finally cleanup.
 
 **Codebase:**
-- ~219,921 lines of code (Python, Cython, C)
+- ~221,387 lines of code (Python, Cython, C)
 - Version 0.1.0
 - Tech stack: Python 3.11+, Cython, C backend, Qiskit (optional verification)
 
@@ -189,8 +187,12 @@ Write quantum algorithms in natural programming style that compiles to efficient
 | qarray __setitem__ enables element mutation | Replaces TypeError with working assignment | ✓ Good — all 9 augmented operators work |
 
 ---
-| Pure Python (PIL) renderer first | Simpler to build, optimize to C only if needed | — Pending |
-| Pixel-art over ASCII for large circuits | ASCII unusable beyond ~20 qubits; pixel art scales to 200+ | — Pending |
+| Pure Python (PIL) renderer first | Simpler to build, optimize to C only if needed | ✓ Good — renders 200+ qubits in <5s |
+| Pixel-art over ASCII for large circuits | ASCII unusable beyond ~20 qubits; pixel art scales to 200+ | ✓ Good — 200 qubits / 10K gates verified |
+| NumPy bulk rendering over per-pixel ImageDraw | Performance at scale (10K+ gates) | ✓ Good — 54MB image in <5s |
+| 3x3 pixel cells for overview mode | 2px gate + 1px gap gives clean pixel art | ✓ Good — compact and readable |
+| 12px cells with text labels for detail mode | Accommodates 2-char labels (Rx, Ry) | ✓ Good — readable gate labels |
+| Auto-zoom with AND logic (both thresholds) | Keep detail for circuits large in only one dimension | ✓ Good — sensible default behavior |
 
 ---
-*Last updated: 2026-02-03 after v1.9 milestone start*
+*Last updated: 2026-02-03 after v1.9 milestone completion*

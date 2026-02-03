@@ -1,5 +1,33 @@
 # Project Milestones: Quantum Assembly
 
+## v1.9 Pixel-Art Circuit Visualization (Shipped: 2026-02-03)
+
+**Delivered:** Added compact pixel-art circuit visualization with two zoom levels (overview for 200+ qubits, detail with text labels), auto-zoom selection, and a clean `ql.draw_circuit()` public API with lazy Pillow import.
+
+**Phases completed:** 45-47 (7 plans total)
+
+**Key accomplishments:**
+
+- C-level circuit data extraction with qubit compaction (sparse-to-dense index remapping)
+- NumPy-based pixel-art renderer with 10 color-coded gate types and measurement checkerboard
+- Multi-qubit gate visualization with control lines and control dots
+- Scale-tested at 200+ qubits and 10,000+ gates (54MB, <5s render time)
+- Detail mode with 12px cells, text gate labels, qubit labels, and wire termination
+- Public `ql.draw_circuit()` API with auto-zoom, mode override, save parameter, and lazy Pillow import
+
+**Stats:**
+
+- 9 files created/modified (+1,466 lines)
+- ~221,387 total LOC (Python, Cython, C)
+- 3 phases, 7 plans, 47 tests
+- 1 day (2026-02-03)
+
+**Git range:** `feat(45-01) aaa258d` -> `docs(47) 8dc87d8`
+
+**What's next:** TBD — next milestone planning via `/gsd:new-milestone`
+
+---
+
 ## v1.8 Quantum Copy, Array Mutability & Uncomputation Fix (Shipped: 2026-02-03)
 
 **Delivered:** Fixed uncomputation regression, implemented CNOT-based quantum state copying for qint/qarray binary operations, and enabled in-place element mutation on qarrays via all augmented assignment operators.
