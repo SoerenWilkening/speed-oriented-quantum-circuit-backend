@@ -12,7 +12,7 @@ See: .planning/PROJECT.md (updated 2026-02-03)
 Phase: 47 of 47 (all milestones through v1.9 complete)
 Plan: N/A
 Status: Milestone v1.9 shipped
-Last activity: 2026-02-03 -- Completed quick task 011: Split qint.pyx via build preprocessor
+Last activity: 2026-02-03 -- Completed quick task 012: Circuit viz control dots + non-overlapping mode
 
 Progress: [████████████████████████████████████████] 100% (all v1.9 plans complete)
 
@@ -62,13 +62,14 @@ See PROJECT.md Key Decisions table for full history.
 |---|-------------|------|--------|-----------|
 | 010 | Split qint.pyx and qarray.pyx into smaller modules | 2026-02-03 | 4364090 | [010-split-qint-qarray-into-modules](./quick/010-split-qint-qarray-into-modules/) |
 | 011 | Split qint.pyx via build preprocessor (701 lines + 4 .pxi) | 2026-02-03 | fb9bdb8 | [011-verify-qint-pyx-split-feasibility](./quick/011-verify-qint-pyx-split-feasibility/) |
+| 012 | Circuit viz: distinct control dots + non-overlapping mode | 2026-02-03 | 6f98a98 | [012-circuit-viz-control-dots-nonoverlap](./quick/012-circuit-viz-control-dots-nonoverlap/) |
 
 ## Session Continuity
 
 Last session: 2026-02-03
-Stopped at: Completed quick-011 (split qint.pyx via build preprocessor)
+Stopped at: Completed quick-012 (circuit viz control dots + non-overlapping mode)
 Resume file: None
 Resume action: Start next milestone with `/gsd:new-milestone`
 
 ---
-*State updated: 2026-02-03 -- quick-011 complete*
+*State updated: 2026-02-03 -- quick-012 complete*
