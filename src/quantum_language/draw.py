@@ -3,15 +3,20 @@
 Converts a draw_data dict (from _core.draw_data()) into a PIL Image
 using NumPy bulk array operations for efficient rendering.
 
+Two rendering modes:
+- render()        : Overview mode (3px cells, pixel-art, scales to 200+ qubits)
+- render_detail() : Detail mode (12px cells, text labels, for <= 30 qubits)
+
 Usage
 -----
->>> from quantum_language.draw import render
->>> img = render(draw_data_dict)
+>>> from quantum_language.draw import render, render_detail
+>>> img = render(draw_data_dict)          # overview
+>>> img = render_detail(draw_data_dict)   # detail with labels
 >>> img.save("circuit.png")
 """
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 # Layout constants (pixels per cell: 2px gate + 1px gap)
 CELL_W = 3
@@ -119,3 +124,157 @@ def render(draw_data, cell_size=3):
             canvas[cy, gx] = CTRL_COLOR
 
     return Image.fromarray(canvas, "RGB")
+
+
+# ---------------------------------------------------------------------------
+# Detail mode constants (12px cells with text labels)
+# ---------------------------------------------------------------------------
+
+DETAIL_CELL = 12
+LABEL_MARGIN = 40
+
+# Gate type integer -> text label (measurement excluded: uses checkerboard)
+GATE_LABELS = {
+    0: "X",
+    1: "Y",
+    2: "Z",
+    3: "R",
+    4: "H",
+    5: "Rx",
+    6: "Ry",
+    7: "Rz",
+    8: "P",
+}
+
+BORDER_COLOR = (80, 80, 100)
+
+
+def render_detail(draw_data):
+    """Render a draw_data dict into a PIL Image at detail zoom level.
+
+    Detail mode uses 12px cells with readable text labels for gate types,
+    qubit labels on the left margin, gate box borders, scaled-up measurement
+    checkerboard icons, larger control dots, and wire termination after
+    measurement gates.
+
+    Parameters
+    ----------
+    draw_data : dict
+        Dictionary with keys: num_layers, num_qubits, gates, qubit_map.
+
+    Returns
+    -------
+    PIL.Image.Image
+        RGB image of the rendered circuit at detail scale.
+    """
+    num_layers = draw_data.get("num_layers", 0)
+    num_qubits = draw_data.get("num_qubits", 0)
+
+    # Handle empty circuit
+    if num_layers == 0 or num_qubits == 0:
+        return Image.fromarray(np.full((1, 1, 3), BG_COLOR, dtype=np.uint8), "RGB")
+
+    width = LABEL_MARGIN + num_layers * DETAIL_CELL
+    height = num_qubits * DETAIL_CELL
+
+    # Create canvas and drawing context
+    img = Image.new("RGB", (width, height), BG_COLOR)
+    draw = ImageDraw.Draw(img)
+    font = ImageFont.load_default(size=8)
+
+    gates = draw_data.get("gates", [])
+
+    # --- Pre-compute measurement positions ---
+    # earliest_meas[qubit] = earliest layer index with a measurement gate
+    earliest_meas = {}
+    for gate in gates:
+        if gate["type"] == 9:
+            q = gate["target"]
+            layer = gate["layer"]
+            if q not in earliest_meas or layer < earliest_meas[q]:
+                earliest_meas[q] = layer
+
+    # --- Step 1: Qubit labels ---
+    label_color = (200, 200, 200)
+    for q in range(num_qubits):
+        label = f"q{q}"
+        bbox = font.getbbox(label)
+        text_h = bbox[3] - bbox[1]
+        ty = q * DETAIL_CELL + (DETAIL_CELL - text_h) // 2
+        draw.text((2, ty), label, fill=label_color, font=font)
+
+    # --- Step 2: Horizontal wires ---
+    for q in range(num_qubits):
+        wire_y = q * DETAIL_CELL + DETAIL_CELL // 2
+        wire_x_start = LABEL_MARGIN
+        if q in earliest_meas:
+            # Wire ends at the right edge of the measurement cell
+            wire_x_end = LABEL_MARGIN + earliest_meas[q] * DETAIL_CELL + DETAIL_CELL - 1
+        else:
+            wire_x_end = width - 1
+        draw.line([(wire_x_start, wire_y), (wire_x_end, wire_y)], fill=WIRE_COLOR)
+
+    # --- Step 3: Control lines ---
+    for gate in gates:
+        controls = gate.get("controls", [])
+        if not controls:
+            continue
+        x_center = LABEL_MARGIN + gate["layer"] * DETAIL_CELL + DETAIL_CELL // 2
+        all_qubits = [gate["target"]] + list(controls)
+        y_min = min(all_qubits) * DETAIL_CELL + DETAIL_CELL // 2
+        y_max = max(all_qubits) * DETAIL_CELL + DETAIL_CELL // 2
+        draw.line([(x_center, y_min), (x_center, y_max)], fill=CTRL_COLOR)
+
+    # --- Step 4: Gate blocks ---
+    for gate in gates:
+        gx = LABEL_MARGIN + gate["layer"] * DETAIL_CELL
+        gy = gate["target"] * DETAIL_CELL
+        gate_type = gate["type"]
+        color = GATE_COLORS.get(gate_type, _DEFAULT_GATE_COLOR)
+
+        if gate_type == 9:
+            # Measurement: scaled-up checkerboard (2x2 pixel blocks)
+            for py in range(DETAIL_CELL):
+                for px in range(DETAIL_CELL):
+                    # 2x2 block checkerboard
+                    block_row = py // 2
+                    block_col = px // 2
+                    if (block_row + block_col) % 2 == 0:
+                        img.putpixel((gx + px, gy + py), color)
+                    # else: leave as BG_COLOR
+        else:
+            # Standard gate: filled rectangle with border
+            draw.rectangle(
+                [gx + 1, gy + 1, gx + DETAIL_CELL - 2, gy + DETAIL_CELL - 2],
+                fill=color,
+                outline=BORDER_COLOR,
+            )
+            # Center text label
+            label = GATE_LABELS.get(gate_type, "?")
+            bbox = font.getbbox(label)
+            tw = bbox[2] - bbox[0]
+            th = bbox[3] - bbox[1]
+            tx = gx + (DETAIL_CELL - tw) // 2
+            ty = gy + (DETAIL_CELL - th) // 2
+            draw.text((tx, ty), label, fill=(255, 255, 255), font=font)
+
+    # --- Step 5: Control dots (filled circles, rendered last) ---
+    for gate in gates:
+        controls = gate.get("controls", [])
+        if not controls:
+            continue
+        x_center = LABEL_MARGIN + gate["layer"] * DETAIL_CELL + DETAIL_CELL // 2
+        for ctrl in controls:
+            cy = ctrl * DETAIL_CELL + DETAIL_CELL // 2
+            radius = 3
+            draw.ellipse(
+                [
+                    x_center - radius,
+                    cy - radius,
+                    x_center + radius,
+                    cy + radius,
+                ],
+                fill=CTRL_COLOR,
+            )
+
+    return img
