@@ -391,7 +391,7 @@ cdef class qarray:
                 if len(value) != len(indices):
                     raise ValueError(f"Cannot assign {len(value)} elements to slice of length {len(indices)}")
                 for i, idx in enumerate(indices):
-                    self._elements[idx] = value._elements[i]
+                    self._elements[idx] = (<qarray>value)._elements[i]
             else:
                 # Broadcast scalar to all slice positions
                 for idx in indices:
