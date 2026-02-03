@@ -1,3 +1,6 @@
+# NOTE: This file is intentionally large (~2800 lines). Cython cdef classes
+# cannot be split across files (no include/mixin support in cdef class bodies).
+# See .planning/quick/004-consolidate-qint-pxi-includes-to-remove-/004-SUMMARY.md
 """Quantum integer type with arithmetic, bitwise, and comparison operations."""
 
 import sys
