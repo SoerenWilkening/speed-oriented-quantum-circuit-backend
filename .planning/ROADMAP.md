@@ -32,7 +32,7 @@
 
 **Milestone Goal:** `@ql.compile` decorator that captures gate sequences on first call, optimizes them, and replays with qubit remapping on subsequent calls -- enabling compiled quantum functions that work inside controlled contexts and support inverse generation, nesting, and debug introspection.
 
-- [ ] **Phase 48: Core Capture-Replay** - Cython infrastructure, decorator, gate capture/replay with qubit remapping and caching
+- [x] **Phase 48: Core Capture-Replay** - Cython infrastructure, decorator, gate capture/replay with qubit remapping and caching -- completed 2026-02-04
 - [ ] **Phase 49: Optimization & Uncomputation** - Optimize captured sequences and integrate with uncomputation tracking
 - [ ] **Phase 50: Controlled Context** - Compiled functions work inside `with` blocks via re-capture with controlled cache keys
 - [ ] **Phase 51: Differentiators & Polish** - Inverse generation, debug mode, nested compilation, and comprehensive test suite
@@ -51,8 +51,8 @@
   5. Creating a new circuit via `ql.circuit()` invalidates the compilation cache
 **Plans**: 2 plans
 Plans:
-- [ ] 48-01-PLAN.md -- Cython infrastructure (extract_gate_range, inject_remapped_gates, helpers)
-- [ ] 48-02-PLAN.md -- Python compile decorator, __init__.py wiring, and test suite
+- [x] 48-01-PLAN.md -- Cython infrastructure (extract_gate_range, inject_remapped_gates, helpers)
+- [x] 48-02-PLAN.md -- Python compile decorator, __init__.py wiring, and test suite
 
 ### Phase 49: Optimization & Uncomputation
 **Goal**: Captured gate sequences are optimized before caching, and compiled function outputs integrate correctly with the automatic uncomputation system
@@ -99,7 +99,7 @@ Phases execute in numeric order: 48 -> 49 -> 50 -> 51
 | 45. Data Extraction Bridge | v1.9 | 2/2 | Complete | 2026-02-03 |
 | 46. Core Renderer | v1.9 | 3/3 | Complete | 2026-02-03 |
 | 47. Detail Mode & Public API | v1.9 | 2/2 | Complete | 2026-02-03 |
-| 48. Core Capture-Replay | v2.0 | 0/TBD | Not started | - |
+| 48. Core Capture-Replay | v2.0 | 2/2 | Complete | 2026-02-04 |
 | 49. Optimization & Uncomputation | v2.0 | 0/TBD | Not started | - |
 | 50. Controlled Context | v2.0 | 0/TBD | Not started | - |
 | 51. Differentiators & Polish | v2.0 | 0/TBD | Not started | - |

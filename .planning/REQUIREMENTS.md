@@ -9,12 +9,12 @@ Requirements for the function compilation milestone. Each maps to roadmap phases
 
 ### Capture & Replay
 
-- [ ] **CAP-01**: `@ql.compile` decorator captures all gate sequences within a decorated function on first call
-- [ ] **CAP-02**: Captured gates are stored with virtual qubit references (not absolute indices)
-- [ ] **CAP-03**: Subsequent calls replay cached gates with virtual-to-real qubit remapping
-- [ ] **CAP-04**: Cache key includes function identity, argument widths, and classical argument values
-- [ ] **CAP-05**: Cache is cleared when a new `ql.circuit()` is created
-- [ ] **CAP-06**: Return values (qint/qbool) from compiled functions are usable in further quantum operations
+- [x] **CAP-01**: `@ql.compile` decorator captures all gate sequences within a decorated function on first call
+- [x] **CAP-02**: Captured gates are stored with virtual qubit references (not absolute indices)
+- [x] **CAP-03**: Subsequent calls replay cached gates with virtual-to-real qubit remapping
+- [x] **CAP-04**: Cache key includes function identity, argument widths, and classical argument values
+- [x] **CAP-05**: Cache is cleared when a new `ql.circuit()` is created
+- [x] **CAP-06**: Return values (qint/qbool) from compiled functions are usable in further quantum operations
 
 ### Optimization
 
@@ -44,8 +44,8 @@ Requirements for the function compilation milestone. Each maps to roadmap phases
 
 ### Infrastructure
 
-- [ ] **INF-01**: Two new Cython helper functions for gate extraction and remapped injection
-- [ ] **INF-02**: Global state snapshot/restore during tracing to prevent state pollution
+- [x] **INF-01**: Two new Cython helper functions for gate extraction and remapped injection
+- [x] **INF-02**: Global state snapshot/restore during tracing to prevent state pollution
 - [ ] **INF-03**: Comprehensive test suite covering all compilation scenarios
 
 ## Future Requirements
@@ -81,12 +81,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CAP-01 | Phase 48 | Pending |
-| CAP-02 | Phase 48 | Pending |
-| CAP-03 | Phase 48 | Pending |
-| CAP-04 | Phase 48 | Pending |
-| CAP-05 | Phase 48 | Pending |
-| CAP-06 | Phase 48 | Pending |
+| CAP-01 | Phase 48 | Complete |
+| CAP-02 | Phase 48 | Complete |
+| CAP-03 | Phase 48 | Complete |
+| CAP-04 | Phase 48 | Complete |
+| CAP-05 | Phase 48 | Complete |
+| CAP-06 | Phase 48 | Complete |
 | OPT-01 | Phase 49 | Pending |
 | OPT-02 | Phase 49 | Pending |
 | CTL-01 | Phase 50 | Pending |
@@ -98,8 +98,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DBG-02 | Phase 51 | Pending |
 | NST-01 | Phase 51 | Pending |
 | NST-02 | Phase 51 | Pending |
-| INF-01 | Phase 48 | Pending |
-| INF-02 | Phase 48 | Pending |
+| INF-01 | Phase 48 | Complete |
+| INF-02 | Phase 48 | Complete |
 | INF-03 | Phase 51 | Pending |
 
 **Coverage:**
