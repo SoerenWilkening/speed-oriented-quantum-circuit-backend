@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v2.0 -- Function Compilation, Phase 48 (Core Capture-Replay)
+**Current focus:** v2.0 -- Function Compilation, Phase 49 (Optimization & Uncomputation)
 
 ## Current Position
 
-Phase: 48 of 51 (Core Capture-Replay)
-Plan: 01 of 02 complete
-Status: In progress
-Last activity: 2026-02-04 -- Completed 48-01-PLAN.md (Core Capture-Replay Infrastructure)
+Phase: 48 of 51 (Core Capture-Replay) -- COMPLETE
+Plan: 02 of 02 complete
+Status: Phase complete
+Last activity: 2026-02-04 -- Completed 48-02-PLAN.md (Compile Decorator Implementation)
 
-Progress: [█████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] ~12%
+Progress: [██████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] ~25%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 143 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 1)
+- Total plans completed: 144 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 2)
 - Average duration: ~13 min/plan
 - Total execution time: ~23.5 hours
 
@@ -55,7 +55,7 @@ See PROJECT.md Key Decisions table for full history.
 
 **v2.0 research flags:**
 - Uncomputation integration (Phase 49) is the hardest challenge -- layer-based tracking has known fragility
-- 12+ global state variables need snapshot-restore during tracing (Phase 48)
+- 12+ global state variables need snapshot-restore during tracing (Phase 48) -- RESOLVED: first call is real execution, no snapshot needed
 - Controlled context requires re-capture, not post-hoc control addition (Phase 50)
 
 ### Quick Tasks Completed
@@ -69,9 +69,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-04
-Stopped at: Completed 48-01-PLAN.md (Core Capture-Replay Infrastructure)
-Resume file: .planning/phases/48-core-capture-replay/48-02-PLAN.md
-Resume action: `/gsd:execute-plan 48-02`
+Stopped at: Completed 48-02-PLAN.md (Compile Decorator Implementation)
+Resume file: None (Phase 48 complete, proceed to Phase 49)
+Resume action: `/gsd:research 49`
 
 ---
-*State updated: 2026-02-04 -- Completed 48-01 (Cython capture-replay primitives)*
+*State updated: 2026-02-04 -- Completed 48-02 (@ql.compile decorator with capture, cache, replay)*
