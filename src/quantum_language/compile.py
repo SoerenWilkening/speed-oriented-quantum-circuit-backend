@@ -49,6 +49,29 @@ from .qint import qint
 _X, _Y, _Z, _R, _H, _Rx, _Ry, _Rz, _P, _M = range(10)
 _SELF_ADJOINT = frozenset({_X, _Y, _Z, _H})
 _ROTATION_GATES = frozenset({_P, _Rx, _Ry, _Rz, _R})
+_NON_REVERSIBLE = frozenset({_M})
+
+
+# ---------------------------------------------------------------------------
+# Inverse (adjoint) helpers
+# ---------------------------------------------------------------------------
+def _adjoint_gate(gate):
+    """Return the adjoint of *gate*.
+
+    Self-adjoint gates (X, Y, Z, H) are unchanged.  Rotation gates have
+    their angle negated.  Measurement gates cannot be inverted.
+    """
+    if gate["type"] in _NON_REVERSIBLE:
+        raise ValueError("Cannot invert compiled function containing measurement gates")
+    adj = dict(gate)
+    if gate["type"] in _ROTATION_GATES:
+        adj["angle"] = -gate["angle"]
+    return adj
+
+
+def _inverse_gate_list(gates):
+    """Return the adjoint of a gate list (reversed order, adjoint gates)."""
+    return [_adjoint_gate(g) for g in reversed(gates)]
 
 
 # ---------------------------------------------------------------------------
@@ -369,7 +392,7 @@ class CompiledFunc:
         If True, run both capture and replay and compare (dev mode).
     """
 
-    def __init__(self, func, max_cache=128, key=None, verify=False, optimize=True):
+    def __init__(self, func, max_cache=128, key=None, verify=False, optimize=True, inverse=False):
         functools.update_wrapper(self, func)
         self._func = func
         self._cache = collections.OrderedDict()
@@ -377,8 +400,13 @@ class CompiledFunc:
         self._key_func = key
         self._verify = verify
         self._optimize = optimize
+        self._inverse_eager = inverse
+        self._inverse_func = None
         # Register for cache invalidation on circuit reset
         _compiled_funcs.append(weakref.ref(self))
+        # Eagerly create inverse wrapper when inverse=True
+        if inverse:
+            self._inverse_func = _InverseCompiledFunc(self)
 
     def __call__(self, *args, **kwargs):
         """Call the compiled function (capture or replay)."""
@@ -664,18 +692,98 @@ class CompiledFunc:
             return 0.0
         return 100.0 * (1.0 - self.optimized_gates / orig)
 
+    def inverse(self):
+        """Return an ``_InverseCompiledFunc`` that replays the adjoint gate sequence.
+
+        The inverse wrapper is lazily created and cached.  Calling
+        ``.inverse()`` on the inverse returns the original ``CompiledFunc``.
+        """
+        if self._inverse_func is None:
+            self._inverse_func = _InverseCompiledFunc(self)
+        return self._inverse_func
+
     def clear_cache(self):
         """Clear this function's compilation cache."""
         self._cache.clear()
+        if self._inverse_func is not None:
+            self._inverse_func.clear_cache()
 
     def __repr__(self):
         return f"<CompiledFunc {self._func.__name__}>"
 
 
 # ---------------------------------------------------------------------------
+# _InverseCompiledFunc -- lightweight wrapper for adjoint replay
+# ---------------------------------------------------------------------------
+class _InverseCompiledFunc:
+    """Wrapper that replays the adjoint (inverse) gate sequence of a ``CompiledFunc``.
+
+    Does NOT inherit from ``CompiledFunc``.  Reuses the original's
+    ``_classify_args``, ``_replay``, and cache, but maintains its own
+    cache of inverted ``CompiledBlock`` objects.
+    """
+
+    def __init__(self, original):
+        self._original = original
+        self._inv_cache = {}
+        functools.update_wrapper(self, original._func)
+
+    def __call__(self, *args, **kwargs):
+        """Call the inverse compiled function."""
+        quantum_args, classical_args, widths = self._original._classify_args(args, kwargs)
+
+        # Detect controlled context
+        is_controlled = _get_controlled()
+        control_count = 1 if is_controlled else 0
+
+        # Build cache key (same logic as CompiledFunc.__call__)
+        if self._original._key_func:
+            cache_key = (self._original._key_func(*args, **kwargs), control_count)
+        else:
+            cache_key = (tuple(classical_args), tuple(widths), control_count)
+
+        # Check inverse cache
+        if cache_key not in self._inv_cache:
+            # Ensure original has the block cached
+            if cache_key not in self._original._cache:
+                # Trigger capture by calling the original
+                self._original(*args, **kwargs)
+
+            block = self._original._cache[cache_key]
+            # Invert the gates
+            inverted_gates = _inverse_gate_list(block.gates)
+            inverted_block = CompiledBlock(
+                gates=inverted_gates,
+                total_virtual_qubits=block.total_virtual_qubits,
+                param_qubit_ranges=list(block.param_qubit_ranges),
+                internal_qubit_count=block.internal_qubit_count,
+                return_qubit_range=block.return_qubit_range,
+                return_is_param_index=block.return_is_param_index,
+                original_gate_count=block.original_gate_count,
+            )
+            inverted_block.control_virtual_idx = block.control_virtual_idx
+            self._inv_cache[cache_key] = inverted_block
+
+        return self._original._replay(self._inv_cache[cache_key], quantum_args)
+
+    def inverse(self):
+        """Return the original ``CompiledFunc`` (round-trip)."""
+        return self._original
+
+    def clear_cache(self):
+        """Clear the inverse cache."""
+        self._inv_cache.clear()
+
+    def __repr__(self):
+        return f"<InverseCompiledFunc {self._original._func.__name__}>"
+
+
+# ---------------------------------------------------------------------------
 # Public decorator API
 # ---------------------------------------------------------------------------
-def compile(func=None, *, max_cache=128, key=None, verify=False, optimize=True):
+def compile(
+    func=None, *, max_cache=128, key=None, verify=False, optimize=True, inverse=False, debug=False
+):
     """Decorator that compiles a quantum function for cached gate replay.
 
     Supports three forms:
@@ -721,10 +829,14 @@ def compile(func=None, *, max_cache=128, key=None, verify=False, optimize=True):
     """
 
     def decorator(fn):
-        return CompiledFunc(fn, max_cache=max_cache, key=key, verify=verify, optimize=optimize)
+        return CompiledFunc(
+            fn, max_cache=max_cache, key=key, verify=verify, optimize=optimize, inverse=inverse
+        )
 
     if func is not None:
         # Called as @ql.compile (bare) -- func is the decorated function
-        return CompiledFunc(func, max_cache=max_cache, key=key, verify=verify, optimize=optimize)
+        return CompiledFunc(
+            func, max_cache=max_cache, key=key, verify=verify, optimize=optimize, inverse=inverse
+        )
     # Called as @ql.compile() or @ql.compile(max_cache=N)
     return decorator
