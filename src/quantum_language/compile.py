@@ -33,6 +33,7 @@ from ._core import (
     _get_controlled,
     _get_layer_floor,
     _get_list_of_controls,
+    _get_qubit_saving_mode,
     _register_cache_clear_hook,
     _set_control_bool,
     _set_controlled,
@@ -262,6 +263,7 @@ class CompiledBlock:
         "_first_call_result",
         "_capture_ancilla_qubits",
         "_capture_virtual_to_real",
+        "_modifies_inputs",
     )
 
     def __init__(
@@ -287,6 +289,7 @@ class CompiledBlock:
         self._first_call_result = None
         self._capture_ancilla_qubits = None
         self._capture_virtual_to_real = None
+        self._modifies_inputs = None
 
 
 # ---------------------------------------------------------------------------
@@ -302,6 +305,24 @@ class AncillaRecord:
         self.virtual_to_real = virtual_to_real
         self.block = block
         self.return_qint = return_qint
+
+
+# ---------------------------------------------------------------------------
+# Input side-effect detection
+# ---------------------------------------------------------------------------
+def _function_modifies_inputs(block):
+    """Check if any gate in block targets a parameter (input) qubit.
+
+    Returns True if the compiled function modifies its inputs, which means
+    auto-uncompute should be skipped (uncomputing temp ancillas would also
+    undo the input modifications).  Result is cached on the block.
+    """
+    if block._modifies_inputs is not None:
+        return block._modifies_inputs
+    param_count = sum(w for _, w in block.param_qubit_ranges)
+    result = any(g["target"] < param_count for g in block.gates)
+    block._modifies_inputs = result
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -463,11 +484,12 @@ class CompiledFunc:
         is_controlled = _get_controlled()
         control_count = 1 if is_controlled else 0
 
-        # Build cache key (always includes control_count)
+        # Build cache key (always includes control_count and qubit_saving mode)
+        qubit_saving = _get_qubit_saving_mode()
         if self._key_func:
-            cache_key = (self._key_func(*args, **kwargs), control_count)
+            cache_key = (self._key_func(*args, **kwargs), control_count, qubit_saving)
         else:
-            cache_key = (tuple(classical_args), tuple(widths), control_count)
+            cache_key = (tuple(classical_args), tuple(widths), control_count, qubit_saving)
 
         is_hit = cache_key in self._cache
 
@@ -677,10 +699,11 @@ class CompiledFunc:
             block = self._capture(args, kwargs, quantum_args)
 
         # Cache uncontrolled variant
+        qubit_saving = _get_qubit_saving_mode()
         if self._key_func:
-            unctrl_key = (self._key_func(*args, **kwargs), 0)
+            unctrl_key = (self._key_func(*args, **kwargs), 0, qubit_saving)
         else:
-            unctrl_key = (tuple(classical_args), tuple(widths), 0)
+            unctrl_key = (tuple(classical_args), tuple(widths), 0, qubit_saving)
         self._cache[unctrl_key] = block
 
         # Derive and cache controlled variant
@@ -691,9 +714,9 @@ class CompiledFunc:
             # current gate set, but guards against future gate types)
             controlled_block = self._capture(args, kwargs, quantum_args)
         if self._key_func:
-            ctrl_key = (self._key_func(*args, **kwargs), 1)
+            ctrl_key = (self._key_func(*args, **kwargs), 1, qubit_saving)
         else:
-            ctrl_key = (tuple(classical_args), tuple(widths), 1)
+            ctrl_key = (tuple(classical_args), tuple(widths), 1, qubit_saving)
         self._cache[ctrl_key] = controlled_block
 
         # Evict oldest if over capacity (we added 2 entries)
@@ -896,10 +919,11 @@ class _InverseCompiledFunc:
         control_count = 1 if is_controlled else 0
 
         # Build cache key (same logic as CompiledFunc.__call__)
+        qubit_saving = _get_qubit_saving_mode()
         if self._original._key_func:
-            cache_key = (self._original._key_func(*args, **kwargs), control_count)
+            cache_key = (self._original._key_func(*args, **kwargs), control_count, qubit_saving)
         else:
-            cache_key = (tuple(classical_args), tuple(widths), control_count)
+            cache_key = (tuple(classical_args), tuple(widths), control_count, qubit_saving)
 
         # Check inverse cache
         if cache_key not in self._inv_cache:

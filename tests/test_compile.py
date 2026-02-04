@@ -733,7 +733,7 @@ def test_replay_uses_optimized_gates():
     # uncontrolled variant.  Since _capture_and_cache_both caches both
     # uncontrolled and controlled variants, optimized_gates sums across
     # all entries.  We check the specific uncontrolled block's gate count.
-    unctrl_key = ((), (4,), 0)
+    unctrl_key = ((), (4,), 0, False)
     unctrl_block = add_one._cache[unctrl_key]
     assert len(replay_gates) == len(unctrl_block.gates), (
         f"Replay gates ({len(replay_gates)}) should match uncontrolled cached gates "
@@ -974,7 +974,7 @@ def test_uncomputation_replay_uses_optimized_sequence():
     _r1 = make_new(a)
     # Get the uncontrolled block's gate count directly (optimized_gates
     # sums across both uncontrolled and controlled cached variants)
-    unctrl_key = ((), (4,), 0)
+    unctrl_key = ((), (4,), 0, False)
     cached_gate_count = len(make_new._cache[unctrl_key].gates)
 
     # Replay outside with block to measure forward gate count
@@ -1027,8 +1027,8 @@ def test_compile_controlled_basic():
     add_one(a)
 
     # Verify both variants are cached (eager compilation)
-    unctrl_key = ((), (4,), 0)
-    ctrl_key = ((), (4,), 1)
+    unctrl_key = ((), (4,), 0, False)
+    ctrl_key = ((), (4,), 1, False)
     assert unctrl_key in add_one._cache, "Uncontrolled variant should be cached"
     assert ctrl_key in add_one._cache, "Controlled variant should be cached"
 
@@ -1106,8 +1106,8 @@ def test_compile_controlled_gates_have_extra_control():
     a = ql.qint(3, width=4)
     add_one(a)
 
-    unctrl_key = ((), (4,), 0)
-    ctrl_key = ((), (4,), 1)
+    unctrl_key = ((), (4,), 0, False)
+    ctrl_key = ((), (4,), 1, False)
     unctrl_block = add_one._cache[unctrl_key]
     ctrl_block = add_one._cache[ctrl_key]
 
@@ -1272,8 +1272,8 @@ def test_compile_controlled_custom_key():
     assert call_count[0] == 1
 
     # Cache should have 2 entries: (4, 0) and (4, 1)
-    assert (4, 0) in add_one._cache, "Uncontrolled variant with custom key should be cached"
-    assert (4, 1) in add_one._cache, "Controlled variant with custom key should be cached"
+    assert (4, 0, False) in add_one._cache, "Uncontrolled variant with custom key should be cached"
+    assert (4, 1, False) in add_one._cache, "Controlled variant with custom key should be cached"
 
     # Call inside `with` -- cache hit on controlled variant
     b = ql.qint(5, width=4)
@@ -1310,8 +1310,8 @@ def test_compile_controlled_first_call_inside_with():
     assert call_count[0] == 1, "First call should capture"
 
     # Both variants should be cached
-    unctrl_key = ((), (4,), 0)
-    ctrl_key = ((), (4,), 1)
+    unctrl_key = ((), (4,), 0, False)
+    ctrl_key = ((), (4,), 1, False)
     assert unctrl_key in add_one._cache, (
         "Uncontrolled variant should be cached even when first called inside `with`"
     )
@@ -1467,7 +1467,7 @@ def test_inverse_replays_adjoint_gates():
     assert len(inv_gates) > 0, "Adjoint should produce gates"
     # Adjoint replays from cached (possibly optimized) block, so compare
     # against the cached uncontrolled block gate count
-    unctrl_key = ((), (4,), 0)
+    unctrl_key = ((), (4,), 0, False)
     cached_count = len(add_one._cache[unctrl_key].gates)
     assert len(inv_gates) == cached_count, (
         f"Adjoint gate count {len(inv_gates)} should match cached count {cached_count}"
@@ -1940,7 +1940,7 @@ def test_ancilla_inverse_produces_adjoint_gates_qiskit():
     _result = add_to_new(a)
 
     # Get the cached block gate count (this is what inverse uses)
-    unctrl_key = ((), (4,), 0)
+    unctrl_key = ((), (4,), 0, False)
     cached_gate_count = len(add_to_new._cache[unctrl_key].gates)
 
     # Measure inverse call gate count
