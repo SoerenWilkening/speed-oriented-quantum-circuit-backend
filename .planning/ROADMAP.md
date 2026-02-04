@@ -50,20 +50,20 @@
 ## Phase Details
 
 ### Phase 52: Ancilla Tracking & Inverse Qubit Reuse
-**Goal**: Users can call `f(x).inverse()` or `f.inverse(x)` to target the same physical ancilla qubits allocated during `f(x)`, uncomputing them to |0⟩ and deallocating them
+**Goal**: Users can call `f(x).inverse()` or `f.inverse(x)` to target the same physical ancilla qubits allocated during `f(x)`, uncomputing them to |0> and deallocating them
 **Depends on**: v2.0 compilation infrastructure (Phase 51)
 **Requirements**: INV-01, INV-02, INV-03, INV-04, INV-05, INV-06
 **Success Criteria** (what must be TRUE):
   1. When a compiled function allocates qubits internally (e.g., `ql.qint()` inside the function), those qubits appear in a trackable ancilla list
-  2. `f(x).inverse()` — return value carries compiled-origin metadata; calling `.inverse()` on it runs adjoint on that call's exact physical ancillas
-  3. `f.inverse(x)` — looks up ancillas from a prior `f(x)` with matching inputs and runs adjoint on them
-  4. After inverse completes, ancilla qubits are in |0⟩ state (Qiskit-verified)
+  2. `f(x).inverse()` -- return value carries compiled-origin metadata; calling `.inverse()` on it runs adjoint on that call's exact physical ancillas
+  3. `f.inverse(x)` -- looks up ancillas from a prior `f(x)` with matching inputs and runs adjoint on them
+  4. After inverse completes, ancilla qubits are in |0> state (Qiskit-verified)
   5. After inverse completes, ancilla qubits are deallocated (returned to allocator for reuse)
   6. Inverse works when called at any later point in the program (not just immediately after forward call)
 **Plans:** 2 plans
 Plans:
-- [x] 52-01-PLAN.md — Infrastructure + f.inverse(x) + f.adjoint(x) implementation
-- [x] 52-02-PLAN.md — Comprehensive tests for INV-01 through INV-06
+- [x] 52-01-PLAN.md -- Infrastructure + f.inverse(x) + f.adjoint(x) implementation
+- [x] 52-02-PLAN.md -- Comprehensive tests for INV-01 through INV-06
 
 ### Phase 53: Qubit-Saving Auto-Uncompute
 **Goal**: When qubit-saving mode is active, compiled functions that return a qint automatically uncompute all ancillas except the return value's qubits after the forward call
@@ -73,7 +73,10 @@ Plans:
   1. With `ql.option("qubit_saving")` active, calling a compiled function that returns a qint automatically uncomputes internal ancillas after the forward call completes
   2. The return value's qubits are preserved (not uncomputed) and remain usable in subsequent operations
   3. The auto-uncomputed ancilla qubits are deallocated and available for reuse by later allocations
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 53-01-PLAN.md -- Auto-uncompute implementation in compile.py
+- [ ] 53-02-PLAN.md -- Comprehensive tests for INV-07
 
 ### Phase 54: qarray Support in @ql.compile
 **Goal**: Users can pass `ql.qarray` objects as arguments to `@ql.compile`-decorated functions with correct capture, caching, and replay
@@ -104,7 +107,7 @@ Plans:
 | 50. Controlled Context | v2.0 | 2/2 | Complete | 2026-02-04 |
 | 51. Differentiators & Polish | v2.0 | 2/2 | Complete | 2026-02-04 |
 | 52. Ancilla Tracking & Inverse Qubit Reuse | v2.1 | 2/2 | Complete | 2026-02-04 |
-| 53. Qubit-Saving Auto-Uncompute | v2.1 | 0/TBD | Not started | - |
+| 53. Qubit-Saving Auto-Uncompute | v2.1 | 0/2 | Not started | - |
 | 54. qarray Support in @ql.compile | v2.1 | 0/TBD | Not started | - |
 
 ---
