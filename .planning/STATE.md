@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v2.0 — Function Compilation (@ql.compile decorator)
+**Current focus:** v2.0 -- Function Compilation, Phase 48 (Core Capture-Replay)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements for v2.0
-Last activity: 2026-02-04 — Milestone v2.0 started
+Phase: 48 of 51 (Core Capture-Replay)
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-02-04 -- v2.0 roadmap created (4 phases, 20 requirements)
 
 Progress: [░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 0%
 
@@ -37,6 +37,7 @@ Progress: [░░░░░░░░░░░░░░░░░░░░░░░
 | v1.7 Bug Fixes & Array Optimization | 37, 40 | 2 | Complete (2026-02-02) |
 | v1.8 Copy, Mutability & Uncomp Fix | 41-44 | 7 | Complete (2026-02-03) |
 | v1.9 Pixel-Art Circuit Visualization | 45-47 | 7 | Complete (2026-02-03) |
+| v2.0 Function Compilation | 48-51 | TBD | In progress |
 
 ## Accumulated Context
 
@@ -52,9 +53,10 @@ See PROJECT.md Key Decisions table for full history.
 - BUG-COND-MUL-01: Controlled multiplication corruption (not yet investigated)
 - BUG-WIDTH-ADD: Mixed-width QFT addition off-by-one (discovered in v1.8)
 
-**Known limitations (not bugs):**
-- Dirty ancilla in gt/le comparisons (by design)
-- 4 pre-existing uncomputation test failures (architectural: layer counter vs instruction counter)
+**v2.0 research flags:**
+- Uncomputation integration (Phase 49) is the hardest challenge -- layer-based tracking has known fragility
+- 12+ global state variables need snapshot-restore during tracing (Phase 48)
+- Controlled context requires re-capture, not post-hoc control addition (Phase 50)
 
 ### Quick Tasks Completed
 
@@ -67,9 +69,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-04
-Stopped at: Milestone v2.0 initialization — defining requirements
+Stopped at: v2.0 roadmap created -- ready to plan Phase 48
 Resume file: None
-Resume action: Continue with requirements definition and roadmap creation
+Resume action: `/gsd:plan-phase 48`
 
 ---
-*State updated: 2026-02-04 — Milestone v2.0 started*
+*State updated: 2026-02-04 -- v2.0 roadmap created*

@@ -81,32 +81,32 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CAP-01 | TBD | Pending |
-| CAP-02 | TBD | Pending |
-| CAP-03 | TBD | Pending |
-| CAP-04 | TBD | Pending |
-| CAP-05 | TBD | Pending |
-| CAP-06 | TBD | Pending |
-| OPT-01 | TBD | Pending |
-| OPT-02 | TBD | Pending |
-| CTL-01 | TBD | Pending |
-| CTL-02 | TBD | Pending |
-| CTL-03 | TBD | Pending |
-| INV-01 | TBD | Pending |
-| INV-02 | TBD | Pending |
-| DBG-01 | TBD | Pending |
-| DBG-02 | TBD | Pending |
-| NST-01 | TBD | Pending |
-| NST-02 | TBD | Pending |
-| INF-01 | TBD | Pending |
-| INF-02 | TBD | Pending |
-| INF-03 | TBD | Pending |
+| CAP-01 | Phase 48 | Pending |
+| CAP-02 | Phase 48 | Pending |
+| CAP-03 | Phase 48 | Pending |
+| CAP-04 | Phase 48 | Pending |
+| CAP-05 | Phase 48 | Pending |
+| CAP-06 | Phase 48 | Pending |
+| OPT-01 | Phase 49 | Pending |
+| OPT-02 | Phase 49 | Pending |
+| CTL-01 | Phase 50 | Pending |
+| CTL-02 | Phase 50 | Pending |
+| CTL-03 | Phase 50 | Pending |
+| INV-01 | Phase 51 | Pending |
+| INV-02 | Phase 51 | Pending |
+| DBG-01 | Phase 51 | Pending |
+| DBG-02 | Phase 51 | Pending |
+| NST-01 | Phase 51 | Pending |
+| NST-02 | Phase 51 | Pending |
+| INF-01 | Phase 48 | Pending |
+| INF-02 | Phase 48 | Pending |
+| INF-03 | Phase 51 | Pending |
 
 **Coverage:**
 - v2.0 requirements: 20 total
-- Mapped to phases: 0
-- Unmapped: 20 ⚠️
+- Mapped to phases: 20
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-04*
-*Last updated: 2026-02-04 after initial definition*
+*Last updated: 2026-02-04 after roadmap creation*
