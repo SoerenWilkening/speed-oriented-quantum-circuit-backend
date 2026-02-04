@@ -46,6 +46,7 @@ from ._core import (
     option,
     reverse_instruction_range,
 )
+from .compile import compile
 from .openqasm import to_openqasm
 from .qarray import qarray
 from .qbool import qbool
@@ -175,6 +176,7 @@ __all__ = [
     # Circuit
     "circuit",
     # Utilities
+    "compile",
     "array",
     "option",
     "draw_circuit",

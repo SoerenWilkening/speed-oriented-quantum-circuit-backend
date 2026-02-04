@@ -4,9 +4,9 @@ cdef class qint(circuit):
 	cdef int counter
 	cdef int bits
 	cdef int value
-	cdef object qubits
-	cdef bint allocated_qubits
-	cdef unsigned int allocated_start
+	cdef public object qubits
+	cdef public bint allocated_qubits
+	cdef public unsigned int allocated_start
 	cdef object __weakref__
 	cdef public object dependency_parents
 	cdef public int _creation_order
