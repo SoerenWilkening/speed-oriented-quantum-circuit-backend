@@ -278,6 +278,8 @@ cdef class circuit:
 			# Reset legacy ancilla tracking
 			for i in range(NUMANCILLY):
 				ancilla[i] = i
+			# Clear all compilation caches (Phase 48: capture-replay)
+			_clear_compile_caches()
 		elif not _circuit_initialized:
 			# First-time init from subclass (should not normally happen)
 			_circuit = init_circuit()
@@ -720,6 +722,132 @@ def reverse_instruction_range(int start_layer, int end_layer):
 	if not _circuit_initialized:
 		raise RuntimeError("Circuit not initialized")
 	reverse_circuit_range(_circuit, start_layer, end_layer)
+
+
+def inject_remapped_gates(list gates, dict qubit_map):
+	"""Inject gates into circuit with qubit index remapping.
+
+	For each gate dict, creates a new gate_t, remaps qubit indices through
+	qubit_map, and calls add_gate() to insert into the circuit.
+
+	Parameters
+	----------
+	gates : list of dict
+		Gate data from extract_gate_range() or cached compiled block.
+		Each dict must have keys: 'type', 'target', 'angle', 'num_controls', 'controls'.
+	qubit_map : dict
+		Mapping from source qubit index (int) to destination qubit index (int).
+
+	Examples
+	--------
+	>>> c = circuit()
+	>>> a = ql.qint(5, width=4)
+	>>> gates = extract_gate_range(0, get_current_layer())
+	>>> identity_map = {g['target']: g['target'] for g in gates}
+	>>> inject_remapped_gates(gates, identity_map)
+	"""
+	cdef circuit_t *circ = <circuit_t*>_circuit
+	cdef gate_t *g
+	cdef int i
+	if not _circuit_initialized:
+		raise RuntimeError("Circuit not initialized")
+	for gate_dict in gates:
+		g = <gate_t*>malloc(sizeof(gate_t))
+		if g == NULL:
+			raise MemoryError("Failed to allocate gate_t")
+		memset(g, 0, sizeof(gate_t))
+		g.Gate = <Standardgate_t>gate_dict['type']
+		g.Target = <qubit_t>qubit_map[gate_dict['target']]
+		g.GateValue = gate_dict['angle']
+		g.NumControls = <unsigned int>gate_dict['num_controls']
+		controls = gate_dict['controls']
+		if g.NumControls <= 2:
+			for i in range(<int>g.NumControls):
+				g.Control[i] = <qubit_t>qubit_map[controls[i]]
+		else:
+			g.large_control = <qubit_t*>malloc(g.NumControls * sizeof(qubit_t))
+			if g.large_control == NULL:
+				free(g)
+				raise MemoryError("Failed to allocate large_control array")
+			for i in range(<int>g.NumControls):
+				g.large_control[i] = <qubit_t>qubit_map[controls[i]]
+			g.Control[0] = g.large_control[0]
+			g.Control[1] = g.large_control[1]
+		add_gate(circ, g)
+
+
+def _get_layer_floor():
+	"""Get current layer floor value.
+
+	Returns
+	-------
+	int
+		Current layer_floor from circuit_t.
+	"""
+	cdef circuit_s *circ = <circuit_s*>_circuit
+	if not _circuit_initialized:
+		return 0
+	return <int>circ.layer_floor
+
+
+def _set_layer_floor(int floor):
+	"""Set layer floor value.
+
+	Parameters
+	----------
+	floor : int
+		New layer_floor value. Gates added via add_gate() will not be placed
+		before this layer.
+	"""
+	cdef circuit_s *circ = <circuit_s*>_circuit
+	if not _circuit_initialized:
+		raise RuntimeError("Circuit not initialized")
+	circ.layer_floor = <unsigned int>floor
+
+
+def _allocate_qubit():
+	"""Allocate a single qubit via the circuit's qubit allocator.
+
+	Returns
+	-------
+	int
+		Index of the newly allocated qubit.
+	"""
+	cdef qubit_allocator_t *alloc
+	cdef unsigned int qubit_idx
+	if not _circuit_initialized:
+		raise RuntimeError("Circuit not initialized")
+	alloc = circuit_get_allocator(<circuit_s*>_circuit)
+	if alloc == NULL:
+		raise RuntimeError("No allocator available")
+	qubit_idx = allocator_alloc(alloc, 1, True)
+	return <int>qubit_idx
+
+
+# Module-level compile cache clear infrastructure
+_compile_cache_clear_hooks = []
+
+def _register_cache_clear_hook(callback):
+	"""Register a callback to be called when compile caches should be cleared.
+
+	Parameters
+	----------
+	callback : callable
+		Function to call (no arguments) when caches need clearing.
+		Typically called on ql.circuit() creation.
+	"""
+	_compile_cache_clear_hooks.append(callback)
+
+def _clear_compile_caches():
+	"""Call all registered cache-clear hooks.
+
+	Called automatically when a new circuit is created via ql.circuit().
+	"""
+	for hook in _compile_cache_clear_hooks:
+		try:
+			hook()
+		except Exception:
+			pass  # Silently ignore errors in cache-clear hooks
 
 
 circuit()
