@@ -89,7 +89,10 @@ Plans:
   2. Debug mode (`@ql.compile(debug=True)`) prints original operation count alongside optimized gate count and reports cache hits/misses
   3. A compiled function calling another compiled function produces correct results (inner function's replayed gates become part of outer capture)
   4. Comprehensive test suite covers all compilation scenarios: basic capture/replay, different widths, cache invalidation, controlled context, inverse, debug, and nesting
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 51-01-PLAN.md -- Inverse generation, debug mode, and nesting depth limit (compile.py)
+- [ ] 51-02-PLAN.md -- Comprehensive test suite for inverse, debug, nesting, and composition
 
 ## Progress
 
@@ -108,7 +111,7 @@ Phases execute in numeric order: 48 -> 49 -> 50 -> 51
 | 48. Core Capture-Replay | v2.0 | 2/2 | Complete | 2026-02-04 |
 | 49. Optimization & Uncomputation | v2.0 | 2/2 | Complete | 2026-02-04 |
 | 50. Controlled Context | v2.0 | 2/2 | Complete | 2026-02-04 |
-| 51. Differentiators & Polish | v2.0 | 0/TBD | Not started | - |
+| 51. Differentiators & Polish | v2.0 | 0/2 | Planned | - |
 
 ---
 *Roadmap created: 2026-02-02*
