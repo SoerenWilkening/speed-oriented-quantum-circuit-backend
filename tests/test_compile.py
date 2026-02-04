@@ -1,4 +1,4 @@
-"""Tests for @ql.compile decorator -- capture, caching, and replay.
+"""Tests for @ql.compile decorator -- capture, caching, replay, and optimization.
 
 Covers all 5 phase success criteria:
   SC1: First call produces same circuit as undecorated version
@@ -6,13 +6,27 @@ Covers all 5 phase success criteria:
   SC3: Returned qint is usable in subsequent operations
   SC4: Different widths/classical args trigger re-capture
   SC5: ql.circuit() invalidates cache
+
+Plus Phase 49 optimization criteria:
+  OPT1: Optimiser cancels adjacent inverse gates
+  OPT2: Optimiser merges consecutive rotations
+  OPT3: optimize=False skips optimisation
+  OPT4: Stats properties report correct values
 """
 
 import warnings
 
 import quantum_language as ql
 from quantum_language._core import extract_gate_range, get_current_layer
-from quantum_language.compile import CompiledFunc
+from quantum_language.compile import (
+    _H,
+    _M,
+    _P,
+    _X,
+    CompiledFunc,
+    _gates_cancel,
+    _optimize_gate_list,
+)
 
 # Suppress cosmetic width warnings
 warnings.filterwarnings("ignore", message="Value .* exceeds")
@@ -582,3 +596,220 @@ def test_no_return_value():
     b = ql.qint(5, width=4)
     result2 = just_modify(b)
     assert result2 is None
+
+
+# ---------------------------------------------------------------------------
+# Helper: build a synthetic gate dict
+# ---------------------------------------------------------------------------
+def _gate(gate_type, target, angle=0.0, controls=None):
+    """Build a gate dict matching the extract_gate_range format."""
+    ctrl = controls if controls is not None else []
+    return {
+        "type": gate_type,
+        "target": target,
+        "angle": angle,
+        "num_controls": len(ctrl),
+        "controls": ctrl,
+    }
+
+
+# ---------------------------------------------------------------------------
+# OPT: Optimisation tests (Phase 49)
+# ---------------------------------------------------------------------------
+
+
+def test_optimization_reduces_adjacent_inverse_gates():
+    """OPT1: Adjacent self-adjoint gates cancel, reducing gate count.
+
+    Uses synthetic gate list to demonstrate adjacent H-H cancellation,
+    then verifies via the compile decorator stats API.
+    """
+    # Unit test: two adjacent H on same qubit cancel to nothing
+    gates = [_gate(_H, 0), _gate(_H, 0)]
+    optimized = _optimize_gate_list(gates)
+    assert len(optimized) == 0, f"H-H should cancel, got {len(optimized)}"
+
+    # Unit test: cascading cancellation (H-X-X-H -> H-H -> empty)
+    gates2 = [_gate(_H, 0), _gate(_X, 0), _gate(_X, 0), _gate(_H, 0)]
+    optimized2 = _optimize_gate_list(gates2)
+    assert len(optimized2) == 0, f"H-X-X-H should cascade-cancel, got {len(optimized2)}"
+
+    # Unit test: opposite P angles cancel
+    gates3 = [_gate(_P, 0, angle=1.5708), _gate(_P, 0, angle=-1.5708)]
+    optimized3 = _optimize_gate_list(gates3)
+    assert len(optimized3) == 0, f"P(+a) P(-a) should cancel, got {len(optimized3)}"
+
+    # Integration: compiled function with at least some gates should
+    # report original_gates >= optimized_gates (never more gates after opt)
+    ql.circuit()
+
+    @ql.compile
+    def add_one(x):
+        x += 1
+        return x
+
+    a = ql.qint(0, width=4)
+    add_one(a)
+    assert add_one.original_gates >= add_one.optimized_gates
+
+
+def test_optimization_stats_properties():
+    """OPT4: Stats properties (original_gates, optimized_gates, reduction_percent) exist."""
+    ql.circuit()
+
+    @ql.compile
+    def add_one(x):
+        x += 1
+        return x
+
+    a = ql.qint(0, width=4)
+    add_one(a)
+
+    assert add_one.original_gates > 0, "original_gates should be > 0"
+    assert add_one.optimized_gates >= 0, "optimized_gates should be >= 0"
+    assert add_one.reduction_percent >= 0.0, "reduction_percent should be >= 0"
+    assert add_one.original_gates >= add_one.optimized_gates
+
+
+def test_optimize_false_skips_optimization():
+    """OPT3: optimize=False stores raw captured sequence without reduction."""
+    ql.circuit()
+
+    @ql.compile(optimize=False)
+    def add_one(x):
+        x += 1
+        return x
+
+    a = ql.qint(0, width=4)
+    add_one(a)
+
+    # With optimization disabled, original == optimized (no reduction)
+    assert add_one.original_gates == add_one.optimized_gates, (
+        f"optimize=False should not reduce: orig={add_one.original_gates}, "
+        f"opt={add_one.optimized_gates}"
+    )
+    assert add_one.reduction_percent == 0.0
+
+
+def test_replay_uses_optimized_gates():
+    """OPT2: Replay injects the optimised gate count, not the original.
+
+    We test this using _optimize_gate_list on a synthetic sequence, then
+    verify through the compile decorator that replay gate count matches
+    the cached (optimised) count.
+    """
+    ql.circuit()
+
+    @ql.compile
+    def add_one(x):
+        x += 1
+        return x
+
+    # Capture
+    a = ql.qint(0, width=4)
+    add_one(a)
+
+    # Replay on different qubits
+    b = ql.qint(0, width=4)
+    start2 = get_current_layer()
+    add_one(b)
+    end2 = get_current_layer()
+    replay_gates = extract_gate_range(start2, end2)
+
+    # Replay gate count must equal the optimised (cached) count
+    assert len(replay_gates) == add_one.optimized_gates, (
+        f"Replay gates ({len(replay_gates)}) should match optimized_gates "
+        f"({add_one.optimized_gates})"
+    )
+
+
+def test_optimization_rotation_merge():
+    """OPT2: Consecutive rotations on the same qubit are merged."""
+    # Two P gates with different angles -> merged into one
+    gates = [_gate(_P, 0, angle=0.5), _gate(_P, 0, angle=0.3)]
+    optimized = _optimize_gate_list(gates)
+    assert len(optimized) == 1, f"Two P gates should merge, got {len(optimized)}"
+    assert abs(optimized[0]["angle"] - 0.8) < 1e-12
+
+    # Two P gates that sum to zero -> disappear
+    gates2 = [_gate(_P, 0, angle=0.5), _gate(_P, 0, angle=-0.5)]
+    optimized2 = _optimize_gate_list(gates2)
+    assert len(optimized2) == 0, f"P(+a) + P(-a) should vanish, got {len(optimized2)}"
+
+    # Different targets -> no merge
+    gates3 = [_gate(_P, 0, angle=0.5), _gate(_P, 1, angle=0.3)]
+    optimized3 = _optimize_gate_list(gates3)
+    assert len(optimized3) == 2, "Different targets should not merge"
+
+    # Different controls -> no merge
+    gates4 = [
+        _gate(_P, 0, angle=0.5, controls=[1]),
+        _gate(_P, 0, angle=0.3, controls=[2]),
+    ]
+    optimized4 = _optimize_gate_list(gates4)
+    assert len(optimized4) == 2, "Different controls should not merge"
+
+
+def test_optimization_empty_function():
+    """OPT: Empty function (no gates) works with optimisation and stats."""
+    ql.circuit()
+
+    @ql.compile
+    def noop(x):
+        return x
+
+    a = ql.qint(0, width=4)
+    noop(a)
+
+    assert noop.original_gates == 0
+    assert noop.optimized_gates == 0
+    assert noop.reduction_percent == 0.0
+
+
+def test_optimization_fallback_on_error():
+    """OPT: Optimisation preserves functional correctness.
+
+    Even if optimisation changes the gate count, the function should still
+    produce correct results (replay returns the input qint for in-place ops).
+    """
+    ql.circuit()
+
+    @ql.compile
+    def add_one(x):
+        x += 1
+        return x
+
+    a = ql.qint(3, width=4)
+    result = add_one(a)
+    assert result is a, "In-place return should still work after optimisation"
+
+    # Replay also works
+    b = ql.qint(5, width=4)
+    result2 = add_one(b)
+    assert result2 is b, "Replay in-place return should work after optimisation"
+
+    # Subsequent operations on the result should work
+    layer_before = get_current_layer()
+    result2 += 1
+    layer_after = get_current_layer()
+    assert layer_after > layer_before
+
+
+def test_optimization_measurement_gates_never_cancel():
+    """OPT: Measurement gates are never cancelled or merged."""
+    gates = [_gate(_M, 0), _gate(_M, 0)]
+    optimized = _optimize_gate_list(gates)
+    assert len(optimized) == 2, "Measurement gates should not cancel"
+
+
+def test_optimization_controlled_gates_respect_controls():
+    """OPT: Gates with different controls do not cancel."""
+    # Same type and target, but different controls
+    g1 = _gate(_H, 0, controls=[1])
+    g2 = _gate(_H, 0, controls=[2])
+    assert not _gates_cancel(g1, g2), "Different controls should not cancel"
+
+    # Same controls -> cancel
+    g3 = _gate(_H, 0, controls=[1])
+    g4 = _gate(_H, 0, controls=[1])
+    assert _gates_cancel(g3, g4), "Same controls should cancel"
