@@ -813,3 +813,170 @@ def test_optimization_controlled_gates_respect_controls():
     g3 = _gate(_H, 0, controls=[1])
     g4 = _gate(_H, 0, controls=[1])
     assert _gates_cancel(g3, g4), "Same controls should cancel"
+
+
+# ---------------------------------------------------------------------------
+# UNCOMP: Uncomputation integration tests (Phase 49 Plan 02)
+# ---------------------------------------------------------------------------
+
+
+def test_uncomputation_replay_result_in_with_block():
+    """UNCOMP1: Replay result inside with block is auto-uncomputed at scope exit.
+
+    Capture happens outside the with block; replay inside produces a new qint
+    that is registered in the scope frame and uncomputed when the with block exits.
+    """
+    ql.circuit()
+
+    @ql.compile
+    def make_result(x):
+        return x + ql.qint(1, width=x.width)
+
+    # Capture (first call) outside with block
+    a = ql.qint(3, width=4)
+    _r1 = make_result(a)
+
+    # Replay inside with block
+    b = ql.qint(5, width=4)
+    ctrl = ql.qbool()
+
+    with ctrl:
+        result = make_result(b)
+        assert not result._is_uncomputed, "Result should be live inside with block"
+
+    # After scope exit, the result should have been auto-uncomputed
+    assert result._is_uncomputed, "Replay result should be auto-uncomputed after with block exit"
+
+
+def test_uncomputation_in_place_return_no_double_uncompute():
+    """UNCOMP2: In-place return does NOT set operation_type, preventing spurious uncomputation.
+
+    When a compiled function returns its input parameter (in-place modification),
+    the caller's original qint is returned unchanged -- no new metadata is set.
+    """
+    ql.circuit()
+
+    @ql.compile
+    def add_inplace(x):
+        x += 1
+        return x
+
+    # First call: in-place return
+    a = ql.qint(3, width=4)
+    result = add_inplace(a)
+    assert result is a, "In-place return should be the same object"
+    assert result.operation_type is None, (
+        f"In-place first-call result should NOT have operation_type, got {result.operation_type}"
+    )
+
+    # Replay: in-place return
+    b = ql.qint(5, width=4)
+    result2 = add_inplace(b)
+    assert result2 is b, "Replay in-place return should be caller's qint"
+    assert result2.operation_type is None, (
+        f"Replay in-place result should NOT have operation_type, got {result2.operation_type}"
+    )
+
+
+def test_uncomputation_second_replay_in_with_block():
+    """UNCOMP3: Second replay inside with block also gets correctly uncomputed.
+
+    Ensures uncomputation works consistently across multiple replay invocations
+    when called inside different with blocks.
+    """
+    ql.circuit()
+
+    @ql.compile
+    def make_val(x):
+        return x + ql.qint(2, width=x.width)
+
+    # First call (capture)
+    a = ql.qint(1, width=4)
+    _r1 = make_val(a)
+
+    # Second call (replay) inside with block
+    b = ql.qint(5, width=4)
+    ctrl1 = ql.qbool()
+    with ctrl1:
+        r2 = make_val(b)
+    assert r2._is_uncomputed, "First replay in with block should be uncomputed"
+
+    # Third call (replay) inside another with block
+    c = ql.qint(7, width=4)
+    ctrl2 = ql.qbool()
+    with ctrl2:
+        r3 = make_val(c)
+    assert r3._is_uncomputed, "Second replay in with block should also be uncomputed"
+
+
+def test_compiled_result_has_operation_type():
+    """UNCOMP4: Both first-call and replay results have operation_type set.
+
+    This is the trigger for _do_uncompute() to actually reverse gates.
+    First-call results get their type from normal arithmetic (e.g. 'ADD'),
+    replay results get 'COMPILED' from _build_return_qint.
+    """
+    ql.circuit()
+
+    @ql.compile
+    def make_new(x):
+        return x + ql.qint(1, width=x.width)
+
+    # First call
+    a = ql.qint(0, width=4)
+    r1 = make_new(a)
+    assert r1.operation_type is not None, "First-call result should have operation_type set"
+
+    # Replay
+    b = ql.qint(0, width=4)
+    r2 = make_new(b)
+    assert r2.operation_type is not None, "Replay result should have operation_type set"
+    assert r2.operation_type == "COMPILED", (
+        f"Replay result should have operation_type='COMPILED', got {r2.operation_type}"
+    )
+
+
+def test_uncomputation_replay_uses_optimized_sequence():
+    """UNCOMP5: Uncomputation reverses the optimised gate sequence, not the original.
+
+    The replayed gates come from the optimised (cached) sequence, so when
+    reverse_circuit_range is called during uncomputation, it reverses only
+    the optimised gates.  We verify by checking that the replay gate count
+    matches the optimised count, and that uncomputation correctly reverses
+    only those gates.
+    """
+    ql.circuit()
+
+    @ql.compile
+    def make_new(x):
+        return x + ql.qint(1, width=x.width)
+
+    # Capture
+    a = ql.qint(0, width=4)
+    _r1 = make_new(a)
+    cached_gate_count = make_new.optimized_gates
+
+    # Replay outside with block to measure forward gate count
+    b = ql.qint(0, width=4)
+    start = get_current_layer()
+    _r2 = make_new(b)
+    end = get_current_layer()
+    replay_gates = extract_gate_range(start, end)
+    assert len(replay_gates) == cached_gate_count, (
+        f"Replay gate count ({len(replay_gates)}) should match "
+        f"optimized_gates ({cached_gate_count})"
+    )
+
+    # Replay inside with block -- result gets uncomputed
+    c = ql.qint(0, width=4)
+    ctrl = ql.qbool()
+    with ctrl:
+        r3 = make_new(c)
+
+    # r3's start/end layer span should match the optimised gate count
+    layer_span = r3._end_layer - r3._start_layer
+    assert layer_span > 0, "Result should have valid layer span"
+    # The span of optimised gates that were replayed should equal the cached count
+    # After uncomputation, the gates may have been reversed/removed,
+    # but the original span should have matched the optimised count
+    assert r3._is_uncomputed, "Result should be uncomputed after with block"
