@@ -1,5 +1,33 @@
 # Project Milestones: Quantum Assembly
 
+## v2.0 Function Compilation (Shipped: 2026-02-04)
+
+**Delivered:** `@ql.compile` decorator that captures gate sequences on first call, optimizes them, and replays with qubit remapping on subsequent calls — supporting controlled contexts, inverse generation, nesting, and debug introspection.
+
+**Phases completed:** 48-51 (8 plans total)
+
+**Key accomplishments:**
+
+- `@ql.compile` decorator with gate capture, caching, and replay with virtual-to-real qubit remapping
+- Gate list optimizer canceling inverse pairs and merging adjacent gates before caching
+- Compiled functions work inside `with` blocks via controlled variant derivation with separate cache entries
+- Inverse generation (`.inverse()`) producing adjoint of compiled sequences with reversed gate order
+- Debug introspection mode showing operation counts, optimization stats, and cache hit/miss reporting
+- Nested compilation support — compiled functions can call other compiled functions
+
+**Stats:**
+
+- 40 files created/modified (+8,252 lines)
+- Key files: compile.py (920 LOC) + test_compile.py (1,794 LOC)
+- 4 phases, 8 plans, 62 tests (100% pass rate)
+- 1 day (2026-02-04)
+
+**Git range:** `docs(48) 67196d0` → `test(51) c803676`
+
+**What's next:** TBD — next milestone planning via `/gsd:new-milestone`
+
+---
+
 ## v1.9 Pixel-Art Circuit Visualization (Shipped: 2026-02-03)
 
 **Delivered:** Added compact pixel-art circuit visualization with two zoom levels (overview for 200+ qubits, detail with text labels), auto-zoom selection, and a clean `ql.draw_circuit()` public API with lazy Pillow import.

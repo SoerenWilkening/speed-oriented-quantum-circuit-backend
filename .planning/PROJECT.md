@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A quantum programming framework that enables writing quantum algorithms using standard programming constructs — operator overloading on variable-width quantum integers (qint, 1-64 bits) and quantum booleans (qbool), with Python's `with` statement implementing quantum conditionals. Operations compile to optimized quantum circuits via a C backend with Cython bindings. Includes circuit optimization, pixel-art circuit visualization scaling to 200+ qubits, statistics, OpenQASM 3.0 export, and Qiskit-based verification.
+A quantum programming framework that enables writing quantum algorithms using standard programming constructs — operator overloading on variable-width quantum integers (qint, 1-64 bits) and quantum booleans (qbool), with Python's `with` statement implementing quantum conditionals. Operations compile to optimized quantum circuits via a C backend with Cython bindings. Includes `@ql.compile` for function-level compilation with gate capture/replay/optimization, circuit optimization, pixel-art circuit visualization scaling to 200+ qubits, statistics, OpenQASM 3.0 export, and Qiskit-based verification.
 
 ## Core Value
 
@@ -86,22 +86,27 @@ Write quantum algorithms in natural programming style that compiles to efficient
 - ✓ Auto-zoom selection based on circuit size with user override — v1.9
 - ✓ `ql.draw_circuit()` Python API returning PIL Image with save-to-PNG and lazy Pillow import — v1.9
 
+- ✓ `@ql.compile` decorator captures gate sequences and replays with qubit remapping — v2.0
+- ✓ Gate list optimizer cancels inverse pairs and merges adjacent gates before caching — v2.0
+- ✓ Compiled functions work inside `with` blocks via controlled variant derivation — v2.0
+- ✓ `.inverse()` on compiled functions produces adjoint of compiled sequence — v2.0
+- ✓ Debug mode with operation counts, optimization stats, cache hit/miss reporting — v2.0
+- ✓ Nested compilation (compiled functions calling other compiled functions) — v2.0
+- ✓ Comprehensive test suite (62 tests) covering all compilation scenarios — v2.0
+
 ### Active
-
-**Current Milestone: v2.0 — Function Compilation**
-
-- [ ] `@ql.compile` decorator captures all gate sequences within a decorated function
-- [ ] Merged sequences are optimized (gate merging, inverse cancellation) as a single unit
-- [ ] Compiled functions execute the pre-optimized sequence on subsequent calls
-- [ ] Classical parameters are parametric (compile once, not per-value)
-- [ ] Compiled functions work inside `with` blocks (controlled execution)
-- [ ] Compiled functions return quantum values (qint/qbool) usable in further operations
 
 **Deferred bugs (carry forward):**
 - Fix _reduce_mod result corruption (BUG-MOD-REDUCE) — needs fundamentally different circuit structure
 - Fix controlled multiplication corruption (BUG-COND-MUL-01) — not yet investigated
 - Fix MSB comparison leak in division (BUG-DIV-02) — 9 cases per div/mod test file
 - Fix mixed-width QFT addition off-by-one (BUG-WIDTH-ADD) — discovered in Phase 43
+
+**Deferred features (carry forward):**
+- Parametric compilation (compile once for all classical values) — PAR-01, PAR-02
+- Resource estimation for compiled functions — ADV-01
+- Serialization of compiled functions to disk — ADV-02
+- Compiled function composition — ADV-03
 
 ### Out of Scope
 
@@ -117,7 +122,7 @@ Write quantum algorithms in natural programming style that compiles to efficient
 
 **Architecture:** Three-layer stateless design — C backend (gate primitives, circuit management, integer operations) -> Cython bindings -> Python frontend (qint/qbool classes, operator overloading). All functions take explicit parameters; no global state.
 
-**Current state:** v1.9 shipped — pixel-art circuit visualization complete. C-level data extraction with qubit compaction, NumPy pixel-art renderer with 10 gate colors, multi-qubit control lines/dots, two zoom levels (overview 3px + detail 12px with text labels), auto-zoom selection, and `ql.draw_circuit()` public API with lazy Pillow import. 47 visualization tests. Exhaustive verification suite with 8,365+ tests covering every operation category through the full pipeline (Python -> C circuit -> OpenQASM 3.0 -> Qiskit simulate -> result check). Clean modular C backend with types.h, circuit.h, arithmetic_ops.h, comparison_ops.h, bitwise_ops.h, circuit_output.h. Centralized qubit allocator with ownership tracking. Variable-width quantum integers (1-64 bits) with complete arithmetic, comparison, and initialization operations. Automatic uncomputation with dependency tracking, mode control (lazy/eager), and user override methods. Proper package structure with ql.array supporting multi-dimensional arrays, reductions, element-wise operations, and in-place element mutation. CNOT-based quantum copy for binary operations. Memory-safe Python-to-C bridge with Cython try-finally cleanup.
+**Current state:** v2.0 shipped — function compilation complete. `@ql.compile` decorator captures gate sequences on first call, optimizes via gate list optimizer, and replays with qubit remapping on subsequent calls. Compiled functions work inside `with` blocks (controlled variant derivation), support `.inverse()` for adjoint generation, debug introspection, and nesting. 62 compilation tests. Pixel-art circuit visualization with two zoom levels scaling to 200+ qubits. Exhaustive verification suite with 8,365+ tests covering every operation category through the full pipeline (Python -> C circuit -> OpenQASM 3.0 -> Qiskit simulate -> result check). Clean modular C backend with types.h, circuit.h, arithmetic_ops.h, comparison_ops.h, bitwise_ops.h, circuit_output.h. Centralized qubit allocator with ownership tracking. Variable-width quantum integers (1-64 bits) with complete arithmetic, comparison, and initialization operations. Automatic uncomputation with dependency tracking, mode control (lazy/eager), and user override methods. Proper package structure with ql.array supporting multi-dimensional arrays, reductions, element-wise operations, and in-place element mutation. CNOT-based quantum copy for binary operations. Memory-safe Python-to-C bridge with Cython try-finally cleanup.
 
 **Codebase:**
 - ~221,387 lines of code (Python, Cython, C)
@@ -196,6 +201,10 @@ Write quantum algorithms in natural programming style that compiles to efficient
 | qarray __setitem__ enables element mutation | Replaces TypeError with working assignment | ✓ Good — all 9 augmented operators work |
 
 ---
+| Capture-replay over abstract tracing | Compatible with Cython layer, no operator rewrites | ✓ Good — works with existing architecture |
+| Python-level gate list optimizer | Simpler than C-level, functionally equivalent | ✓ Good — cancels inverse pairs, merges adjacent |
+| Controlled variant derivation | Correct quantum semantics vs post-hoc control | ✓ Good — both variants eagerly cached |
+| Eager caching of controlled+uncontrolled | Avoids redundant re-capture | ✓ Good — separate cache entries |
 | Pure Python (PIL) renderer first | Simpler to build, optimize to C only if needed | ✓ Good — renders 200+ qubits in <5s |
 | Pixel-art over ASCII for large circuits | ASCII unusable beyond ~20 qubits; pixel art scales to 200+ | ✓ Good — 200 qubits / 10K gates verified |
 | NumPy bulk rendering over per-pixel ImageDraw | Performance at scale (10K+ gates) | ✓ Good — 54MB image in <5s |
@@ -204,4 +213,4 @@ Write quantum algorithms in natural programming style that compiles to efficient
 | Auto-zoom with AND logic (both thresholds) | Keep detail for circuits large in only one dimension | ✓ Good — sensible default behavior |
 
 ---
-*Last updated: 2026-02-04 after v2.0 milestone start*
+*Last updated: 2026-02-04 after v2.0 milestone*
