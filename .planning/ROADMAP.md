@@ -62,7 +62,10 @@ Plans:
   1. A compiled function produces fewer gates than the undecorated version (optimization applied to captured sequence)
   2. Replayed gates come from the optimized sequence, not the original unoptimized capture
   3. A qint returned from a compiled function is correctly uncomputed when it goes out of scope inside a `with` block
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 49-01-PLAN.md -- Gate list optimizer, optimize parameter, and stats exposure
+- [ ] 49-02-PLAN.md -- Uncomputation integration and comprehensive tests
 
 ### Phase 50: Controlled Context
 **Goal**: Compiled functions work correctly inside `with` blocks, producing controlled gate variants
@@ -100,7 +103,7 @@ Phases execute in numeric order: 48 -> 49 -> 50 -> 51
 | 46. Core Renderer | v1.9 | 3/3 | Complete | 2026-02-03 |
 | 47. Detail Mode & Public API | v1.9 | 2/2 | Complete | 2026-02-03 |
 | 48. Core Capture-Replay | v2.0 | 2/2 | Complete | 2026-02-04 |
-| 49. Optimization & Uncomputation | v2.0 | 0/TBD | Not started | - |
+| 49. Optimization & Uncomputation | v2.0 | 0/2 | Planned | - |
 | 50. Controlled Context | v2.0 | 0/TBD | Not started | - |
 | 51. Differentiators & Polish | v2.0 | 0/TBD | Not started | - |
 
