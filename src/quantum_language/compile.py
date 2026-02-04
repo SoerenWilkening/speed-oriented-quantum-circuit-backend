@@ -1,7 +1,10 @@
 """Compile decorator for quantum function capture and replay.
 
 Provides @ql.compile decorator that captures gate sequences on first call
-and replays them with qubit remapping on subsequent calls.
+and replays them with qubit remapping on subsequent calls.  When
+``optimize=True`` (the default), adjacent inverse gates are cancelled and
+consecutive rotations on the same qubit are merged before the sequence is
+cached, so every replay benefits from the reduced gate count.
 
 Usage
 -----
@@ -12,9 +15,9 @@ Usage
 ...     x += 1
 ...     return x
 >>> a = ql.qint(3, width=4)
->>> result = add_one(a)   # Capture
+>>> result = add_one(a)   # Capture + optimise
 >>> b = ql.qint(5, width=4)
->>> result2 = add_one(b)  # Replay (no re-execution)
+>>> result2 = add_one(b)  # Replay (optimised sequence)
 """
 
 import collections
@@ -33,6 +36,115 @@ from ._core import (
     inject_remapped_gates,
 )
 from .qint import qint
+
+# ---------------------------------------------------------------------------
+# Gate type constants (from c_backend/include/types.h  Standardgate_t)
+# ---------------------------------------------------------------------------
+_X, _Y, _Z, _R, _H, _Rx, _Ry, _Rz, _P, _M = range(10)
+_SELF_ADJOINT = frozenset({_X, _Y, _Z, _H})
+_ROTATION_GATES = frozenset({_P, _Rx, _Ry, _Rz, _R})
+
+
+# ---------------------------------------------------------------------------
+# Gate list optimisation helpers
+# ---------------------------------------------------------------------------
+def _gates_cancel(g1, g2):
+    """Return True if *g1* followed by *g2* is identity (they cancel).
+
+    Rules
+    -----
+    * Must have identical target, num_controls, controls and type.
+    * Self-adjoint gates (X, Y, Z, H) always cancel with themselves.
+    * Rotation gates (P, Rx, Ry, Rz, R) cancel when their angles sum to
+      zero within floating-point tolerance.
+    * Measurement gates never cancel.
+    """
+    if g1["type"] != g2["type"]:
+        return False
+    if g1["target"] != g2["target"]:
+        return False
+    if g1["num_controls"] != g2["num_controls"]:
+        return False
+    if g1["controls"] != g2["controls"]:
+        return False
+
+    gt = g1["type"]
+    if gt == _M:
+        return False
+    if gt in _SELF_ADJOINT:
+        return True
+    if gt in _ROTATION_GATES:
+        return abs(g1["angle"] + g2["angle"]) < 1e-12
+    return False
+
+
+def _gates_merge(g1, g2):
+    """Return True if *g1* and *g2* can be merged into a single gate.
+
+    Only rotation gates on the same qubit (same target, controls, type) are
+    mergeable.  Self-adjoint and measurement gates cannot merge (they would
+    cancel, not merge).
+    """
+    if g1["type"] != g2["type"]:
+        return False
+    if g1["target"] != g2["target"]:
+        return False
+    if g1["num_controls"] != g2["num_controls"]:
+        return False
+    if g1["controls"] != g2["controls"]:
+        return False
+
+    gt = g1["type"]
+    if gt in _ROTATION_GATES:
+        # Cancellation is handled by _gates_cancel; here we only say
+        # "yes these can be combined".  The caller uses _merged_gate
+        # which may still return None when the sum is zero.
+        return True
+    return False
+
+
+def _merged_gate(g1, g2):
+    """Return a new gate dict with merged angle, or *None* if result is zero.
+
+    Copies all fields from *g1* and replaces the angle with the sum.
+    """
+    new_angle = g1["angle"] + g2["angle"]
+    if abs(new_angle) < 1e-12:
+        return None  # gate disappears
+    merged = dict(g1)
+    merged["angle"] = new_angle
+    return merged
+
+
+def _optimize_gate_list(gates):
+    """Optimise a gate list with multi-pass adjacent cancellation / merge.
+
+    Each pass scans left-to-right, cancelling adjacent inverse pairs and
+    merging consecutive rotations on the same qubit.  Passes repeat until
+    the list stops shrinking or *max_passes* is reached.
+    """
+    prev_count = len(gates) + 1
+    optimized = list(gates)
+    max_passes = 10  # safety limit
+    passes = 0
+    while len(optimized) < prev_count and passes < max_passes:
+        prev_count = len(optimized)
+        passes += 1
+        result = []
+        for gate in optimized:
+            if result and _gates_cancel(result[-1], gate):
+                result.pop()  # Adjacent inverse cancellation
+            elif result and _gates_merge(result[-1], gate):
+                merged = _merged_gate(result[-1], gate)
+                if merged is None:
+                    result.pop()  # Merged to zero
+                else:
+                    result[-1] = merged
+            else:
+                result.append(gate)
+        optimized = result
+    return optimized
+
 
 # ---------------------------------------------------------------------------
 # Global registry for cache invalidation on circuit reset
@@ -88,6 +200,7 @@ class CompiledBlock:
         "internal_qubit_count",
         "return_qubit_range",
         "return_is_param_index",
+        "original_gate_count",
         "_first_call_result",
     )
 
@@ -99,6 +212,7 @@ class CompiledBlock:
         internal_qubit_count,
         return_qubit_range,
         return_is_param_index=None,
+        original_gate_count=None,
     ):
         self.gates = gates
         self.total_virtual_qubits = total_virtual_qubits
@@ -106,6 +220,9 @@ class CompiledBlock:
         self.internal_qubit_count = internal_qubit_count
         self.return_qubit_range = return_qubit_range
         self.return_is_param_index = return_is_param_index
+        self.original_gate_count = (
+            original_gate_count if original_gate_count is not None else len(gates)
+        )
         self._first_call_result = None
 
 
@@ -226,13 +343,14 @@ class CompiledFunc:
         If True, run both capture and replay and compare (dev mode).
     """
 
-    def __init__(self, func, max_cache=128, key=None, verify=False):
+    def __init__(self, func, max_cache=128, key=None, verify=False, optimize=True):
         functools.update_wrapper(self, func)
         self._func = func
         self._cache = collections.OrderedDict()
         self._max_cache = max_cache
         self._key_func = key
         self._verify = verify
+        self._optimize = optimize
         # Register for cache invalidation on circuit reset
         _compiled_funcs.append(weakref.ref(self))
 
@@ -343,6 +461,15 @@ class CompiledFunc:
             vidx += qa.width
         internal_count = total_virtual - vidx
 
+        # Optimise the virtual gate list (cancel adjacent inverses, merge
+        # consecutive rotations) before caching so every replay benefits.
+        original_count = len(virtual_gates)
+        if self._optimize:
+            try:
+                virtual_gates = _optimize_gate_list(virtual_gates)
+            except Exception:
+                pass  # Fall back to unoptimised on any error
+
         block = CompiledBlock(
             gates=virtual_gates,
             total_virtual_qubits=total_virtual,
@@ -350,6 +477,7 @@ class CompiledFunc:
             internal_qubit_count=internal_count,
             return_qubit_range=return_range,
             return_is_param_index=return_is_param_index,
+            original_gate_count=original_count,
         )
         block._first_call_result = result
         return block
@@ -390,6 +518,27 @@ class CompiledFunc:
                 return _build_return_qint(block, virtual_to_real, start_layer, end_layer)
         return None
 
+    # ------------------------------------------------------------------
+    # Optimisation statistics
+    # ------------------------------------------------------------------
+    @property
+    def original_gates(self):
+        """Total original (pre-optimisation) gate count across all cache entries."""
+        return sum(b.original_gate_count for b in self._cache.values())
+
+    @property
+    def optimized_gates(self):
+        """Total optimised gate count across all cache entries."""
+        return sum(len(b.gates) for b in self._cache.values())
+
+    @property
+    def reduction_percent(self):
+        """Percentage reduction from optimisation."""
+        orig = self.original_gates
+        if orig == 0:
+            return 0.0
+        return 100.0 * (1.0 - self.optimized_gates / orig)
+
     def clear_cache(self):
         """Clear this function's compilation cache."""
         self._cache.clear()
@@ -401,13 +550,13 @@ class CompiledFunc:
 # ---------------------------------------------------------------------------
 # Public decorator API
 # ---------------------------------------------------------------------------
-def compile(func=None, *, max_cache=128, key=None, verify=False):
+def compile(func=None, *, max_cache=128, key=None, verify=False, optimize=True):
     """Decorator that compiles a quantum function for cached gate replay.
 
     Supports three forms:
       @ql.compile
       @ql.compile()
-      @ql.compile(max_cache=N, key=..., verify=...)
+      @ql.compile(max_cache=N, key=..., verify=..., optimize=...)
 
     Parameters
     ----------
@@ -419,6 +568,10 @@ def compile(func=None, *, max_cache=128, key=None, verify=False):
         Custom cache key function. Receives same args as decorated function.
     verify : bool
         If True, compare capture vs replay gate sequences (dev mode).
+    optimize : bool
+        If True (default), optimise the captured gate list by cancelling
+        adjacent inverse gates and merging consecutive rotations before
+        caching.  Set to False to store the raw captured sequence.
 
     Returns
     -------
@@ -435,13 +588,18 @@ def compile(func=None, *, max_cache=128, key=None, verify=False):
     >>> @ql.compile(max_cache=16)
     ... def multiply(x, y):
     ...     return x * y
+
+    >>> @ql.compile(optimize=False)
+    ... def raw_capture(x):
+    ...     x += 1
+    ...     return x
     """
 
     def decorator(fn):
-        return CompiledFunc(fn, max_cache=max_cache, key=key, verify=verify)
+        return CompiledFunc(fn, max_cache=max_cache, key=key, verify=verify, optimize=optimize)
 
     if func is not None:
         # Called as @ql.compile (bare) -- func is the decorated function
-        return CompiledFunc(func, max_cache=max_cache, key=key, verify=verify)
+        return CompiledFunc(func, max_cache=max_cache, key=key, verify=verify, optimize=optimize)
     # Called as @ql.compile() or @ql.compile(max_cache=N)
     return decorator
