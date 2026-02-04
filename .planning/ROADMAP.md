@@ -75,7 +75,10 @@ Plans:
   1. Calling a compiled function inside a `with qbool:` block produces controlled gates (verified via OpenQASM export or circuit inspection)
   2. The same compiled function called outside and inside a `with` block uses separate cache entries (controlled vs uncontrolled)
   3. Nested `with` blocks around compiled function calls produce the correct multi-controlled gates
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 50-01-PLAN.md -- Core controlled context implementation (derivation, cache key, replay remapping)
+- [ ] 50-02-PLAN.md -- Controlled context tests (basic, cache separation, nested with, custom key)
 
 ### Phase 51: Differentiators & Polish
 **Goal**: Compiled functions support inverse generation, debug introspection, nesting, and the feature has comprehensive test coverage
@@ -104,7 +107,7 @@ Phases execute in numeric order: 48 -> 49 -> 50 -> 51
 | 47. Detail Mode & Public API | v1.9 | 2/2 | Complete | 2026-02-03 |
 | 48. Core Capture-Replay | v2.0 | 2/2 | Complete | 2026-02-04 |
 | 49. Optimization & Uncomputation | v2.0 | 2/2 | Complete | 2026-02-04 |
-| 50. Controlled Context | v2.0 | 0/TBD | Not started | - |
+| 50. Controlled Context | v2.0 | 0/2 | Not started | - |
 | 51. Differentiators & Polish | v2.0 | 0/TBD | Not started | - |
 
 ---
