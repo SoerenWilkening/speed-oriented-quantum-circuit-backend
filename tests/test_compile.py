@@ -988,3 +988,347 @@ def test_uncomputation_replay_uses_optimized_sequence():
     # After uncomputation, the gates may have been reversed/removed,
     # but the original span should have matched the optimised count
     assert r3._is_uncomputed, "Result should be uncomputed after with block"
+
+
+# ---------------------------------------------------------------------------
+# CTL: Controlled context tests (Phase 50 Plan 02)
+# ---------------------------------------------------------------------------
+
+
+def test_compile_controlled_basic():
+    """CTL-01: Compiled function inside `with qbool:` produces controlled gates.
+
+    First call outside `with` block captures + caches both variants.
+    Second call inside `with` block replays the controlled variant, which has
+    extra controls on every gate.
+    """
+    ql.circuit()
+
+    @ql.compile
+    def add_one(x):
+        x += 1
+        return x
+
+    # Call outside `with` block -- capture both variants
+    a = ql.qint(3, width=4)
+    add_one(a)
+
+    # Verify both variants are cached (eager compilation)
+    unctrl_key = ((), (4,), 0)
+    ctrl_key = ((), (4,), 1)
+    assert unctrl_key in add_one._cache, "Uncontrolled variant should be cached"
+    assert ctrl_key in add_one._cache, "Controlled variant should be cached"
+
+    # Call inside `with` block -- should replay the controlled variant
+    b = ql.qint(5, width=4)
+    ctrl = ql.qbool(True)
+
+    start = get_current_layer()
+    with ctrl:
+        add_one(b)
+    end = get_current_layer()
+
+    # Gates inside the `with` block should have controls
+    gates = extract_gate_range(start, end)
+    assert len(gates) > 0, "Should have gates inside with block"
+
+    # Every gate replayed from the controlled variant should have at least 1 control
+    ctrl_block = add_one._cache[ctrl_key]
+    for gate in ctrl_block.gates:
+        assert gate["num_controls"] >= 1, (
+            f"Controlled gate should have at least 1 control, got {gate['num_controls']}"
+        )
+
+
+def test_compile_controlled_separate_cache_entries():
+    """CTL-03: Separate cache entries exist for controlled vs uncontrolled.
+
+    After the first call (whether inside or outside `with`), both cache entries
+    are created immediately.  Subsequent calls in either context hit the cache
+    without re-capture.
+    """
+    ql.circuit()
+    call_count = [0]
+
+    @ql.compile
+    def add_one(x):
+        call_count[0] += 1
+        x += 1
+        return x
+
+    # First call outside `with` -- triggers capture
+    a = ql.qint(3, width=4)
+    add_one(a)
+    assert call_count[0] == 1, "First call should capture"
+
+    # Both variants should already be cached
+    assert len(add_one._cache) == 2, (
+        f"Cache should have 2 entries (uncontrolled + controlled), got {len(add_one._cache)}"
+    )
+
+    # Call inside `with` -- should NOT re-capture (cache hit on controlled variant)
+    b = ql.qint(5, width=4)
+    ctrl = ql.qbool(True)
+    with ctrl:
+        add_one(b)
+    assert call_count[0] == 1, "Controlled call should be cache hit (no re-capture)"
+
+    # Call outside `with` again -- also cache hit
+    c = ql.qint(7, width=4)
+    add_one(c)
+    assert call_count[0] == 1, "Uncontrolled call should be cache hit (no re-capture)"
+
+
+def test_compile_controlled_gates_have_extra_control():
+    """CTL: Every gate in the controlled variant has exactly 1 more control than
+    the corresponding gate in the uncontrolled variant.
+    """
+    ql.circuit()
+
+    @ql.compile
+    def add_one(x):
+        x += 1
+        return x
+
+    a = ql.qint(3, width=4)
+    add_one(a)
+
+    unctrl_key = ((), (4,), 0)
+    ctrl_key = ((), (4,), 1)
+    unctrl_block = add_one._cache[unctrl_key]
+    ctrl_block = add_one._cache[ctrl_key]
+
+    # Same number of gates in both variants
+    assert len(ctrl_block.gates) == len(unctrl_block.gates), (
+        f"Controlled and uncontrolled variants should have same gate count: "
+        f"ctrl={len(ctrl_block.gates)}, unctrl={len(unctrl_block.gates)}"
+    )
+
+    # Each controlled gate has exactly 1 more control
+    for i, (ug, cg) in enumerate(zip(unctrl_block.gates, ctrl_block.gates, strict=False)):
+        assert cg["num_controls"] == ug["num_controls"] + 1, (
+            f"Gate {i}: controlled should have {ug['num_controls'] + 1} controls, "
+            f"got {cg['num_controls']}"
+        )
+        assert cg["type"] == ug["type"], (
+            f"Gate {i}: type should be same, got ctrl={cg['type']}, unctrl={ug['type']}"
+        )
+        assert cg["target"] == ug["target"], (
+            f"Gate {i}: target should be same, got ctrl={cg['target']}, unctrl={ug['target']}"
+        )
+
+
+def test_compile_controlled_nested_with():
+    """CTL-01: Compiled function called inside sequential `with` blocks
+    produces correctly controlled gates.
+
+    Each `with` block independently controls the compiled function.  The
+    compiled function's controlled variant is replayed for each `with` block
+    with the appropriate control qubit.
+    """
+    ql.circuit()
+    call_count = [0]
+
+    @ql.compile
+    def add_one(x):
+        call_count[0] += 1
+        x += 1
+        return x
+
+    # First call outside to capture + cache both variants
+    a = ql.qint(3, width=4)
+    add_one(a)
+    assert call_count[0] == 1
+
+    # Call inside first `with` block
+    b = ql.qint(5, width=4)
+    qbool1 = ql.qbool(True)
+    qbool1_qubit = int(qbool1.qubits[63])
+
+    start1 = get_current_layer()
+    with qbool1:
+        add_one(b)
+    end1 = get_current_layer()
+    gates1 = extract_gate_range(start1, end1)
+
+    assert call_count[0] == 1, "First `with` should be a cache hit"
+
+    # Call inside second `with` block (different control qubit)
+    c = ql.qint(7, width=4)
+    qbool2 = ql.qbool(True)
+    qbool2_qubit = int(qbool2.qubits[63])
+
+    start2 = get_current_layer()
+    with qbool2:
+        add_one(c)
+    end2 = get_current_layer()
+    gates2 = extract_gate_range(start2, end2)
+
+    assert call_count[0] == 1, "Second `with` should also be a cache hit"
+
+    # Verify different control qubits are used
+    assert qbool1_qubit != qbool2_qubit, "Different qbools should have different qubits"
+
+    # Both calls should produce gates with controls
+    for gate in gates1:
+        if gate["num_controls"] > 0:
+            assert qbool1_qubit in gate["controls"], (
+                "First with-block gate should use qbool1's qubit"
+            )
+    for gate in gates2:
+        if gate["num_controls"] > 0:
+            assert qbool2_qubit in gate["controls"], (
+                "Second with-block gate should use qbool2's qubit"
+            )
+
+
+def test_compile_controlled_replay_correct_qubits():
+    """CTL: Replayed controlled gates use the correct control qubit for each call.
+
+    Two calls inside different `with` blocks should use different control qubits.
+    """
+    ql.circuit()
+
+    @ql.compile
+    def add_one(x):
+        x += 1
+        return x
+
+    # First call outside to capture
+    a = ql.qint(3, width=4)
+    add_one(a)
+
+    # Call inside `with qbool1:`
+    b = ql.qint(5, width=4)
+    ctrl1 = ql.qbool(True)
+    ctrl1_qubit = int(ctrl1.qubits[63])
+
+    start1 = get_current_layer()
+    with ctrl1:
+        add_one(b)
+    end1 = get_current_layer()
+    gates1 = extract_gate_range(start1, end1)
+
+    # Call inside `with qbool2:` (different control qubit)
+    c = ql.qint(7, width=4)
+    ctrl2 = ql.qbool(True)
+    ctrl2_qubit = int(ctrl2.qubits[63])
+
+    start2 = get_current_layer()
+    with ctrl2:
+        add_one(c)
+    end2 = get_current_layer()
+    gates2 = extract_gate_range(start2, end2)
+
+    # The control qubits should be different
+    assert ctrl1_qubit != ctrl2_qubit, "Different qbools should have different qubits"
+
+    # Verify that gates in first call use ctrl1's qubit as control
+    for gate in gates1:
+        if gate["num_controls"] > 0:
+            assert ctrl1_qubit in gate["controls"], (
+                f"Gate should use ctrl1's qubit {ctrl1_qubit} as control, "
+                f"got controls={gate['controls']}"
+            )
+
+    # Verify that gates in second call use ctrl2's qubit as control
+    for gate in gates2:
+        if gate["num_controls"] > 0:
+            assert ctrl2_qubit in gate["controls"], (
+                f"Gate should use ctrl2's qubit {ctrl2_qubit} as control, "
+                f"got controls={gate['controls']}"
+            )
+
+
+def test_compile_controlled_custom_key():
+    """CTL: Custom key function correctly separates controlled and uncontrolled
+    cache entries.  The custom key is wrapped with control_count.
+    """
+    ql.circuit()
+    call_count = [0]
+
+    @ql.compile(key=lambda x: x.width)
+    def add_one(x):
+        call_count[0] += 1
+        x += 1
+        return x
+
+    # First call outside `with` -- capture
+    a = ql.qint(3, width=4)
+    add_one(a)
+    assert call_count[0] == 1
+
+    # Cache should have 2 entries: (4, 0) and (4, 1)
+    assert (4, 0) in add_one._cache, "Uncontrolled variant with custom key should be cached"
+    assert (4, 1) in add_one._cache, "Controlled variant with custom key should be cached"
+
+    # Call inside `with` -- cache hit on controlled variant
+    b = ql.qint(5, width=4)
+    ctrl = ql.qbool(True)
+    with ctrl:
+        add_one(b)
+    assert call_count[0] == 1, "Controlled call with custom key should be cache hit"
+
+
+def test_compile_controlled_first_call_inside_with():
+    """CTL: First call to compiled function happens inside `with` block.
+
+    This tests the accepted trade-off: the first call captures the uncontrolled
+    body (because gates already emitted to the circuit cannot be retroactively
+    controlled). The gates in the circuit during this first call are UNCONTROLLED.
+    Both uncontrolled and controlled variants are cached.
+    Subsequent calls replay the correct variant (controlled inside `with`,
+    uncontrolled outside).
+    """
+    ql.circuit()
+    call_count = [0]
+
+    @ql.compile
+    def add_one(x):
+        call_count[0] += 1
+        x += 1
+        return x
+
+    # First call INSIDE `with` block -- triggers capture in uncontrolled mode
+    a = ql.qint(3, width=4)
+    ctrl = ql.qbool(True)
+    with ctrl:
+        add_one(a)
+    assert call_count[0] == 1, "First call should capture"
+
+    # Both variants should be cached
+    unctrl_key = ((), (4,), 0)
+    ctrl_key = ((), (4,), 1)
+    assert unctrl_key in add_one._cache, (
+        "Uncontrolled variant should be cached even when first called inside `with`"
+    )
+    assert ctrl_key in add_one._cache, (
+        "Controlled variant should be cached even when first called inside `with`"
+    )
+
+    # Call outside `with` -- cache hit on uncontrolled variant
+    b = ql.qint(5, width=4)
+    add_one(b)
+    assert call_count[0] == 1, "Uncontrolled call should be cache hit"
+
+    # Call inside `with` again -- cache hit on controlled variant, gates ARE controlled
+    c = ql.qint(7, width=4)
+    ctrl2 = ql.qbool(True)
+    ctrl2_qubit = int(ctrl2.qubits[63])
+
+    start = get_current_layer()
+    with ctrl2:
+        add_one(c)
+    end = get_current_layer()
+
+    assert call_count[0] == 1, "Second controlled call should be cache hit"
+
+    # Verify replayed gates use the control qubit (subsequent calls work correctly)
+    gates = extract_gate_range(start, end)
+    assert len(gates) > 0, "Should have gates from controlled replay"
+    for gate in gates:
+        if gate["num_controls"] > 0:
+            assert ctrl2_qubit in gate["controls"], (
+                f"Replayed controlled gate should use ctrl2's qubit {ctrl2_qubit}, "
+                f"got controls={gate['controls']}"
+            )
