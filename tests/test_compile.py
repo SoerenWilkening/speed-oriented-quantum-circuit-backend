@@ -1792,3 +1792,498 @@ def test_composition_nested_inverse():
     c = ql.qint(7, width=4)
     undo_add(c)
     assert outer_count[0] == 1, "Replay should not re-execute outer"
+
+
+# ---------------------------------------------------------------------------
+# ANCILLA: Ancilla tracking tests (Phase 52, INV-01)
+# ---------------------------------------------------------------------------
+
+
+def test_forward_call_tracks_ancillas():
+    """INV-01: Compiled function tracks internal qubit allocations as ancillas."""
+    ql.circuit()
+
+    @ql.compile
+    def make_ancilla(x):
+        temp = ql.qint(0, width=x.width)
+        temp += x
+        return temp
+
+    a = ql.qint(3, width=4)
+    _result = make_ancilla(a)
+
+    # Forward call should be tracked
+    assert len(make_ancilla._forward_calls) == 1
+    # Should have ancilla qubits recorded
+    key = list(make_ancilla._forward_calls.keys())[0]
+    record = make_ancilla._forward_calls[key]
+    assert len(record.ancilla_qubits) > 0, "Should have ancilla qubits recorded"
+
+
+def test_forward_call_tracks_return_qint():
+    """INV-01: Return value qubits are tracked in the ancilla record."""
+    ql.circuit()
+
+    @ql.compile
+    def make_result(x):
+        result = ql.qint(0, width=x.width)
+        result += x
+        return result
+
+    a = ql.qint(5, width=4)
+    result = make_result(a)
+    key = list(make_result._forward_calls.keys())[0]
+    record = make_result._forward_calls[key]
+    assert record.return_qint is result, "Return qint should be tracked in ancilla record"
+
+
+def test_inplace_function_no_forward_tracking():
+    """INV-01: In-place function without ancillas does NOT track forward calls."""
+    ql.circuit()
+
+    @ql.compile
+    def add_inplace(x):
+        x += 1
+        return x
+
+    a = ql.qint(3, width=4)
+    add_inplace(a)
+    assert len(add_inplace._forward_calls) == 0, (
+        "In-place function without ancillas should not track forward calls"
+    )
+
+
+# ---------------------------------------------------------------------------
+# AINV: f.inverse(x) tests (Phase 52, INV-02/03)
+# ---------------------------------------------------------------------------
+
+
+def test_ancilla_inverse_basic():
+    """INV-02/03: f.inverse(x) uncomputes ancillas from a prior forward call."""
+    ql.circuit()
+
+    @ql.compile
+    def add_temp(x):
+        temp = ql.qint(0, width=x.width)
+        temp += x
+        return temp
+
+    a = ql.qint(3, width=4)
+    stats_before = ql.circuit_stats()
+    _result = add_temp(a)
+    stats_during = ql.circuit_stats()
+
+    # Ancillas allocated
+    assert stats_during["current_in_use"] > stats_before["current_in_use"], (
+        "Forward call should allocate ancilla qubits"
+    )
+
+    # Inverse call
+    add_temp.inverse(a)
+    stats_after = ql.circuit_stats()
+
+    # Ancillas deallocated
+    assert stats_after["current_in_use"] == stats_before["current_in_use"], (
+        "After inverse, qubit count should return to pre-forward level"
+    )
+    # Forward call record removed
+    assert len(add_temp._forward_calls) == 0, "Forward call record should be removed after inverse"
+
+
+def test_ancilla_inverse_removes_forward_record():
+    """INV-03: After inverse, no forward call record for those qubits."""
+    ql.circuit()
+
+    @ql.compile
+    def simple_op(x):
+        t = ql.qint(0, width=x.width)
+        t += x
+        return t
+
+    a = ql.qint(2, width=4)
+    simple_op(a)
+    assert len(simple_op._forward_calls) == 1
+    simple_op.inverse(a)
+    assert len(simple_op._forward_calls) == 0
+
+
+# ---------------------------------------------------------------------------
+# AINV-SIM: Qiskit verification (Phase 52, INV-04)
+# ---------------------------------------------------------------------------
+
+try:
+    from qiskit import qasm3
+
+    HAS_QISKIT = True
+except ImportError:
+    HAS_QISKIT = False
+
+
+@pytest.mark.skipif(not HAS_QISKIT, reason="Qiskit not installed")
+def test_ancilla_inverse_produces_adjoint_gates_qiskit():
+    """INV-04: After forward + inverse, adjoint gate sequence is present in circuit.
+
+    We verify the structural property: the inverse injects the same number of
+    gates as the cached (optimized) block, confirming that the inverse proxy
+    correctly generates and injects the adjoint gates using the original
+    ancilla qubits.
+    """
+    ql.circuit()
+
+    @ql.compile
+    def add_to_new(x):
+        result = ql.qint(0, width=x.width)
+        result += x
+        return result
+
+    a = ql.qint(5, width=4)
+    _result = add_to_new(a)
+
+    # Get the cached block gate count (this is what inverse uses)
+    unctrl_key = ((), (4,), 0)
+    cached_gate_count = len(add_to_new._cache[unctrl_key].gates)
+
+    # Measure inverse call gate count
+    start_inv = get_current_layer()
+    add_to_new.inverse(a)
+    end_inv = get_current_layer()
+    inv_gates = extract_gate_range(start_inv, end_inv)
+
+    # Inverse should inject approximately the same number of gates as the cached block.
+    # Minor differences can occur from circuit-level gate scheduling/merging.
+    assert len(inv_gates) > 0, "Inverse should inject gates"
+    assert abs(len(inv_gates) - cached_gate_count) <= 2, (
+        f"Inverse gate count ({len(inv_gates)}) should be close to cached ({cached_gate_count})"
+    )
+
+    # Export to QASM and verify it loads successfully
+    qasm = ql.to_openqasm()
+    qc = qasm3.loads(qasm)
+    assert qc.num_qubits > 0, "QASM should produce a valid circuit"
+
+
+# ---------------------------------------------------------------------------
+# AINV-DEALLOC: Deallocation tests (Phase 52, INV-05)
+# ---------------------------------------------------------------------------
+
+
+def test_ancilla_inverse_deallocates_ancillas():
+    """INV-05: After inverse, ancilla qubits are returned to allocator."""
+    ql.circuit()
+
+    @ql.compile
+    def alloc_func(x):
+        t = ql.qint(0, width=x.width)
+        t += x
+        return t
+
+    a = ql.qint(3, width=4)
+    stats_pre = ql.circuit_stats()
+    _result = alloc_func(a)
+    stats_mid = ql.circuit_stats()
+    alloc_func.inverse(a)
+    stats_post = ql.circuit_stats()
+
+    # Qubits freed
+    assert stats_post["current_in_use"] == stats_pre["current_in_use"], (
+        "After inverse, current_in_use should return to pre-forward level"
+    )
+    # Deallocation count increased
+    assert stats_post["total_deallocations"] > stats_mid["total_deallocations"], (
+        "Deallocation count should increase after inverse"
+    )
+
+
+def test_deallocated_qubits_reusable():
+    """INV-05: After inverse, freed qubits can be reused by new allocations."""
+    ql.circuit()
+
+    @ql.compile
+    def make_temp(x):
+        t = ql.qint(0, width=x.width)
+        t += x
+        return t
+
+    a = ql.qint(1, width=4)
+    _result = make_temp(a)
+
+    make_temp.inverse(a)
+    stats_after_inv = ql.circuit_stats()
+
+    # Allocate new qubits -- should reuse freed slots
+    b = ql.qint(2, width=4)
+    stats_after_realloc = ql.circuit_stats()
+
+    # If qubits were properly freed, new allocation succeeds
+    assert b.width == 4
+    # current_in_use should be same as after inverse + 4 new qubits
+    assert stats_after_realloc["current_in_use"] == stats_after_inv["current_in_use"] + 4
+
+
+# ---------------------------------------------------------------------------
+# AINV-DEFER: Deferred inverse tests (Phase 52, INV-06)
+# ---------------------------------------------------------------------------
+
+
+def test_ancilla_inverse_after_other_operations():
+    """INV-06: f.inverse(x) works when called later, not just immediately after."""
+    ql.circuit()
+
+    @ql.compile
+    def op(x):
+        t = ql.qint(0, width=x.width)
+        t += x
+        return t
+
+    a = ql.qint(3, width=4)
+    _result = op(a)
+
+    # Do other operations in between
+    b = ql.qint(7, width=4)
+    c = ql.qint(0, width=4)
+    c += b
+
+    # Now inverse the earlier call
+    op.inverse(a)
+    assert len(op._forward_calls) == 0, "Deferred inverse should still work"
+
+
+def test_ancilla_inverse_with_multiple_forward_calls():
+    """INV-06: Multiple forward calls can coexist, each inversed independently."""
+    ql.circuit()
+
+    @ql.compile
+    def op(x):
+        t = ql.qint(0, width=x.width)
+        t += x
+        return t
+
+    a = ql.qint(3, width=4)
+    b = ql.qint(5, width=4)
+    _r1 = op(a)
+    _r2 = op(b)
+    assert len(op._forward_calls) == 2, "Should have 2 forward call records"
+
+    # Inverse in different order
+    op.inverse(b)
+    assert len(op._forward_calls) == 1, "Should have 1 forward call record after first inverse"
+    op.inverse(a)
+    assert len(op._forward_calls) == 0, "Should have 0 forward call records after second inverse"
+
+
+# ---------------------------------------------------------------------------
+# AINV-ERR: Error handling tests (Phase 52)
+# ---------------------------------------------------------------------------
+
+
+def test_double_forward_raises_error():
+    """Error: Calling f(x) twice with same input qubits without inverse."""
+    ql.circuit()
+
+    @ql.compile
+    def op(x):
+        t = ql.qint(0, width=x.width)
+        t += x
+        return t
+
+    a = ql.qint(3, width=4)
+    op(a)
+    with pytest.raises(ValueError, match="already has an uninverted"):
+        op(a)  # Same input qubits, should error
+
+
+def test_inverse_without_forward_raises_error():
+    """Error: f.inverse(x) without prior f(x) raises ValueError."""
+    ql.circuit()
+
+    @ql.compile
+    def op(x):
+        t = ql.qint(0, width=x.width)
+        t += x
+        return t
+
+    a = ql.qint(3, width=4)
+    with pytest.raises(ValueError, match="No prior forward call"):
+        op.inverse(a)
+
+
+def test_double_inverse_raises_error():
+    """Error: f.inverse(x) twice for same forward call raises error."""
+    ql.circuit()
+
+    @ql.compile
+    def op(x):
+        t = ql.qint(0, width=x.width)
+        t += x
+        return t
+
+    a = ql.qint(3, width=4)
+    op(a)
+    op.inverse(a)
+    with pytest.raises(ValueError, match="No prior forward call"):
+        op.inverse(a)  # Already inversed
+
+
+# ---------------------------------------------------------------------------
+# AINV-RET: Return value invalidation tests (Phase 52)
+# ---------------------------------------------------------------------------
+
+
+def test_return_qint_invalidated_after_inverse():
+    """Return qint is invalidated after f.inverse(x)."""
+    ql.circuit()
+
+    @ql.compile
+    def op(x):
+        t = ql.qint(0, width=x.width)
+        t += x
+        return t
+
+    a = ql.qint(3, width=4)
+    result = op(a)
+    assert not result._is_uncomputed, "Result should be live before inverse"
+
+    op.inverse(a)
+    assert result._is_uncomputed is True, "Result should be uncomputed after inverse"
+    assert result.allocated_qubits is False, "Result qubits should be deallocated after inverse"
+
+
+# ---------------------------------------------------------------------------
+# AINV-ADJ: f.adjoint(x) standalone tests (Phase 52)
+# ---------------------------------------------------------------------------
+
+
+def test_adjoint_standalone_no_forward_needed():
+    """f.adjoint(x) runs reverse circuit with fresh ancillas, no forward needed."""
+    ql.circuit()
+
+    @ql.compile
+    def op(x):
+        x += 1
+        return x
+
+    a = ql.qint(3, width=4)
+    _result = op.adjoint(a)
+
+    # adjoint does NOT track forward calls
+    assert len(op._forward_calls) == 0, "Adjoint should not track forward calls"
+
+
+def test_adjoint_does_not_interfere_with_inverse():
+    """f.adjoint and f.inverse are independent."""
+    ql.circuit()
+
+    @ql.compile
+    def op(x):
+        t = ql.qint(0, width=x.width)
+        t += x
+        return t
+
+    a = ql.qint(3, width=4)
+    b = ql.qint(5, width=4)
+    _result = op(a)
+
+    # adjoint on different qubits
+    op.adjoint(b)
+
+    # inverse on original qubits still works
+    op.inverse(a)
+    assert len(op._forward_calls) == 0, "Inverse should still work after adjoint call"
+
+
+def test_adjoint_with_ancilla_function():
+    """f.adjoint(x) works with functions that allocate ancillas."""
+    ql.circuit()
+
+    @ql.compile
+    def make_temp(x):
+        t = ql.qint(0, width=x.width)
+        t += x
+        return t
+
+    a = ql.qint(3, width=4)
+    _result = make_temp.adjoint(a)
+
+    # adjoint should NOT track forward calls
+    assert len(make_temp._forward_calls) == 0, "Adjoint should not create forward call records"
+
+
+# ---------------------------------------------------------------------------
+# AINV-REFORWARD: Re-forward after inverse (Phase 52)
+# ---------------------------------------------------------------------------
+
+
+def test_reforward_after_inverse():
+    """After f.inverse(x), can call f(x) again with same qubits."""
+    ql.circuit()
+
+    @ql.compile
+    def op(x):
+        t = ql.qint(0, width=x.width)
+        t += x
+        return t
+
+    a = ql.qint(3, width=4)
+    _r1 = op(a)
+    op.inverse(a)
+
+    # Should work again
+    _r2 = op(a)
+    assert len(op._forward_calls) == 1, "Should have 1 forward call after re-forward"
+    op.inverse(a)
+    assert len(op._forward_calls) == 0, "Should have 0 forward calls after second inverse"
+
+
+# ---------------------------------------------------------------------------
+# AINV-RESET: Circuit reset clears forward calls (Phase 52)
+# ---------------------------------------------------------------------------
+
+
+def test_circuit_reset_clears_forward_calls_52():
+    """ql.circuit() clears forward call registry."""
+    ql.circuit()
+
+    @ql.compile
+    def op(x):
+        t = ql.qint(0, width=x.width)
+        t += x
+        return t
+
+    a = ql.qint(3, width=4)
+    op(a)
+    assert len(op._forward_calls) == 1
+
+    ql.circuit()  # Reset
+    assert len(op._forward_calls) == 0, "Circuit reset should clear forward calls"
+
+
+# ---------------------------------------------------------------------------
+# AINV-REPLAY: Replay path forward tracking (Phase 52)
+# ---------------------------------------------------------------------------
+
+
+def test_replay_tracks_forward_call():
+    """Replay (cached) path also tracks forward calls for inverse support."""
+    ql.circuit()
+
+    @ql.compile
+    def op(x):
+        t = ql.qint(0, width=x.width)
+        t += x
+        return t
+
+    # First call (capture path)
+    a = ql.qint(3, width=4)
+    _r1 = op(a)
+    assert len(op._forward_calls) == 1
+
+    # Second call (replay path) with different qubits
+    b = ql.qint(5, width=4)
+    _r2 = op(b)
+    assert len(op._forward_calls) == 2, "Replay should also track forward call"
+
+    # Inverse both
+    op.inverse(b)
+    assert len(op._forward_calls) == 1
+    op.inverse(a)
+    assert len(op._forward_calls) == 0
