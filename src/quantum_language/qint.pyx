@@ -564,8 +564,11 @@ cdef class qint(circuit):
 			# Scope-internal qints are uncomputed by __exit__ scope cleanup
 
 		# Keep backward compat tracking (deprecated, but maintained for older code)
+		# Guard against underflow when replaying inverse functions (Phase 51)
 		if not self._is_uncomputed and self.bits > 0:
-			_set_smallest_allocated_qubit(_get_smallest_allocated_qubit() - self.bits)
+			current_smallest = _get_smallest_allocated_qubit()
+			if current_smallest >= self.bits:
+				_set_smallest_allocated_qubit(current_smallest - self.bits)
 			_decrement_ancilla(self.bits)
 
 	def __str__(self):

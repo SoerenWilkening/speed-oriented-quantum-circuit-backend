@@ -156,7 +156,9 @@ def _increment_ancilla(int amount):
 def _decrement_ancilla(int amount):
 	"""Decrement ancilla[0] by amount (legacy compatibility)."""
 	global ancilla
-	ancilla[0] -= amount
+	# Guard against underflow (Phase 51: inverse function support)
+	if ancilla[0] >= amount:
+		ancilla[0] -= amount
 
 
 def option(key: str, value=None):
