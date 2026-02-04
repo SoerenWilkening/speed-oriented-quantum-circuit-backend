@@ -96,6 +96,14 @@ Write quantum algorithms in natural programming style that compiles to efficient
 
 ### Active
 
+**Current Milestone: v2.1 Compile Enhancements**
+
+**Goal:** Make `@ql.compile` inverse reuse physical ancilla qubits from forward call (uncompute + deallocate), and support `ql.qarray` as compiled function arguments.
+
+**Target features:**
+- Inverse qubit reuse: `f.inverse()(x)` targets same physical ancillas from `f(x)`, uncomputes to |0⟩, deallocates
+- qarray support in `@ql.compile`: pass `ql.qarray` as arguments to compiled functions
+
 **Deferred bugs (carry forward):**
 - Fix _reduce_mod result corruption (BUG-MOD-REDUCE) — needs fundamentally different circuit structure
 - Fix controlled multiplication corruption (BUG-COND-MUL-01) — not yet investigated
@@ -213,4 +221,4 @@ Write quantum algorithms in natural programming style that compiles to efficient
 | Auto-zoom with AND logic (both thresholds) | Keep detail for circuits large in only one dimension | ✓ Good — sensible default behavior |
 
 ---
-*Last updated: 2026-02-04 after v2.0 milestone*
+*Last updated: 2026-02-04 after v2.1 milestone started*
