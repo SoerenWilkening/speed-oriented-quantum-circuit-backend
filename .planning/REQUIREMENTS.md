@@ -18,8 +18,8 @@ Requirements for the function compilation milestone. Each maps to roadmap phases
 
 ### Optimization
 
-- [ ] **OPT-01**: Captured gate range is optimized via `circuit_optimize()` before caching
-- [ ] **OPT-02**: Optimized sequence replaces the individual operation sequences on replay
+- [x] **OPT-01**: Captured gate range is optimized via `_optimize_gate_list()` before caching
+- [x] **OPT-02**: Optimized sequence replaces the individual operation sequences on replay
 
 ### Controlled Execution
 
@@ -87,8 +87,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CAP-04 | Phase 48 | Complete |
 | CAP-05 | Phase 48 | Complete |
 | CAP-06 | Phase 48 | Complete |
-| OPT-01 | Phase 49 | Pending |
-| OPT-02 | Phase 49 | Pending |
+| OPT-01 | Phase 49 | Complete |
+| OPT-02 | Phase 49 | Complete |
 | CTL-01 | Phase 50 | Pending |
 | CTL-02 | Phase 50 | Pending |
 | CTL-03 | Phase 50 | Pending |
