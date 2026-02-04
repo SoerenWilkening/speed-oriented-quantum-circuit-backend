@@ -13,7 +13,7 @@
 - [x] **INV-04**: Inverse runs adjoint gates on original ancillas, uncomputing them to |0⟩
 - [x] **INV-05**: Ancilla qubits are deallocated after inverse completes (returned to allocator)
 - [x] **INV-06**: Inverse works when called at any point after forward call (not just immediately after)
-- [ ] **INV-07**: When qubit-saving is active and function returns a qint, auto-uncompute all ancillas except the return value's qubits after forward call
+- [x] **INV-07**: When qubit-saving is active and function returns a qint, auto-uncompute all ancillas except the return value's qubits after forward call
 
 ### qarray Support in @ql.compile
 
@@ -51,7 +51,7 @@
 | INV-04 | Phase 52 | Complete |
 | INV-05 | Phase 52 | Complete |
 | INV-06 | Phase 52 | Complete |
-| INV-07 | Phase 53 | Pending |
+| INV-07 | Phase 53 | Complete |
 | ARR-01 | Phase 54 | Pending |
 | ARR-02 | Phase 54 | Pending |
 | ARR-03 | Phase 54 | Pending |

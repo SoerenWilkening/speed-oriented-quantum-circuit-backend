@@ -44,7 +44,7 @@
 **Milestone Goal:** Make `@ql.compile` inverse reuse physical ancilla qubits from forward call (uncompute + deallocate), and support `ql.qarray` as compiled function arguments.
 
 - [x] **Phase 52: Ancilla Tracking & Inverse Qubit Reuse** (2/2 plans) -- completed 2026-02-04
-- [ ] **Phase 53: Qubit-Saving Auto-Uncompute** - Compiled functions auto-uncompute ancillas in qubit-saving mode
+- [x] **Phase 53: Qubit-Saving Auto-Uncompute** (2/2 plans) -- completed 2026-02-04
 - [ ] **Phase 54: qarray Support in @ql.compile** - Pass ql.qarray as arguments to compiled functions
 
 ## Phase Details
@@ -75,8 +75,8 @@ Plans:
   3. The auto-uncomputed ancilla qubits are deallocated and available for reuse by later allocations
 **Plans:** 2 plans
 Plans:
-- [ ] 53-01-PLAN.md -- Auto-uncompute implementation in compile.py
-- [ ] 53-02-PLAN.md -- Comprehensive tests for INV-07
+- [x] 53-01-PLAN.md -- Auto-uncompute implementation in compile.py
+- [x] 53-02-PLAN.md -- Comprehensive tests for INV-07
 
 ### Phase 54: qarray Support in @ql.compile
 **Goal**: Users can pass `ql.qarray` objects as arguments to `@ql.compile`-decorated functions with correct capture, caching, and replay
@@ -107,7 +107,7 @@ Plans:
 | 50. Controlled Context | v2.0 | 2/2 | Complete | 2026-02-04 |
 | 51. Differentiators & Polish | v2.0 | 2/2 | Complete | 2026-02-04 |
 | 52. Ancilla Tracking & Inverse Qubit Reuse | v2.1 | 2/2 | Complete | 2026-02-04 |
-| 53. Qubit-Saving Auto-Uncompute | v2.1 | 0/2 | Not started | - |
+| 53. Qubit-Saving Auto-Uncompute | v2.1 | 2/2 | Complete | 2026-02-04 |
 | 54. qarray Support in @ql.compile | v2.1 | 0/TBD | Not started | - |
 
 ---
