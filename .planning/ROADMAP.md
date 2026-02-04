@@ -49,7 +49,10 @@
   3. The returned qint/qbool from a compiled function is usable in subsequent quantum operations (arithmetic, comparisons, conditionals)
   4. Calling with different classical parameter values or different qint widths triggers re-capture (separate cache entries)
   5. Creating a new circuit via `ql.circuit()` invalidates the compilation cache
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 48-01-PLAN.md -- Cython infrastructure (extract_gate_range, inject_remapped_gates, helpers)
+- [ ] 48-02-PLAN.md -- Python compile decorator, __init__.py wiring, and test suite
 
 ### Phase 49: Optimization & Uncomputation
 **Goal**: Captured gate sequences are optimized before caching, and compiled function outputs integrate correctly with the automatic uncomputation system
