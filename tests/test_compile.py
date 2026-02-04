@@ -1591,3 +1591,204 @@ def test_debug_stats_tracks_totals():
 
     assert add_one.stats["total_hits"] == 1
     assert add_one.stats["total_misses"] == 2
+
+
+# ---------------------------------------------------------------------------
+# NST: Nesting tests (Phase 51)
+# ---------------------------------------------------------------------------
+
+
+def test_nesting_inner_gates_in_outer_capture():
+    """NST-01: Outer capture includes inner compiled function's replayed gates."""
+    ql.circuit()
+    inner_count = [0]
+    outer_count = [0]
+
+    @ql.compile
+    def add_one(x):
+        inner_count[0] += 1
+        x += 1
+        return x
+
+    @ql.compile
+    def add_two(x):
+        outer_count[0] += 1
+        x = add_one(x)
+        x = add_one(x)
+        return x
+
+    # Populate inner's cache first
+    a = ql.qint(0, width=4)
+    add_one(a)
+    assert inner_count[0] == 1
+
+    # Call outer (captures outer, which internally replays inner twice)
+    b = ql.qint(3, width=4)
+    start = get_current_layer()
+    add_two(b)
+    end = get_current_layer()
+    assert outer_count[0] == 1
+    assert end > start, "Outer should produce gates"
+
+    # Replay outer (no re-execution)
+    c = ql.qint(5, width=4)
+    add_two(c)
+    assert outer_count[0] == 1, "Replay should NOT re-execute outer"
+    assert inner_count[0] == 1, "Inner should not be called again during replay"
+
+
+def test_nesting_depth_limit():
+    """NST-02: Recursive compiled functions raise RecursionError at depth limit."""
+
+    ql.circuit()
+    fn_ref = [None]
+
+    @ql.compile
+    def recursive_fn(x):
+        x += 1
+        return fn_ref[0](x)
+
+    fn_ref[0] = recursive_fn
+
+    with pytest.raises(RecursionError, match="(?i)nesting depth"):
+        recursive_fn(ql.qint(0, width=4))
+
+
+def test_nesting_inner_return_value_usable():
+    """NST-03: Inner compiled function's return value is usable in outer."""
+    ql.circuit()
+
+    @ql.compile
+    def make_new(x):
+        return x + ql.qint(1, width=x.width)
+
+    @ql.compile
+    def add_and_increment(x):
+        r = make_new(x)
+        r += 1
+        return r
+
+    # Populate inner cache
+    a = ql.qint(0, width=4)
+    _r = make_new(a)
+
+    # Call outer
+    b = ql.qint(3, width=4)
+    result = add_and_increment(b)
+    assert result.width == 4
+
+    # Replay outer
+    c = ql.qint(5, width=4)
+    result2 = add_and_increment(c)
+    assert result2.width == 4
+
+    # Result should be usable in subsequent operations
+    layer_before = get_current_layer()
+    result2 += 1
+    layer_after = get_current_layer()
+    assert layer_after > layer_before, "Replay result should be usable"
+
+
+def test_nesting_replay_uses_outer_cache():
+    """NST-04: Outer replay does NOT re-enter inner function."""
+    ql.circuit()
+    inner_count = [0]
+    outer_count = [0]
+
+    @ql.compile
+    def add_one(x):
+        inner_count[0] += 1
+        x += 1
+        return x
+
+    @ql.compile
+    def add_two(x):
+        outer_count[0] += 1
+        x = add_one(x)
+        x = add_one(x)
+        return x
+
+    # Call outer once (captures everything)
+    a = ql.qint(3, width=4)
+    add_two(a)
+    assert outer_count[0] == 1
+    # Inner was called during outer's capture (first call triggers inner capture + replay)
+    inner_after_first = inner_count[0]
+
+    # Call outer again (replays from outer's cache -- inner is NOT re-entered)
+    b = ql.qint(5, width=4)
+    add_two(b)
+    assert outer_count[0] == 1, "Outer should replay (no re-execution)"
+    assert inner_count[0] == inner_after_first, "Inner should NOT be called during outer replay"
+
+
+# ---------------------------------------------------------------------------
+# COMP: Composition tests (Phase 51)
+# ---------------------------------------------------------------------------
+
+
+def test_composition_inverse_with_controlled():
+    """COMP-01: Inverse callable works inside controlled context."""
+    ql.circuit()
+
+    @ql.compile
+    def add_one(x):
+        x += 1
+        return x
+
+    # Populate cache
+    a = ql.qint(3, width=4)
+    add_one(a)
+
+    inv = add_one.inverse()
+    qbool = ql.qbool(True)
+
+    # Call inverse inside controlled context
+    b = ql.qint(5, width=4)
+    start = get_current_layer()
+    with qbool:
+        inv(b)
+    end = get_current_layer()
+
+    gates = extract_gate_range(start, end)
+    assert len(gates) > 0, "Should produce gates"
+
+    # Verify at least some gates have controls
+    controlled_gates = [g for g in gates if g["num_controls"] >= 1]
+    assert len(controlled_gates) > 0, "Some gates should have controls"
+
+
+def test_composition_nested_inverse():
+    """COMP-02: Outer compiled function can call inner's inverse."""
+    ql.circuit()
+    inner_count = [0]
+    outer_count = [0]
+
+    @ql.compile
+    def add_one(x):
+        inner_count[0] += 1
+        x += 1
+        return x
+
+    # Populate inner cache
+    a = ql.qint(3, width=4)
+    add_one(a)
+    assert inner_count[0] == 1
+
+    @ql.compile
+    def undo_add(x):
+        outer_count[0] += 1
+        return add_one.inverse()(x)
+
+    # Call outer (captures outer, which calls inner's inverse)
+    b = ql.qint(5, width=4)
+    start = get_current_layer()
+    undo_add(b)
+    end = get_current_layer()
+    assert end > start, "Should produce gates"
+    assert outer_count[0] == 1
+
+    # Replay outer (no re-execution)
+    c = ql.qint(7, width=4)
+    undo_add(c)
+    assert outer_count[0] == 1, "Replay should not re-execute outer"
