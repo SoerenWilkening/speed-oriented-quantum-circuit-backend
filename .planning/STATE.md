@@ -9,17 +9,17 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 
 ## Current Position
 
-Phase: 48 of 51 (Core Capture-Replay) -- COMPLETE
-Plan: 02 of 02 complete
-Status: Phase complete
-Last activity: 2026-02-04 -- Completed 48-02-PLAN.md (Compile Decorator Implementation)
+Phase: 49 of 51 (Optimization & Uncomputation)
+Plan: 01 of 02 complete
+Status: In progress
+Last activity: 2026-02-04 -- Completed 49-01-PLAN.md (Gate List Optimization)
 
-Progress: [██████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] ~25%
+Progress: [███████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] ~27%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 144 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 2)
+- Total plans completed: 145 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 3)
 - Average duration: ~13 min/plan
 - Total execution time: ~23.5 hours
 
@@ -69,9 +69,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-04
-Stopped at: Completed 48-02-PLAN.md (Compile Decorator Implementation)
-Resume file: None (Phase 48 complete, proceed to Phase 49)
-Resume action: `/gsd:research 49`
+Stopped at: Completed 49-01-PLAN.md (Gate List Optimization)
+Resume file: None
+Resume action: `/gsd:execute-phase 49` (plan 02 remaining)
 
 ---
-*State updated: 2026-02-04 -- Completed 48-02 (@ql.compile decorator with capture, cache, replay)*
+*State updated: 2026-02-04 -- Completed 49-01 (gate list optimiser with adjacent cancellation, rotation merge, stats API)*
