@@ -60,7 +60,10 @@
   4. After inverse completes, ancilla qubits are in |0⟩ state (Qiskit-verified)
   5. After inverse completes, ancilla qubits are deallocated (returned to allocator for reuse)
   6. Inverse works when called at any later point in the program (not just immediately after forward call)
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 52-01-PLAN.md — Infrastructure + f.inverse(x) + f.adjoint(x) implementation
+- [ ] 52-02-PLAN.md — Comprehensive tests for INV-01 through INV-06
 
 ### Phase 53: Qubit-Saving Auto-Uncompute
 **Goal**: When qubit-saving mode is active, compiled functions that return a qint automatically uncompute all ancillas except the return value's qubits after the forward call
