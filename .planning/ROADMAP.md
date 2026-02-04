@@ -5,7 +5,7 @@
 - v1.0 through v1.7: See milestone archives
 - v1.8 Quantum Copy, Array Mutability & Uncomputation Fix -- Phases 41-44 (shipped 2026-02-03) -- See `milestones/v1.8-ROADMAP.md`
 - v1.9 Pixel-Art Circuit Visualization -- Phases 45-47 (shipped 2026-02-03) -- See `milestones/v1.9-ROADMAP.md`
-- v2.0 Function Compilation -- Phases 48-51 (in progress)
+- v2.0 Function Compilation -- Phases 48-51 (complete 2026-02-04)
 
 ## Phases
 
@@ -28,14 +28,14 @@
 
 </details>
 
-### v2.0 Function Compilation (In Progress)
+### v2.0 Function Compilation (Complete)
 
 **Milestone Goal:** `@ql.compile` decorator that captures gate sequences on first call, optimizes them, and replays with qubit remapping on subsequent calls -- enabling compiled quantum functions that work inside controlled contexts and support inverse generation, nesting, and debug introspection.
 
 - [x] **Phase 48: Core Capture-Replay** - Cython infrastructure, decorator, gate capture/replay with qubit remapping and caching -- completed 2026-02-04
 - [x] **Phase 49: Optimization & Uncomputation** - Optimize captured sequences and integrate with uncomputation tracking -- completed 2026-02-04
 - [x] **Phase 50: Controlled Context** - Compiled functions work inside `with` blocks via re-capture with controlled cache keys -- completed 2026-02-04
-- [ ] **Phase 51: Differentiators & Polish** - Inverse generation, debug mode, nested compilation, and comprehensive test suite
+- [x] **Phase 51: Differentiators & Polish** - Inverse generation, debug mode, nested compilation, and comprehensive test suite -- completed 2026-02-04
 
 ## Phase Details
 
@@ -91,8 +91,8 @@ Plans:
   4. Comprehensive test suite covers all compilation scenarios: basic capture/replay, different widths, cache invalidation, controlled context, inverse, debug, and nesting
 **Plans**: 2 plans
 Plans:
-- [ ] 51-01-PLAN.md -- Inverse generation, debug mode, and nesting depth limit (compile.py)
-- [ ] 51-02-PLAN.md -- Comprehensive test suite for inverse, debug, nesting, and composition
+- [x] 51-01-PLAN.md -- Inverse generation, debug mode, and nesting depth limit (compile.py)
+- [x] 51-02-PLAN.md -- Comprehensive test suite for inverse, debug, nesting, and composition
 
 ## Progress
 
@@ -111,7 +111,7 @@ Phases execute in numeric order: 48 -> 49 -> 50 -> 51
 | 48. Core Capture-Replay | v2.0 | 2/2 | Complete | 2026-02-04 |
 | 49. Optimization & Uncomputation | v2.0 | 2/2 | Complete | 2026-02-04 |
 | 50. Controlled Context | v2.0 | 2/2 | Complete | 2026-02-04 |
-| 51. Differentiators & Polish | v2.0 | 0/2 | Planned | - |
+| 51. Differentiators & Polish | v2.0 | 2/2 | Complete | 2026-02-04 |
 
 ---
 *Roadmap created: 2026-02-02*

@@ -29,24 +29,24 @@ Requirements for the function compilation milestone. Each maps to roadmap phases
 
 ### Inverse Generation
 
-- [ ] **INV-01**: Compiled functions support `.inverse()` to generate adjoint of the compiled sequence
-- [ ] **INV-02**: Inverse reverses gate order and applies adjoint transformation to each gate
+- [x] **INV-01**: Compiled functions support `.inverse()` to generate adjoint of the compiled sequence
+- [x] **INV-02**: Inverse reverses gate order and applies adjoint transformation to each gate
 
 ### Debug Mode
 
-- [ ] **DBG-01**: Debug mode shows original operations alongside optimized gate count
-- [ ] **DBG-02**: Debug mode reports cache hits/misses
+- [x] **DBG-01**: Debug mode shows original operations alongside optimized gate count
+- [x] **DBG-02**: Debug mode reports cache hits/misses
 
 ### Nested Compilation
 
-- [ ] **NST-01**: A compiled function can call another compiled function
-- [ ] **NST-02**: Inner compiled function's replayed gates become part of outer function's capture
+- [x] **NST-01**: A compiled function can call another compiled function
+- [x] **NST-02**: Inner compiled function's replayed gates become part of outer function's capture
 
 ### Infrastructure
 
 - [x] **INF-01**: Two new Cython helper functions for gate extraction and remapped injection
 - [x] **INF-02**: Global state snapshot/restore during tracing to prevent state pollution
-- [ ] **INF-03**: Comprehensive test suite covering all compilation scenarios
+- [x] **INF-03**: Comprehensive test suite covering all compilation scenarios
 
 ## Future Requirements
 
@@ -92,15 +92,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CTL-01 | Phase 50 | Complete |
 | CTL-02 | Phase 50 | Complete |
 | CTL-03 | Phase 50 | Complete |
-| INV-01 | Phase 51 | Pending |
-| INV-02 | Phase 51 | Pending |
-| DBG-01 | Phase 51 | Pending |
-| DBG-02 | Phase 51 | Pending |
-| NST-01 | Phase 51 | Pending |
-| NST-02 | Phase 51 | Pending |
+| INV-01 | Phase 51 | Complete |
+| INV-02 | Phase 51 | Complete |
+| DBG-01 | Phase 51 | Complete |
+| DBG-02 | Phase 51 | Complete |
+| NST-01 | Phase 51 | Complete |
+| NST-02 | Phase 51 | Complete |
 | INF-01 | Phase 48 | Complete |
 | INF-02 | Phase 48 | Complete |
-| INF-03 | Phase 51 | Pending |
+| INF-03 | Phase 51 | Complete |
 
 **Coverage:**
 - v2.0 requirements: 20 total
