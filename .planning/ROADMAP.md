@@ -105,6 +105,13 @@ Plans:
 
 **Requirements:** CYT-01, CYT-02, CYT-03, CYT-04
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 57-01-PLAN.md — Add CYTHON_DEBUG build mode and capture baseline metrics
+- [ ] 57-02-PLAN.md — Optimize arithmetic and bitwise hot path functions
+- [ ] 57-03-PLAN.md — Create annotation verification tests and final benchmarks
+
 **Success Criteria:**
 1. `cython -a` shows reduced yellow lines in identified hot path functions
 2. Benchmarks show measurable improvement (target: 2-10x in typed sections)
@@ -199,7 +206,7 @@ Plans:
 | 54. qarray Support in @ql.compile | v2.1 | 2/2 | Complete | 2026-02-05 |
 | 55. Profiling Infrastructure | v2.2 | 3/3 | Complete | 2026-02-05 |
 | 56. Forward/Inverse Depth Fix | v2.2 | 2/2 | Complete | 2026-02-05 |
-| 57. Cython Optimization | v2.2 | 0/? | Pending | - |
+| 57. Cython Optimization | v2.2 | 0/3 | Pending | - |
 | 58. Hardcoded Sequences (1-8 bit) | v2.2 | 0/? | Pending | - |
 | 59. Hardcoded Sequences (9-16 bit) | v2.2 | 0/? | Pending | - |
 | 60. C Hot Path Migration | v2.2 | 0/? | Pending | - |
