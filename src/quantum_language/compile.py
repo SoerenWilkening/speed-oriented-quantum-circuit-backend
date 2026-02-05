@@ -710,11 +710,27 @@ class CompiledFunc:
             raw_gates, param_qubit_indices
         )
 
-        # Determine return value qubit range (if result is qint)
+        # Determine return value qubit range (if result is qint or qarray)
+        from .qarray import qarray
+
         return_range = None
         return_is_param_index = None
 
-        if isinstance(result, qint):
+        if isinstance(result, qarray):
+            # Get all qubit indices from the returned qarray
+            ret_indices = _get_qarray_qubit_indices(result)
+
+            # Check if return qarray IS one of the input parameters
+            for param_idx, param_indices in enumerate(param_qubit_indices):
+                if ret_indices == param_indices:
+                    return_is_param_index = param_idx
+                    break
+
+            # Map return qubits to virtual namespace
+            if ret_indices:
+                virt_ret = [real_to_virtual[r] for r in ret_indices]
+                return_range = (min(virt_ret), len(ret_indices))
+        elif isinstance(result, qint):
             ret_indices = _get_qint_qubit_indices(result)
 
             # Check if return value IS one of the input parameters (in-place)
@@ -731,8 +747,9 @@ class CompiledFunc:
         param_ranges = []
         vidx = 0
         for qa in quantum_args:
-            param_ranges.append((vidx, qa.width))
-            vidx += qa.width
+            qa_width = _get_quantum_arg_width(qa)
+            param_ranges.append((vidx, qa_width))
+            vidx += qa_width
         internal_count = total_virtual - vidx
 
         # Optimise the virtual gate list (cancel adjacent inverses, merge
@@ -871,14 +888,22 @@ class CompiledFunc:
 
     def _replay(self, block, quantum_args, track_forward=True):
         """Replay cached gates with qubit remapping."""
-        # Build virtual-to-real mapping from caller's qints
+        # Build virtual-to-real mapping from caller's qints/qarrays
         virtual_to_real = {}
         vidx = 0
         for qa in quantum_args:
-            indices = _get_qint_qubit_indices(qa)
+            indices = _get_quantum_arg_qubit_indices(qa)
             for real_q in indices:
                 virtual_to_real[vidx] = real_q
                 vidx += 1
+
+        # Validate total qubit count matches cached block's param ranges
+        expected_param_qubits = sum(w for _, w in block.param_qubit_ranges)
+        if vidx != expected_param_qubits:
+            raise ValueError(
+                f"qarray element widths don't match captured widths: "
+                f"expected {expected_param_qubits} qubits, got {vidx}"
+            )
 
         # Allocate fresh ancillas for internal qubits, with control
         # qubit remapping for controlled variants
