@@ -2,6 +2,10 @@
 	# ARITHMETIC OPERATIONS
 	# ====================================================================
 
+	cimport cython
+
+	@cython.boundscheck(False)
+	@cython.wraparound(False)
 	cdef addition_inplace(self, other, int invert=False):
 		cdef sequence_t *seq
 		cdef unsigned int[:] arr
@@ -9,27 +13,39 @@
 		cdef int other_bits
 		cdef int self_offset
 		cdef int other_offset
+		cdef int start
+		cdef int i
+		cdef int ancilla_count
 		cdef circuit_t *_circuit = <circuit_t*><unsigned long long>_get_circuit()
 		cdef bint _controlled = _get_controlled()
 		cdef object _control_bool = _get_control_bool()
+		cdef unsigned int[:] ancilla_arr
+		cdef unsigned int[:] control_qubits
 
 		start = 0
 
 		# Extract only the used qubits (right-aligned in 64-element array)
 		# self.qubits[64-self.bits:64] contains the actual qubit indices
 		self_offset = 64 - self.bits
-		qubit_array[:self.bits] = self.qubits[self_offset:64]
+		# CYT-03: Replace slice with explicit loop for memory view optimization
+		for i in range(self.bits):
+			qubit_array[i] = self.qubits[self_offset + i]
 		start += self.bits
 
 		if type(other) == int:
 			# value is a classical integer
 			if _controlled:
 				# Control qubit from qbool (last element)
-				qubit_array[start: start + 1] = (<qint> _control_bool).qubits[63:64]
-				qubit_array[start + 1: start + 1 + NUMANCILLY] = _get_ancilla()
+				control_qubits = (<qint> _control_bool).qubits
+				qubit_array[start] = control_qubits[63]
+				ancilla_arr = _get_ancilla()
+				for i in range(NUMANCILLY):
+					qubit_array[start + 1 + i] = ancilla_arr[i]
 				seq = cCQ_add(self.bits, other)
 			else:
-				qubit_array[start: start + NUMANCILLY] = _get_ancilla()
+				ancilla_arr = _get_ancilla()
+				for i in range(NUMANCILLY):
+					qubit_array[start + i] = ancilla_arr[i]
 				seq = CQ_add(self.bits, other)
 
 
@@ -47,17 +63,24 @@
 		other_offset = 64 - other_bits
 
 		# Extract used qubits from other
-		qubit_array[start: start + other_bits] = (<qint> other).qubits[other_offset:64]
+		# CYT-03: Replace slice with explicit loop for memory view optimization
+		for i in range(other_bits):
+			qubit_array[start + i] = (<qint> other).qubits[other_offset + i]
 		start += other_bits
 
 
 		if _controlled:
 			# Control qubit from qbool (last element)
-			qubit_array[start: start + 1] = (<qint> _control_bool).qubits[63:64]
-			qubit_array[start + 1: start + 1 + NUMANCILLY] = _get_ancilla()
+			control_qubits = (<qint> _control_bool).qubits
+			qubit_array[start] = control_qubits[63]
+			ancilla_arr = _get_ancilla()
+			for i in range(NUMANCILLY):
+				qubit_array[start + 1 + i] = ancilla_arr[i]
 			seq = cQQ_add(result_bits)
 		else:
-			qubit_array[start: start + NUMANCILLY] = _get_ancilla()
+			ancilla_arr = _get_ancilla()
+			for i in range(NUMANCILLY):
+				qubit_array[start + i] = ancilla_arr[i]
 			seq = QQ_add(result_bits)
 
 		arr = qubit_array
@@ -483,6 +506,8 @@
 		return self
 
 
+	@cython.boundscheck(False)
+	@cython.wraparound(False)
 	cdef multiplication_inplace(self, other, qint ret):
 		cdef sequence_t *seq
 		cdef unsigned int[:] arr
@@ -491,9 +516,15 @@
 		cdef int self_offset
 		cdef int ret_offset
 		cdef int other_offset
+		cdef int start
+		cdef int i
 		cdef circuit_t *_circuit = <circuit_t*><unsigned long long>_get_circuit()
 		cdef bint _controlled = _get_controlled()
 		cdef object _control_bool = _get_control_bool()
+		cdef unsigned int[:] ancilla_arr
+		cdef unsigned int[:] control_qubits
+		cdef unsigned int[:] ret_qubits
+		cdef unsigned int[:] other_qubits
 
 		start = 0
 
@@ -506,20 +537,29 @@
 		ret_offset = 64 - result_bits
 
 		# ret qubits at position 0
-		qubit_array[:result_bits] = (<qint>ret).qubits[ret_offset:64]
+		# CYT-03: Replace slice with explicit loop for memory view optimization
+		ret_qubits = (<qint>ret).qubits
+		for i in range(result_bits):
+			qubit_array[i] = ret_qubits[ret_offset + i]
 		# self qubits at position result_bits
-		qubit_array[result_bits: result_bits + self.bits] = self.qubits[self_offset:64]
+		for i in range(self.bits):
+			qubit_array[result_bits + i] = self.qubits[self_offset + i]
 		start = result_bits + self.bits
 
 		if type(other) == int:
 			# Classical-quantum multiplication
 			if _controlled:
 				# Control qubit from qbool (last element)
-				qubit_array[start: start + 1] = (<qint> _control_bool).qubits[63:64]
-				qubit_array[start + 1: start + 1 + NUMANCILLY] = _get_ancilla()
+				control_qubits = (<qint> _control_bool).qubits
+				qubit_array[start] = control_qubits[63]
+				ancilla_arr = _get_ancilla()
+				for i in range(NUMANCILLY):
+					qubit_array[start + 1 + i] = ancilla_arr[i]
 				seq = cCQ_mul(result_bits, other)  # Pass bits parameter
 			else:
-				qubit_array[start: start + NUMANCILLY] = _get_ancilla()
+				ancilla_arr = _get_ancilla()
+				for i in range(NUMANCILLY):
+					qubit_array[start + i] = ancilla_arr[i]
 				seq = CQ_mul(result_bits, other)  # Pass bits parameter
 
 			if seq == NULL:
@@ -537,15 +577,23 @@
 		other_offset = 64 - other_bits
 
 		# other qubits at position start
-		qubit_array[start: start + other_bits] = (<qint> other).qubits[other_offset:64]
+		# CYT-03: Replace slice with explicit loop for memory view optimization
+		other_qubits = (<qint> other).qubits
+		for i in range(other_bits):
+			qubit_array[start + i] = other_qubits[other_offset + i]
 		start += other_bits
 
 		if _controlled:
-			qubit_array[start: start + 1] = (<qint> _control_bool).qubits[63:64]
-			qubit_array[start + 1: start + 1 + NUMANCILLY] = _get_ancilla()
+			control_qubits = (<qint> _control_bool).qubits
+			qubit_array[start] = control_qubits[63]
+			ancilla_arr = _get_ancilla()
+			for i in range(NUMANCILLY):
+				qubit_array[start + 1 + i] = ancilla_arr[i]
 			seq = cQQ_mul(result_bits)  # Pass bits parameter
 		else:
-			qubit_array[start: start + NUMANCILLY] = _get_ancilla()
+			ancilla_arr = _get_ancilla()
+			for i in range(NUMANCILLY):
+				qubit_array[start + i] = ancilla_arr[i]
 			seq = QQ_mul(result_bits)  # Pass bits parameter
 
 		if seq == NULL:
