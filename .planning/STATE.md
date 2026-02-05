@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-05)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** Planning next milestone
+**Current focus:** v2.2 Performance Optimization
 
 ## Current Position
 
-Phase: 54 of 54 complete
-Plan: All complete
-Status: v2.1 milestone shipped
-Last activity: 2026-02-05 — Milestone v2.1 complete
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-05 — Milestone v2.2 started
 
-Progress: ██████████ 100% (v2.1 complete)
+Progress: ░░░░░░░░░░ 0% (v2.2 starting)
 
 ## Performance Metrics
 
@@ -66,9 +66,9 @@ Recent decisions (v2.1):
 ## Session Continuity
 
 Last session: 2026-02-05
-Stopped at: Milestone v2.1 complete
+Stopped at: Defining v2.2 requirements
 Resume file: None
-Resume action: `/gsd:new-milestone` — start next milestone
+Resume action: Continue requirements definition
 
 ---
-*State updated: 2026-02-05 -- Milestone v2.1 shipped*
+*State updated: 2026-02-05 -- Milestone v2.2 started*

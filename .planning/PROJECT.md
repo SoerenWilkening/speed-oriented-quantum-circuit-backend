@@ -102,6 +102,25 @@ Write quantum algorithms in natural programming style that compiles to efficient
 
 ### Active
 
+## Current Milestone: v2.2 Performance Optimization
+
+**Goal:** Improve circuit generation performance through profiling-driven optimization
+
+**Target features:**
+- Profiler infrastructure (Python timing + C profiling + Cython annotation analysis)
+- Fix f() vs f.inverse() depth discrepancy — forward path should match inverse optimization
+- C memory optimizations based on profiling results
+- Cython optimizations based on `cython -a` analysis (typing, cdef/nogil)
+- Python→C migration for identified hot paths
+- Hardcoded gate sequences PoC — addition for 1-16 bits to test precomputation approach
+- Opportunistic bug fixes if profiling reveals easy root causes
+
+**Constraints:**
+- New code: ~400 LOC per file max
+- Don't refactor existing file structure
+
+---
+
 **Deferred bugs (carry forward):**
 - Fix _reduce_mod result corruption (BUG-MOD-REDUCE) — needs fundamentally different circuit structure
 - Fix controlled multiplication corruption (BUG-COND-MUL-01) — not yet investigated
@@ -226,4 +245,4 @@ Write quantum algorithms in natural programming style that compiles to efficient
 | Cache key uses ('arr', length) tuple | Distinguishes qarray from qint widths | ✓ Good — unambiguous caching |
 
 ---
-*Last updated: 2026-02-05 after v2.1 milestone complete*
+*Last updated: 2026-02-05 after v2.2 milestone started*
