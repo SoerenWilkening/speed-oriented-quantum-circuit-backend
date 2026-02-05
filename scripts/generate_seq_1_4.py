@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate add_seq_5_8.c with hardcoded QQ_add and cQQ_add sequences for widths 5-8."""
+"""Generate add_seq_1_4.c with hardcoded QQ_add and cQQ_add sequences for widths 1-4."""
 
 import math
 from dataclasses import dataclass
@@ -248,7 +248,7 @@ def main():
 
     # Header
     output.append("//")
-    output.append("// add_seq_5_8.c - Hardcoded QQ_add and cQQ_add sequences for 5-8 bit widths")
+    output.append("// add_seq_1_4.c - Hardcoded QQ_add and cQQ_add sequences for 1-4 bit widths")
     output.append("//")
     output.append("// This file contains statically-defined gate sequences that match the")
     output.append(
@@ -265,8 +265,8 @@ def main():
     output.append("#endif")
     output.append("")
 
-    # Generate QQ_add for widths 5-8
-    for width in [5, 6, 7, 8]:
+    # Generate QQ_add for widths 1-4
+    for width in [1, 2, 3, 4]:
         layers = generate_qq_add(width)
         layers = optimize_layers(layers)
         output.append(
@@ -274,7 +274,8 @@ def main():
         )
         output.append(f"// QQ_ADD WIDTH {width} ({len(layers)} layers)")
         output.append(
-            f"// Qubit layout: [0,{width - 1}] = target, [{width},{2 * width - 1}] = control"
+            f"// Qubit layout: [0{f',{width - 1}' if width > 1 else ''}] = target, "
+            f"[{width}{f',{2 * width - 1}' if width > 1 else ''}] = control"
         )
         output.append(
             "// ============================================================================"
@@ -283,29 +284,29 @@ def main():
         output.append(generate_c_sequence("QQ_ADD", layers, width))
         output.append("")
 
-    # QQ_add dispatch helper for 5-8
+    # QQ_add dispatch helper for 1-4
     output.append("// ============================================================================")
-    output.append("// QQ_ADD DISPATCH HELPER FOR 5-8")
+    output.append("// QQ_ADD DISPATCH HELPER FOR 1-4")
     output.append("// ============================================================================")
     output.append("")
-    output.append("const sequence_t *get_hardcoded_QQ_add_5_8(int bits) {")
+    output.append("const sequence_t *get_hardcoded_QQ_add_1_4(int bits) {")
     output.append("    switch (bits) {")
-    output.append("    case 5:")
-    output.append("        return &HARDCODED_QQ_ADD_5;")
-    output.append("    case 6:")
-    output.append("        return &HARDCODED_QQ_ADD_6;")
-    output.append("    case 7:")
-    output.append("        return &HARDCODED_QQ_ADD_7;")
-    output.append("    case 8:")
-    output.append("        return &HARDCODED_QQ_ADD_8;")
+    output.append("    case 1:")
+    output.append("        return &HARDCODED_QQ_ADD_1;")
+    output.append("    case 2:")
+    output.append("        return &HARDCODED_QQ_ADD_2;")
+    output.append("    case 3:")
+    output.append("        return &HARDCODED_QQ_ADD_3;")
+    output.append("    case 4:")
+    output.append("        return &HARDCODED_QQ_ADD_4;")
     output.append("    default:")
     output.append("        return NULL;")
     output.append("    }")
     output.append("}")
     output.append("")
 
-    # Generate cQQ_add for widths 5-8
-    for width in [5, 6, 7, 8]:
+    # Generate cQQ_add for widths 1-4
+    for width in [1, 2, 3, 4]:
         layers = generate_cqq_add(width)
         layers = optimize_layers(layers)
         control_qubit = 2 * width
@@ -314,7 +315,8 @@ def main():
         )
         output.append(f"// cQQ_ADD WIDTH {width} ({len(layers)} layers)")
         output.append(
-            f"// Qubit layout: [0,{width - 1}] = target, [{width},{2 * width - 1}] = b, [{control_qubit}] = control"
+            f"// Qubit layout: [0{f',{width - 1}' if width > 1 else ''}] = target, "
+            f"[{width}{f',{2 * width - 1}' if width > 1 else ''}] = b, [{control_qubit}] = control"
         )
         output.append(
             "// ============================================================================"
@@ -323,48 +325,24 @@ def main():
         output.append(generate_c_sequence("cQQ_ADD", layers, width))
         output.append("")
 
-    # cQQ_add dispatch helper for 5-8
+    # cQQ_add dispatch helper for 1-4
     output.append("// ============================================================================")
-    output.append("// cQQ_ADD DISPATCH HELPER FOR 5-8")
+    output.append("// cQQ_ADD DISPATCH HELPER FOR 1-4")
     output.append("// ============================================================================")
     output.append("")
-    output.append("const sequence_t *get_hardcoded_cQQ_add_5_8(int bits) {")
+    output.append("const sequence_t *get_hardcoded_cQQ_add_1_4(int bits) {")
     output.append("    switch (bits) {")
-    output.append("    case 5:")
-    output.append("        return &HARDCODED_cQQ_ADD_5;")
-    output.append("    case 6:")
-    output.append("        return &HARDCODED_cQQ_ADD_6;")
-    output.append("    case 7:")
-    output.append("        return &HARDCODED_cQQ_ADD_7;")
-    output.append("    case 8:")
-    output.append("        return &HARDCODED_cQQ_ADD_8;")
+    output.append("    case 1:")
+    output.append("        return &HARDCODED_cQQ_ADD_1;")
+    output.append("    case 2:")
+    output.append("        return &HARDCODED_cQQ_ADD_2;")
+    output.append("    case 3:")
+    output.append("        return &HARDCODED_cQQ_ADD_3;")
+    output.append("    case 4:")
+    output.append("        return &HARDCODED_cQQ_ADD_4;")
     output.append("    default:")
     output.append("        return NULL;")
     output.append("    }")
-    output.append("}")
-    output.append("")
-
-    # Unified public dispatch functions
-    output.append("// ============================================================================")
-    output.append("// UNIFIED PUBLIC DISPATCH FUNCTIONS (covers all 1-8)")
-    output.append("// ============================================================================")
-    output.append("")
-    output.append("const sequence_t *get_hardcoded_QQ_add(int bits) {")
-    output.append("    if (bits >= 1 && bits <= 4) {")
-    output.append("        return get_hardcoded_QQ_add_1_4(bits);")
-    output.append("    } else if (bits >= 5 && bits <= 8) {")
-    output.append("        return get_hardcoded_QQ_add_5_8(bits);")
-    output.append("    }")
-    output.append("    return NULL;  // > 8 or < 1: caller must use dynamic generation")
-    output.append("}")
-    output.append("")
-    output.append("const sequence_t *get_hardcoded_cQQ_add(int bits) {")
-    output.append("    if (bits >= 1 && bits <= 4) {")
-    output.append("        return get_hardcoded_cQQ_add_1_4(bits);")
-    output.append("    } else if (bits >= 5 && bits <= 8) {")
-    output.append("        return get_hardcoded_cQQ_add_5_8(bits);")
-    output.append("    }")
-    output.append("    return NULL;")
     output.append("}")
     output.append("")
 

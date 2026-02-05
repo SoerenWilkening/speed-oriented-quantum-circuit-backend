@@ -350,8 +350,8 @@ sequence_t *cQQ_add(int bits) {
     //
     // Qubit layout for cQQ_add(bits):
     // - Qubits [0, bits-1]: First operand (target, modified in place)
-    // - Qubits [bits, 2*bits-1]: Second operand (control)
-    // - Qubit [3*bits-1]: Conditional control qubit
+    // - Qubits [bits, 2*bits-1]: Second operand (other)
+    // - Qubit [2*bits]: Conditional control qubit
 
     // Bounds check: valid widths are 1-64
     if (bits < 1 || bits > 64) {
@@ -409,7 +409,7 @@ sequence_t *cQQ_add(int bits) {
 
     QFT(add, bits);
 
-    int control = 3 * bits - 1;
+    int control = 2 * bits;
     int rounds;
     int layer = 2 * bits - 1;
 
