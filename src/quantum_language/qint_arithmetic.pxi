@@ -2,8 +2,6 @@
 	# ARITHMETIC OPERATIONS
 	# ====================================================================
 
-	cimport cython
-
 	@cython.boundscheck(False)
 	@cython.wraparound(False)
 	cdef addition_inplace(self, other, int invert=False):

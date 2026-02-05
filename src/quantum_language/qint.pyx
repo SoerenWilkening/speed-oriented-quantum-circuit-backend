@@ -3,6 +3,8 @@
 # See .planning/quick/004-consolidate-qint-pxi-includes-to-remove-/004-SUMMARY.md
 """Quantum integer type with arithmetic, bitwise, and comparison operations."""
 
+cimport cython
+
 import sys
 import warnings
 

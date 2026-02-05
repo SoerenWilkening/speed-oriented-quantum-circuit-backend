@@ -2,8 +2,6 @@
 	# BITWISE OPERATIONS
 	# ====================================================================
 
-	cimport cython
-
 	@cython.boundscheck(False)
 	@cython.wraparound(False)
 	def __and__(self, other):
@@ -723,7 +721,8 @@
 		>>> # bit1 is qbool representing |1>
 		"""
 		from quantum_language.qbool import qbool
-		bit_list = np.zeros(64)
+		# Use uint32 dtype to match qint.qubits memory view type
+		bit_list = np.zeros(64, dtype=np.uint32)
 		bit_list[-1] = self.qubits[item]
 		a = qbool(create_new = False, bit_list = bit_list)
 		return a
