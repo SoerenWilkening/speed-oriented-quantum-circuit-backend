@@ -3,6 +3,7 @@
 //
 
 #include "Integer.h"
+#include "sequences.h"
 
 // Legacy globals for backward compatibility (point to INTEGERSIZE versions)
 sequence_t *precompiled_QQ_add = NULL;
@@ -148,7 +149,19 @@ sequence_t *QQ_add(int bits) {
         return NULL;
     }
 
-    // Check cache for this width
+    // Use hardcoded sequences for widths 1-8
+    if (bits <= HARDCODED_MAX_WIDTH) {
+        const sequence_t *hardcoded = get_hardcoded_QQ_add(bits);
+        if (hardcoded != NULL) {
+            // SAFETY: Const cast is safe here because:
+            // 1. Static sequences have program lifetime (never freed)
+            // 2. Caller should never free returned sequences anyway
+            // 3. Cast needed only because existing API returns non-const
+            return (sequence_t *)hardcoded;
+        }
+    }
+
+    // Check cache for dynamically generated (widths > 8)
     if (precompiled_QQ_add_width[bits] != NULL)
         return precompiled_QQ_add_width[bits];
 
@@ -345,7 +358,19 @@ sequence_t *cQQ_add(int bits) {
         return NULL;
     }
 
-    // Check cache for this width
+    // Use hardcoded sequences for widths 1-8
+    if (bits <= HARDCODED_MAX_WIDTH) {
+        const sequence_t *hardcoded = get_hardcoded_cQQ_add(bits);
+        if (hardcoded != NULL) {
+            // SAFETY: Const cast is safe here because:
+            // 1. Static sequences have program lifetime (never freed)
+            // 2. Caller should never free returned sequences anyway
+            // 3. Cast needed only because existing API returns non-const
+            return (sequence_t *)hardcoded;
+        }
+    }
+
+    // Check cache for dynamically generated (widths > 8)
     if (precompiled_cQQ_add_width[bits] != NULL)
         return precompiled_cQQ_add_width[bits];
 
