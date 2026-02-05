@@ -69,11 +69,12 @@
 
 		if _controlled:
 			# Control qubit from qbool (last element)
+			# cQQ_add expects control at position 3*bits-1 (with a gap for algorithm)
 			control_qubits = (<qint> _control_bool).qubits
-			qubit_array[start] = control_qubits[63]
+			qubit_array[3 * result_bits - 1] = control_qubits[63]
 			ancilla_arr = _get_ancilla()
 			for i in range(NUMANCILLY):
-				qubit_array[start + 1 + i] = ancilla_arr[i]
+				qubit_array[3 * result_bits + i] = ancilla_arr[i]
 			seq = cQQ_add(result_bits)
 		else:
 			ancilla_arr = _get_ancilla()
