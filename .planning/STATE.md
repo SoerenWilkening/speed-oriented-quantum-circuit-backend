@@ -10,16 +10,16 @@ See: .planning/PROJECT.md (updated 2026-02-05)
 ## Current Position
 
 Phase: 58 - Hardcoded Sequences (1-8 bit)
-Plan: 1/3 complete
+Plan: 2/3 complete
 Status: In progress
-Last activity: 2026-02-05 — Completed 58-01-PLAN.md (1-4 bit sequences)
+Last activity: 2026-02-05 — Completed 58-02-PLAN.md (5-8 bit sequences + routing)
 
-Progress: [████......] ~46% (v2.2: 4/7 phases in progress)
+Progress: [█████.....] ~48% (v2.2: 4/7 phases in progress)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 165 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 9)
+- Total plans completed: 166 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 10)
 - Average duration: ~13 min/plan
 - Total execution time: ~24.3 hours
 
@@ -77,6 +77,8 @@ Recent decisions (v2.2):
 - SEQ-01: Use SEQ_PI compile-time constant instead of M_PI (M_PI not constant expression)
 - SEQ-02: Separate 1-4 and 5-8 bit widths into different source files
 - SEQ-03: Use const gate_t arrays with designated initializers for compile-time allocation
+- SEQ-04: Generate C code via Python script for 5-8 bit sequences (reproducibility)
+- SEQ-05: Use const cast in IntegerAddition.c for hardcoded return (safe due to static lifetime)
 
 ### v2.2 Research Findings
 
@@ -167,12 +169,27 @@ Profiling infrastructure now available:
 
 **Build integration:** setup.py updated to include new source file
 
+### Phase 58 Plan 02 Complete
+
+**Outcome:** Static QQ_add and cQQ_add sequences for 5-8 bit widths with routing integration.
+
+**Files created/modified:**
+- c_backend/src/sequences/add_seq_5_8.c (6351 lines) - static gate arrays for 5-8 bit
+- c_backend/src/IntegerAddition.c - routing to hardcoded sequences
+- scripts/generate_seq_5_8.py - code generation script
+
+**Layer counts (5-8 bit):**
+- QQ_add: 35, 43, 51, 58 layers
+- cQQ_add: 53, 71, 90, 110 layers
+
+**Routing:** QQ_add() and cQQ_add() now return hardcoded sequences for widths 1-8
+
 ## Session Continuity
 
-Last session: 2026-02-05 17:07 UTC
-Stopped at: Completed 58-01-PLAN.md
-Resume file: .planning/phases/58-hardcoded-sequences-1-8/58-02-PLAN.md
-Resume action: Execute Plan 02 (5-8 bit sequences)
+Last session: 2026-02-05 17:35 UTC
+Stopped at: Completed 58-02-PLAN.md
+Resume file: .planning/phases/58-hardcoded-sequences-1-8/58-03-PLAN.md
+Resume action: Execute Plan 03 (integration testing)
 
 ---
-*State updated: 2026-02-05 — Phase 58 Plan 01 complete (1-4 bit sequences)*
+*State updated: 2026-02-05 — Phase 58 Plan 02 complete (5-8 bit sequences + routing)*
