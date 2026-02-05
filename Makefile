@@ -164,6 +164,20 @@ build-profile:
 	. $(VENV) && QUANTUM_PROFILE=1 $(PYTHON) setup.py build_ext --inplace
 	@echo "Profiling build complete. Cython functions now visible in cProfile."
 
+.PHONY: verify-optimization
+verify-optimization:
+	@echo "Verifying Cython optimizations..."
+	@echo "1. Rebuilding package..."
+	. $(VENV) && $(PYTHON) setup.py build_ext --inplace -q
+	@echo "2. Regenerating annotations..."
+	$(MAKE) profile-cython
+	@echo "3. Running verification tests..."
+	. $(VENV) && $(PYTEST) tests/python/test_cython_optimization.py -v
+	@echo "4. Running benchmarks..."
+	. $(VENV) && $(PYTEST) tests/benchmarks/ -v --benchmark-only
+	@echo ""
+	@echo "Optimization verification complete!"
+
 # === Help ===
 
 .PHONY: help
@@ -176,13 +190,14 @@ help:
 	@echo "  clean            - Remove test artifacts"
 	@echo ""
 	@echo "Profiling targets:"
-	@echo "  profile-cython   - Generate Cython annotation HTML"
-	@echo "  profile-native   - Run py-spy with native frames (requires py-spy)"
-	@echo "  profile-memory   - Run memray memory profiler (requires memray)"
-	@echo "  profile-cprofile - Run cProfile on quantum operations"
-	@echo "  benchmark        - Run pytest-benchmark tests"
-	@echo "  benchmark-compare- Run benchmarks and save for comparison"
-	@echo "  build-profile    - Build with Cython profiling enabled"
+	@echo "  profile-cython      - Generate Cython annotation HTML (run after optimizations)"
+	@echo "  profile-native      - Run py-spy with native frames (requires py-spy)"
+	@echo "  profile-memory      - Run memray memory profiler (requires memray)"
+	@echo "  profile-cprofile    - Run cProfile on quantum operations"
+	@echo "  benchmark           - Run pytest-benchmark tests"
+	@echo "  benchmark-compare   - Run benchmarks and save for comparison"
+	@echo "  build-profile       - Build with Cython profiling enabled"
+	@echo "  verify-optimization - Full optimization verification (rebuild, annotate, test, benchmark)"
 	@echo ""
 	@echo "Tool availability:"
 	@echo "  C compiler: $(if $(HAS_CC),$(CC),NOT FOUND)"
