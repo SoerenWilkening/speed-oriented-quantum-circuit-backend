@@ -10,16 +10,16 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Phase: 54 of 54 (qarray Support in @ql.compile)
-Plan: 1 of 1 in current phase
-Status: Plan complete
-Last activity: 2026-02-05 — Completed 54-01-PLAN.md (qarray compile support)
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-05 — Completed 54-02-PLAN.md (qarray compile tests)
 
 Progress: ██████████ 100% (v2.1)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 155 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 5)
+- Total plans completed: 156 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6)
 - Average duration: ~13 min/plan
 - Total execution time: ~24 hours
 
@@ -38,7 +38,7 @@ Progress: ██████████ 100% (v2.1)
 | v1.8 Copy, Mutability & Uncomp Fix | 41-44 | 7 | Complete (2026-02-03) |
 | v1.9 Pixel-Art Circuit Visualization | 45-47 | 7 | Complete (2026-02-03) |
 | v2.0 Function Compilation | 48-51 | 8 | Complete (2026-02-04) |
-| v2.1 Compile Enhancements | 52-54 | 5 | Complete (2026-02-05) |
+| v2.1 Compile Enhancements | 52-54 | 6 | Complete (2026-02-05) |
 
 ## Accumulated Context
 
@@ -60,6 +60,7 @@ See PROJECT.md Key Decisions table for full history.
 | 54-01 | Use iteration protocol for qarray cdef access | _elements is cdef attribute; for elem in arr uses __iter__ which accesses _elements internally |
 | 54-01 | Cache key uses ('arr', length) tuple for qarray | Distinguishes qarray from qint widths; array length determines cache hit/miss |
 | 54-01 | Store return_type and element widths in CompiledBlock | Enables qarray reconstruction during replay without original qarray reference |
+| 54-02 | qarray constructor uses integer list with width param | ql.qarray([1,2,3], width=4) not ql.qarray([qint(), ...]) |
 
 ### Blockers/Concerns
 
@@ -72,9 +73,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-05
-Stopped at: Completed Phase 54-01 (qarray compile support)
+Stopped at: Completed Phase 54-02 (qarray compile tests)
 Resume file: None
-Resume action: Milestone v2.1 complete. Plan next milestone or verify overall system.
+Resume action: Milestone v2.1 complete. Phase 54 complete with implementation and tests.
 
 ---
-*State updated: 2026-02-05 -- Phase 54 plan 01 complete (qarray compile support)*
+*State updated: 2026-02-05 -- Phase 54 plan 02 complete (qarray compile tests)*
