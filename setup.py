@@ -37,6 +37,15 @@ c_sources = [
 
 compiler_args = ["-O3", "-pthread"]  # Removed -flto due to GCC LTO bug
 
+# Profiling build mode - enables Cython function-level profiling
+profiling_directives = {}
+if os.environ.get("QUANTUM_PROFILE"):
+    profiling_directives = {
+        "profile": True,
+        "linetrace": True,
+    }
+    compiler_args.append("-DCYTHON_TRACE=1")
+
 # src/ directory is at project root, not in python-backend
 SRC_DIR = os.path.join(PROJECT_ROOT, "src")
 
@@ -100,6 +109,7 @@ setup(
         language_level="3",
         compiler_directives={
             "embedsignature": True,  # Preserves docstrings in compiled modules
+            **profiling_directives,
         },
     ),
     # Include .pxd and .py files for installed package (e.g. __init__.py wrappers)
@@ -112,6 +122,11 @@ setup(
     ],
     extras_require={
         "verification": ["qiskit>=1.0"],
+        "profiling": [
+            "line-profiler>=5.0.0",
+            "snakeviz>=2.2.2",
+            "pytest-benchmark>=5.2.3",
+        ],
     },
     python_requires=">=3.11",
 )
