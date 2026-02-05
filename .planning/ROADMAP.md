@@ -128,6 +128,13 @@ Plans:
 
 **Requirements:** HCS-01, HCS-02, HCS-05, HCS-06
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 58-01-PLAN.md — Create sequences.h header and 1-4 bit hardcoded sequences
+- [ ] 58-02-PLAN.md — Implement 5-8 bit sequences and integrate routing
+- [ ] 58-03-PLAN.md — Validation tests and fallback verification
+
 **Success Criteria:**
 1. Addition operations for 1-4 bit widths use pre-computed gate sequences
 2. Addition operations for 5-8 bit widths use pre-computed gate sequences
