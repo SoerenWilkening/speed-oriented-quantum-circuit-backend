@@ -93,16 +93,14 @@ Write quantum algorithms in natural programming style that compiles to efficient
 - ✓ Debug mode with operation counts, optimization stats, cache hit/miss reporting — v2.0
 - ✓ Nested compilation (compiled functions calling other compiled functions) — v2.0
 - ✓ Comprehensive test suite (62 tests) covering all compilation scenarios — v2.0
+- ✓ Ancilla tracking with forward call registry for compiled functions — v2.1
+- ✓ `f.inverse(x)` uncomputes exact physical ancillas from prior forward call and deallocates — v2.1
+- ✓ `f.adjoint(x)` standalone adjoint generation without forward tracking — v2.1
+- ✓ Auto-uncompute of temp ancillas in qubit_saving mode (preserves return qubits) — v2.1
+- ✓ `ql.qarray` support as `@ql.compile` arguments with correct capture, caching, and replay — v2.1
+- ✓ 106 compilation tests covering all INV and ARR requirements — v2.1
 
 ### Active
-
-**Current Milestone: v2.1 Compile Enhancements**
-
-**Goal:** Make `@ql.compile` inverse reuse physical ancilla qubits from forward call (uncompute + deallocate), and support `ql.qarray` as compiled function arguments.
-
-**Target features:**
-- Inverse qubit reuse: `f.inverse()(x)` targets same physical ancillas from `f(x)`, uncomputes to |0⟩, deallocates
-- qarray support in `@ql.compile`: pass `ql.qarray` as arguments to compiled functions
 
 **Deferred bugs (carry forward):**
 - Fix _reduce_mod result corruption (BUG-MOD-REDUCE) — needs fundamentally different circuit structure
@@ -130,10 +128,10 @@ Write quantum algorithms in natural programming style that compiles to efficient
 
 **Architecture:** Three-layer stateless design — C backend (gate primitives, circuit management, integer operations) -> Cython bindings -> Python frontend (qint/qbool classes, operator overloading). All functions take explicit parameters; no global state.
 
-**Current state:** v2.0 shipped — function compilation complete. `@ql.compile` decorator captures gate sequences on first call, optimizes via gate list optimizer, and replays with qubit remapping on subsequent calls. Compiled functions work inside `with` blocks (controlled variant derivation), support `.inverse()` for adjoint generation, debug introspection, and nesting. 62 compilation tests. Pixel-art circuit visualization with two zoom levels scaling to 200+ qubits. Exhaustive verification suite with 8,365+ tests covering every operation category through the full pipeline (Python -> C circuit -> OpenQASM 3.0 -> Qiskit simulate -> result check). Clean modular C backend with types.h, circuit.h, arithmetic_ops.h, comparison_ops.h, bitwise_ops.h, circuit_output.h. Centralized qubit allocator with ownership tracking. Variable-width quantum integers (1-64 bits) with complete arithmetic, comparison, and initialization operations. Automatic uncomputation with dependency tracking, mode control (lazy/eager), and user override methods. Proper package structure with ql.array supporting multi-dimensional arrays, reductions, element-wise operations, and in-place element mutation. CNOT-based quantum copy for binary operations. Memory-safe Python-to-C bridge with Cython try-finally cleanup.
+**Current state:** v2.1 shipped — compile enhancements complete. `@ql.compile` now supports ancilla tracking with forward call registry, `f.inverse(x)` for uncomputing/deallocating exact physical ancillas from prior forward calls, `f.adjoint(x)` for standalone adjoint generation, auto-uncompute in qubit_saving mode, and `ql.qarray` arguments. 106 compilation tests. Pixel-art circuit visualization with two zoom levels scaling to 200+ qubits. Exhaustive verification suite with 8,365+ tests covering every operation category through the full pipeline (Python -> C circuit -> OpenQASM 3.0 -> Qiskit simulate -> result check). Clean modular C backend with types.h, circuit.h, arithmetic_ops.h, comparison_ops.h, bitwise_ops.h, circuit_output.h. Centralized qubit allocator with ownership tracking. Variable-width quantum integers (1-64 bits) with complete arithmetic, comparison, and initialization operations. Automatic uncomputation with dependency tracking, mode control (lazy/eager), and user override methods. Proper package structure with ql.array supporting multi-dimensional arrays, reductions, element-wise operations, and in-place element mutation. CNOT-based quantum copy for binary operations. Memory-safe Python-to-C bridge with Cython try-finally cleanup.
 
 **Codebase:**
-- ~221,387 lines of code (Python, Cython, C)
+- ~345,901 lines of code (Python, Cython, C)
 - Version 0.1.0
 - Tech stack: Python 3.11+, Cython, C backend, Qiskit (optional verification)
 
@@ -219,6 +217,13 @@ Write quantum algorithms in natural programming style that compiles to efficient
 | 3x3 pixel cells for overview mode | 2px gate + 1px gap gives clean pixel art | ✓ Good — compact and readable |
 | 12px cells with text labels for detail mode | Accommodates 2-char labels (Rx, Ry) | ✓ Good — readable gate labels |
 | Auto-zoom with AND logic (both thresholds) | Keep detail for circuits large in only one dimension | ✓ Good — sensible default behavior |
+| Only track forward calls when ancillas exist | In-place functions without ancillas don't need tracking | ✓ Good — avoids false double-forward errors |
+| f.inverse as @property returning proxy | Enables f.inverse(x) call syntax | ✓ Good — clean API |
+| f.adjoint as @property (standalone) | No forward tracking needed for pure adjoint | ✓ Good — separate use case |
+| Auto-uncompute triggers in __call__ | After both replay and capture paths | ✓ Good — consistent behavior |
+| Cache key includes qubit_saving mode | Mode change triggers recompilation | ✓ Good — correct semantics |
+| Iteration protocol for qarray cdef access | _elements is cdef attribute; iteration uses __iter__ | ✓ Good — Python-accessible |
+| Cache key uses ('arr', length) tuple | Distinguishes qarray from qint widths | ✓ Good — unambiguous caching |
 
 ---
-*Last updated: 2026-02-04 after v2.1 milestone started*
+*Last updated: 2026-02-05 after v2.1 milestone complete*

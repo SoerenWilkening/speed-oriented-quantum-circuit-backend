@@ -6,7 +6,7 @@
 - v1.8 Quantum Copy, Array Mutability & Uncomputation Fix -- Phases 41-44 (shipped 2026-02-03) -- See `milestones/v1.8-ROADMAP.md`
 - v1.9 Pixel-Art Circuit Visualization -- Phases 45-47 (shipped 2026-02-03) -- See `milestones/v1.9-ROADMAP.md`
 - v2.0 Function Compilation -- Phases 48-51 (shipped 2026-02-04) -- See `milestones/v2.0-ROADMAP.md`
-- **v2.1 Compile Enhancements** -- Phases 52-54 (in progress)
+- ✅ **v2.1 Compile Enhancements** -- Phases 52-54 (shipped 2026-02-05) -- See `milestones/v2.1-ROADMAP.md`
 
 ## Phases
 
@@ -39,58 +39,14 @@
 
 </details>
 
-### v2.1 Compile Enhancements (In Progress)
+<details>
+<summary>✅ v2.1 Compile Enhancements (Phases 52-54) -- SHIPPED 2026-02-05</summary>
 
-**Milestone Goal:** Make `@ql.compile` inverse reuse physical ancilla qubits from forward call (uncompute + deallocate), and support `ql.qarray` as compiled function arguments.
+- [x] Phase 52: Ancilla Tracking & Inverse Qubit Reuse (2/2 plans) -- completed 2026-02-04
+- [x] Phase 53: Qubit-Saving Auto-Uncompute (2/2 plans) -- completed 2026-02-04
+- [x] Phase 54: qarray Support in @ql.compile (2/2 plans) -- completed 2026-02-05
 
-- [x] **Phase 52: Ancilla Tracking & Inverse Qubit Reuse** (2/2 plans) -- completed 2026-02-04
-- [x] **Phase 53: Qubit-Saving Auto-Uncompute** (2/2 plans) -- completed 2026-02-04
-- [x] **Phase 54: qarray Support in @ql.compile** (2/2 plans) -- completed 2026-02-05
-
-## Phase Details
-
-### Phase 52: Ancilla Tracking & Inverse Qubit Reuse
-**Goal**: Users can call `f(x).inverse()` or `f.inverse(x)` to target the same physical ancilla qubits allocated during `f(x)`, uncomputing them to |0> and deallocating them
-**Depends on**: v2.0 compilation infrastructure (Phase 51)
-**Requirements**: INV-01, INV-02, INV-03, INV-04, INV-05, INV-06
-**Success Criteria** (what must be TRUE):
-  1. When a compiled function allocates qubits internally (e.g., `ql.qint()` inside the function), those qubits appear in a trackable ancilla list
-  2. `f(x).inverse()` -- return value carries compiled-origin metadata; calling `.inverse()` on it runs adjoint on that call's exact physical ancillas
-  3. `f.inverse(x)` -- looks up ancillas from a prior `f(x)` with matching inputs and runs adjoint on them
-  4. After inverse completes, ancilla qubits are in |0> state (Qiskit-verified)
-  5. After inverse completes, ancilla qubits are deallocated (returned to allocator for reuse)
-  6. Inverse works when called at any later point in the program (not just immediately after forward call)
-**Plans:** 2 plans
-Plans:
-- [x] 52-01-PLAN.md -- Infrastructure + f.inverse(x) + f.adjoint(x) implementation
-- [x] 52-02-PLAN.md -- Comprehensive tests for INV-01 through INV-06
-
-### Phase 53: Qubit-Saving Auto-Uncompute
-**Goal**: When qubit-saving mode is active, compiled functions that return a qint automatically uncompute all ancillas except the return value's qubits after the forward call
-**Depends on**: Phase 52 (ancilla tracking infrastructure)
-**Requirements**: INV-07
-**Success Criteria** (what must be TRUE):
-  1. With `ql.option("qubit_saving")` active, calling a compiled function that returns a qint automatically uncomputes internal ancillas after the forward call completes
-  2. The return value's qubits are preserved (not uncomputed) and remain usable in subsequent operations
-  3. The auto-uncomputed ancilla qubits are deallocated and available for reuse by later allocations
-**Plans:** 2 plans
-Plans:
-- [x] 53-01-PLAN.md -- Auto-uncompute implementation in compile.py
-- [x] 53-02-PLAN.md -- Comprehensive tests for INV-07
-
-### Phase 54: qarray Support in @ql.compile
-**Goal**: Users can pass `ql.qarray` objects as arguments to `@ql.compile`-decorated functions with correct capture, caching, and replay
-**Depends on**: v2.0 compilation infrastructure (Phase 51); independent of Phases 52-53
-**Requirements**: ARR-01, ARR-02, ARR-03, ARR-04
-**Success Criteria** (what must be TRUE):
-  1. A `@ql.compile`-decorated function accepting a `ql.qarray` argument captures gates correctly on first call (no errors, correct circuit)
-  2. Replay of a compiled function with a different qarray of the same shape and element widths produces the correct remapped circuit
-  3. Calling the same compiled function with qarrays of different shapes or element widths triggers separate cache entries (not incorrect replay)
-  4. Compiled qarray functions produce identical circuits to their non-compiled equivalents (verified by gate-level comparison or Qiskit simulation)
-**Plans:** 2 plans
-Plans:
-- [x] 54-01-PLAN.md -- qarray support implementation in compile.py
-- [x] 54-02-PLAN.md -- Comprehensive tests for ARR-01 through ARR-04
+</details>
 
 ## Progress
 
@@ -118,6 +74,4 @@ Plans:
 *Milestone v1.8 shipped: 2026-02-03*
 *Milestone v1.9 shipped: 2026-02-03*
 *Milestone v2.0 shipped: 2026-02-04*
-*Milestone v2.1 roadmap added: 2026-02-04*
-*Phase 54 planned: 2026-02-05*
-*Phase 54 complete: 2026-02-05*
+*Milestone v2.1 shipped: 2026-02-05*

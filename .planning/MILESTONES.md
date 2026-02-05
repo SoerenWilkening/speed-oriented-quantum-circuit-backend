@@ -1,5 +1,33 @@
 # Project Milestones: Quantum Assembly
 
+## v2.1 Compile Enhancements (Shipped: 2026-02-05)
+
+**Delivered:** Ancilla qubit reuse in compiled function inverses (track, uncompute, deallocate), auto-uncompute in qubit_saving mode, and `ql.qarray` support as `@ql.compile` arguments.
+
+**Phases completed:** 52-54 (6 plans total)
+
+**Key accomplishments:**
+
+- Forward call registry tracks ancilla qubits allocated during compiled function execution
+- `f.inverse(x)` uncomputes exact physical ancillas from prior `f(x)` and deallocates them
+- `f.adjoint(x)` provides standalone adjoint without forward call tracking
+- Auto-uncompute of temp ancillas when `qubit_saving` mode is active (preserves return qubits)
+- `ql.qarray` support in `@ql.compile` with correct capture, cache keying by length, and replay
+- 106 compilation tests (100% pass rate) covering all INV and ARR requirements
+
+**Stats:**
+
+- 22 files created/modified (+5,334 / -104 lines)
+- 345,901 total LOC (Python, Cython, C)
+- 3 phases, 6 plans, ~12 tasks
+- 1 day (2026-02-04 → 2026-02-05)
+
+**Git range:** `feat(52-01) 2098d6f` → `docs(54) 54c18ec`
+
+**What's next:** TBD — next milestone planning via `/gsd:new-milestone`
+
+---
+
 ## v2.0 Function Compilation (Shipped: 2026-02-04)
 
 **Delivered:** `@ql.compile` decorator that captures gate sequences on first call, optimizes them, and replays with qubit remapping on subsequent calls — supporting controlled contexts, inverse generation, nesting, and debug introspection.

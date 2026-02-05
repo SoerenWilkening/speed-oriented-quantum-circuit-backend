@@ -2,19 +2,19 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-04)
+See: .planning/PROJECT.md (updated 2026-02-05)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v2.1 Compile Enhancements — Phase 54 (qarray Support in @ql.compile)
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 54 of 54 (qarray Support in @ql.compile)
-Plan: 2 of 2 in current phase
-Status: Phase complete (verified)
-Last activity: 2026-02-05 — Phase 54 complete (verified)
+Phase: 54 of 54 complete
+Plan: All complete
+Status: v2.1 milestone shipped
+Last activity: 2026-02-05 — Milestone v2.1 complete
 
-Progress: ██████████ 100% (v2.1)
+Progress: ██████████ 100% (v2.1 complete)
 
 ## Performance Metrics
 
@@ -46,21 +46,14 @@ Progress: ██████████ 100% (v2.1)
 
 See PROJECT.md Key Decisions table for full history.
 
-| Phase | Decision | Rationale |
-|-------|----------|-----------|
-| 52-01 | Only track forward calls when ancillas allocated | In-place functions without ancillas don't need tracking; avoids false double-forward errors in nested compilation |
-| 52-01 | f.inverse is @property returning _AncillaInverseProxy | Enables f.inverse(x) call syntax without parentheses for getter |
-| 52-01 | f.adjoint is @property returning _InverseCompiledFunc | Standalone adjoint with fresh ancillas, no forward call tracking |
-| 52-02 | Qiskit test uses structural verification not simulation | Circuit-level gate scheduling differences between forward and inverse paths |
-| 53-01 | Auto-uncompute triggers in __call__ after both replay and capture paths | qubit_saving variable already computed for cache key; forward call record exists after both paths |
-| 53-01 | Cache key includes qubit_saving mode | Mode change triggers recompilation with different optimization |
-| 53-01 | Functions modifying inputs skip auto-uncompute | Uncomputing temp ancillas would undo input modifications |
-| 53-02 | complex_fn pattern (two allocations) needed for auto-uncompute tests | Simple copy pattern creates no temp qubits distinct from return |
-| 53-02 | Verify deallocation via total_deallocations stat | More reliable than current_in_use for non-contiguous qubit deallocation |
-| 54-01 | Use iteration protocol for qarray cdef access | _elements is cdef attribute; for elem in arr uses __iter__ which accesses _elements internally |
-| 54-01 | Cache key uses ('arr', length) tuple for qarray | Distinguishes qarray from qint widths; array length determines cache hit/miss |
-| 54-01 | Store return_type and element widths in CompiledBlock | Enables qarray reconstruction during replay without original qarray reference |
-| 54-02 | qarray constructor uses integer list with width param | ql.qarray([1,2,3], width=4) not ql.qarray([qint(), ...]) |
+Recent decisions (v2.1):
+- Only track forward calls when ancilla qubits exist
+- f.inverse is @property returning _AncillaInverseProxy
+- f.adjoint is @property returning _InverseCompiledFunc
+- Auto-uncompute triggers after both replay and capture paths
+- Cache key includes qubit_saving mode
+- Use iteration protocol for qarray cdef access
+- Cache key uses ('arr', length) tuple for qarray
 
 ### Blockers/Concerns
 
@@ -73,9 +66,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-05
-Stopped at: Completed Phase 54-02 (qarray compile tests)
+Stopped at: Milestone v2.1 complete
 Resume file: None
-Resume action: `/gsd:audit-milestone` — all phases complete, ready for milestone audit
+Resume action: `/gsd:new-milestone` — start next milestone
 
 ---
-*State updated: 2026-02-05 -- Phase 54 complete (verified), milestone v2.1 ready for audit*
+*State updated: 2026-02-05 -- Milestone v2.1 shipped*
