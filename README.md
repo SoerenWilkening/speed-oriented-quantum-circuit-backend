@@ -391,6 +391,39 @@ Contributions welcome! Areas for improvement:
 - Alternative output formats (Quil, QASM 3.0)
 - Quantum control flow constructs (if/else, loops)
 
+### Git Flow Workflow
+
+This project uses **Git Flow** for version control:
+
+```
+main ─────●─────────────●─────────────●───── (releases only)
+          │             │             │
+develop ──┴──●──●──●────┴──●──●──●────┴───── (integration)
+             │     │          │
+feature/* ───┴─────┴──────────┴────────────── (your work)
+```
+
+**For contributors:**
+
+1. **Fork and clone** the repository
+2. **Create a feature branch** from `develop`:
+   ```bash
+   git checkout develop
+   git checkout -b feature/your-feature-name
+   ```
+3. **Make your changes** with atomic commits
+4. **Push and create PR** targeting `develop` (not `main`)
+5. After review, your feature will be merged into `develop`
+
+**Branch types:**
+- `feature/*` — New features → merge to `develop`
+- `hotfix/*` — Urgent fixes → merge to `main` and `develop`
+- `release/*` — Release prep → merge to `main` and `develop`
+
+**Important:** PRs should target `develop`, not `main`. The `main` branch is reserved for releases only.
+
+### Code Requirements
+
 Please ensure:
 - Code follows existing style (C: LLVM style, Python: PEP 8)
 - Tests pass (`pytest tests/python/ -v`)

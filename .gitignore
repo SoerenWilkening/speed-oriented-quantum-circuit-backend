@@ -1,3 +1,6 @@
+# Claude Code configuration
+.claude/
+
 cmake-build-debug
 benchmark/CQ_inprov_qtf.csv
 .idea

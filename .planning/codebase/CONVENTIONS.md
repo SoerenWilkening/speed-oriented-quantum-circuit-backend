@@ -140,6 +140,76 @@ Guards use `CQ_BACKEND_IMPROVED_` prefix based on module name, `_H` suffix
 - Cython (.pyx) files bridge C and Python code
 - No namespace packages used
 
+## Git Workflow
+
+This project uses **Git Flow** branching model.
+
+**Branch Structure:**
+
+| Branch | Purpose | Merges To |
+|--------|---------|-----------|
+| `main` | Production releases only | — |
+| `develop` | Integration branch for features | `main` (releases) |
+| `feature/*` | New features and enhancements | `develop` |
+| `hotfix/*` | Urgent production fixes | `main` and `develop` |
+| `release/*` | Release preparation | `main` and `develop` |
+
+**Workflow:**
+
+1. **Start a feature:**
+   ```bash
+   git checkout develop
+   git pull origin develop
+   git checkout -b feature/my-feature
+   ```
+
+2. **Work on the feature:**
+   - Make commits on the feature branch
+   - Keep commits atomic and well-described
+
+3. **Complete a feature:**
+   ```bash
+   git checkout develop
+   git pull origin develop
+   git merge --no-ff feature/my-feature
+   git push origin develop
+   git branch -d feature/my-feature
+   ```
+
+4. **Create a release:**
+   ```bash
+   git checkout develop
+   git checkout -b release/v1.x.x
+   # Update version numbers, final testing
+   git checkout main
+   git merge --no-ff release/v1.x.x
+   git tag -a v1.x.x -m "Release v1.x.x"
+   git checkout develop
+   git merge --no-ff release/v1.x.x
+   ```
+
+5. **Hotfix (urgent production fix):**
+   ```bash
+   git checkout main
+   git checkout -b hotfix/critical-fix
+   # Fix the issue
+   git checkout main
+   git merge --no-ff hotfix/critical-fix
+   git tag -a v1.x.y -m "Hotfix v1.x.y"
+   git checkout develop
+   git merge --no-ff hotfix/critical-fix
+   ```
+
+**Branch Naming Conventions:**
+- `feature/short-description` — New features
+- `hotfix/issue-description` — Production fixes
+- `release/vX.Y.Z` — Release preparation
+
+**Commit Messages:**
+- Use imperative mood: "Add feature" not "Added feature"
+- Keep first line under 72 characters
+- Reference issues when applicable: "Fix #123: description"
+
 ---
 
 *Convention analysis: 2026-01-25*
