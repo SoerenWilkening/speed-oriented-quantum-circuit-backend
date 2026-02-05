@@ -2633,3 +2633,109 @@ def test_auto_uncompute_controlled_context():
     assert dealloc_after > dealloc_before, (
         "Controlled context should still trigger auto-uncompute deallocation"
     )
+
+
+# ---------------------------------------------------------------------------
+# qarray Support in @ql.compile (Phase 54: ARR-01, ARR-02, ARR-03, ARR-04)
+# ---------------------------------------------------------------------------
+
+
+def test_qarray_argument_basic():
+    """ARR-01: qarray can be passed as argument to compiled function."""
+    ql.circuit()
+
+    @ql.compile
+    def sum_elements(arr):
+        total = ql.qint(0, width=8)
+        for elem in arr:
+            total += elem
+        return total
+
+    arr = ql.qarray([1, 2, 3], width=4)
+    result = sum_elements(arr)
+
+    # Should return a qint
+    assert isinstance(result, ql.qint), "Result should be qint"
+    assert result.width == 8, "Result should have width 8"
+
+
+def test_qarray_argument_mixed_with_qint():
+    """ARR-01: Mixed qarray and qint arguments work correctly."""
+    ql.circuit()
+
+    @ql.compile
+    def add_scalar_to_array(arr, scalar):
+        # Return first element plus scalar
+        return arr[0] + scalar
+
+    arr = ql.qarray([5, 6], width=4)
+    scalar = ql.qint(3, width=4)
+    result = add_scalar_to_array(arr, scalar)
+
+    assert isinstance(result, ql.qint), "Result should be qint"
+
+
+def test_qarray_capture_extracts_all_qubits():
+    """ARR-02: Capture phase extracts qubit indices from all array elements."""
+    ql.circuit()
+
+    @ql.compile
+    def touch_all_elements(arr):
+        # Apply operation to each element to verify all qubits captured
+        for elem in arr:
+            elem += 1
+        return arr
+
+    arr = ql.qarray([0, 0], width=4)
+
+    # Collect qubits from all elements
+    all_element_qubits = set()
+    for elem in arr:
+        for i in range(elem.width):
+            all_element_qubits.add(int(elem.qubits[64 - elem.width + i]))
+
+    start = get_current_layer()
+    touch_all_elements(arr)
+    end = get_current_layer()
+
+    gates = extract_gate_range(start, end)
+    gate_targets = {g["target"] for g in gates}
+
+    # All element qubits should appear in gate targets
+    assert all_element_qubits <= gate_targets, (
+        f"Not all element qubits captured. "
+        f"Expected {all_element_qubits} to be subset of {gate_targets}"
+    )
+
+
+def test_qarray_first_call_matches_undecorated():
+    """ARR-02: Compiled qarray function produces same gate count as plain."""
+    # Plain run
+    ql.circuit()
+    arr1 = ql.qarray([1, 2], width=4)
+    total1 = ql.qint(0, width=8)
+    start1 = get_current_layer()
+    for elem in arr1:
+        total1 += elem
+    end1 = get_current_layer()
+    plain_gates = extract_gate_range(start1, end1)
+
+    # Compiled run
+    ql.circuit()
+
+    @ql.compile
+    def sum_array(arr):
+        total = ql.qint(0, width=8)
+        for elem in arr:
+            total += elem
+        return total
+
+    arr2 = ql.qarray([1, 2], width=4)
+    start2 = get_current_layer()
+    sum_array(arr2)
+    end2 = get_current_layer()
+    compiled_gates = extract_gate_range(start2, end2)
+
+    assert len(compiled_gates) == len(plain_gates), (
+        f"Gate count mismatch: compiled={len(compiled_gates)}, plain={len(plain_gates)}"
+    )
