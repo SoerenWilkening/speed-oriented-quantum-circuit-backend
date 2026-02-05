@@ -10,16 +10,16 @@ See: .planning/PROJECT.md (updated 2026-02-05)
 ## Current Position
 
 Phase: 55 - Profiling Infrastructure
-Plan: 01 of TBD complete
+Plan: 02 of 03 complete
 Status: In progress
-Last activity: 2026-02-05 — Completed 55-01-PLAN.md (Profiling Dependencies)
+Last activity: 2026-02-05 — Completed 55-02-PLAN.md (Profiling API & Benchmarks)
 
-Progress: [..........] ~5% (v2.2: 1 plan complete)
+Progress: [=.........] ~10% (v2.2: 2 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 156 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6)
+- Total plans completed: 158 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 2)
 - Average duration: ~13 min/plan
 - Total execution time: ~24 hours
 
@@ -56,6 +56,11 @@ Recent decisions (v2.1):
 - Use iteration protocol for qarray cdef access
 - Cache key uses ('arr', length) tuple for qarray
 
+Recent decisions (v2.2):
+- Used cProfile + pstats directly for profiler (no external dependency)
+- Benchmarks skip gracefully when pytest-benchmark not installed
+- Benchmark fixtures create fresh circuit for state isolation
+
 ### v2.2 Research Findings
 
 Key constraints and guidance from research:
@@ -77,9 +82,9 @@ Key constraints and guidance from research:
 ## Session Continuity
 
 Last session: 2026-02-05
-Stopped at: Completed 55-01-PLAN.md
-Resume file: .planning/phases/55-profiling-infrastructure/55-01-SUMMARY.md
-Resume action: Continue with 55-02-PLAN.md (pytest-benchmark integration)
+Stopped at: Completed 55-02-PLAN.md
+Resume file: .planning/phases/55-profiling-infrastructure/55-02-SUMMARY.md
+Resume action: Continue with 55-03-PLAN.md (Hotpath Identification)
 
 ---
-*State updated: 2026-02-05 -- Roadmap created for v2.2 Performance Optimization*
+*State updated: 2026-02-05 -- Completed 55-02-PLAN.md (Profiling API & Benchmarks)*
