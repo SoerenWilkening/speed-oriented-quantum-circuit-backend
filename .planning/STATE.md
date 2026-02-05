@@ -11,8 +11,8 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 
 Phase: 54 of 54 (qarray Support in @ql.compile)
 Plan: 2 of 2 in current phase
-Status: Phase complete
-Last activity: 2026-02-05 — Completed 54-02-PLAN.md (qarray compile tests)
+Status: Phase complete (verified)
+Last activity: 2026-02-05 — Phase 54 complete (verified)
 
 Progress: ██████████ 100% (v2.1)
 
@@ -75,7 +75,7 @@ See PROJECT.md Key Decisions table for full history.
 Last session: 2026-02-05
 Stopped at: Completed Phase 54-02 (qarray compile tests)
 Resume file: None
-Resume action: Milestone v2.1 complete. Phase 54 complete with implementation and tests.
+Resume action: `/gsd:audit-milestone` — all phases complete, ready for milestone audit
 
 ---
-*State updated: 2026-02-05 -- Phase 54 plan 02 complete (qarray compile tests)*
+*State updated: 2026-02-05 -- Phase 54 complete (verified), milestone v2.1 ready for audit*
