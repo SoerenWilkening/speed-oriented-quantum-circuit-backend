@@ -9,19 +9,19 @@ See: .planning/PROJECT.md (updated 2026-02-05)
 
 ## Current Position
 
-Phase: 55 - Profiling Infrastructure
-Plan: 3/3 complete
-Status: Phase complete, verified (5/5 success criteria)
-Last activity: 2026-02-05 — Phase 55 verified, all requirements complete
+Phase: 56 - Forward/Inverse Depth Fix
+Plan: 1/? complete
+Status: In progress
+Last activity: 2026-02-05 — Completed 56-01-PLAN.md (Depth Diagnostic Tests)
 
-Progress: [█.........] ~14% (v2.2: 1/7 phases complete)
+Progress: [██........] ~17% (v2.2: 1/7 phases, plan 1 of phase 56 complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 159 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 3)
+- Total plans completed: 160 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 4)
 - Average duration: ~13 min/plan
-- Total execution time: ~24 hours
+- Total execution time: ~24.1 hours
 
 **By Milestone:**
 
@@ -63,6 +63,9 @@ Recent decisions (v2.2):
 - Use PYTHONPATH=src for profiling targets (in-place builds)
 - Process pyx files individually in profile-cython (include directive handling)
 - Use inline cProfile API instead of -c flag (better compatibility)
+- Forward/adjoint replays produce equal depths - no fix needed for that
+- Real discrepancy is capture vs replay when capture allows parallelization
+- Root cause is layer_floor constraint in compile.py lines 984-994
 
 ### v2.2 Research Findings
 
@@ -73,6 +76,20 @@ Key constraints and guidance from research:
 - Move entire hot paths to C (not individual functions) to avoid boundary overhead
 - Hardcoded sequences split into 4 files (~400 LOC each per constraint)
 - MIG and MEM phases are conditional on profiling results
+
+### Phase 56 Findings (Plan 01)
+
+**Key finding:** Forward/adjoint replays produce EQUAL depths. The original assumption of f(x)/f.inverse(x) depth discrepancy was incorrect.
+
+**Actual discrepancy:** Capture vs replay depths differ when:
+- Capture occurs after operations on non-overlapping qubits (gates pack into earlier layers)
+- Replay sets layer_floor=current_layer (forces gates to start at current position)
+
+**Root cause location:** compile.py lines 984-994 (_replay method)
+
+**Fix options:**
+1. Set layer_floor during capture too (consistency)
+2. Store relative layer offsets, apply during replay (preserves optimization)
 
 ### Blockers/Concerns
 
@@ -95,9 +112,9 @@ Profiling infrastructure now available:
 ## Session Continuity
 
 Last session: 2026-02-05
-Stopped at: Phase 55 complete and verified
-Resume file: .planning/ROADMAP.md
-Resume action: `/gsd:plan-phase 56` to begin forward/inverse depth fix
+Stopped at: Completed 56-01-PLAN.md (Depth Diagnostic Tests)
+Resume file: .planning/phases/56-forward-inverse-depth-fix/56-01-SUMMARY.md
+Resume action: Plan 02 should reassess if capture/replay depth discrepancy needs fixing
 
 ---
-*State updated: 2026-02-05 — Phase 55 complete (Profiling Infrastructure)*
+*State updated: 2026-02-05 — Phase 56 Plan 01 complete (Depth Diagnostic Tests)*
