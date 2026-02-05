@@ -1,197 +1,384 @@
 # Project Research Summary
 
-**Project:** Quantum Assembly v1.9 - Pixel-Art Circuit Visualization
-**Domain:** Quantum circuit visualization (compact pixel-art rendering at scale)
-**Researched:** 2026-02-03
+**Project:** Quantum Assembly v2.2 Performance Optimization
+**Domain:** Cython/C Performance Optimization for Quantum Computing Framework
+**Researched:** 2026-02-05
 **Confidence:** HIGH
 
 ## Executive Summary
 
-This research addresses v1.9's goal of adding pixel-art circuit visualization to the Quantum Assembly framework. Current quantum visualization tools (Qiskit matplotlib, Cirq SVG) fail at scale — they become unreadable above 40 qubits and unusable above 60. The existing ASCII renderer in this project caps at 60 layers and skips rendering above 2000 gates. Pixel-art fills a genuine gap: rendering circuits with 100-200+ qubits and thousands of gates where each gate occupies only 2-3 pixels, allowing the entire circuit structure to remain visible.
+This research investigates profiling-driven performance optimization for the Quantum Assembly framework, a three-layer (Python/Cython/C) quantum circuit compiler. The project currently generates quantum circuits for arithmetic operations (addition, multiplication, comparison) but suffers from performance overhead in gate generation, particularly the run_instruction dispatch layer and dynamic sequence allocation. The recommended approach establishes profiling infrastructure across all layers (Python cProfile, Cython annotation, C-level timing), identifies hot paths via measurement, then applies targeted optimizations: completing static typing in Cython, migrating critical paths to C, eliminating malloc overhead via pre-allocation or pooling, and pre-computing gate sequences for common operations (1-16 bit addition).
 
-The recommended approach is: add Pillow (PIL) as the sole new dependency, extract circuit data from C backend to Python via a new Cython function, render entirely in pure Python using NumPy array operations for performance. The architecture follows existing patterns (`circuit_to_qasm_string` for bulk data extraction, OpenQASM module for Cython pattern). Two zoom levels (overview at 2-3px per gate, detail at 8-12px per gate) with automatic selection based on circuit size provide both "see everything" and "read details" modes.
+The critical constraint is Python 3.11 for Cython profiling (Python 3.12+ breaks profiling due to PEP-669). The highest-value optimizations come from eliminating boundary crossing overhead (moving entire hot paths to C, not individual functions) and replacing dynamic QFT-based addition with hardcoded gate sequences for common bit widths. Current profiling shows inject_remapped_gates allocates per-gate (malloc in hot path - major bottleneck) and the compile.py optimizer runs Python-level gate list processing on every capture.
 
-The critical risks are: (1) Pillow's per-call ImageDraw overhead at scale (mitigated by NumPy array-based rendering), (2) missing Python API to iterate circuit gates (mitigated by building Cython extraction layer first), and (3) choosing wrong zoom level for given circuit size (mitigated by auto-selection thresholds). With these addressed, pixel-art visualization delivers 10-100x performance vs Qiskit matplotlib while handling circuits 5x larger.
+Key risks include premature optimization without profiling data (wasting effort on non-bottlenecks), boundary crossing overhead when moving code to C (can be 10x slower if done wrong), and validation failures for precomputed gate sequences (silently incorrect circuits). Mitigation: profile with production-scale workloads first, move entire hot paths (not individual functions) to C, and validate hardcoded sequences against dynamic computation during tests.
 
 ## Key Findings
 
 ### Recommended Stack
 
-Pixel-art visualization requires exactly one new dependency: **Pillow 12.1.0**. The existing project has no image dependencies. Pillow provides everything needed for pixel-level rendering, text labeling, palette-mode PNG export, and nearest-neighbor upscaling. NumPy (already a dependency) accelerates bulk pixel operations when Pillow's per-pixel methods are too slow.
+The profiling stack focuses on cross-layer visibility for Python/Cython/C hybrid architecture. Python 3.11 is mandatory for Cython-level profiling due to PEP-669 breaking changes in 3.12+. The stack provides coverage across all three layers with tools that integrate with the existing pytest/setup.py infrastructure.
 
 **Core technologies:**
-- **Pillow >=12.1.0**: Image creation, pixel drawing, PNG export — Latest stable (Jan 2026), Python 3.10-3.14 support, MIT-CMU license, zero compiled sub-dependencies
-- **NumPy (existing)**: Fast bulk pixel array construction via `Image.fromarray()` — 10-100x faster than per-pixel `putpixel()` calls for images with thousands of pixels
-- **Cython (existing)**: C backend bridge for circuit data extraction — follows pattern from OpenQASM export
+- **cProfile + snakeviz 2.2.2**: Python function-level timing with browser visualization - zero install overhead, identifies hot Python functions
+- **line_profiler 5.0.0**: Line-by-line Python and Cython timing - drills into specific hot functions identified by cProfile
+- **memray 1.19.1**: Memory allocation profiling - Bloomberg's production tool, traces Python AND native code allocations (critical for Cython/C)
+- **cython -a (annotation HTML)**: Cython-to-C boundary visualization - yellow lines show Python API overhead, guides optimization targets
+- **py-spy 0.4.1**: Sampling profiler with --native flag - profiles C extensions without code modification or slowdown
+- **perf (Linux) / valgrind**: C-level CPU and memory profiling - deep-dive analysis for C backend hot spots
 
-**What NOT to add:** matplotlib (50+ MB dependency tree, antialiases everything), cairo/pycairo (vector graphics, complex system deps), pygame/arcade (require display server), imageio/scikit-image (scientific processing, not creation), niche pixel-art libraries (supply chain risk).
+**Integration approach:**
+- Add profiling optional dependency group to pyproject.toml
+- Environment variable QUANTUM_PROFILE=1 enables profiling build (Cython directives: profile=True, linetrace=True)
+- Makefile targets for profile, profile-line, profile-memory, cython-annotate
 
-**Rendering in Python, not C:** C backend has no standard image library (would need libpng/zlib build deps). Python/Pillow is fast enough for static image generation. Keep C focused on quantum operations.
+**Critical constraint:** Pin profiling work to Python 3.11. Cython profiling is non-functional in CPython 3.12+ due to PEP-669 changes.
 
 ### Expected Features
 
-Pixel-art visualization targets a specific niche: ultra-compact rendering of large circuits. The core value proposition is scalability — showing circuit structure for 100-200+ qubits where every other tool fails.
+Performance optimization for Cython/C code requires profiling infrastructure first, followed by targeted optimizations based on measurement data. Features categorized by necessity and complexity.
 
 **Must have (table stakes):**
-- Horizontal qubit wires (universal convention, time flows left-to-right)
-- Distinct gate symbols per type (color + shape at 2-3px scale)
-- Control-target connections (vertical lines with dots for multi-qubit gates)
-- Qubit labels (q0, q1, ... at left margin)
-- Save to PNG (lossless, palette mode for small files)
-- Return PIL Image object (Jupyter inline display, programmatic access)
-- Color legend (essential — without it, 2-3px icons are meaningless)
+- Profiling infrastructure (Python/Cython/C) - cannot optimize without measurement; establishes baselines
+- Static typing for all cdef functions - Cython without types gives only 35% speedup; with types gives 10-100x
+- Bounds checking disabled for production - boundscheck=False in tight loops is standard Cython optimization
+- Memory views for array parameters - replaces slow Python list access with C-speed buffer protocol
+- Avoid Python object creation in hot paths - PyObject allocation is slow; use C types directly
 
-**Should have (differentiators):**
-- **Overview zoom level (2-3px gates)** — see ENTIRE circuit for 100+ qubits, no existing tool does this
-- **Detail zoom level (8-12px gates)** — readable gate labels for small circuits
-- **Scalability to 200+ qubits** — no open-source tool handles this
-- **Auto zoom selection** — choose mode based on circuit size
-- **Fast rendering (NumPy backend)** — 10,000+ gates in under 1 second
-- **No matplotlib dependency** — lighter weight than Qiskit drawer
+**Should have (competitive differentiators):**
+- Fix f() vs f.inverse() depth discrepancy - identified bug where inverse produces lower depth than forward
+- Hardcoded gate sequences for 1-16 bit addition - pre-computed sequences eliminate runtime QFT generation (10-50x improvement)
+- Sequence caching at C level - extend existing precompiled_*_width pattern to eliminate value-dependent allocations
+- nogil sections for parallel gate injection - release GIL during C backend calls if no Python callbacks
+- Object pooling for gate_t structures - reuse gate structs instead of malloc/free per gate (inject_remapped_gates allocates per gate currently)
 
-**Defer (v2+):**
-- Interactive zoom/pan (requires GUI framework, massive scope)
-- LaTeX rendering (requires LaTeX install, slow, fragile)
-- SVG output (contradicts pixel-art paradigm)
-- Animation (different product entirely)
-- Circuit density heatmap (nice visual but not essential)
-- Region-of-interest rendering (advanced feature)
+**Defer (post-MVP):**
+- Memory arena for circuit operations - complex lifecycle management, requires profiling to confirm malloc is bottleneck
+- Python-to-C migration for compile.py - large effort, only if Python optimization insufficient
+- Custom allocator for all memory - glibc allocator is heavily optimized; custom allocator adds complexity overhead
+
+**Anti-features (explicitly avoid):**
+- Premature micro-optimization - optimize without profiling wastes effort on non-bottlenecks
+- Global nogil without analysis - can cause segfaults if Python objects accessed; hard to debug
+- Removing all bounds checking - masks bugs; crashes become silent corruption
+- LTO (Link-Time Optimization) - setup.py notes GCC LTO bug; removed for a reason
 
 ### Architecture Approach
 
-Pixel-art renderer integrates with the existing three-layer architecture (C backend -> Cython bindings -> Python frontend) by extracting circuit data to Python via a new Cython function, then rendering entirely in pure Python using Pillow. No C-level rendering is needed.
+The architecture integrates profiling infrastructure and optimization into the existing three-layer Quantum Assembly framework (C backend -> Cython bindings -> Python frontend) while maintaining the ~400 LOC per file constraint. The approach enables cross-layer profiling from Python through Cython to C, provides migration paths for hot paths from Cython to C, and supports hardcoded gate sequences for common operations.
 
 **Major components:**
 
-1. **C Extraction Layer (circuit_output.c)** — New function `circuit_to_draw_data()` serializes entire circuit into flat struct (`draw_data_t`) with gate type, target, controls, angle arrays. Single iteration over `circuit_s.sequence` produces all data. Follows pattern from `circuit_to_qasm_string`.
+1. **Profiler Module** (profiler.h/c, _profiler.pyx, profiler.py ~650 LOC total)
+   - C-level instrumentation macros (PROF_ENTER, PROF_EXIT, PROF_COUNT) that compile to no-op when QUANTUM_PROFILE undefined
+   - Python context manager API: with ql.profile() as stats
+   - Zero overhead when disabled; cross-layer visibility when enabled
+   - Integrates with cProfile for Python layer
 
-2. **Cython Bridge (_core.pyx)** — New method `circuit.draw_data()` converts C struct to Python dict. Flat array-to-list conversion in single pass. Returns `{'num_layers', 'num_qubits', 'gates': [...]}` where each gate is `{'layer', 'target', 'type', 'angle', 'controls'}`.
+2. **Hot Paths C API** (hot_paths.h/c ~480 LOC)
+   - Direct circuit generation functions: hot_QQ_add, hot_CQ_add, hot_cQQ_add, hot_cCQ_add
+   - Bypasses sequence_t/run_instruction overhead by generating gates directly into circuit
+   - Pre-mapped qubits eliminate qubit remapping overhead
+   - Falls back to dynamic generation for widths > 16 bits
 
-3. **Python Renderer (draw.py)** — Pure Python module consuming dict from Cython. Uses NumPy array operations for bulk pixel placement (wires, gates). Layout engine maps logical (layer, qubit) to pixel (x, y). Sprite system composites gate icons. Outputs PIL Image with `Image.fromarray(numpy_array)`.
+3. **Hardcoded Gate Sequences** (hardcoded_add.h + 4x .c files ~1650 LOC total)
+   - Pre-computed addition sequences for 1-16 bits (split into 4 files: 1-4, 5-8, 9-12, 13-16 bits)
+   - Static const arrays of gate descriptors (type, target, control, angle)
+   - Emission function remaps relative qubit indices to actual circuit qubits
+   - Validation: compare hardcoded output to dynamic sequence generation in tests
 
-**Data flow:** `circuit_t` (C) -> `draw_data_t` (C struct) -> Python dict (Cython) -> NumPy array (Python) -> PIL Image (Python) -> PNG file.
+**Data flow optimization:**
+- Current: Python -> Cython qint.__add__ -> Cython addition_inplace -> C QQ_add (allocate sequence_t) -> C run_instruction (remap + inject per gate with malloc)
+- Optimized: Python -> Cython qint.__add__ -> C hot_QQ_add (if width <= 16: emit hardcoded sequence; else: fallback) -> add_gate directly (no sequence_t allocation, no per-gate malloc)
 
-**Why this architecture:**
-- Single boundary crossing (bulk extraction) vs thousands of per-gate Cython calls
-- Pure Python renderer allows easy visual iteration (no C recompile)
-- NumPy array rendering avoids Pillow's per-call overhead (10-100x speedup)
-- Pillow is headless-compatible (works in CI/server environments)
+**Integration points:**
+- C backend: Instrument IntegerAddition.c, execution.c with PROF_ENTER/PROF_EXIT
+- Cython: Update _core.pxd to expose hot_paths.h, modify qint_arithmetic.pxi to call hot_* functions
+- Python: Add profiler.py wrapper for user-facing API
+- Build: setup.py adds new C sources, QUANTUM_PROFILE env var enables profiling directives
 
 ### Critical Pitfalls
 
-1. **Pillow Decompression Bomb Limits** — Default 178M pixel limit raises error on large circuits. A 200-qubit x 2000-layer circuit can exceed this at wrong zoom. **Prevention:** Calculate dimensions BEFORE `Image.new()`, cap at 32000x32000, auto-switch to overview mode if exceeded. Set explicit `Image.MAX_IMAGE_PIXELS` limit.
+Based on Cython documentation, scikit-learn best practices, and existing codebase analysis, the top risks are:
 
-2. **ImageDraw Per-Call Overhead** — Each `draw.rectangle()` call crosses Python-C boundary. 100,000 gates = 100,000+ calls = 5-30 seconds. Natural nested loop approach is clean but slow. **Prevention:** Use NumPy array slice assignment (`arr[y1:y2, x1:x2] = color`) for bulk operations. Reserve ImageDraw only for text labels. Target <100ms for 1000-layer circuit.
+1. **Optimizing Without Profiling (Premature Optimization)**
+   - Risk: Spend days optimizing code that accounts for 2-5% of runtime while actual bottleneck remains untouched
+   - Prevention: Profile first with cProfile/line_profiler on representative workloads; run cython -a to identify yellow lines; establish baselines before any optimization
+   - Detection: Compare development effort to actual speedup - if hours of work yield < 5% improvement, wrong target was optimized
+   - Phase: Address in Phase 1 (Profiling Infrastructure) - establish profiling before any optimization work
 
-3. **No Python API to Iterate Gates** — Existing Cython bindings expose aggregates (`gate_count`, `depth`) but not per-gate data. `circuit_s.sequence[layer][gate]` only accessible from C. **Prevention:** First implementation task must be Cython `get_circuit_data()` function. Everything depends on this. Cannot render without structured gate access.
+2. **Boundary Crossing Overhead When Moving Code to C**
+   - Risk: Moving individual function to C creates 10x performance regression due to Python/C boundary overhead (argument conversion, result marshaling)
+   - Prevention: Move entire hot paths, not individual functions; batch operations (pass array of N inputs, not call N times); keep data in C structs; measure call frequency
+   - Detection: Profile the call site, not just the function; use perf to see time in marshaling code
+   - Phase: Address in Phase 2 (C Migration) - design C API to minimize boundary crossings
 
-4. **Wrong Zoom Level Selection** — Detail mode on 200-qubit circuit = 50,000px wide image (impractical). Overview mode on 5-qubit circuit = 100x50px where everything is a dot (useless). **Prevention:** Auto-select: detail when `qubits <= 30 AND layers <= 200`, overview otherwise. Allow manual override. Cap maximum dimensions.
+3. **Malloc in Hot Paths**
+   - Risk: Memory allocation can take 100-1000x longer than actual computation; current inject_remapped_gates allocates per gate
+   - Prevention: Pre-allocate buffers once at initialization; use stack allocation for small fixed-size buffers; pool allocation for frequent structures; amortize allocation (allocate in blocks)
+   - Detection: Use valgrind --tool=massif to track allocation patterns; count malloc calls with instrumentation
+   - Specific target: inject_remapped_gates in _core.pyx lines 756-778 calls malloc(sizeof(gate_t)) per gate
+   - Phase: Address in Phase 3 (Memory Optimization) - implement gate pooling or pre-allocation
 
-5. **NEAREST Resampling Required** — Pillow defaults to BICUBIC which blurs pixel art into gray smudges. **Prevention:** Always use `Image.Resampling.NEAREST` for any scaling. Use only integer scale factors (2x, 3x, 4x). For overview, render at target resolution directly rather than render-large-then-shrink.
+4. **Unrepresentative Profiling Workloads**
+   - Risk: Optimizations based on small test cases (10 gates) produce slower code on real workloads (10,000+ gates)
+   - Prevention: Profile with production-size circuits (1000+ gates); vary circuit types (addition, multiplication, comparison, arrays); include edge cases (wide integers, deep control nesting)
+   - Detection: Compare optimization gains on test vs production - if they differ by > 20%, workload is not representative
+   - Phase: Address in Phase 1 (Profiling Infrastructure) - create representative benchmark suite before optimization
+
+5. **Hardcoding Without Validation**
+   - Risk: Precomputed gate sequences are wrong due to computation error, causing silently incorrect quantum circuits
+   - Prevention: Generate lookup tables from same code path; validate on load (compare sample precomputed values to runtime computation); comprehensive test coverage for all precomputed paths; include assertions
+   - Phase: Address in Phase 3 (Gate Sequence Hardcoding) - include validation infrastructure in tests
 
 ## Implications for Roadmap
 
-Based on research, suggested build order follows dependency chain: data access first (can't render without it), single-qubit gates second (simplest case), multi-qubit complexity third (vertical connections hardest), polish last (labels/themes don't affect correctness).
+Based on research, the optimization work must follow a strict profiling-driven methodology. The architecture research identifies clear dependencies: profiling infrastructure is foundation for all optimization decisions, hot path migration requires profiling data to identify targets, and hardcoded sequences build on the C migration infrastructure. Suggested phase structure below.
 
-### Phase 1: Cython Data Extraction Bridge
-**Rationale:** Prerequisite for everything else. The renderer cannot access circuit data without this. Must validate C-Python data flow before investing in visual work.
-**Delivers:** Python API to extract circuit structure: `circuit.draw_data()` returns dict of layers/gates/qubits with all gate fields (type, target, controls, angle).
-**Addresses:** Pitfall #3 (no gate iteration API), establishes architecture pattern.
-**Avoids:** Bolt-on solutions (parsing ASCII output, OpenQASM parsing) which are fragile and slow.
-**Confidence:** HIGH — follows established `circuit_to_qasm_string()` pattern from codebase.
+### Phase 1: Profiling Infrastructure
+**Rationale:** Cannot optimize without measurement. Profiling identifies actual bottlenecks and prevents premature optimization (Pitfall 1, 4). Establishes baselines for measuring improvement. All subsequent optimization depends on profiling data.
 
-### Phase 2: Core Renderer - Single-Qubit Gates
-**Rationale:** Validate layout engine, NumPy rendering approach, and PIL integration with simplest case before adding multi-qubit complexity.
-**Delivers:** Python module `draw.py` that renders circuits with X, Y, Z, H, P, Rx, Ry, Rz, M gates. Horizontal qubit wires, colored gate blocks (2-3px overview or 8-12px detail), PNG export.
-**Uses:** Pillow (Image.new, Image.fromarray), NumPy (array slice assignment for bulk pixels).
-**Implements:** Layout engine (layer_to_x, qubit_to_y coordinate mapping), sprite system (embedded 2D color arrays), dimension calculation with caps.
-**Addresses:** Pitfall #1 (dimension limits), Pitfall #2 (NumPy bulk operations), Pitfall #8 (all 10 gate types mapped).
-**Confidence:** HIGH — single-qubit gates have no vertical connections, simplest visual case.
+**Delivers:**
+- Cross-layer profiler (profiler.h/c, _profiler.pyx, profiler.py)
+- Makefile targets for profiling (profile, profile-line, profile-memory, cython-annotate)
+- Benchmark suite with production-scale workloads
+- Python 3.11 environment for Cython profiling
+- Baseline performance measurements
 
-### Phase 3: Multi-Qubit Gates - Controls & Connections
-**Rationale:** Control connections are the hardest visual element (variable-length vertical lines, potential overlaps). Tackle after basic rendering is proven.
-**Delivers:** CNOT, Toffoli, multi-controlled gates with vertical connection lines, control dots at control qubits, target symbols.
-**Implements:** Vertical line rendering between control and target qubits, overlap detection for same-layer controlled gates.
-**Addresses:** Pitfall #7 (overlapping control lines) by using sub-columns when ranges overlap.
-**Confidence:** MEDIUM — complex visual interactions, needs careful testing with dense circuits.
+**Addresses:**
+- Table stakes: Profiling infrastructure (required for optimization)
+- Avoids Pitfall 1: Optimizing without profiling
+- Avoids Pitfall 4: Unrepresentative profiling workloads
 
-### Phase 4: Auto Zoom & Polish
-**Rationale:** Polish after core functionality works. Zoom selection and labels don't affect rendering correctness but significantly impact usability.
-**Delivers:** Auto zoom selection (detail vs overview based on circuit size), qubit labels, layer numbers, scale parameter, truncation for very large circuits.
-**Addresses:** Pitfall #4 (wrong zoom level) with threshold-based auto-selection.
-**Confidence:** HIGH — straightforward enhancements after renderer exists.
+**Complexity:** MEDIUM - New module creation, cross-layer integration
+**Risk:** LOW - Additive only, no existing code changes
+**Research needed:** STANDARD - Profiling patterns well-documented in Cython docs and scikit-learn best practices
+
+### Phase 2: Fix f() vs f.inverse() Depth Discrepancy
+**Rationale:** Identified bug where f.inverse(x) produces lower circuit depth than f(x) followed by optimization. Quick win with correctness and performance benefits. Can be fixed once profiling infrastructure identifies the exact cause in optimizer vs capture flow.
+
+**Delivers:**
+- Corrected depth for forward operations matching inverse
+- Understanding of optimizer behavior during capture vs post-capture
+- Validation tests for depth parity
+
+**Addresses:**
+- Competitive feature: Fix depth discrepancy
+- Correctness issue with performance implications
+
+**Complexity:** MEDIUM - Requires understanding optimizer and capture interaction
+**Risk:** MEDIUM - Must maintain correctness (tests validate)
+**Research needed:** SKIP - Issue already identified in codebase, standard optimization pattern
+
+### Phase 3: Cython Quick Wins (Static Typing, Compiler Directives)
+**Rationale:** Low-risk optimizations guided by cython -a annotation HTML. Complete static typing in hot paths identified by profiling, add boundscheck=False/wraparound=False to verified tight loops, convert to memory views for array passing. Measurable 2-10x gains in typed sections with minimal code change risk.
+
+**Delivers:**
+- Complete static typing for hot path cdef functions
+- Compiler directives (boundscheck=False) in verified loops
+- Memory views for qubit array passing
+- cython -a annotation reports showing reduced yellow lines
+
+**Addresses:**
+- Table stakes: Static typing, bounds checking disabled, memory views
+- Avoids Pitfall 5: Over-typing (guided by annotation HTML)
+- Avoids Pitfall 10: Annotation misinterpretation
+
+**Complexity:** LOW - Standard Cython optimization patterns
+**Risk:** LOW - Guided by profiling and annotation reports
+**Research needed:** SKIP - Well-documented in Cython docs
+
+### Phase 4: C Hot Path Migration
+**Rationale:** Profiling data from Phase 1 identifies hot paths in Cython (likely qint.addition_inplace, run_instruction dispatch). Move entire hot paths to C (hot_paths.h/c) to eliminate run_instruction overhead and Python/C boundary crossings. Must move complete operations (not individual functions) to avoid Pitfall 2.
+
+**Delivers:**
+- hot_paths.h/c with hot_QQ_add, hot_CQ_add, hot_cQQ_add, hot_cCQ_add
+- Updated _core.pxd to expose hot_paths API
+- Modified qint_arithmetic.pxi to call hot_* functions directly
+- Validation tests comparing hot path output to sequence_t generation
+
+**Addresses:**
+- Table stakes: Avoid Python object creation in hot paths
+- Competitive feature: Sequence caching at C level
+- Avoids Pitfall 2: Boundary crossing overhead (move entire hot paths)
+- Avoids Pitfall 3: Malloc in hot paths (design API without per-call allocation)
+
+**Complexity:** HIGH - Careful qubit mapping, complete path migration
+**Risk:** MEDIUM - Must maintain correctness (tests validate)
+**Research needed:** SKIP - Architecture clearly defined in research
+
+### Phase 5: Hardcoded Gate Sequences (1-8 bits)
+**Rationale:** For default 8-bit width (most common use case), pre-computed addition sequences eliminate runtime QFT generation. Expected 10-50x improvement for cached widths. Builds on hot_paths infrastructure from Phase 4. Start with 1-8 bits to validate approach before extending to 16 bits.
+
+**Delivers:**
+- hardcoded_add.h with API declarations
+- hardcoded_add_1_4.c with 1-4 bit sequences
+- hardcoded_add_5_8.c with 5-8 bit sequences
+- hot_paths.c updated to use hardcoded sequences when available
+- Validation tests: compare hardcoded output to dynamic generation
+
+**Addresses:**
+- Competitive feature: Hardcoded gate sequences (high-impact differentiator)
+- Avoids Pitfall 8: Hardcoding without validation (include validation infrastructure)
+
+**Complexity:** MEDIUM - Repetitive but mechanical pre-computation
+**Risk:** LOW - Can validate against existing sequence_t output
+**Research needed:** SKIP - Pattern established in existing precompiled_* caches
+
+### Phase 6: Hardcoded Gate Sequences (9-16 bits)
+**Rationale:** Extend hardcoded sequences to 9-16 bits for broader coverage while staying within ~400 LOC per file constraint. Mechanical extension of Phase 5 approach.
+
+**Delivers:**
+- hardcoded_add_9_12.c with 9-12 bit sequences
+- hardcoded_add_13_16.c with 13-16 bit sequences
+- Extended validation tests
+
+**Addresses:**
+- Competitive feature: Extended hardcoded sequence coverage
+
+**Complexity:** LOW - Same pattern as Phase 5
+**Risk:** LOW - Mechanical extension
+**Research needed:** SKIP - Same approach as Phase 5
+
+### Phase 7: Memory Optimization (Object Pooling)
+**Rationale:** If profiling data shows malloc overhead remains after Phase 4 (likely in inject_remapped_gates if not yet migrated), implement gate_t object pooling. Only proceed if profiling shows malloc is bottleneck - deferred until measurement confirms need.
+
+**Delivers:**
+- Object pool for gate_t structures (if profiling confirms need)
+- Modified inject_remapped_gates or equivalent to use pool
+- Memory profiling showing reduced allocation count
+
+**Addresses:**
+- Competitive feature: Object pooling for gate_t
+- Avoids Pitfall 3: Malloc in hot paths
+
+**Complexity:** MEDIUM - Careful lifecycle management
+**Risk:** MEDIUM - Pool implementation requires correct reuse logic
+**Research needed:** SKIP - Standard object pooling pattern
+
+### Phase 8: Validation and Benchmarking
+**Rationale:** Confirm optimization achieved performance goals. Compare before/after benchmarks, generate profile reports demonstrating improvement, update documentation with optimization guidance.
+
+**Delivers:**
+- Benchmark comparison report (before vs after optimization)
+- Profile reports showing improvement metrics
+- Updated documentation for profiling workflow
+- Performance regression tests integrated with CI
+
+**Addresses:**
+- Avoids Pitfall 9: Regression without baseline tests
+- Validation of all optimization work
+
+**Complexity:** LOW - Measurement and documentation
+**Risk:** LOW
+**Research needed:** SKIP - Standard benchmarking
 
 ### Phase Ordering Rationale
 
-- **Phase 1 first because:** No rendering is possible without circuit data access. This validates the C-Python bridge design early.
-- **Phase 2 before Phase 3 because:** Single-qubit gates exercise the full rendering pipeline (data extraction -> layout -> pixel rendering -> PNG export) without multi-qubit visual complexity. Gets NumPy bulk rendering working before vertical line logic.
-- **Phase 3 before Phase 4 because:** Multi-qubit gates are a correctness requirement (can't skip them), while zoom/labels are usability enhancements.
-- **Phase 4 last because:** Labels, themes, and auto-zoom can be added without changing the rendering core.
+- **Phase 1 first (Profiling):** Fundamental dependency - cannot make informed optimization decisions without measurement data. Establishes baselines for measuring improvement. Prevents premature optimization.
 
-**Dependency chain:** Phase 1 (data access) -> Phase 2 (basic rendering) -> Phase 3 (multi-qubit) -> Phase 4 (polish). Each phase depends on the previous. No parallelization possible.
+- **Phase 2 early (f/f.inverse fix):** Quick win for correctness once profiling identifies root cause. Can be parallelized with Phase 3 if profiling shows independent code paths.
+
+- **Phase 3 before Phase 4 (Cython before C):** Lower risk, faster to implement, provides measurable gains. Ensures Cython layer is optimized before moving to C (avoid moving already-optimizable Cython code).
+
+- **Phase 4 enables Phase 5/6 (hot_paths enables hardcoded):** Hardcoded sequences integrate with hot_paths API. Must have direct circuit generation infrastructure before pre-computed sequences.
+
+- **Phase 5 before Phase 6 (1-8 bits before 9-16):** Validate approach on most common use case (8-bit default) before extending. Mechanical extension reduces risk.
+
+- **Phase 7 deferred (Object pooling):** Only proceed if profiling shows malloc remains bottleneck after Phase 4. May not be needed if hot_paths eliminates per-gate allocation.
+
+- **Phase 8 last (Validation):** Requires all optimization work complete to measure total improvement.
 
 ### Research Flags
 
-**Needs deeper research during planning:**
-- None — this is a well-scoped pixel rendering task with established tools (Pillow). All critical questions answered by this research.
+**Phases with standard patterns (skip research-phase):**
+- **Phase 1 (Profiling):** Well-documented in Cython profiling tutorial, scikit-learn best practices, Bloomberg memray docs
+- **Phase 2 (f/f.inverse):** Issue identified in codebase, standard optimization flow analysis
+- **Phase 3 (Cython Quick Wins):** Official Cython documentation provides clear guidance on static typing, compiler directives, memory views
+- **Phase 4 (C Hot Paths):** Architecture clearly defined in ARCHITECTURE-PROFILER-OPTIMIZATION.md, pattern exists in codebase (precompiled_* caches)
+- **Phase 5/6 (Hardcoded Sequences):** Extension of existing precompiled pattern, validation approach defined in architecture research
+- **Phase 7 (Object Pooling):** Standard object pooling pattern if needed (conditional on profiling)
+- **Phase 8 (Validation):** Standard benchmarking and documentation
 
-**Standard patterns (skip research-phase):**
-- **All phases** — Pillow documentation is excellent, NumPy array operations are standard, Cython data extraction follows existing OpenQASM pattern. No novel technical challenges beyond what's already documented in STACK.md, ARCHITECTURE.md, PITFALLS.md.
-
-**Testing focus needed:**
-- **Phase 2:** Dimension calculation and capping (test with circuits up to 200 qubits, 5000 layers)
-- **Phase 2:** NumPy rendering performance (benchmark target: <100ms for 1000-layer circuit)
-- **Phase 3:** Overlapping control lines detection (test with circuits where optimizer packed multi-qubit gates into same layer)
-- **Phase 4:** Auto zoom threshold tuning (needs experimentation with real circuit sizes)
+**No phases require deeper research during planning.** All optimization patterns are well-documented in official Cython documentation, scikit-learn Cython best practices, and existing codebase patterns.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Pillow 12.1.0 verified from PyPI (Jan 2026), NumPy already in project, Cython pattern established |
-| Features | MEDIUM-HIGH | Table stakes clear from quantum viz conventions, differentiators validated by Quantivine paper on large-circuit needs, anti-features based on PROJECT.md scope limits |
-| Architecture | HIGH | C struct extraction follows `circuit_to_qasm_string()` pattern (lines verified in circuit_output.c), Cython dict conversion is standard, Pillow rendering is well-documented |
-| Pitfalls | HIGH | All critical pitfalls verified from Pillow GitHub issues, codebase inspection shows no gate iteration API exists, dimension limits documented in Pillow reference |
+| Stack | HIGH | All tools verified via PyPI (versions current as of 2026-02-05); profiling workflow documented in official Cython and Python docs; memray is Bloomberg production tool |
+| Features | HIGH | Table stakes based on standard Cython optimization patterns (scikit-learn best practices); differentiators identified from existing codebase analysis (f/f.inverse discrepancy, precompiled_* pattern for hardcoded sequences) |
+| Architecture | HIGH | Based on existing three-layer structure analysis; profiler module follows established instrumentation patterns; hot_paths and hardcoded sequences extend existing precompiled_* caching pattern |
+| Pitfalls | HIGH | Verified against official Cython documentation, scikit-learn Cython best practices, and Python profiling guides; malloc in hot paths confirmed by _core.pyx line 756-778 analysis |
 
 **Overall confidence:** HIGH
 
+All recommendations grounded in official documentation, established best practices, and existing codebase patterns. Python 3.11 constraint verified against Cython PEP-669 breaking change documentation.
+
 ### Gaps to Address
 
-**Color palette accessibility:** The research proposes a specific color scheme (blue/red/green/yellow/purple for gate categories) but hasn't validated colorblind accessibility. **Handling:** Test with colorblindness simulator during Phase 2 icon design. Use shape AND color as redundant encodings at detail zoom.
+The research provides clear guidance for implementation, but the following should be validated during execution:
 
-**Zoom threshold values:** Research suggests `qubits <= 30 AND layers <= 200` for detail mode, but this needs empirical validation with real circuits. **Handling:** Make thresholds configurable parameters in Phase 4, tune based on user feedback and visual testing.
+- **Profiling workload representativeness:** Create benchmark suite with production-scale circuits (1000+ gates, varied operation types) during Phase 1 to ensure profiling data reflects real usage patterns. Validate benchmark suite against actual production workloads if available.
 
-**Phase gate angle display:** Phase/rotation gates have continuous angle parameters that can't be shown as text at 2-3px scale. Research suggests accepting this limitation or using color intensity encoding. **Handling:** Defer to Phase 4 refinement. V1 shows Phase gates as distinct colored blocks without angle indication, document that users should use ASCII `visualize()` for angle details.
+- **GIL analysis for nogil sections:** During Phase 4 (C Migration), verify that run_instruction and hot path C code has no Python callbacks. Use cython -a to confirm all lines in nogil blocks are white (no Python API calls). This determines whether nogil optimization is viable.
 
-**Qubit index sparsity:** The C backend uses right-aligned layout in 64-element array, active qubit indices may be sparse (e.g., [0,1,2,64,65,66]). Renderer must compact to avoid 61 empty rows. **Handling:** Phase 2 layout engine must check `used_occupation_indices_per_qubit[qubit]` and create dense row mapping. Already documented in circuit.h lines 64-66.
+- **Malloc bottleneck confirmation:** Phase 7 (Object Pooling) is conditional on profiling data showing malloc remains bottleneck after Phase 4. May not be needed if hot_paths eliminates per-gate allocation. Decide based on Phase 1 and Phase 4 profiling results.
+
+- **Hardcoded sequence validation approach:** During Phase 5, establish automated validation that compares hardcoded gate sequences to dynamic generation output. This prevents Pitfall 8 (silently incorrect circuits). Use pytest fixtures that generate both paths and assert equality.
+
+- **Cross-platform compiler flag compatibility:** The project notes setup.py removed -flto due to GCC LTO bug. During Phase 8, validate optimized builds work on both Linux and macOS. Document any platform-specific flags or limitations.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [Pillow 12.1.0 on PyPI](https://pypi.org/project/pillow/) — version, compatibility, release date Jan 2, 2026
-- [Pillow ImageDraw API Documentation](https://pillow.readthedocs.io/en/stable/reference/ImageDraw.html) — drawing methods, per-call overhead notes
-- [Pillow Image Module Documentation](https://pillow.readthedocs.io/en/stable/reference/Image.html) — fromarray, resize, resampling filters, MAX_IMAGE_PIXELS
-- [Pillow Limits Reference](https://pillow.readthedocs.io/en/stable/reference/limits.html) — decompression bomb limits (178M pixels default)
-- [Pillow Image File Formats](https://pillow.readthedocs.io/en/stable/handbook/image-file-formats.html) — PNG save options, palette mode, compress_level
-- **Codebase:** `circuit_output.c` lines 178-277 (`circuit_visualize()`) — iteration pattern for layers/gates
-- **Codebase:** `types.h` line 64 (`Standardgate_t` enum: X, Y, Z, R, H, Rx, Ry, Rz, P, M)
-- **Codebase:** `circuit.h` lines 54-79 (`circuit_s` struct with sequence[layer][gate])
-- **Codebase:** `_core.pxd` lines 62-148 (Cython declarations, no per-gate Python API confirmed)
-- **Codebase:** `openqasm.pyx` — pattern for dedicated Cython module calling C function
+
+**Stack:**
+- [line_profiler 5.0.0 - PyPI](https://pypi.org/project/line-profiler/)
+- [memray 1.19.1 - PyPI](https://pypi.org/project/memray/)
+- [snakeviz 2.2.2 - PyPI](https://pypi.org/project/snakeviz/)
+- [pytest-benchmark 5.2.3 - PyPI](https://pypi.org/project/pytest-benchmark/)
+- [py-spy 0.4.1 - PyPI](https://pypi.org/project/py-spy/)
+- [scalene 2.1.3 - PyPI](https://pypi.org/project/scalene/)
+- [Cython 3.2.4 - PyPI](https://pypi.org/project/Cython/)
+- [Python cProfile Documentation](https://docs.python.org/3/library/profile.html)
+- [Cython Profiling Tutorial](https://cython.readthedocs.io/en/latest/src/tutorial/profiling_tutorial.html)
+- [memray Documentation](https://bloomberg.github.io/memray/)
+
+**Features:**
+- [scikit-learn Cython Best Practices](https://scikit-learn.org/stable/developers/cython.html)
+- [Cython Static Typing Documentation](https://cython.readthedocs.io/en/latest/src/quickstart/cythonize.html)
+- [Finesse Cython Optimization Guide](https://finesse.ifosim.org/docs/latest/developer/codeguide/cython/optimising.html)
+
+**Architecture:**
+- [Cython Profiling Tutorial](https://cython.readthedocs.io/en/latest/src/tutorial/profiling_tutorial.html)
+- [Score-P Performance Measurement](https://zenodo.org/records/8424550)
+- Existing codebase: IntegerAddition.c, execution.c, qint_arithmetic.pxi, _core.pyx
+
+**Pitfalls:**
+- [Cython Faster Code via Static Typing](https://cython.readthedocs.io/en/latest/src/quickstart/cythonize.html)
+- [Cython Typed Memoryviews](https://cython.readthedocs.io/en/latest/src/userguide/memoryviews.html)
+- [scikit-learn Cython Best Practices](https://scikit-learn.org/stable/developers/cython.html)
+- [Some Reasons to Avoid Cython](https://pythonspeed.com/articles/cython-limitations/)
+- [Hidden Performance Overhead of Python C Extensions](https://pythonspeed.com/articles/python-extension-performance/)
 
 ### Secondary (MEDIUM confidence)
-- [Qiskit circuit_drawer API](https://quantum.cloud.ibm.com/docs/en/api/qiskit/qiskit.visualization.circuit_drawer) — existing tool comparison, fold/scale parameters
-- [Quantivine: Large-Scale Quantum Circuit Visualization (IEEE TVCG 2023, arXiv:2307.08969)](https://arxiv.org/abs/2307.08969) — semantic abstraction for 100-qubit circuits, zoom level concepts
-- [Pillow Performance Issues](https://python-pillow.github.io/pillow-perf/) — per-call overhead documentation
-- [Pillow GitHub Issue #2450](https://github.com/python-pillow/Pillow/issues/2450) — putpixel performance, NumPy fromarray recommendation
-- [Pillow GitHub Issue #5218](https://github.com/python-pillow/Pillow/issues/5218) — decompression bomb errors on generated images
-- [Pillow GitHub Issue #5986](https://github.com/python-pillow/Pillow/issues/5986) — PNG save performance vs OpenCV
-- [Azure Quantum Circuit Diagram Conventions](https://learn.microsoft.com/en-us/azure/quantum/concepts-circuits) — visual conventions for quantum gates
+
+**Features:**
+- [Real Python - Profiling in Python](https://realpython.com/python-profiling/)
+- [Baeldung - Profiling C++ on Linux](https://www.baeldung.com/linux/profiling-c-cpp-code)
+
+**Pitfalls:**
+- [Premature Optimization Fallacy](https://the-pi-guy.com/blog/the_premature_optimization_fallacy_why_you_should_measure_performance_before_optimizing/)
+- [Ultimate Python Performance Guide 2025](https://www.fyld.pt/blog/python-performance-guide-writing-code-25/)
+- [Stack vs Heap Allocation in C](https://www.matecdev.com/posts/c-heap-vs-stack-allocation.html)
 
 ### Tertiary (LOW confidence)
-- [Cirq SVG Rendering GitHub Discussion](https://github.com/quantumlib/Cirq/issues/4499) — SVG limitations at scale (needs validation)
-- Pixel-art data visualization principles from FasterCapital blog — general guidance, not quantum-specific
+
+**Architecture:**
+- [Quantum Circuit Optimization Survey](https://arxiv.org/pdf/2408.08941)
+- [Gate Decomposition Optimization](https://quantum-journal.org/papers/q-2025-03-12-1659/)
 
 ---
-*Research completed: 2026-02-03*
+*Research completed: 2026-02-05*
 *Ready for roadmap: yes*
