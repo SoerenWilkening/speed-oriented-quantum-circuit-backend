@@ -7,8 +7,8 @@ NOTE: We test ARITHMETIC CORRECTNESS, not gate-by-gate structure comparison.
 The internal gate sequence is an implementation detail. What matters is that
 addition operations produce mathematically correct results.
 
-Simulation constraints (qubit budget):
-- QQ_add out-of-place (3*N qubits): feasible for widths 1-10 (30 qubits max)
+Simulation constraints (qubit budget, ~8 GB available):
+- QQ_add out-of-place (3*N qubits): feasible for widths 1-9 (27 qubits max)
 - CQ_add in-place (N qubits): feasible for ALL widths 1-16
 - cCQ_add / controlled CQ_add (N+1 qubits): feasible for ALL widths 1-16
 
@@ -16,9 +16,12 @@ Per CONTEXT.md, this is one-time verification (not in regular CI).
 Mark with @pytest.mark.hardcoded_validation to allow filtering.
 """
 
+import gc
 import warnings
 
 import pytest
+import qiskit.qasm3
+from qiskit_aer import AerSimulator
 from verify_helpers import format_failure_message
 
 import quantum_language as ql
@@ -31,11 +34,12 @@ warnings.filterwarnings("ignore", message="Value .* exceeds")
 class TestHardcodedSequenceValidation:
     """Verify hardcoded sequences produce correct arithmetic results."""
 
-    @pytest.mark.parametrize("width", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+    @pytest.mark.parametrize("width", [1, 2, 3, 4, 5, 6, 7, 8, 9])
     def test_qq_add_produces_correct_results(self, verify_circuit, width):
         """QQ_add hardcoded produces correct arithmetic results.
 
-        Out-of-place QQ_add uses 3*N qubits, so feasible up to width 10 (30 qubits).
+        Out-of-place QQ_add uses 3*N qubits, so feasible up to width 9 (27 qubits).
+        Width 10+ exceeds available memory for statevector simulation.
         """
         # Test representative values including edge cases
         test_cases = [(0, 0), (1, 1)]
@@ -272,10 +276,10 @@ class TestHardcodedBoundaryConditions:
     def test_zero_plus_zero(self, verify_circuit, width):
         """Addition identity: 0 + 0 = 0 for all hardcoded widths.
 
-        Uses CQ_add (in-place) for widths 11-16 to stay within qubit budget.
+        Uses CQ_add (in-place) for widths 10-16 to stay within qubit budget.
         """
-        if width <= 10:
-            # Out-of-place QQ_add feasible
+        if width <= 9:
+            # Out-of-place QQ_add feasible (3*9=27 qubits)
             def circuit_builder(w=width):
                 qa = ql.qint(0, width=w)
                 qb = ql.qint(0, width=w)
@@ -298,12 +302,12 @@ class TestHardcodedBoundaryConditions:
     def test_overflow_wrapping(self, verify_circuit, width):
         """Max value + 1 wraps to 0 for all hardcoded widths.
 
-        Uses CQ_add (in-place) for widths 11-16 to stay within qubit budget.
+        Uses CQ_add (in-place) for widths 10-16 to stay within qubit budget.
         """
         max_val = (1 << width) - 1
 
-        if width <= 10:
-            # Out-of-place QQ_add feasible
+        if width <= 9:
+            # Out-of-place QQ_add feasible (3*9=27 qubits)
             def circuit_builder(w=width, mv=max_val):
                 qa = ql.qint(mv, width=w)
                 qb = ql.qint(1, width=w)
@@ -323,6 +327,38 @@ class TestHardcodedBoundaryConditions:
         assert actual == expected, f"Width {width} overflow: expected {expected}, got {actual}"
 
 
+def _simulate_controlled_cq_add(width, init_val, add_val, ctrl_val):
+    """Simulate controlled CQ_add and extract qa register value.
+
+    The controlled CQ_add circuit has N+1 qubits: q[0..N-1] for qa, q[N] for ctrl.
+    In Qiskit's big-endian bitstring, the first char is the highest qubit (ctrl),
+    followed by qa bits. We skip the control bit to extract only the qa value.
+
+    Returns:
+        Tuple of (qa_actual, ctrl_actual) as integers.
+    """
+    gc.collect()
+    ql.circuit()
+    qa = ql.qint(init_val, width=width)
+    ctrl = ql.qint(ctrl_val, width=1)
+    with ctrl:
+        qa += add_val
+    qasm_str = ql.to_openqasm()
+
+    circuit = qiskit.qasm3.loads(qasm_str)
+    if not circuit.cregs:
+        circuit.measure_all()
+    simulator = AerSimulator(method="statevector")
+    job = simulator.run(circuit, shots=1)
+    counts = job.result().get_counts()
+    bitstring = list(counts.keys())[0]
+
+    # First char = ctrl qubit (highest index), remaining = qa register
+    ctrl_actual = int(bitstring[0], 2)
+    qa_actual = int(bitstring[1:], 2)
+    return qa_actual, ctrl_actual
+
+
 @pytest.mark.hardcoded_validation
 class TestHardcodedControlledVariants:
     """Test controlled addition variants (cCQ_add path).
@@ -332,53 +368,39 @@ class TestHardcodedControlledVariants:
     validates the cQQ_add hardcoded sequences.
 
     Uses N+1 qubits (N for target + 1 for control), feasible for all widths 1-16.
+
+    NOTE: These tests use custom simulation instead of verify_circuit because
+    the control qubit changes the bitstring layout (ctrl bit is at highest index,
+    which is the first char in Qiskit's big-endian bitstring format).
     """
 
     @pytest.mark.parametrize("width", range(1, 17))
-    def test_controlled_cq_add_correctness_control_on(self, verify_circuit, width):
+    def test_controlled_cq_add_correctness_control_on(self, width):
         """Controlled CQ_add with control=|1> performs addition."""
-
-        def circuit_builder(w=width):
-            qa = ql.qint(1, width=w)
-            ctrl = ql.qint(1, width=1)  # Control qubit ON
-            with ctrl:
-                qa += 1  # Should add because control is |1>
-            return 2 % (1 << w)
-
-        actual, expected = verify_circuit(circuit_builder, width)
-        assert actual == expected, format_failure_message(
-            "controlled_cq_add_on", [1, 1], width, expected, actual
+        expected = 2 % (1 << width)
+        qa_actual, ctrl_actual = _simulate_controlled_cq_add(width, 1, 1, 1)
+        assert ctrl_actual == 1, f"Control qubit should remain |1>, got {ctrl_actual}"
+        assert qa_actual == expected, format_failure_message(
+            "controlled_cq_add_on", [1, 1], width, expected, qa_actual
         )
 
     @pytest.mark.parametrize("width", range(1, 17))
-    def test_controlled_cq_add_correctness_control_off(self, verify_circuit, width):
+    def test_controlled_cq_add_correctness_control_off(self, width):
         """Controlled CQ_add with control=|0> does NOT perform addition."""
-
-        def circuit_builder(w=width):
-            qa = ql.qint(1, width=w)
-            ctrl = ql.qint(0, width=1)  # Control qubit OFF
-            with ctrl:
-                qa += 1  # Should NOT add because control is |0>
-            return 1  # Unchanged
-
-        actual, expected = verify_circuit(circuit_builder, width)
-        assert actual == expected, format_failure_message(
-            "controlled_cq_add_off", [1, 1], width, expected, actual
+        expected = 1  # Unchanged
+        qa_actual, ctrl_actual = _simulate_controlled_cq_add(width, 1, 1, 0)
+        assert ctrl_actual == 0, f"Control qubit should remain |0>, got {ctrl_actual}"
+        assert qa_actual == expected, format_failure_message(
+            "controlled_cq_add_off", [1, 1], width, expected, qa_actual
         )
 
     @pytest.mark.parametrize("width", range(1, 17))
-    def test_controlled_cq_add_boundary_values(self, verify_circuit, width):
+    def test_controlled_cq_add_boundary_values(self, width):
         """Controlled CQ_add with boundary values (overflow wrapping)."""
         max_val = (1 << width) - 1
-
-        def circuit_builder(w=width, mv=max_val):
-            qa = ql.qint(mv, width=w)
-            ctrl = ql.qint(1, width=1)  # Control ON
-            with ctrl:
-                qa += 1  # max + 1 should wrap to 0
-            return 0
-
-        actual, expected = verify_circuit(circuit_builder, width)
-        assert actual == expected, format_failure_message(
-            "controlled_cq_add_overflow", [max_val, 1], width, expected, actual
+        expected = 0  # max + 1 wraps to 0
+        qa_actual, ctrl_actual = _simulate_controlled_cq_add(width, max_val, 1, 1)
+        assert ctrl_actual == 1, f"Control qubit should remain |1>, got {ctrl_actual}"
+        assert qa_actual == expected, format_failure_message(
+            "controlled_cq_add_overflow", [max_val, 1], width, expected, qa_actual
         )
