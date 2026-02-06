@@ -1,6 +1,7 @@
 # Makefile for C-level unit tests
 # Usage: make test_comparison && ./test_comparison
 #        make test_hot_path_mul && ./test_hot_path_mul
+#        make test_hot_path_add && ./test_hot_path_add
 
 CC = gcc
 CFLAGS = -Wall -Wextra -g -I../../c_backend/include
@@ -35,6 +36,21 @@ MUL_SRCS = $(BACKEND_SRC)/Integer.c \
            $(BACKEND_SRC)/hot_path_mul.c \
            $(SEQ_SRCS)
 
+# Sources for hot_path_add tests (addition only, no multiplication)
+ADD_SRCS = $(BACKEND_SRC)/Integer.c \
+           $(BACKEND_SRC)/IntegerAddition.c \
+           $(BACKEND_SRC)/QPU.c \
+           $(BACKEND_SRC)/gate.c \
+           $(BACKEND_SRC)/qubit_allocator.c \
+           $(BACKEND_SRC)/execution.c \
+           $(BACKEND_SRC)/optimizer.c \
+           $(BACKEND_SRC)/circuit_allocations.c \
+           $(BACKEND_SRC)/circuit_output.c \
+           $(BACKEND_SRC)/circuit_stats.c \
+           $(BACKEND_SRC)/circuit_optimizer.c \
+           $(BACKEND_SRC)/hot_path_add.c \
+           $(SEQ_SRCS)
+
 # Test targets
 test_comparison: test_comparison.c $(BACKEND_SRCS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
@@ -42,9 +58,12 @@ test_comparison: test_comparison.c $(BACKEND_SRCS)
 test_hot_path_mul: test_hot_path_mul.c $(MUL_SRCS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
+test_hot_path_add: test_hot_path_add.c $(ADD_SRCS)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
 .PHONY: clean
 clean:
-	rm -f test_comparison test_hot_path_mul
+	rm -f test_comparison test_hot_path_mul test_hot_path_add
 
 .PHONY: run
 run: test_comparison
