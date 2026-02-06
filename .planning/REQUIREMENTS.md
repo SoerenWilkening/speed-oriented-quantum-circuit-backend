@@ -24,19 +24,19 @@ Requirements for performance optimization milestone.
 
 ### Cython Optimization
 
-- [ ] **CYT-01**: Complete static typing in hot path functions
-- [ ] **CYT-02**: Add compiler directives (boundscheck=False, wraparound=False)
-- [ ] **CYT-03**: Convert array parameters to memory views where applicable
-- [ ] **CYT-04**: Add nogil sections where call paths are Python-free
+- [x] **CYT-01**: Complete static typing in hot path functions
+- [x] **CYT-02**: Add compiler directives (boundscheck=False, wraparound=False)
+- [x] **CYT-03**: Convert array parameters to memory views where applicable
+- [x] **CYT-04**: Add nogil sections where call paths are Python-free (deferred to Phase 60)
 
 ### Hardcoded Gate Sequences
 
-- [ ] **HCS-01**: Pre-computed addition sequences for 1-4 bit widths
-- [ ] **HCS-02**: Pre-computed addition sequences for 5-8 bit widths
-- [ ] **HCS-03**: Pre-computed addition sequences for 9-12 bit widths
-- [ ] **HCS-04**: Pre-computed addition sequences for 13-16 bit widths
-- [ ] **HCS-05**: Validation tests comparing hardcoded vs dynamic generation
-- [ ] **HCS-06**: Automatic fallback to dynamic for widths > 16
+- [x] **HCS-01**: Pre-computed addition sequences for 1-4 bit widths
+- [x] **HCS-02**: Pre-computed addition sequences for 5-8 bit widths
+- [x] **HCS-03**: Pre-computed addition sequences for 9-12 bit widths
+- [x] **HCS-04**: Pre-computed addition sequences for 13-16 bit widths
+- [x] **HCS-05**: Validation tests comparing hardcoded vs dynamic generation
+- [x] **HCS-06**: Automatic fallback to dynamic for widths > 16
 
 ### C Hot Path Migration (Conditional)
 
@@ -83,16 +83,16 @@ Deferred to later milestones.
 | PROF-07 | Phase 55 | Complete |
 | FIX-01 | Phase 56 | Complete |
 | FIX-02 | Phase 56 | Complete |
-| CYT-01 | Phase 57 | Pending |
-| CYT-02 | Phase 57 | Pending |
-| CYT-03 | Phase 57 | Pending |
-| CYT-04 | Phase 57 | Pending |
-| HCS-01 | Phase 58 | Pending |
-| HCS-02 | Phase 58 | Pending |
-| HCS-03 | Phase 59 | Pending |
-| HCS-04 | Phase 59 | Pending |
-| HCS-05 | Phase 58 | Pending |
-| HCS-06 | Phase 58 | Pending |
+| CYT-01 | Phase 57 | Complete |
+| CYT-02 | Phase 57 | Complete |
+| CYT-03 | Phase 57 | Complete |
+| CYT-04 | Phase 57 | Complete (deferred to P60) |
+| HCS-01 | Phase 58 | Complete |
+| HCS-02 | Phase 58 | Complete |
+| HCS-03 | Phase 59 | Complete |
+| HCS-04 | Phase 59 | Complete |
+| HCS-05 | Phase 58 | Complete |
+| HCS-06 | Phase 58 | Complete |
 | MIG-01 | Phase 60 | Pending |
 | MIG-02 | Phase 60 | Pending |
 | MIG-03 | Phase 60 | Pending |
@@ -107,4 +107,4 @@ Deferred to later milestones.
 
 ---
 *Requirements defined: 2026-02-05*
-*Last updated: 2026-02-05 — Phase 56 requirements complete*
+*Last updated: 2026-02-06 — Phases 57-59 requirements complete*
