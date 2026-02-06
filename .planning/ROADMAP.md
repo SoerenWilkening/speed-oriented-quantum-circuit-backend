@@ -178,10 +178,10 @@ Plans:
 **Plans:** 4 plans
 
 Plans:
-- [ ] 60-01-PLAN.md — Fresh profiling and hot path identification
-- [ ] 60-02-PLAN.md — Migrate hot path #1 to C
-- [ ] 60-03-PLAN.md — Migrate hot path #2 to C
-- [ ] 60-04-PLAN.md — Migrate hot path #3 to C and final benchmarks
+- [x] 60-01-PLAN.md — Fresh profiling and hot path identification
+- [x] 60-02-PLAN.md — Migrate hot path #1 to C
+- [x] 60-03-PLAN.md — Migrate hot path #2 to C
+- [x] 60-04-PLAN.md — Migrate hot path #3 to C and final benchmarks
 
 **Success Criteria:**
 1. Profiling data identifies top 3 hot paths with >20% potential improvement
@@ -232,7 +232,7 @@ Plans:
 | 57. Cython Optimization | v2.2 | 3/3 | Complete | 2026-02-05 |
 | 58. Hardcoded Sequences (1-8 bit) | v2.2 | 3/3 | Complete | 2026-02-05 |
 | 59. Hardcoded Sequences (9-16 bit) | v2.2 | 4/4 | Complete | 2026-02-06 |
-| 60. C Hot Path Migration | v2.2 | 0/4 | Pending | - |
+| 60. C Hot Path Migration | v2.2 | 4/4 | Complete | 2026-02-06 |
 | 61. Memory Optimization | v2.2 | 0/? | Pending | - |
 
 ---
