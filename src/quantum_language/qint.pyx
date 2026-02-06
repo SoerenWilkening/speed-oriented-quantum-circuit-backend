@@ -26,6 +26,7 @@ from ._core cimport (
     CQ_equal_width, cCQ_equal_width,
     print_circuit as c_print_circuit,
     hot_path_mul_qq, hot_path_mul_cq,
+    hot_path_add_qq, hot_path_add_cq,
 )
 
 # Python-level imports for global state access via accessor functions

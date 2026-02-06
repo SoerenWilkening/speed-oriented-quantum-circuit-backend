@@ -5,85 +5,62 @@
 	@cython.boundscheck(False)
 	@cython.wraparound(False)
 	cdef addition_inplace(self, other, int invert=False):
-		cdef sequence_t *seq
-		cdef unsigned int[:] arr
-		cdef int result_bits
-		cdef int other_bits
-		cdef int self_offset
-		cdef int other_offset
-		cdef int start
-		cdef int i
-		cdef int ancilla_count
+		# Phase 60-03: Thin Cython wrapper -- all hot-path logic moved to C
+		# (hot_path_add.c). We only extract qubit indices from Python objects
+		# here, then call the C function with nogil.
 		cdef circuit_t *_circuit = <circuit_t*><unsigned long long>_get_circuit()
 		cdef bint _controlled = _get_controlled()
 		cdef object _control_bool = _get_control_bool()
+		cdef unsigned int self_qa[64]
+		cdef unsigned int other_qa[64]
+		cdef unsigned int ancilla_qa[128]
+		cdef int self_bits = self.bits
+		cdef int self_offset = 64 - self_bits
+		cdef int i
+		cdef int64_t classical_value = 0
+		cdef unsigned int control_qubit = 0
+		cdef int num_ancilla = NUMANCILLY
 		cdef unsigned int[:] ancilla_arr
 		cdef unsigned int[:] control_qubits
 
-		start = 0
+		# Extract self qubits (right-aligned in 64-element array)
+		for i in range(self_bits):
+			self_qa[i] = self.qubits[self_offset + i]
 
-		# Extract only the used qubits (right-aligned in 64-element array)
-		# self.qubits[64-self.bits:64] contains the actual qubit indices
-		self_offset = 64 - self.bits
-		# CYT-03: Replace slice with explicit loop for memory view optimization
-		for i in range(self.bits):
-			qubit_array[i] = self.qubits[self_offset + i]
-		start += self.bits
+		# Extract control qubit if controlled
+		if _controlled:
+			control_qubits = (<qint> _control_bool).qubits
+			control_qubit = control_qubits[63]
+
+		# Extract ancilla qubits
+		ancilla_arr = _get_ancilla()
+		for i in range(num_ancilla):
+			ancilla_qa[i] = ancilla_arr[i]
 
 		if type(other) == int:
-			# value is a classical integer
-			if _controlled:
-				# Control qubit from qbool (last element)
-				control_qubits = (<qint> _control_bool).qubits
-				qubit_array[start] = control_qubits[63]
-				ancilla_arr = _get_ancilla()
-				for i in range(NUMANCILLY):
-					qubit_array[start + 1 + i] = ancilla_arr[i]
-				seq = cCQ_add(self.bits, other)
-			else:
-				ancilla_arr = _get_ancilla()
-				for i in range(NUMANCILLY):
-					qubit_array[start + i] = ancilla_arr[i]
-				seq = CQ_add(self.bits, other)
-
-
-			arr = qubit_array
-			run_instruction(seq, &arr[0], invert, _circuit)
-
+			classical_value = <int64_t>other
+			with nogil:
+				hot_path_add_cq(_circuit, self_qa, self_bits,
+								classical_value,
+								invert, _controlled, control_qubit,
+								ancilla_qa, num_ancilla)
 			return self
+
 		if not isinstance(other, qint):
 			raise ValueError()
 
-
-		# other type is qint as well - determine result width
-		other_bits = (<qint> other).bits
-		result_bits = max(self.bits, other_bits)
-		other_offset = 64 - other_bits
-
-		# Extract used qubits from other
-		# CYT-03: Replace slice with explicit loop for memory view optimization
+		# Extract other qubits for quantum-quantum addition
+		cdef int other_bits = (<qint> other).bits
+		cdef int other_offset = 64 - other_bits
+		cdef unsigned int[:] other_qubits_mv = (<qint> other).qubits
 		for i in range(other_bits):
-			qubit_array[start + i] = (<qint> other).qubits[other_offset + i]
-		start += other_bits
+			other_qa[i] = other_qubits_mv[other_offset + i]
 
-
-		if _controlled:
-			# Control qubit from qbool (last element)
-			# cQQ_add expects control at position 2*bits (immediately after both operands)
-			control_qubits = (<qint> _control_bool).qubits
-			qubit_array[2 * result_bits] = control_qubits[63]
-			ancilla_arr = _get_ancilla()
-			for i in range(NUMANCILLY):
-				qubit_array[2 * result_bits + 1 + i] = ancilla_arr[i]
-			seq = cQQ_add(result_bits)
-		else:
-			ancilla_arr = _get_ancilla()
-			for i in range(NUMANCILLY):
-				qubit_array[start + i] = ancilla_arr[i]
-			seq = QQ_add(result_bits)
-
-		arr = qubit_array
-		run_instruction(seq, &arr[0], invert, _circuit)
+		with nogil:
+			hot_path_add_qq(_circuit, self_qa, self_bits,
+							other_qa, other_bits,
+							invert, _controlled, control_qubit,
+							ancilla_qa, num_ancilla)
 		return self
 
 	def __add__(self, other: qint | int):
