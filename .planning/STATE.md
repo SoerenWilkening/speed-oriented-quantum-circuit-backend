@@ -10,16 +10,16 @@ See: .planning/PROJECT.md (updated 2026-02-05)
 ## Current Position
 
 Phase: 60 - C Hot Path Migration
-Plan: 2/4 complete
+Plan: 3/4 complete
 Status: In progress
-Last activity: 2026-02-06 — Completed 60-02-PLAN.md (migrate multiplication_inplace to C)
+Last activity: 2026-02-06 — Completed 60-03-PLAN.md (migrate addition_inplace to C)
 
-Progress: [████████..] ~76% (v2.2: 60: 2/4 plans)
+Progress: [█████████.] ~82% (v2.2: 60: 3/4 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 173 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 17)
+- Total plans completed: 174 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 18)
 - Average duration: ~13 min/plan
 - Total execution time: ~24.5 hours
 
@@ -97,6 +97,9 @@ Recent decisions (v2.2):
 - MIG-05: Stack-allocated qa[256] in C for qubit layout (matches original qubit_array global size)
 - MIG-06: Cython wrapper extracts all Python data before nogil block, passes flat C arrays
 - MIG-07: ancilla_qa[128] buffer in Cython (matches NUMANCILLY=128)
+- MIG-08: Same two-entry-point pattern (hot_path_add_qq, hot_path_add_cq) for addition
+- MIG-09: Addition hot path passes invert parameter to run_instruction for subtraction support
+- MIG-10: Controlled QQ_add uses fixed position 2*result_bits for control qubit (not sequential)
 
 ### Phase 60 Plan 01 Baseline Metrics
 
@@ -328,12 +331,33 @@ All success criteria met:
 - Fixed ancilla buffer overflow (ancilla_qa[16] -> ancilla_qa[128])
 - Added missing int64_t and hot_path_mul imports to qint.pyx
 
+### Phase 60 Plan 03 Complete
+
+**Outcome:** addition_inplace hot path fully migrated to C with nogil wrapper. Massive speedup.
+
+**Files created:**
+- c_backend/include/hot_path_add.h - header with QQ and CQ declarations
+- c_backend/src/hot_path_add.c - C implementation with invert support
+- tests/c/test_hot_path_add.c - C unit tests (9 tests)
+
+**Post-migration benchmarks:**
+| Operation | Baseline (us) | Post-migration (us) | Change |
+|-----------|--------------|-------------------|--------|
+| iadd_8bit | 37.2 | 14.4 | -61.3% |
+| isub_8bit | 31.2 | 17.1 | -45.2% |
+| iadd_quantum_8bit | 62.4 | 36.0 | -42.3% |
+| eq_8bit | 103.1 | 60.0 | -41.8% |
+| lt_8bit | 115.3 | 78.5 | -31.9% |
+| add_8bit | 59.6 | 39.2 | -34.2% |
+
+**No deviations.** Plan executed exactly as written.
+
 ## Session Continuity
 
 Last session: 2026-02-06
-Stopped at: Completed 60-02-PLAN.md (migrate multiplication_inplace to C)
+Stopped at: Completed 60-03-PLAN.md (migrate addition_inplace to C)
 Resume file: None
-Resume action: Continue Phase 60 plan 03 (migrate addition_inplace to C)
+Resume action: Continue Phase 60 plan 04 (migrate __ixor__/__xor__ to C)
 
 ---
-*State updated: 2026-02-06 — Completed 60-02-PLAN.md (migrate multiplication_inplace to C)*
+*State updated: 2026-02-06 — Completed 60-03-PLAN.md (migrate addition_inplace to C)*
