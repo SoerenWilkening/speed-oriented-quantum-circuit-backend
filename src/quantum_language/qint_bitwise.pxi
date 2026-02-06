@@ -473,46 +473,46 @@
 		>>> a ^= 0b0110
 		>>> # a now represents |1010>
 		"""
-		cdef sequence_t *seq
-		cdef unsigned int[:] arr
-		cdef int self_offset, other_offset
-		cdef int i
+		# Phase 60-04: Thin Cython wrapper -- all hot-path logic moved to C
+		# (hot_path_xor.c). We only extract qubit indices from Python objects
+		# here, then call the C function with nogil.
 		cdef circuit_t *_circuit = <circuit_t*><unsigned long long>_get_circuit()
 		cdef bint _controlled = _get_controlled()
-		cdef unsigned int[:] other_qubits
+		cdef unsigned int self_qa[64]
+		cdef unsigned int other_qa[64]
+		cdef int self_bits = self.bits
+		cdef int self_offset = 64 - self_bits
+		cdef int i
+		cdef int64_t classical_value = 0
 
-		# XOR can be done truly in-place since target ^= source modifies target
-		self_offset = 64 - self.bits
+		# Extract self qubits (right-aligned in 64-element array)
+		for i in range(self_bits):
+			self_qa[i] = self.qubits[self_offset + i]
 
 		if type(other) == int:
 			if _controlled:
 				raise NotImplementedError("Controlled classical-quantum XOR not yet supported")
-			else:
-				for i in range(self.bits):
-					if (other >> i) & 1:
-						qubit_array[0] = self.qubits[64 - self.bits + i]
-						arr = qubit_array
-						seq = Q_not(1)
-						run_instruction(seq, &arr[0], False, _circuit)
-		elif isinstance(other, qint):
-			other_offset = 64 - (<qint>other).bits
-			# CYT-03: Replace slice with explicit loop for memory view optimization
-			for i in range(self.bits):
-				qubit_array[i] = self.qubits[self_offset + i]
-			other_qubits = (<qint>other).qubits
-			for i in range((<qint>other).bits):
-				qubit_array[self.bits + i] = other_qubits[other_offset + i]
+			classical_value = <int64_t>other
+			with nogil:
+				hot_path_ixor_cq(_circuit, self_qa, self_bits, classical_value)
+			return self
 
-			if _controlled:
-				raise NotImplementedError("Controlled quantum-quantum XOR not yet supported")
-			else:
-				seq = Q_xor(min(self.bits, (<qint>other).bits))
-
-			arr = qubit_array
-			run_instruction(seq, &arr[0], False, _circuit)
-		else:
+		if not isinstance(other, qint):
 			raise TypeError("Operand must be qint or int")
 
+		if _controlled:
+			raise NotImplementedError("Controlled quantum-quantum XOR not yet supported")
+
+		# Extract other qubits for quantum-quantum XOR
+		cdef int other_bits = (<qint>other).bits
+		cdef int other_offset = 64 - other_bits
+		cdef unsigned int[:] other_qubits_mv = (<qint>other).qubits
+		for i in range(other_bits):
+			other_qa[i] = other_qubits_mv[other_offset + i]
+
+		with nogil:
+			hot_path_ixor_qq(_circuit, self_qa, self_bits,
+							other_qa, other_bits)
 		return self
 
 	def __rxor__(self, other):

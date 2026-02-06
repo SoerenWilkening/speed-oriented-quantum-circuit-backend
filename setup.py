@@ -36,6 +36,7 @@ c_sources = [
     # Hot path migrations (Phase 60)
     os.path.join(PROJECT_ROOT, "c_backend", "src", "hot_path_mul.c"),
     os.path.join(PROJECT_ROOT, "c_backend", "src", "hot_path_add.c"),
+    os.path.join(PROJECT_ROOT, "c_backend", "src", "hot_path_xor.c"),
     # Hardcoded addition sequences: 16 per-width files + unified dispatch
     *[
         os.path.join(PROJECT_ROOT, "c_backend", "src", "sequences", f"add_seq_{i}.c")

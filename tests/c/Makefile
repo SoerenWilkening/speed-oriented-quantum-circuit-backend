@@ -2,6 +2,7 @@
 # Usage: make test_comparison && ./test_comparison
 #        make test_hot_path_mul && ./test_hot_path_mul
 #        make test_hot_path_add && ./test_hot_path_add
+#        make test_hot_path_xor && ./test_hot_path_xor
 
 CC = gcc
 CFLAGS = -Wall -Wextra -g -I../../c_backend/include
@@ -51,6 +52,20 @@ ADD_SRCS = $(BACKEND_SRC)/Integer.c \
            $(BACKEND_SRC)/hot_path_add.c \
            $(SEQ_SRCS)
 
+# Sources for hot_path_xor tests (bitwise only, no arithmetic sequences needed)
+XOR_SRCS = $(BACKEND_SRC)/Integer.c \
+           $(BACKEND_SRC)/LogicOperations.c \
+           $(BACKEND_SRC)/QPU.c \
+           $(BACKEND_SRC)/gate.c \
+           $(BACKEND_SRC)/qubit_allocator.c \
+           $(BACKEND_SRC)/execution.c \
+           $(BACKEND_SRC)/optimizer.c \
+           $(BACKEND_SRC)/circuit_allocations.c \
+           $(BACKEND_SRC)/circuit_output.c \
+           $(BACKEND_SRC)/circuit_stats.c \
+           $(BACKEND_SRC)/circuit_optimizer.c \
+           $(BACKEND_SRC)/hot_path_xor.c
+
 # Test targets
 test_comparison: test_comparison.c $(BACKEND_SRCS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
@@ -61,9 +76,12 @@ test_hot_path_mul: test_hot_path_mul.c $(MUL_SRCS)
 test_hot_path_add: test_hot_path_add.c $(ADD_SRCS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
+test_hot_path_xor: test_hot_path_xor.c $(XOR_SRCS)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
 .PHONY: clean
 clean:
-	rm -f test_comparison test_hot_path_mul test_hot_path_add
+	rm -f test_comparison test_hot_path_mul test_hot_path_add test_hot_path_xor
 
 .PHONY: run
 run: test_comparison
