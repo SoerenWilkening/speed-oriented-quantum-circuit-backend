@@ -305,34 +305,74 @@ def generate_c_sequence(name: str, layers: list[list[Gate]], width: int) -> str:
 # ============================================================================
 
 
+def _generate_qft_layers(bits: int) -> list[list[Gate]]:
+    """Generate QFT layers matching the C QFT() function layout.
+
+    The C QFT() produces exactly 2*bits-1 layers with gate packing:
+    For j=0..n-1, qubit q=n-1-j:
+      - H(q) placed at layer 2*j
+      - CP(q, q-i-1, pi/2^(i+1)) placed at layer 2*j+i+1 for i=0..n-2-j
+
+    Multiple gates can share the same layer when they operate on independent qubits.
+    """
+    n = bits
+    total = 2 * n - 1
+    layers: list[list[Gate]] = [[] for _ in range(total)]
+
+    for j in range(n):
+        q = n - 1 - j
+        layers[2 * j].append(Gate("H", q, None, 0))
+        for i in range(n - 1 - j):
+            angle = math.pi / (2 ** (i + 1))
+            layers[2 * j + i + 1].append(Gate("P", q, q - i - 1, angle))
+
+    return layers
+
+
+def _generate_iqft_layers(bits: int) -> list[list[Gate]]:
+    """Generate inverse QFT layers matching the C QFT_inverse() function layout.
+
+    The C QFT_inverse() produces exactly 2*bits-1 layers (reverse of QFT).
+    For j=0..n-1, qubit q=n-1-j:
+      - CP(q, q-i-1, -pi/2^(i+1)) at layer (2*n-1) - (2*j+i+1) - 1
+      - H(q) at layer (2*n-1) - 2*j - 1
+    """
+    n = bits
+    total = 2 * n - 1
+    layers: list[list[Gate]] = [[] for _ in range(total)]
+
+    for j in range(n):
+        q = n - 1 - j
+        for i in range(n - 1 - j):
+            layer_idx = total - (2 * j + i + 1) - 1
+            angle = -math.pi / (2 ** (i + 1))
+            layers[layer_idx].append(Gate("P", q, q - i - 1, angle))
+        h_layer = total - 2 * j - 1
+        layers[h_layer].append(Gate("H", q, None, 0))
+
+    return layers
+
+
 def generate_cq_add_template_layers(bits: int) -> list[list[Gate]]:
-    """Return the gate structure for CQ_add template.
+    """Return the gate structure for CQ_add template matching C QFT layout.
 
     Structure:
-      - QFT on target register [0, bits-1] (same as QQ_add QFT section)
+      - QFT on target register [0, bits-1] (2*bits-1 layers, matching C QFT())
       - bits rotation layers: each has one P gate on qubit i with angle placeholder 0
-      - Inverse QFT on target register (same as QQ_add IQFT section)
+      - Inverse QFT on target register (2*bits-1 layers, matching C QFT_inverse())
       - Total layers: 5 * bits - 2
     """
     layers = []
 
-    # QFT on target register [0, bits-1]
-    for target in range(bits - 1, -1, -1):
-        layers.append([Gate("H", target, None, 0)])
-        for ctrl in range(target - 1, -1, -1):
-            angle = math.pi / (2 ** (target - ctrl))
-            layers.append([Gate("P", target, ctrl, angle)])
+    # QFT section (2*bits-1 layers)
+    layers.extend(_generate_qft_layers(bits))
 
     # Rotation layers: one P gate per qubit with placeholder angle 0
     for i in range(bits):
-        layers.append([Gate("P", i, None, 0)])  # control=None for P (uncontrolled)
+        layers.append([Gate("P", i, None, 0)])  # Uncontrolled P (angle injected at runtime)
 
-    # Inverse QFT on target register
-    for target in range(bits):
-        for ctrl in range(target):
-            angle = -math.pi / (2 ** (target - ctrl))
-            layers.append([Gate("P", target, ctrl, angle)])
-        layers.append([Gate("H", target, None, 0)])
+    # IQFT section (2*bits-1 layers)
+    layers.extend(_generate_iqft_layers(bits))
 
     return layers
 
@@ -413,33 +453,25 @@ def generate_cq_add_template_c(bits: int) -> str:
 
 
 def generate_ccq_add_template_layers(bits: int) -> list[list[Gate]]:
-    """Return the gate structure for cCQ_add template.
+    """Return the gate structure for cCQ_add template matching C QFT layout.
 
     Structure:
-      - QFT on target register [0, bits-1]
+      - QFT on target register [0, bits-1] (2*bits-1 layers, matching C QFT())
       - bits rotation layers: each has one CP gate on qubit i with control=bits and angle 0
-      - Inverse QFT on target register
+      - Inverse QFT on target register (2*bits-1 layers, matching C QFT_inverse())
       - Total layers: 5 * bits - 2
     """
     layers = []
 
-    # QFT on target register [0, bits-1]
-    for target in range(bits - 1, -1, -1):
-        layers.append([Gate("H", target, None, 0)])
-        for ctrl in range(target - 1, -1, -1):
-            angle = math.pi / (2 ** (target - ctrl))
-            layers.append([Gate("P", target, ctrl, angle)])
+    # QFT section (2*bits-1 layers)
+    layers.extend(_generate_qft_layers(bits))
 
     # Rotation layers: one CP gate per qubit with control at qubit[bits] and placeholder angle 0
     for i in range(bits):
         layers.append([Gate("P", i, bits, 0)])  # CP with control = bits
 
-    # Inverse QFT on target register
-    for target in range(bits):
-        for ctrl in range(target):
-            angle = -math.pi / (2 ** (target - ctrl))
-            layers.append([Gate("P", target, ctrl, angle)])
-        layers.append([Gate("H", target, None, 0)])
+    # IQFT section (2*bits-1 layers)
+    layers.extend(_generate_iqft_layers(bits))
 
     return layers
 
