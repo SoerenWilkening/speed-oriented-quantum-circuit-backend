@@ -63,6 +63,14 @@ sequence_t *CQ_add(int bits, int64_t value) {
     // Phase rotations start after QFT (which uses 2*bits-1 layers)
     int start_layer = 2 * bits - 1;
 
+    // Use hardcoded template for widths 1-16 (allocates on first call, caches)
+    if (bits <= HARDCODED_MAX_WIDTH && precompiled_CQ_add_width[bits] == NULL) {
+        sequence_t *hardcoded = get_hardcoded_CQ_add(bits);
+        if (hardcoded != NULL) {
+            precompiled_CQ_add_width[bits] = hardcoded;
+        }
+    }
+
     // Check cache for this width (use width-parameterized cache)
     if (precompiled_CQ_add_width[bits] != NULL) {
         sequence_t *add = precompiled_CQ_add_width[bits];
@@ -271,6 +279,14 @@ sequence_t *cCQ_add(int bits, int64_t value) {
     free(bin);
     // Phase rotations start after QFT (which uses 2*bits-1 layers)
     int start_layer = 2 * bits - 1;
+
+    // Use hardcoded template for widths 1-16 (allocates on first call, caches)
+    if (bits <= HARDCODED_MAX_WIDTH && precompiled_cCQ_add_width[bits] == NULL) {
+        sequence_t *hardcoded = get_hardcoded_cCQ_add(bits);
+        if (hardcoded != NULL) {
+            precompiled_cCQ_add_width[bits] = hardcoded;
+        }
+    }
 
     // Check cache for this width (use width-parameterized cache)
     if (precompiled_cCQ_add_width[bits] != NULL) {

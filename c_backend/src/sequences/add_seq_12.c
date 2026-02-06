@@ -6,9 +6,10 @@
 // Contains: QQ_add, cQQ_add (static const), CQ_add, cCQ_add (template-init)
 //
 
+#include "sequences.h"
+
 #ifdef SEQ_WIDTH_12
 
-#include "sequences.h"
 #include <stdlib.h>
 
 // SEQ_PI as compile-time constant for static initializers
