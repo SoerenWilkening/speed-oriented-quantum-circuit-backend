@@ -9,17 +9,17 @@ See: .planning/PROJECT.md (updated 2026-02-05)
 
 ## Current Position
 
-Phase: 59 - Hardcoded Sequences (9-16 bit)
-Plan: 4/4 complete
-Status: Phase complete
-Last activity: 2026-02-06 — Completed 59-04-PLAN.md (validation tests)
+Phase: 60 - C Hot Path Migration
+Plan: 1/4 complete
+Status: In progress
+Last activity: 2026-02-06 — Completed 60-01-PLAN.md (profiling and hot path identification)
 
-Progress: [████████..] ~71% (v2.2: 6/7 phases complete, 59: 4/4 plans)
+Progress: [████████..] ~74% (v2.2: 60: 1/4 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 171 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 15)
+- Total plans completed: 172 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 16)
 - Average duration: ~13 min/plan
 - Total execution time: ~24.5 hours
 
@@ -88,6 +88,30 @@ Recent decisions (v2.2):
 - SEQ-10: CQ/cCQ template-init populates existing precompiled cache before cache check
 - SEQ-11: QQ_add out-of-place tests limited to widths 1-9 (16GB+ needed for width 10)
 - SEQ-12: Custom simulation for controlled CQ_add tests (control qubit shifts bitstring layout)
+
+**Phase 60 decisions:**
+- MIG-01: Top 3 hot paths: multiplication_inplace, addition_inplace, __ixor__/__xor__
+- MIG-02: Migration order: multiplication_inplace first (highest absolute time), addition_inplace second (highest frequency), ixor/xor third (enabler for many operations)
+- MIG-03: Baseline captured as JSON at /tmp/baseline_60.json and in 60-01-SUMMARY.md benchmark table
+
+### Phase 60 Plan 01 Baseline Metrics
+
+**Benchmark results (key operations, Phase 60 pre-migration):**
+| Operation | Mean (us) | OPS |
+|-----------|-----------|-----|
+| ixor_8bit | 3.3 | 302,317 |
+| ixor_quantum_8bit | 6.3 | 159,529 |
+| xor_8bit | 22.6 | 44,231 |
+| isub_8bit | 31.2 | 32,098 |
+| iadd_8bit | 37.2 | 26,854 |
+| isub_quantum_8bit | 61.7 | 16,204 |
+| iadd_quantum_8bit | 62.4 | 16,019 |
+| iadd_16bit | 48.3 | 20,714 |
+| add_8bit | 59.6 | 16,788 |
+| eq_8bit | 103.1 | 9,703 |
+| lt_8bit | 115.3 | 8,675 |
+| mul_8bit | 236.2 | 4,234 |
+| mul_classical | 11,807.7 | 85 |
 
 ### v2.2 Research Findings
 
@@ -284,9 +308,9 @@ All success criteria met:
 ## Session Continuity
 
 Last session: 2026-02-06
-Stopped at: Completed 59-04-PLAN.md (Phase 59 complete)
+Stopped at: Completed 60-01-PLAN.md (profiling and hot path identification)
 Resume file: None
-Resume action: Next phase (60 or as directed)
+Resume action: Continue Phase 60 plan 02 (migrate multiplication_inplace to C)
 
 ---
-*State updated: 2026-02-06 — Completed 59-04-PLAN.md (Phase 59 complete)*
+*State updated: 2026-02-06 — Completed 60-01-PLAN.md (profiling and hot path identification)*
