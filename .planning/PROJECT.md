@@ -107,17 +107,16 @@ Write quantum algorithms in natural programming style that compiles to efficient
 - ✓ Top 3 hot paths (mul, add, xor) migrated to C with nogil — 27.7% aggregate improvement — v2.2
 - ✓ Memory leaks eliminated, 59-93% allocation reduction via stack allocation — v2.2
 
+- ✓ Benchmark infrastructure measuring import time, first-call generation, and cached dispatch overhead — v2.3
+- ✓ Data-driven decision to keep all addition widths 1-16 hardcoded (2-6x dispatch speedup) — v2.3
+- ✓ Shared QFT/IQFT factoring reducing generated C by 32.9% (79,867 to 53,598 lines) — v2.3
+- ✓ 11.1% binary size reduction (17.2MB to 15.3MB) from shared arrays — v2.3
+- ✓ Evaluation: multiplication "investigate", bitwise "skip", division "skip" for hardcoding — v2.3
+- ✓ Zero regression verified — 60-94% first-call improvement for addition operations — v2.3
+
 ### Active
 
-## Current Milestone: v2.3 Hardcoding Right-Sizing
-
-**Goal:** Benchmark hardcoded vs dynamic gate sequence generation (including import time), right-size or eliminate hardcoded sequences based on data, and evaluate whether other operations (mul, bitwise, div) warrant hardcoding.
-
-**Target features:**
-- Benchmark infrastructure for import time, first-call generation cost, and per-call overhead
-- Data-driven decision on which widths/operations to keep hardcoded vs revert to dynamic
-- File size reduction for any retained hardcoded sequences (QFT/IQFT factoring)
-- Evaluation of multiplication/bitwise/division hardcoding viability
+(No active milestone — use `/gsd:new-milestone` to plan next)
 
 **Deferred bugs (carry forward):**
 - Fix _reduce_mod result corruption (BUG-MOD-REDUCE) — needs fundamentally different circuit structure
@@ -131,7 +130,7 @@ Write quantum algorithms in natural programming style that compiles to efficient
 - Resource estimation for compiled functions — ADV-01
 - Serialization of compiled functions to disk — ADV-02
 - Compiled function composition — ADV-03
-- Hardcoded sequences for multiplication — ADV-OPT-01
+- Hardcoded sequences for multiplication — ADV-OPT-01 (EVAL-01 recommends "investigate")
 - SIMD vectorization for bulk gate operations — ADV-OPT-03
 - Multi-threaded circuit building — ADV-OPT-04
 
@@ -149,7 +148,7 @@ Write quantum algorithms in natural programming style that compiles to efficient
 
 **Architecture:** Three-layer stateless design — C backend (gate primitives, circuit management, integer operations) -> Cython bindings -> Python frontend (qint/qbool classes, operator overloading). All functions take explicit parameters; no global state.
 
-**Current state:** v2.2 shipped — performance optimization complete. Profiling infrastructure (cProfile, memray, Cython annotations, py-spy, pytest-benchmark) established and used to drive all optimization decisions. Top 3 hot paths (multiplication, addition, XOR) migrated to C with nogil wrappers achieving 27.7% aggregate throughput improvement. Hardcoded gate sequences for all 4 addition variants at widths 1-16 (~80K generated C lines). Memory leaks eliminated and 59-93% allocation reduction via stack allocation. Cython hot paths fully typed with compiler directives. `@ql.compile` supports ancilla tracking, inverse/adjoint generation, auto-uncompute, and `ql.qarray` arguments. 106 compilation tests. Pixel-art circuit visualization scaling to 200+ qubits. Exhaustive verification suite with 8,365+ tests. Clean modular C backend with types.h, circuit.h, arithmetic_ops.h, comparison_ops.h, bitwise_ops.h, circuit_output.h. Variable-width quantum integers (1-64 bits). Automatic uncomputation with dependency tracking. CNOT-based quantum copy. Memory-safe Python-to-C bridge.
+**Current state:** v2.3 shipped — hardcoding right-sizing complete. Benchmark infrastructure (import time, first-call generation, cached dispatch) established. Data-driven decision: keep all addition widths 1-16 hardcoded (2-6x dispatch speedup). Shared QFT/IQFT factoring reduced generated C by 32.9% and binary size by 11.1%. Evaluation: multiplication "investigate" for future, bitwise and division "skip". Zero regression verified with 60-94% first-call improvement. Profiling infrastructure (cProfile, memray, Cython annotations, py-spy, pytest-benchmark) used to drive all optimization decisions. Top 3 hot paths (multiplication, addition, XOR) migrated to C with nogil. Memory leaks eliminated, 59-93% allocation reduction. `@ql.compile` supports ancilla tracking, inverse/adjoint generation, auto-uncompute, and `ql.qarray` arguments. 106 compilation tests. Pixel-art circuit visualization scaling to 200+ qubits. Exhaustive verification suite with 8,365+ tests. Clean modular C backend. Variable-width quantum integers (1-64 bits). Automatic uncomputation with dependency tracking. CNOT-based quantum copy. Memory-safe Python-to-C bridge.
 
 **Codebase:**
 - ~345,901 lines of code (Python, Cython, C)
@@ -252,6 +251,14 @@ Write quantum algorithms in natural programming style that compiles to efficient
 | Stack-allocated gate_t in run_instruction | add_gate() copies via memcpy; safe for stack | ✓ Good — eliminates per-gate malloc |
 | Arena allocator skipped | Remaining allocs are amortized realloc — not worth complexity | ✓ Good — evidence-based |
 | Defer CYT-04 nogil to Phase 60 | Python call dependencies in Cython accessors | ✓ Good — applied with C migration |
+| Keep all addition widths 1-16 hardcoded | Phase 62 data: 2-6x dispatch speedup, 192ms import justified | ✓ Good — data-driven |
+| Segmented QFT/IQFT optimization | Independent segment optimization enables clean sharing | ✓ Good — 32.9% source reduction |
+| Packed QFT layout for shared arrays | Fewer layers from _generate_qft_layers() packed layout | ✓ Good — const sharing works |
+| Const vs mutable separation for sharing | Static const for QQ/cQQ, init helpers for CQ/cCQ | ✓ Good — type-safe sharing |
+| Multiplication: "investigate" not "hardcode" | 48x addition cost but binary size impact needs study | — Pending — deferred to future |
+| Bitwise: "skip" hardcoding | Max 288us generation, trivial cost | ✓ Good — definitively closed |
+| Division: "skip" hardcoding | Python-level loop cost, not C sequence generation | ✓ Good — definitively closed |
+| 15% regression tolerance | Accounts for ~8% stdev observed in benchmarks | ✓ Good — prevents false positives |
 
 ---
-*Last updated: 2026-02-08 after v2.3 milestone started*
+*Last updated: 2026-02-08 after v2.3 milestone completion*

@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v2.3 Hardcoding Right-Sizing milestone COMPLETE. Phase 64 regression verification passed -- no performance regression, zero new test failures.
+**Current focus:** v2.3 milestone complete. Planning next milestone.
 
 ## Current Position
 
 Phase: 64 of 64 (Regression Verification)
 Plan: 1 of 1 in current phase
-Status: Phase complete -- v2.3 milestone complete
-Last activity: 2026-02-08 -- Completed 64-01-PLAN.md (regression verification with PASS verdict)
+Status: v2.3 milestone archived
+Last activity: 2026-02-08 -- Archived v2.3 Hardcoding Right-Sizing milestone
 
 Progress: [██████████] 100% (4/4 plans across 3 phases)
 
@@ -47,21 +47,7 @@ Progress: [██████████] 100% (4/4 plans across 3 phases)
 ### Decisions
 
 See PROJECT.md Key Decisions table for full history.
-Recent: "Profile before optimizing" principle from v2.2 carries forward -- this milestone is measurement-first.
-- Subprocess isolation for first-call benchmarks (C caches are per-process, non-resettable)
-- In-process measurement for cached dispatch comparison (cache behavior is the target)
-- Width 8 vs 17 for hardcoded vs dynamic dispatch comparison
-- Multiplication recommendation: "investigate" (48x addition cost, CQ_mul not cached, but binary size concern)
-- Bitwise recommendation: "skip" (max 288us, trivial generation)
-- Division recommendation: "skip" (Python-level loop cost, not C sequence generation)
-- Break-even: 3,533 cached calls or 550 first calls to recoup 192ms import overhead
-- **KEEP all addition widths 1-16 hardcoded** (Phase 63 decision, data-driven from Phase 62 benchmarks)
-- **Segmented optimization** (QFT/middle/IQFT optimized independently) to enable shared layer arrays
-- **Packed QFT layout** from _generate_qft_layers() for shared static const arrays
-- **Const vs mutable separation** for sharing: static const arrays for QQ/cQQ, init helpers for CQ/cCQ
-- **15% regression tolerance** for timing benchmarks (accounts for ~8% stdev observed in Phase 62)
-- **System noise identification** via contradictory results on identical code paths (Q_and vs Q_or)
-- **Binary size reduced 11.1%** (17.2MB -> 15.3MB) from shared QFT/IQFT -- compiler did not fully deduplicate before
+Recent (v2.3): Keep all addition widths 1-16 hardcoded (data-driven), shared QFT/IQFT factoring, multiplication "investigate" for future.
 
 ### Blockers/Concerns
 
@@ -82,9 +68,9 @@ Recent: "Profile before optimizing" principle from v2.2 carries forward -- this 
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed Phase 64 plan 01 (regression verification) -- v2.3 milestone complete
+Stopped at: Archived v2.3 Hardcoding Right-Sizing milestone
 Resume file: N/A -- milestone complete
-Resume action: Plan next milestone or release v2.3
+Resume action: Start next milestone via `/gsd:new-milestone`
 
 ---
-*State updated: 2026-02-08 -- Completed 64-01 regression verification (v2.3 Hardcoding Right-Sizing milestone complete)*
+*State updated: 2026-02-08 -- v2.3 milestone archived*

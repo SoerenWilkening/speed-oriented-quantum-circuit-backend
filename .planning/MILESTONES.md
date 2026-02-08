@@ -1,5 +1,32 @@
 # Project Milestones: Quantum Assembly
 
+## v2.3 Hardcoding Right-Sizing (Shipped: 2026-02-08)
+
+**Delivered:** Data-driven evaluation and right-sizing of hardcoded gate sequences — benchmarked all 9 operation types, kept addition widths 1-16 with shared QFT/IQFT factoring (32.9% source reduction, 11.1% binary size reduction), confirmed zero regression.
+
+**Phases completed:** 62-64 (4 plans total)
+
+**Key accomplishments:**
+
+- Comprehensive benchmark infrastructure measuring import time (192ms), first-call generation (9 ops x 16 widths), and cached dispatch overhead
+- Data-driven decision to keep all addition widths 1-16 hardcoded (2-6x dispatch speedup)
+- Shared QFT/IQFT factoring reducing generated C from 79,867 to 53,598 lines (32.9% reduction)
+- 11.1% binary size reduction (17.2MB to 15.3MB) from shared arrays
+- Evaluation: multiplication "investigate", bitwise "skip", division "skip" for hardcoding
+- Zero performance regression — 60-94% first-call improvement for addition operations
+
+**Stats:**
+
+- 21 commits
+- 3 phases, 4 plans, 9 tasks
+- 1 day (2026-02-08)
+
+**Git range:** `d819159` → `ca5a4df`
+
+**What's next:** TBD — next milestone planning via `/gsd:new-milestone`
+
+---
+
 ## v2.2 Performance Optimization (Shipped: 2026-02-08)
 
 **Delivered:** Profiling-driven performance optimization achieving 27.7% aggregate throughput improvement via C hot path migration, 59-93% memory allocation reduction, hardcoded gate sequences for widths 1-16, and Cython hot path typing.
