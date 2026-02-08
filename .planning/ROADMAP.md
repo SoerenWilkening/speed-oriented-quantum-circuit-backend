@@ -62,13 +62,13 @@
 
 </details>
 
-### v2.3 Hardcoding Right-Sizing (In Progress)
+### v2.3 Hardcoding Right-Sizing (SHIPPED 2026-02-08)
 
 **Milestone Goal:** Benchmark hardcoded vs dynamic gate sequence generation, right-size or eliminate hardcoded sequences based on data, and evaluate whether other operations warrant hardcoding.
 
 - [x] **Phase 62: Measurement** - Benchmark all generation paths and evaluate other operations for hardcoding viability -- completed 2026-02-08
 - [x] **Phase 63: Right-Sizing Implementation** - Apply data-driven decisions to right-size addition sequences -- completed 2026-02-08
-- [ ] **Phase 64: Regression Verification** - Confirm no performance regression after changes
+- [x] **Phase 64: Regression Verification** - Confirm no performance regression after changes -- completed 2026-02-08
 
 ## Phase Details
 
@@ -109,7 +109,7 @@ Plans:
   2. The full test suite passes with zero new failures compared to the v2.2 baseline
 **Plans:** 1 plan
 Plans:
-- [ ] 64-01-PLAN.md -- Benchmark comparison and regression report (ADD-04)
+- [x] 64-01-PLAN.md -- Benchmark comparison and regression report (ADD-04)
 
 ## Progress
 
@@ -141,7 +141,7 @@ Phases execute in numeric order: 62 -> 63 -> 64
 | 61. Memory Optimization | v2.2 | 3/3 | Complete | 2026-02-08 |
 | 62. Measurement | v2.3 | 2/2 | Complete | 2026-02-08 |
 | 63. Right-Sizing Implementation | v2.3 | 1/1 | Complete | 2026-02-08 |
-| 64. Regression Verification | v2.3 | 0/1 | Not started | - |
+| 64. Regression Verification | v2.3 | 1/1 | Complete | 2026-02-08 |
 
 ---
 *Roadmap created: 2026-02-02*
@@ -151,3 +151,4 @@ Phases execute in numeric order: 62 -> 63 -> 64
 *Milestone v2.1 shipped: 2026-02-05*
 *Milestone v2.2 shipped: 2026-02-08*
 *Milestone v2.3 roadmap added: 2026-02-08*
+*Milestone v2.3 shipped: 2026-02-08*
