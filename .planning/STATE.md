@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-05)
 
 ## Current Position
 
-Phase: 60 - C Hot Path Migration
-Plan: 4/4 complete
-Status: Phase complete
-Last activity: 2026-02-06 — Completed 60-04-PLAN.md (migrate XOR to C, final benchmarks)
+Phase: 61 - Memory Optimization
+Plan: 1/3 complete
+Status: In progress
+Last activity: 2026-02-08 — Completed 61-01-PLAN.md (memory profiling baseline)
 
-Progress: [██████████] 100% (v2.2: 60: 4/4 plans)
+Progress: [███░░░░░░░] 33% (v2.2: 61: 1/3 plans)
 
 ## Performance Metrics
 
@@ -101,6 +101,11 @@ Recent decisions (v2.2):
 - MIG-09: Addition hot path passes invert parameter to run_instruction for subtraction support
 - MIG-10: Controlled QQ_add uses fixed position 2*result_bits for control qubit (not sequential)
 - MIG-11: XOR hot path uses hot_path_ixor_qq and hot_path_ixor_cq (simpler than add/mul -- no ancilla, no controlled variants)
+
+**Phase 61 decisions:**
+- MEM-01: 32-bit multiplication segfaults in C backend (buffer overflow), profiling capped at 24-bit
+- MEM-02: 32-bit memray profiling requires inline script (-c) due to argparse/memray interaction crash
+- MEM-03: Top optimization target is run_instruction() per-gate malloc (leaked, ~40 bytes per gate)
 
 ### Phase 60 Complete
 
@@ -395,10 +400,10 @@ All success criteria met:
 
 ## Session Continuity
 
-Last session: 2026-02-06
-Stopped at: Completed 60-04-PLAN.md (Phase 60 complete)
-Resume file: None
-Resume action: Phase 60 complete. Next phase TBD.
+Last session: 2026-02-08
+Stopped at: Completed 61-01-PLAN.md (memory profiling baseline)
+Resume file: .planning/phases/61-memory-optimization/61-02-PLAN.md
+Resume action: Execute Plan 02 (fix memory leaks in run_instruction/reverse_circuit_range)
 
 ---
-*State updated: 2026-02-06 — Completed 60-04-PLAN.md (Phase 60 complete)*
+*State updated: 2026-02-08 — Completed 61-01-PLAN.md (memory profiling baseline)*
