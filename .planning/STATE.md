@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-05)
 ## Current Position
 
 Phase: 61 - Memory Optimization
-Plan: 2/3 complete
-Status: In progress
-Last activity: 2026-02-08 — Completed 61-02-PLAN.md (fix memory leaks and eliminate per-gate malloc)
+Plan: 3/3 complete
+Status: Phase complete
+Last activity: 2026-02-08 — Completed 61-03-PLAN.md (final profiling and validation)
 
-Progress: [██████░░░░] 67% (v2.2: 61: 2/3 plans)
+Progress: [██████████] 100% (v2.2: 61: 3/3 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 176 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 20)
+- Total plans completed: 177 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 21)
 - Average duration: ~13 min/plan
-- Total execution time: ~25.4 hours
+- Total execution time: ~25.7 hours
 
 **By Milestone:**
 
@@ -109,6 +109,7 @@ Recent decisions (v2.2):
 - MEM-04: Stack-allocated gate_t is safe because add_gate() copies via memcpy before pointer goes out of scope
 - MEM-05: For n-controlled gates (NumControls > 2), large_control still needs malloc for remapped array, freed after add_gate
 - MEM-06: colliding_gates() changed from returning malloc'd array to accepting caller-provided gate_t*[3]
+- MEM-07: Arena allocator not needed -- remaining allocation sites are circuit infrastructure realloc (amortized) and Python overhead (one-time)
 
 ### Phase 60 Complete
 
@@ -401,6 +402,25 @@ All success criteria met:
 
 **No deviations** (except auto-fixed missing LogicOperations.c in Makefile).
 
+### Phase 61 Complete
+
+**Outcome:** Memory optimization complete. Per-gate malloc eliminated, memory leak fixed, 59-93% allocation reduction confirmed. Arena allocator evaluated and skipped (not needed).
+
+**Memory allocation reduction (baseline vs final):**
+| Width | Baseline Allocs | Final Allocs | Reduction |
+|-------|----------------|-------------|-----------|
+| 8-bit | 633,855 | 261,048 | -58.8% |
+| 16-bit | 535,843 | 155,196 | -71.0% |
+| 32-bit | 173,511 | 12,317 | -92.9% |
+
+**Phase 61 success criteria:** All 4 criteria PASS (MEM-01: profiling done, MEM-02: N/A, MEM-03: PASS via stack allocation, SC4: allocation reduction confirmed).
+
+**Combined Phase 60+61 results:**
+- Phase 60: 27.7% aggregate throughput improvement via C hot path migration
+- Phase 61: 59-93% allocation count reduction, memory leak eliminated
+
+**Files modified:** c_backend/src/execution.c, c_backend/src/optimizer.c, c_backend/include/optimizer.h
+
 ### Phase 61 Plan 02 Complete
 
 **Outcome:** Memory leak in run_instruction()/reverse_circuit_range() eliminated via stack allocation. Per-gate malloc in colliding_gates() eliminated via caller-provided array.
@@ -417,9 +437,9 @@ All success criteria met:
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 61-02-PLAN.md (fix memory leaks and eliminate per-gate malloc)
-Resume file: .planning/phases/61-memory-optimization/61-03-PLAN.md
-Resume action: Execute Plan 03 (arena allocator or further optimization, conditional)
+Stopped at: Completed Phase 61 (memory optimization) -- all 3 plans done
+Resume file: N/A (phase complete)
+Resume action: Plan next phase or milestone
 
 ---
-*State updated: 2026-02-08 — Completed 61-02-PLAN.md (fix memory leaks and eliminate per-gate malloc)*
+*State updated: 2026-02-08 — Completed 61-03-PLAN.md (final profiling and validation -- Phase 61 complete)*
