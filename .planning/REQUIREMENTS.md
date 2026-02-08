@@ -49,23 +49,23 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BENCH-01 | — | Pending |
-| BENCH-02 | — | Pending |
-| BENCH-03 | — | Pending |
-| BENCH-04 | — | Pending |
-| ADD-01 | — | Pending |
-| ADD-02 | — | Pending |
-| ADD-03 | — | Pending |
-| ADD-04 | — | Pending |
-| EVAL-01 | — | Pending |
-| EVAL-02 | — | Pending |
-| EVAL-03 | — | Pending |
+| BENCH-01 | Phase 62 | Pending |
+| BENCH-02 | Phase 62 | Pending |
+| BENCH-03 | Phase 62 | Pending |
+| BENCH-04 | Phase 62 | Pending |
+| ADD-01 | Phase 63 | Pending |
+| ADD-02 | Phase 63 | Pending |
+| ADD-03 | Phase 63 | Pending |
+| ADD-04 | Phase 64 | Pending |
+| EVAL-01 | Phase 62 | Pending |
+| EVAL-02 | Phase 62 | Pending |
+| EVAL-03 | Phase 62 | Pending |
 
 **Coverage:**
 - v2.3 requirements: 11 total
-- Mapped to phases: 0
-- Unmapped: 11 ⚠️
+- Mapped to phases: 11
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-08*
-*Last updated: 2026-02-08 after initial definition*
+*Last updated: 2026-02-08 after roadmap creation*

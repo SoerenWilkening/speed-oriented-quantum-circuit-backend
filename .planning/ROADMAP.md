@@ -55,14 +55,59 @@
 - [x] Phase 55: Profiling Infrastructure (3/3 plans) -- completed 2026-02-05
 - [x] Phase 56: Forward/Inverse Depth Fix (2/2 plans) -- completed 2026-02-05
 - [x] Phase 57: Cython Optimization (3/3 plans) -- completed 2026-02-05
-- [x] Phase 58: Hardcoded Sequences 1-8 bit (3/3 plans) -- completed 2026-02-05
-- [x] Phase 59: Hardcoded Sequences 9-16 bit (4/4 plans) -- completed 2026-02-06
+- [x] Phase 58: Hardcoded Sequences (1-8 bit) (3/3 plans) -- completed 2026-02-05
+- [x] Phase 59: Hardcoded Sequences (9-16 bit) (4/4 plans) -- completed 2026-02-06
 - [x] Phase 60: C Hot Path Migration (4/4 plans) -- completed 2026-02-06
 - [x] Phase 61: Memory Optimization (3/3 plans) -- completed 2026-02-08
 
 </details>
 
+### v2.3 Hardcoding Right-Sizing (In Progress)
+
+**Milestone Goal:** Benchmark hardcoded vs dynamic gate sequence generation, right-size or eliminate hardcoded sequences based on data, and evaluate whether other operations warrant hardcoding.
+
+- [ ] **Phase 62: Measurement** - Benchmark all generation paths and evaluate other operations for hardcoding viability
+- [ ] **Phase 63: Right-Sizing Implementation** - Apply data-driven decisions to right-size addition sequences
+- [ ] **Phase 64: Regression Verification** - Confirm no performance regression after changes
+
+## Phase Details
+
+### Phase 62: Measurement
+**Goal**: Comprehensive benchmarks quantify the cost/benefit of hardcoded sequences for all operation types, producing a data-driven recommendation
+**Depends on**: Nothing (first phase of v2.3)
+**Requirements**: BENCH-01, BENCH-02, BENCH-03, BENCH-04, EVAL-01, EVAL-02, EVAL-03
+**Success Criteria** (what must be TRUE):
+  1. Running a benchmark script produces import time measurements with and without hardcoded sequences loaded, showing the cost in milliseconds
+  2. Running a benchmark script produces per-operation first-call generation cost for all 9 operation types (QQ_add, CQ_add, cQQ_add, cCQ_add, QQ_mul, CQ_mul, Q_xor, Q_and, Q_or) at widths 1-16
+  3. Running a benchmark script produces per-call dispatch overhead comparing hardcoded lookup vs dynamic cache hit, showing whether the difference is measurable
+  4. A comparison report exists showing hardcoded vs dynamic cost per operation/width, with import time amortization analysis (break-even point in calls)
+  5. Multiplication, bitwise, and division generation costs are each measured and documented with a clear keep/hardcode/skip recommendation
+**Plans**: TBD
+
+### Phase 63: Right-Sizing Implementation
+**Goal**: Addition hardcoded sequences are right-sized (kept, factored, or removed) based on Phase 62 measurements
+**Depends on**: Phase 62
+**Requirements**: ADD-01, ADD-02, ADD-03
+**Success Criteria** (what must be TRUE):
+  1. A documented decision exists stating which addition widths (if any) remain hardcoded, with data justification from Phase 62 benchmarks
+  2. If hardcoded sequences are kept: shared QFT/IQFT sub-sequences are factored out, reducing total generated C file size measurably
+  3. If hardcoded sequences are removed: all hardcoded sequence files are deleted, the build system no longer references them, and dynamic generation handles all widths
+  4. The existing test suite (`pytest tests/python/ -v`) passes after implementation changes
+**Plans**: TBD
+
+### Phase 64: Regression Verification
+**Goal**: End-to-end circuit generation performance is verified to have no regression after right-sizing changes
+**Depends on**: Phase 63
+**Requirements**: ADD-04
+**Success Criteria** (what must be TRUE):
+  1. A benchmark comparing circuit generation throughput before and after changes shows no regression (or documents acceptable trade-offs with justification)
+  2. The full test suite passes with zero new failures compared to the v2.2 baseline
+**Plans**: TBD
+
 ## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 62 -> 63 -> 64
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -87,6 +132,9 @@
 | 59. Hardcoded Sequences (9-16 bit) | v2.2 | 4/4 | Complete | 2026-02-06 |
 | 60. C Hot Path Migration | v2.2 | 4/4 | Complete | 2026-02-06 |
 | 61. Memory Optimization | v2.2 | 3/3 | Complete | 2026-02-08 |
+| 62. Measurement | v2.3 | 0/TBD | Not started | - |
+| 63. Right-Sizing Implementation | v2.3 | 0/TBD | Not started | - |
+| 64. Regression Verification | v2.3 | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-02-02*
@@ -95,3 +143,4 @@
 *Milestone v2.0 shipped: 2026-02-04*
 *Milestone v2.1 shipped: 2026-02-05*
 *Milestone v2.2 shipped: 2026-02-08*
+*Milestone v2.3 roadmap added: 2026-02-08*
