@@ -14,6 +14,12 @@ Generated files contain four addition variants per width:
   - CQ_add:  Classical-quantum addition template (init function with placeholder angles)
   - cCQ_add: Controlled classical-quantum addition template (init function with placeholder angles)
 
+Shared QFT/IQFT factoring (Phase 63):
+  - QQ_add and cQQ_add share static const SHARED_QFT/SHARED_IQFT layer arrays per width
+  - CQ_add and cCQ_add share init_shared_qft_layers_N / init_shared_iqft_layers_N helpers
+  - Optimization is applied independently to QFT, middle, and IQFT segments
+    to prevent cross-boundary layer merging (enabling clean sharing)
+
 Usage:
   python scripts/generate_seq_all.py                     # Generate all 16 per-width files + dispatch
   python scripts/generate_seq_all.py --width 5           # Generate only add_seq_5.c
@@ -301,7 +307,7 @@ def generate_c_sequence(name: str, layers: list[list[Gate]], width: int) -> str:
 
 
 # ============================================================================
-# CQ_add template-init generation (NEW)
+# Shared QFT/IQFT layer generation
 # ============================================================================
 
 
@@ -353,6 +359,187 @@ def _generate_iqft_layers(bits: int) -> list[list[Gate]]:
     return layers
 
 
+# ============================================================================
+# Shared QFT/IQFT static const generation (Part A: QQ_add and cQQ_add sharing)
+# ============================================================================
+
+
+def generate_shared_qft_c(width: int) -> tuple[str, list[list[Gate]]]:
+    """Generate shared static const QFT layer arrays for a given width.
+
+    Returns (c_code, optimized_layers) so layers can be referenced in composite arrays.
+    """
+    raw_layers = _generate_qft_layers(width)
+    opt_layers = optimize_layers(raw_layers)
+    c_code = _generate_layer_arrays_only("SHARED_QFT", opt_layers, width)
+    return c_code, opt_layers
+
+
+def generate_shared_iqft_c(width: int) -> tuple[str, list[list[Gate]]]:
+    """Generate shared static const IQFT layer arrays for a given width.
+
+    Returns (c_code, optimized_layers) so layers can be referenced in composite arrays.
+    """
+    raw_layers = _generate_iqft_layers(width)
+    opt_layers = optimize_layers(raw_layers)
+    c_code = _generate_layer_arrays_only("SHARED_IQFT", opt_layers, width)
+    return c_code, opt_layers
+
+
+def _generate_layer_arrays_only(name: str, layers: list[list[Gate]], width: int) -> str:
+    """Generate ONLY the static const gate_t arrays (no LAYERS/GPL/struct)."""
+    lines = []
+    for i, layer in enumerate(layers):
+        gates_str = ",\n                                     ".join(g.to_c() for g in layer)
+        lines.append(f"static const gate_t {name}_{width}_L{i}[] = {{{gates_str}}};")
+        lines.append("")
+    return "\n".join(lines)
+
+
+# ============================================================================
+# QQ_add and cQQ_add middle layer extraction
+# ============================================================================
+
+
+def generate_qq_add_middle(bits: int) -> tuple[str, list[list[Gate]]]:
+    """Generate QQ_add middle layers (addition phase rotations only, no QFT/IQFT).
+
+    Returns (c_code, optimized_layers).
+    """
+    layers = []
+    rounds = 0
+    for bit in range(bits - 1, -1, -1):
+        for i in range(bits - rounds):
+            target = rounds + i
+            control = bits + (bits - 1 - bit)
+            value = 2 * math.pi / (2 ** (i + 1))
+            layers.append([Gate("P", target, control, value)])
+        rounds += 1
+
+    opt_layers = optimize_layers(layers)
+    c_code = _generate_layer_arrays_only("QQ_ADD_MID", opt_layers, bits)
+    return c_code, opt_layers
+
+
+def generate_cqq_add_middle(bits: int) -> tuple[str, list[list[Gate]]]:
+    """Generate cQQ_add middle layers (Block 1 + Block 2 + Block 3, no QFT/IQFT).
+
+    Returns (c_code, optimized_layers).
+    """
+    layers = []
+    control = 2 * bits
+
+    # Block 1: unconditional half-rotations on Fourier qubits
+    for bit in range(bits - 1, -1, -1):
+        target_q = bits - 1 - bit
+        value = 0
+        for i in range(bits - bit):
+            value += 2 * math.pi / (2 ** (i + 1)) / 2
+        layers.append([Gate("P", target_q, control, value)])
+
+    # Block 2: CNOT + negative half-rotations + CNOT
+    rounds = 0
+    for bit in range(bits - 1, -1, -1):
+        layers.append([Gate("X", bits + bit, control, 1)])
+        for i in range(bits - rounds):
+            value = 2 * math.pi / (2 ** (i + 1)) / 2
+            target_q = rounds + i
+            layers.append([Gate("P", target_q, bits + bit, -value)])
+        layers.append([Gate("X", bits + bit, control, 1)])
+        rounds += 1
+
+    # Block 3: controlled rotations from b register
+    rounds = 0
+    for bit in range(bits - 1, -1, -1):
+        parallel_gates = []
+        for i in range(bits - rounds):
+            value = 2 * math.pi / (2 ** (i + 1)) / 2
+            target_q = rounds + i
+            parallel_gates.append(Gate("P", target_q, bits + bit, value))
+        layers.append(parallel_gates)
+        rounds += 1
+
+    opt_layers = optimize_layers(layers)
+    c_code = _generate_layer_arrays_only("cQQ_ADD_MID", opt_layers, bits)
+    return c_code, opt_layers
+
+
+# ============================================================================
+# Composite LAYERS array generation (referencing shared + unique layers)
+# ============================================================================
+
+
+def generate_composite_layers_array(
+    name: str,
+    shared_qft_layers: list[list[Gate]],
+    middle_layers: list[list[Gate]],
+    shared_iqft_layers: list[list[Gate]],
+    middle_name: str,
+    width: int,
+) -> str:
+    """Generate composite LAYERS array, GPL array, and sequence_t struct.
+
+    The LAYERS array references shared QFT layer names, unique middle layer names,
+    and shared IQFT layer names.
+    """
+    lines = []
+
+    n_qft = len(shared_qft_layers)
+    n_mid = len(middle_layers)
+    n_iqft = len(shared_iqft_layers)
+    total = n_qft + n_mid + n_iqft
+
+    # Build layer name list
+    layer_names = []
+    for i in range(n_qft):
+        layer_names.append(f"SHARED_QFT_{width}_L{i}")
+    for i in range(n_mid):
+        layer_names.append(f"{middle_name}_{width}_L{i}")
+    for i in range(n_iqft):
+        layer_names.append(f"SHARED_IQFT_{width}_L{i}")
+
+    # Generate LAYERS array
+    if total > 6:
+        chunks = [layer_names[i : i + 6] for i in range(0, len(layer_names), 6)]
+        chunk_lines = []
+        for chunk in chunks:
+            chunk_lines.append(f"    {', '.join(chunk)}")
+        layers_str = ",\n".join(chunk_lines)
+        lines.append(f"static const gate_t *{name}_{width}_LAYERS[] = {{\n{layers_str}}};")
+    else:
+        lines.append(
+            f"static const gate_t *{name}_{width}_LAYERS[] = {{{', '.join(layer_names)}}};"
+        )
+
+    # Generate GPL array (gates per layer)
+    all_layers = list(shared_qft_layers) + list(middle_layers) + list(shared_iqft_layers)
+    gpl = [len(layer) for layer in all_layers]
+    gpl_str = ", ".join(str(g) for g in gpl)
+    if len(gpl) > 20:
+        gpl_chunks = [gpl[i : i + 20] for i in range(0, len(gpl), 20)]
+        gpl_lines = [", ".join(str(g) for g in chunk) for chunk in gpl_chunks]
+        gpl_str = ",\n                                      ".join(gpl_lines)
+    lines.append(f"static const num_t {name}_{width}_GPL[] = {{{gpl_str}}};")
+    lines.append("")
+
+    # Generate sequence struct
+    lines.append(
+        f"static const sequence_t HARDCODED_{name}_{width} = {{.seq = (gate_t **){name}_{width}_LAYERS,"
+    )
+    lines.append(f"                                              .num_layer = {total},")
+    lines.append(f"                                              .used_layer = {total},")
+    lines.append(
+        f"                                              .gates_per_layer = (num_t *){name}_{width}_GPL}};"
+    )
+
+    return "\n".join(lines)
+
+
+# ============================================================================
+# CQ_add template-init generation
+# ============================================================================
+
+
 def generate_cq_add_template_layers(bits: int) -> list[list[Gate]]:
     """Return the gate structure for CQ_add template matching C QFT layout.
 
@@ -401,17 +588,73 @@ def _generate_gate_literal(gate: Gate, is_rotation_placeholder: bool = False) ->
             )
 
 
+# ============================================================================
+# Shared QFT/IQFT init helpers (Part B: CQ_add and cCQ_add sharing)
+# ============================================================================
+
+
+def generate_shared_qft_init_helper(bits: int) -> str:
+    """Generate C helper function init_shared_qft_layers_N() for template-init sharing.
+
+    This function initializes QFT layers in a pre-allocated sequence_t starting at
+    a given layer offset. Used by both CQ_add and cCQ_add init functions.
+    """
+    qft_layers = _generate_qft_layers(bits)
+    n = bits
+
+    lines = []
+    lines.append(f"static void init_shared_qft_layers_{n}(sequence_t *seq, int start_layer) {{")
+
+    for i, layer in enumerate(qft_layers):
+        num_gates = len(layer)
+        lines.append(f"    // QFT Layer {i}")
+        lines.append(f"    seq->gates_per_layer[start_layer + {i}] = {num_gates};")
+        lines.append(f"    seq->seq[start_layer + {i}] = calloc({num_gates}, sizeof(gate_t));")
+        for j, gate in enumerate(layer):
+            literal = _generate_gate_literal(gate, is_rotation_placeholder=False)
+            lines.append(f"    seq->seq[start_layer + {i}][{j}] = {literal};")
+
+    lines.append("}")
+
+    return "\n".join(lines)
+
+
+def generate_shared_iqft_init_helper(bits: int) -> str:
+    """Generate C helper function init_shared_iqft_layers_N() for template-init sharing.
+
+    This function initializes IQFT layers in a pre-allocated sequence_t starting at
+    a given layer offset. Used by both CQ_add and cCQ_add init functions.
+    """
+    iqft_layers = _generate_iqft_layers(bits)
+    n = bits
+
+    lines = []
+    lines.append(f"static void init_shared_iqft_layers_{n}(sequence_t *seq, int start_layer) {{")
+
+    for i, layer in enumerate(iqft_layers):
+        num_gates = len(layer)
+        lines.append(f"    // IQFT Layer {i}")
+        lines.append(f"    seq->gates_per_layer[start_layer + {i}] = {num_gates};")
+        lines.append(f"    seq->seq[start_layer + {i}] = calloc({num_gates}, sizeof(gate_t));")
+        for j, gate in enumerate(layer):
+            literal = _generate_gate_literal(gate, is_rotation_placeholder=False)
+            lines.append(f"    seq->seq[start_layer + {i}][{j}] = {literal};")
+
+    lines.append("}")
+
+    return "\n".join(lines)
+
+
 def generate_cq_add_template_c(bits: int) -> str:
     """Generate C function init_hardcoded_CQ_add_N() for template-init pattern.
 
-    The template pre-allocates the full sequence structure. QFT and IQFT gates have
-    fixed angles. Rotation layers get GateValue = 0 (placeholder -- caller injects angles).
+    Uses shared QFT/IQFT init helpers. Only rotation layers are emitted inline.
     """
     layers = generate_cq_add_template_layers(bits)
     n = bits
     total_layers = len(layers)
-    qft_layers = 2 * bits - 1  # Number of QFT layers
-    rotation_start = qft_layers
+    qft_layer_count = 2 * bits - 1
+    rotation_start = qft_layer_count
     rotation_end = rotation_start + bits
 
     lines = []
@@ -429,16 +672,29 @@ def generate_cq_add_template_c(bits: int) -> str:
     lines.append("    if (seq->gates_per_layer == NULL || seq->seq == NULL) {")
     lines.append("        free(seq->gates_per_layer); free(seq->seq); free(seq); return NULL;")
     lines.append("    }")
+    lines.append("")
 
-    for i, layer in enumerate(layers):
+    # QFT layers via shared helper
+    lines.append("    // QFT layers (shared helper)")
+    lines.append(f"    init_shared_qft_layers_{n}(seq, 0);")
+    lines.append("")
+
+    # Rotation layers (inline -- these are the unique middle part)
+    for i in range(rotation_start, rotation_end):
+        layer = layers[i]
         num_gates = len(layer)
-        lines.append(f"    // Layer {i}")
+        lines.append(f"    // Rotation Layer {i}")
         lines.append(f"    seq->gates_per_layer[{i}] = {num_gates};")
         lines.append(f"    seq->seq[{i}] = calloc({num_gates}, sizeof(gate_t));")
-        is_rotation = rotation_start <= i < rotation_end
         for j, gate in enumerate(layer):
-            literal = _generate_gate_literal(gate, is_rotation_placeholder=is_rotation)
+            literal = _generate_gate_literal(gate, is_rotation_placeholder=True)
             lines.append(f"    seq->seq[{i}][{j}] = {literal};")
+
+    lines.append("")
+    # IQFT layers via shared helper
+    lines.append("    // IQFT layers (shared helper)")
+    lines.append(f"    init_shared_iqft_layers_{n}(seq, {rotation_end});")
+    lines.append("")
 
     lines.append(f"    cached_CQ_add_{n} = seq;")
     lines.append("    return seq;")
@@ -448,7 +704,7 @@ def generate_cq_add_template_c(bits: int) -> str:
 
 
 # ============================================================================
-# cCQ_add template-init generation (NEW)
+# cCQ_add template-init generation
 # ============================================================================
 
 
@@ -479,14 +735,13 @@ def generate_ccq_add_template_layers(bits: int) -> list[list[Gate]]:
 def generate_ccq_add_template_c(bits: int) -> str:
     """Generate C function init_hardcoded_cCQ_add_N() for template-init pattern.
 
-    Same pattern as CQ_add but rotation gates are CP (controlled phase) with
-    .NumControls = 1, .Control = {bits}.
+    Uses shared QFT/IQFT init helpers. Only rotation layers are emitted inline.
     """
     layers = generate_ccq_add_template_layers(bits)
     n = bits
     total_layers = len(layers)
-    qft_layers = 2 * bits - 1
-    rotation_start = qft_layers
+    qft_layer_count = 2 * bits - 1
+    rotation_start = qft_layer_count
     rotation_end = rotation_start + bits
 
     lines = []
@@ -504,16 +759,29 @@ def generate_ccq_add_template_c(bits: int) -> str:
     lines.append("    if (seq->gates_per_layer == NULL || seq->seq == NULL) {")
     lines.append("        free(seq->gates_per_layer); free(seq->seq); free(seq); return NULL;")
     lines.append("    }")
+    lines.append("")
 
-    for i, layer in enumerate(layers):
+    # QFT layers via shared helper
+    lines.append("    // QFT layers (shared helper)")
+    lines.append(f"    init_shared_qft_layers_{n}(seq, 0);")
+    lines.append("")
+
+    # Rotation layers (inline -- these are the unique middle part)
+    for i in range(rotation_start, rotation_end):
+        layer = layers[i]
         num_gates = len(layer)
-        lines.append(f"    // Layer {i}")
+        lines.append(f"    // Rotation Layer {i}")
         lines.append(f"    seq->gates_per_layer[{i}] = {num_gates};")
         lines.append(f"    seq->seq[{i}] = calloc({num_gates}, sizeof(gate_t));")
-        is_rotation = rotation_start <= i < rotation_end
         for j, gate in enumerate(layer):
-            literal = _generate_gate_literal(gate, is_rotation_placeholder=is_rotation)
+            literal = _generate_gate_literal(gate, is_rotation_placeholder=True)
             lines.append(f"    seq->seq[{i}][{j}] = {literal};")
+
+    lines.append("")
+    # IQFT layers via shared helper
+    lines.append("    // IQFT layers (shared helper)")
+    lines.append(f"    init_shared_iqft_layers_{n}(seq, {rotation_end});")
+    lines.append("")
 
     lines.append(f"    cached_cCQ_add_{n} = seq;")
     lines.append("    return seq;")
@@ -523,7 +791,7 @@ def generate_ccq_add_template_c(bits: int) -> str:
 
 
 # ============================================================================
-# Per-width file generation
+# Per-width file generation (refactored with shared QFT/IQFT)
 # ============================================================================
 
 
@@ -538,6 +806,8 @@ def generate_width_file(width: int) -> str:
     output.append("// Generated by scripts/generate_seq_all.py - DO NOT EDIT MANUALLY")
     output.append("//")
     output.append("// Contains: QQ_add, cQQ_add (static const), CQ_add, cCQ_add (template-init)")
+    output.append("// Shared QFT/IQFT: static const arrays shared between QQ_add and cQQ_add,")
+    output.append("//                  init helpers shared between CQ_add and cCQ_add")
     output.append("//")
     output.append("")
     output.append('#include "sequences.h"')
@@ -553,33 +823,76 @@ def generate_width_file(width: int) -> str:
     output.append("#endif")
     output.append("")
 
-    # QQ_ADD section
-    qq_layers = generate_qq_add(width)
-    qq_layers = optimize_layers(qq_layers)
+    # Shared QFT/IQFT static const arrays
+    qft_c, shared_qft_layers = generate_shared_qft_c(width)
+    iqft_c, shared_iqft_layers = generate_shared_iqft_c(width)
+
     output.append("// ============================================================================")
-    output.append(f"// QQ_ADD WIDTH {width} ({len(qq_layers)} layers)")
+    output.append(f"// SHARED QFT LAYERS WIDTH {width} ({len(shared_qft_layers)} layers)")
+    output.append("// Used by QQ_ADD and cQQ_ADD composite LAYERS arrays")
+    output.append("// ============================================================================")
+    output.append("")
+    output.append(qft_c)
+    output.append("")
+
+    output.append("// ============================================================================")
+    output.append(f"// SHARED IQFT LAYERS WIDTH {width} ({len(shared_iqft_layers)} layers)")
+    output.append("// Used by QQ_ADD and cQQ_ADD composite LAYERS arrays")
+    output.append("// ============================================================================")
+    output.append("")
+    output.append(iqft_c)
+    output.append("")
+
+    # QQ_ADD section (middle layers + composite array)
+    qq_mid_c, qq_mid_layers = generate_qq_add_middle(width)
+    total_qq = len(shared_qft_layers) + len(qq_mid_layers) + len(shared_iqft_layers)
+    output.append("// ============================================================================")
+    output.append(f"// QQ_ADD WIDTH {width} ({total_qq} layers)")
     output.append(f"// Qubit layout: [0,{width - 1}] = target, [{width},{2 * width - 1}] = control")
     output.append("// ============================================================================")
     output.append("")
-    output.append(generate_c_sequence("QQ_ADD", qq_layers, width))
+    output.append(qq_mid_c)
+    output.append("")
+    output.append(
+        generate_composite_layers_array(
+            "QQ_ADD", shared_qft_layers, qq_mid_layers, shared_iqft_layers, "QQ_ADD_MID", width
+        )
+    )
     output.append("")
 
-    # cQQ_ADD section
-    cqq_layers = generate_cqq_add(width)
-    cqq_layers = optimize_layers(cqq_layers)
+    # cQQ_ADD section (middle layers + composite array)
+    cqq_mid_c, cqq_mid_layers = generate_cqq_add_middle(width)
+    total_cqq = len(shared_qft_layers) + len(cqq_mid_layers) + len(shared_iqft_layers)
     control_qubit = 2 * width
     output.append("// ============================================================================")
-    output.append(f"// cQQ_ADD WIDTH {width} ({len(cqq_layers)} layers)")
+    output.append(f"// cQQ_ADD WIDTH {width} ({total_cqq} layers)")
     output.append(
         f"// Qubit layout: [0,{width - 1}] = target, [{width},{2 * width - 1}] = b, "
         f"[{control_qubit}] = control"
     )
     output.append("// ============================================================================")
     output.append("")
-    output.append(generate_c_sequence("cQQ_ADD", cqq_layers, width))
+    output.append(cqq_mid_c)
+    output.append("")
+    output.append(
+        generate_composite_layers_array(
+            "cQQ_ADD", shared_qft_layers, cqq_mid_layers, shared_iqft_layers, "cQQ_ADD_MID", width
+        )
+    )
     output.append("")
 
-    # CQ_ADD template-init section
+    # Shared QFT/IQFT init helpers (for CQ_add and cCQ_add)
+    output.append("// ============================================================================")
+    output.append(f"// SHARED QFT/IQFT INIT HELPERS WIDTH {width}")
+    output.append("// Used by CQ_ADD and cCQ_ADD template-init functions")
+    output.append("// ============================================================================")
+    output.append("")
+    output.append(generate_shared_qft_init_helper(width))
+    output.append("")
+    output.append(generate_shared_iqft_init_helper(width))
+    output.append("")
+
+    # CQ_ADD template-init section (uses shared helpers)
     cq_layers = generate_cq_add_template_layers(width)
     output.append("// ============================================================================")
     output.append(f"// CQ_ADD WIDTH {width} (template-init, {len(cq_layers)} layers)")
@@ -589,7 +902,7 @@ def generate_width_file(width: int) -> str:
     output.append(generate_cq_add_template_c(width))
     output.append("")
 
-    # cCQ_ADD template-init section
+    # cCQ_ADD template-init section (uses shared helpers)
     ccq_layers = generate_ccq_add_template_layers(width)
     output.append("// ============================================================================")
     output.append(f"// cCQ_ADD WIDTH {width} (template-init, {len(ccq_layers)} layers)")
@@ -745,22 +1058,35 @@ def generate_dispatch_file(max_width: int = 16) -> str:
 
 
 def validate(max_width: int = 8) -> bool:
-    """Cross-validate script output against expected layer counts for widths 1-8."""
+    """Cross-validate script output against expected layer counts for widths 1-8.
 
-    # Expected layer counts from existing generated C files (verified reference)
-    expected_qq = {1: 3, 2: 8, 3: 14, 4: 23, 5: 35, 6: 50, 7: 68, 8: 89}
-    expected_cqq = {1: 7, 2: 15, 3: 26, 4: 40, 5: 57, 6: 77, 7: 100, 8: 126}
+    NOTE: With segmented optimization (QFT/middle/IQFT optimized independently),
+    layer counts differ from the old full-sequence optimization. The expected counts
+    below reflect the new segmented approach.
+    """
+
+    # Expected layer counts with SEGMENTED optimization (QFT + middle + IQFT independently)
+    # Uses _generate_qft_layers (packed) for shared QFT/IQFT, separate middle extraction
+    expected_qq = {1: 3, 2: 9, 3: 15, 4: 22, 5: 30, 6: 39, 7: 49, 8: 60}
+    expected_cqq = {1: 7, 2: 16, 3: 27, 4: 39, 5: 52, 6: 66, 7: 81, 8: 97}
 
     all_ok = True
 
     print("=" * 60)
-    print("QQ_add layer count validation (widths 1-8)")
+    print("QQ_add layer count validation (widths 1-8, segmented optimization)")
     print("=" * 60)
     for w in range(1, max_width + 1):
-        layers = optimize_layers(generate_qq_add(w))
-        actual = len(layers)
+        # Segmented optimization: optimize QFT, middle, IQFT separately
+        _, qft_layers = generate_shared_qft_c(w)
+        _, mid_layers = generate_qq_add_middle(w)
+        _, iqft_layers = generate_shared_iqft_c(w)
+        actual = len(qft_layers) + len(mid_layers) + len(iqft_layers)
+        gate_count = (
+            sum(len(layer) for layer in qft_layers)
+            + sum(len(layer) for layer in mid_layers)
+            + sum(len(layer) for layer in iqft_layers)
+        )
         expected = expected_qq[w]
-        gate_count = sum(len(layer) for layer in layers)
         status = "OK" if actual == expected else "MISMATCH"
         if actual != expected:
             all_ok = False
@@ -770,13 +1096,19 @@ def validate(max_width: int = 8) -> bool:
 
     print()
     print("=" * 60)
-    print("cQQ_add layer count validation (widths 1-8)")
+    print("cQQ_add layer count validation (widths 1-8, segmented optimization)")
     print("=" * 60)
     for w in range(1, max_width + 1):
-        layers = optimize_layers(generate_cqq_add(w))
-        actual = len(layers)
+        _, qft_layers = generate_shared_qft_c(w)
+        _, mid_layers = generate_cqq_add_middle(w)
+        _, iqft_layers = generate_shared_iqft_c(w)
+        actual = len(qft_layers) + len(mid_layers) + len(iqft_layers)
+        gate_count = (
+            sum(len(layer) for layer in qft_layers)
+            + sum(len(layer) for layer in mid_layers)
+            + sum(len(layer) for layer in iqft_layers)
+        )
         expected = expected_cqq[w]
-        gate_count = sum(len(layer) for layer in layers)
         status = "OK" if actual == expected else "MISMATCH"
         if actual != expected:
             all_ok = False
@@ -839,6 +1171,50 @@ def validate(max_width: int = 8) -> bool:
                             break
         if block2_ok:
             print(f"  width {w}: OK - Block 2 uses b-register qubit as control")
+
+    # Verify gate-level equivalence: segmented optimization produces same gates as full optimization
+    print()
+    print("=" * 60)
+    print("Gate equivalence: segmented vs full optimization (widths 1-8)")
+    print("=" * 60)
+    for w in range(1, max_width + 1):
+        # Full optimization (old approach)
+        old_qq_layers = optimize_layers(generate_qq_add(w))
+        old_qq_gates = set()
+        for layer in old_qq_layers:
+            for g in layer:
+                old_qq_gates.add((g.gate_type, g.target, g.control, round(g.value, 10)))
+
+        # Segmented optimization (new approach)
+        _, qft = generate_shared_qft_c(w)
+        _, mid = generate_qq_add_middle(w)
+        _, iqft = generate_shared_iqft_c(w)
+        new_qq_gates = set()
+        for layer in qft + mid + iqft:
+            for g in layer:
+                new_qq_gates.add((g.gate_type, g.target, g.control, round(g.value, 10)))
+
+        qq_ok = old_qq_gates == new_qq_gates
+
+        # Same for cQQ
+        old_cqq_layers = optimize_layers(generate_cqq_add(w))
+        old_cqq_gates = set()
+        for layer in old_cqq_layers:
+            for g in layer:
+                old_cqq_gates.add((g.gate_type, g.target, g.control, round(g.value, 10)))
+
+        _, cmid = generate_cqq_add_middle(w)
+        new_cqq_gates = set()
+        for layer in qft + cmid + iqft:
+            for g in layer:
+                new_cqq_gates.add((g.gate_type, g.target, g.control, round(g.value, 10)))
+
+        cqq_ok = old_cqq_gates == new_cqq_gates
+
+        status = "OK" if (qq_ok and cqq_ok) else "MISMATCH"
+        if not qq_ok or not cqq_ok:
+            all_ok = False
+        print(f"  width {w:2d}: QQ={qq_ok} cQQ={cqq_ok}  [{status}]")
 
     print()
     if all_ok:
