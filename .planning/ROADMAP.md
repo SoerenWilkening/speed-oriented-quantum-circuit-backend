@@ -202,9 +202,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 61-01-PLAN.md — Profile memory allocation patterns with memray at 3 widths
-- [ ] 61-02-PLAN.md — Fix memory leaks and eliminate per-gate malloc overhead
-- [ ] 61-03-PLAN.md — Final profiling comparison and phase-level benchmarks
+- [x] 61-01-PLAN.md — Profile memory allocation patterns with memray at 3 widths
+- [x] 61-02-PLAN.md — Fix memory leaks and eliminate per-gate malloc overhead
+- [x] 61-03-PLAN.md — Final profiling comparison and phase-level benchmarks
 
 **Success Criteria:**
 1. Memory profiling shows malloc patterns in gate creation paths
@@ -240,7 +240,7 @@ Plans:
 | 58. Hardcoded Sequences (1-8 bit) | v2.2 | 3/3 | Complete | 2026-02-05 |
 | 59. Hardcoded Sequences (9-16 bit) | v2.2 | 4/4 | Complete | 2026-02-06 |
 | 60. C Hot Path Migration | v2.2 | 4/4 | Complete | 2026-02-06 |
-| 61. Memory Optimization | v2.2 | 0/3 | Pending | - |
+| 61. Memory Optimization | v2.2 | 3/3 | Complete | 2026-02-08 |
 
 ---
 *Roadmap created: 2026-02-02*
