@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-05)
 ## Current Position
 
 Phase: 61 - Memory Optimization
-Plan: 1/3 complete
+Plan: 2/3 complete
 Status: In progress
-Last activity: 2026-02-08 — Completed 61-01-PLAN.md (memory profiling baseline)
+Last activity: 2026-02-08 — Completed 61-02-PLAN.md (fix memory leaks and eliminate per-gate malloc)
 
-Progress: [███░░░░░░░] 33% (v2.2: 61: 1/3 plans)
+Progress: [██████░░░░] 67% (v2.2: 61: 2/3 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 175 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 19)
+- Total plans completed: 176 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 20)
 - Average duration: ~13 min/plan
-- Total execution time: ~24.5 hours
+- Total execution time: ~25.4 hours
 
 **By Milestone:**
 
@@ -106,6 +106,9 @@ Recent decisions (v2.2):
 - MEM-01: 32-bit multiplication segfaults in C backend (buffer overflow), profiling capped at 24-bit
 - MEM-02: 32-bit memray profiling requires inline script (-c) due to argparse/memray interaction crash
 - MEM-03: Top optimization target is run_instruction() per-gate malloc (leaked, ~40 bytes per gate)
+- MEM-04: Stack-allocated gate_t is safe because add_gate() copies via memcpy before pointer goes out of scope
+- MEM-05: For n-controlled gates (NumControls > 2), large_control still needs malloc for remapped array, freed after add_gate
+- MEM-06: colliding_gates() changed from returning malloc'd array to accepting caller-provided gate_t*[3]
 
 ### Phase 60 Complete
 
@@ -398,12 +401,25 @@ All success criteria met:
 
 **No deviations** (except auto-fixed missing LogicOperations.c in Makefile).
 
+### Phase 61 Plan 02 Complete
+
+**Outcome:** Memory leak in run_instruction()/reverse_circuit_range() eliminated via stack allocation. Per-gate malloc in colliding_gates() eliminated via caller-provided array.
+
+**Memory improvement (8-bit, 200 iterations each add/mul/xor):**
+| Metric | Baseline | Post-Fix | Change |
+|--------|----------|----------|--------|
+| Total allocations | 633,855 | 139,702 | -78.0% |
+| Total memory allocated | 323.5 MB | 197.6 MB | -38.9% |
+| Peak memory usage | 86.1 MB | 75.5 MB | -12.3% |
+
+**Files modified:** c_backend/src/execution.c, c_backend/src/optimizer.c, c_backend/include/optimizer.h
+
 ## Session Continuity
 
 Last session: 2026-02-08
-Stopped at: Completed 61-01-PLAN.md (memory profiling baseline)
-Resume file: .planning/phases/61-memory-optimization/61-02-PLAN.md
-Resume action: Execute Plan 02 (fix memory leaks in run_instruction/reverse_circuit_range)
+Stopped at: Completed 61-02-PLAN.md (fix memory leaks and eliminate per-gate malloc)
+Resume file: .planning/phases/61-memory-optimization/61-03-PLAN.md
+Resume action: Execute Plan 03 (arena allocator or further optimization, conditional)
 
 ---
-*State updated: 2026-02-08 — Completed 61-01-PLAN.md (memory profiling baseline)*
+*State updated: 2026-02-08 — Completed 61-02-PLAN.md (fix memory leaks and eliminate per-gate malloc)*
