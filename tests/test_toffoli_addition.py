@@ -576,6 +576,305 @@ class TestToffoliGateTypeVerification:
         _ = (a, b, c)
 
 
+def _verify_controlled_inplace(circuit_builder, width):
+    """Verify a controlled in-place Toffoli addition/subtraction circuit.
+
+    For controlled in-place operations (a += b or a += val inside `with ctrl:`),
+    the result register (self/a) is always at physical qubits [0..width-1].
+    Ancilla qubits (carry, temp, control) are at higher indices.
+
+    Args:
+        circuit_builder: Callable that builds circuit and returns expected value
+        width: Bit width of result register
+
+    Returns:
+        Tuple (actual, expected)
+    """
+    gc.collect()
+    ql.circuit()
+
+    result = circuit_builder()
+    if isinstance(result, tuple):
+        expected, _keepalive = result
+    else:
+        expected = result
+        _keepalive = None
+
+    qasm_str = ql.to_openqasm()
+
+    # Get actual qubit count from the QASM qubit declaration
+    num_qubits = None
+    for line in qasm_str.split("\n"):
+        line = line.strip()
+        if line.startswith("qubit["):
+            num_qubits = int(line.split("[")[1].split("]")[0])
+            break
+
+    if num_qubits is None:
+        raise Exception(f"Could not find qubit count in QASM:\n{qasm_str}")
+
+    # Result register (self) starts at qubit 0
+    result_start = 0
+
+    _keepalive = None
+
+    try:
+        actual = _simulate_and_extract(qasm_str, num_qubits, result_start, width)
+        return (actual, expected)
+    except Exception as e:
+        raise Exception(f"Simulation failed: {e}\n\nQASM:\n{qasm_str}") from e
+
+
+class TestControlledToffoliQQAddition:
+    """Phase 67: Controlled QQ Toffoli addition verification.
+
+    Tests controlled in-place QQ addition (a += b inside `with ctrl:`) using
+    the Toffoli CDKM path. Verifies that:
+    - control=|1> performs addition correctly
+    - control=|0> is a no-op
+    - Controlled subtraction works
+    - Only X-type gates (CCX/CX/X) are used
+    """
+
+    @pytest.mark.parametrize("width", [1, 2, 3, 4])
+    def test_cqq_toffoli_add_control_active(self, width):
+        """Controlled QQ Toffoli addition with control=|1>."""
+        failures = []
+
+        for a in range(1 << width):
+            for b in range(1 << width):
+
+                def circuit_builder(a=a, b=b, w=width):
+                    _enable_toffoli()
+                    qa = ql.qint(a, width=w)
+                    qb = ql.qint(b, width=w)
+                    ctrl = ql.qint(1, width=1)
+                    with ctrl:
+                        qa += qb
+                    return ((a + b) % (1 << w), [qa, qb, ctrl])
+
+                actual, expected = _verify_controlled_inplace(circuit_builder, width)
+                if actual != expected:
+                    failures.append(
+                        format_failure_message(
+                            "toffoli_cqq_add_ctrl1", [a, b], width, expected, actual
+                        )
+                    )
+
+        assert not failures, f"{len(failures)} failures at width {width}:\n" + "\n".join(
+            failures[:10]
+        )
+
+    @pytest.mark.parametrize("width", [1, 2, 3, 4])
+    def test_cqq_toffoli_add_control_inactive(self, width):
+        """Controlled QQ Toffoli addition with control=|0> (no-op)."""
+        failures = []
+
+        for a in range(1 << width):
+            for b in range(1 << width):
+
+                def circuit_builder(a=a, b=b, w=width):
+                    _enable_toffoli()
+                    qa = ql.qint(a, width=w)
+                    qb = ql.qint(b, width=w)
+                    ctrl = ql.qint(0, width=1)
+                    with ctrl:
+                        qa += qb
+                    return (a, [qa, qb, ctrl])
+
+                actual, expected = _verify_controlled_inplace(circuit_builder, width)
+                if actual != expected:
+                    failures.append(
+                        format_failure_message(
+                            "toffoli_cqq_add_ctrl0", [a, b], width, expected, actual
+                        )
+                    )
+
+        assert not failures, f"{len(failures)} failures at width {width}:\n" + "\n".join(
+            failures[:10]
+        )
+
+    @pytest.mark.parametrize("width", [1, 2, 3])
+    def test_cqq_toffoli_sub_control_active(self, width):
+        """Controlled QQ Toffoli subtraction with control=|1>."""
+        failures = []
+
+        for a in range(1 << width):
+            for b in range(1 << width):
+
+                def circuit_builder(a=a, b=b, w=width):
+                    _enable_toffoli()
+                    qa = ql.qint(a, width=w)
+                    qb = ql.qint(b, width=w)
+                    ctrl = ql.qint(1, width=1)
+                    with ctrl:
+                        qa -= qb
+                    return ((a - b) % (1 << w), [qa, qb, ctrl])
+
+                actual, expected = _verify_controlled_inplace(circuit_builder, width)
+                if actual != expected:
+                    failures.append(
+                        format_failure_message(
+                            "toffoli_cqq_sub_ctrl1", [a, b], width, expected, actual
+                        )
+                    )
+
+        assert not failures, f"{len(failures)} failures at width {width}:\n" + "\n".join(
+            failures[:10]
+        )
+
+    @pytest.mark.parametrize("width", [2, 3, 4])
+    def test_cqq_toffoli_gate_purity(self, width):
+        """Controlled QQ Toffoli addition uses only X-type gates (CCX/CX/X)."""
+        gc.collect()
+        ql.circuit()
+        _enable_toffoli()
+
+        qa = ql.qint(1, width=width)
+        qb = ql.qint(2, width=width)
+        ctrl = ql.qint(1, width=1)
+        with ctrl:
+            qa += qb
+
+        circ = ql.circuit.__new__(ql.circuit)
+        counts = circ.gate_counts
+
+        assert counts["H"] == 0, (
+            f"Found {counts['H']} H gates in controlled Toffoli QQ circuit (width={width})"
+        )
+        assert counts["P"] == 0, (
+            f"Found {counts['P']} P gates in controlled Toffoli QQ circuit (width={width})"
+        )
+
+        toffoli_gates = counts["X"] + counts["CNOT"] + counts["CCX"]
+        assert toffoli_gates > 0, f"No Toffoli gates found in controlled QQ circuit (width={width})"
+
+        _ = (qa, qb, ctrl)
+
+
+class TestControlledToffoliCQAddition:
+    """Phase 67: Controlled CQ Toffoli addition verification.
+
+    Tests controlled in-place CQ addition (a += val inside `with ctrl:`) using
+    the Toffoli CDKM path. Verifies that:
+    - control=|1> performs addition correctly
+    - control=|0> is a no-op
+    - Controlled subtraction works
+    - Only X-type gates (CCX/CX/X) are used
+    """
+
+    @pytest.mark.parametrize("width", [1, 2, 3, 4])
+    def test_ccq_toffoli_add_control_active(self, width):
+        """Controlled CQ Toffoli addition with control=|1>."""
+        failures = []
+
+        for a in range(1 << width):
+            for val in range(1 << width):
+
+                def circuit_builder(a=a, val=val, w=width):
+                    _enable_toffoli()
+                    qa = ql.qint(a, width=w)
+                    ctrl = ql.qint(1, width=1)
+                    with ctrl:
+                        qa += val
+                    return ((a + val) % (1 << w), [qa, ctrl])
+
+                actual, expected = _verify_controlled_inplace(circuit_builder, width)
+                if actual != expected:
+                    failures.append(
+                        format_failure_message(
+                            "toffoli_ccq_add_ctrl1", [a, val], width, expected, actual
+                        )
+                    )
+
+        assert not failures, f"{len(failures)} failures at width {width}:\n" + "\n".join(
+            failures[:10]
+        )
+
+    @pytest.mark.parametrize("width", [1, 2, 3, 4])
+    def test_ccq_toffoli_add_control_inactive(self, width):
+        """Controlled CQ Toffoli addition with control=|0> (no-op)."""
+        failures = []
+
+        for a in range(1 << width):
+            for val in range(1 << width):
+
+                def circuit_builder(a=a, val=val, w=width):
+                    _enable_toffoli()
+                    qa = ql.qint(a, width=w)
+                    ctrl = ql.qint(0, width=1)
+                    with ctrl:
+                        qa += val
+                    return (a, [qa, ctrl])
+
+                actual, expected = _verify_controlled_inplace(circuit_builder, width)
+                if actual != expected:
+                    failures.append(
+                        format_failure_message(
+                            "toffoli_ccq_add_ctrl0", [a, val], width, expected, actual
+                        )
+                    )
+
+        assert not failures, f"{len(failures)} failures at width {width}:\n" + "\n".join(
+            failures[:10]
+        )
+
+    @pytest.mark.parametrize("width", [1, 2, 3])
+    def test_ccq_toffoli_sub_control_active(self, width):
+        """Controlled CQ Toffoli subtraction with control=|1>."""
+        failures = []
+
+        for a in range(1 << width):
+            for val in range(1 << width):
+
+                def circuit_builder(a=a, val=val, w=width):
+                    _enable_toffoli()
+                    qa = ql.qint(a, width=w)
+                    ctrl = ql.qint(1, width=1)
+                    with ctrl:
+                        qa -= val
+                    return ((a - val) % (1 << w), [qa, ctrl])
+
+                actual, expected = _verify_controlled_inplace(circuit_builder, width)
+                if actual != expected:
+                    failures.append(
+                        format_failure_message(
+                            "toffoli_ccq_sub_ctrl1", [a, val], width, expected, actual
+                        )
+                    )
+
+        assert not failures, f"{len(failures)} failures at width {width}:\n" + "\n".join(
+            failures[:10]
+        )
+
+    @pytest.mark.parametrize("width", [2, 3, 4])
+    def test_ccq_toffoli_gate_purity(self, width):
+        """Controlled CQ Toffoli addition uses only X-type gates (CCX/CX/X)."""
+        gc.collect()
+        ql.circuit()
+        _enable_toffoli()
+
+        qa = ql.qint(1, width=width)
+        ctrl = ql.qint(1, width=1)
+        with ctrl:
+            qa += 3
+
+        circ = ql.circuit.__new__(ql.circuit)
+        counts = circ.gate_counts
+
+        assert counts["H"] == 0, (
+            f"Found {counts['H']} H gates in controlled Toffoli CQ circuit (width={width})"
+        )
+        assert counts["P"] == 0, (
+            f"Found {counts['P']} P gates in controlled Toffoli CQ circuit (width={width})"
+        )
+
+        toffoli_gates = counts["X"] + counts["CNOT"] + counts["CCX"]
+        assert toffoli_gates > 0, f"No Toffoli gates found in controlled CQ circuit (width={width})"
+
+        _ = (qa, ctrl)
+
+
 class TestToffoliFaultTolerantOption:
     """Test the fault_tolerant option itself (get/set/reset behavior)."""
 

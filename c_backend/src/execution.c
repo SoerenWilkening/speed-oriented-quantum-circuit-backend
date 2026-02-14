@@ -63,11 +63,9 @@ void run_instruction(sequence_t *res, const qubit_t qubit_array[], int invert, c
             }
 
             add_gate(circ, &g);
-            // Free remapped large_control if we allocated one
-            if (g.NumControls > 2 && g.large_control != NULL &&
-                g.large_control != res->seq[layer][gate].large_control) {
-                free(g.large_control);
-            }
+            // NOTE: Do NOT free g.large_control here. The circuit takes ownership
+            // of the allocated large_control via memcpy in append_gate (Phase 67).
+            // free_circuit handles cleanup of all large_control arrays.
         }
     }
 }
@@ -126,11 +124,9 @@ void reverse_circuit_range(circuit_t *circ, int start_layer, int end_layer) {
 
             // Append inverted gate to circuit
             add_gate(circ, &g);
-            // Free remapped large_control if we allocated one
-            if (g.NumControls > 2 && g.large_control != NULL &&
-                g.large_control != original_gate->large_control) {
-                free(g.large_control);
-            }
+            // NOTE: Do NOT free g.large_control here. The circuit takes ownership
+            // of the allocated large_control via memcpy in append_gate (Phase 67).
+            // free_circuit handles cleanup of all large_control arrays.
         }
     }
 }

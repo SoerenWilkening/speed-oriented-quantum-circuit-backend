@@ -197,6 +197,15 @@ void free_circuit(circuit_t *circ) {
     }
 
     for (int i = 0; i < circ->allocated_layer; ++i) {
+        // Free large_control arrays for MCX gates with >2 controls (Phase 67)
+        if (i < (int)circ->used_layer) {
+            for (int g = 0; g < (int)circ->used_gates_per_layer[i]; ++g) {
+                if (circ->sequence[i][g].NumControls > 2 &&
+                    circ->sequence[i][g].large_control != NULL) {
+                    free(circ->sequence[i][g].large_control);
+                }
+            }
+        }
         free(circ->sequence[i]);
         free(circ->gate_index_of_layer_and_qubits[i]);
     }
