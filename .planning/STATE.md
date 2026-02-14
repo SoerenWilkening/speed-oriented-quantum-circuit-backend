@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v3.0 Fault-Tolerant Arithmetic -- Phase 65 Infrastructure Prerequisites
+**Current focus:** v3.0 Fault-Tolerant Arithmetic -- Phase 66 CDKM Ripple-Carry Adder
 
 ## Current Position
 
-Phase: 65 of 72 (Infrastructure Prerequisites) -- COMPLETE
-Plan: 3 of 3 in current phase
-Status: Phase complete -- ready for Phase 66
-Last activity: 2026-02-14 -- Completed 65-03 (ancilla lifecycle assertions)
+Phase: 66 of 72 (CDKM Ripple-Carry Adder)
+Plan: 1 of 2 in current phase
+Status: Executing Phase 66
+Last activity: 2026-02-14 -- Completed 66-01 (CDKM adder + hot path dispatch)
 
-Progress: [#####___________________] 12% (v3.0 phases -- 3/~24 plans)
+Progress: [######__________________] 16% (v3.0 phases -- 4/~24 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 184 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 22, v2.3: 4, v3.0: 3)
+- Total plans completed: 185 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 22, v2.3: 4, v3.0: 4)
 - Average duration: ~13 min/plan
 - Total execution time: ~27.5 hours
 
@@ -53,6 +53,7 @@ v3.0: Toffoli arithmetic as default (DSP-03), RCA before CLA, division via exist
 Phase 65-01: Inline switch/case for self-inverse gate classification (no helper function). Fixed run_instruction() proactively for Phase 66+ Toffoli inversion.
 Phase 65-02: Block free-list uses sorted array with first-fit allocation and adjacent-block coalescing. No defragmentation -- fresh alloc when no block fits.
 Phase 65-03: #ifdef DEBUG ancilla bitmap uses separate guard from DEBUG_OWNERSHIP for independent control. Dynamic bool array with doubling expansion.
+Phase 66-01: Separate Toffoli QQ cache (not shared with QFT). CQ sequences fresh per call, freed by caller. Controlled ops fall back to QFT. ARITH_QFT=0 for backward-compatible default.
 
 ### Blockers/Concerns
 
@@ -71,9 +72,9 @@ Phase 65-03: #ifdef DEBUG ancilla bitmap uses separate guard from DEBUG_OWNERSHI
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 65-03-PLAN.md (ancilla lifecycle assertions) -- Phase 65 complete
+Stopped at: Completed 66-01-PLAN.md (CDKM adder + hot path dispatch)
 Resume file: N/A
-Resume action: Plan Phase 66 (Toffoli ripple-carry adder) via `/gsd:plan-phase 66`
+Resume action: Execute 66-02-PLAN.md (Python integration tests for Toffoli adder)
 
 ---
-*State updated: 2026-02-14 -- 65-03 complete (ancilla lifecycle assertions), Phase 65 complete*
+*State updated: 2026-02-14 -- 66-01 complete (CDKM ripple-carry adder + hot path dispatch)*
