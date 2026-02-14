@@ -3,6 +3,7 @@
 #        make test_hot_path_mul && ./test_hot_path_mul
 #        make test_hot_path_add && ./test_hot_path_add
 #        make test_hot_path_xor && ./test_hot_path_xor
+#        make test_reverse_circuit && ./test_reverse_circuit
 
 CC = gcc
 CFLAGS = -Wall -Wextra -g -I../../c_backend/include
@@ -66,6 +67,16 @@ XOR_SRCS = $(BACKEND_SRC)/Integer.c \
            $(BACKEND_SRC)/circuit_optimizer.c \
            $(BACKEND_SRC)/hot_path_xor.c
 
+# Sources for reverse_circuit tests (circuit + execution, no arithmetic)
+REVERSE_SRCS = $(BACKEND_SRC)/execution.c \
+               $(BACKEND_SRC)/optimizer.c \
+               $(BACKEND_SRC)/gate.c \
+               $(BACKEND_SRC)/qubit_allocator.c \
+               $(BACKEND_SRC)/circuit_allocations.c \
+               $(BACKEND_SRC)/circuit_output.c \
+               $(BACKEND_SRC)/circuit_stats.c \
+               $(BACKEND_SRC)/circuit_optimizer.c
+
 # Test targets
 test_comparison: test_comparison.c $(BACKEND_SRCS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
@@ -79,9 +90,12 @@ test_hot_path_add: test_hot_path_add.c $(ADD_SRCS)
 test_hot_path_xor: test_hot_path_xor.c $(XOR_SRCS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
+test_reverse_circuit: test_reverse_circuit.c $(REVERSE_SRCS)
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+
 .PHONY: clean
 clean:
-	rm -f test_comparison test_hot_path_mul test_hot_path_add test_hot_path_xor
+	rm -f test_comparison test_hot_path_mul test_hot_path_add test_hot_path_xor test_reverse_circuit
 
 .PHONY: run
 run: test_comparison
@@ -90,3 +104,7 @@ run: test_comparison
 .PHONY: run_mul
 run_mul: test_hot_path_mul
 	./test_hot_path_mul
+
+.PHONY: run_reverse
+run_reverse: test_reverse_circuit
+	./test_reverse_circuit
