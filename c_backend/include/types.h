@@ -81,4 +81,9 @@ typedef struct {
     num_t *gates_per_layer;
 } sequence_t;
 
+// ======================================================
+// Arithmetic Mode (Phase 66: Toffoli arithmetic support)
+// ======================================================
+typedef enum { ARITH_QFT = 0, ARITH_TOFFOLI = 1 } arithmetic_mode_t;
+
 #endif // QUANTUM_TYPES_H
