@@ -1,7 +1,11 @@
-"""Validation tests for hardcoded addition sequences.
+"""Validation tests for hardcoded QFT addition sequences.
 
-These tests verify that hardcoded (pre-computed) sequences for widths 1-16
+These tests verify that hardcoded (pre-computed) QFT sequences for widths 1-16
 produce correct arithmetic results - functional equivalence to dynamic generation.
+
+NOTE: These tests explicitly use QFT mode (ql.option('fault_tolerant', False))
+because they validate QFT-based hardcoded sequences. The default arithmetic mode
+is Toffoli (since Phase 67-03), so QFT must be opted into explicitly.
 
 NOTE: We test ARITHMETIC CORRECTNESS, not gate-by-gate structure comparison.
 The internal gate sequence is an implementation detail. What matters is that
@@ -28,6 +32,15 @@ import quantum_language as ql
 
 # Suppress cosmetic warnings for values >= 2^(width-1) in unsigned interpretation
 warnings.filterwarnings("ignore", message="Value .* exceeds")
+
+
+def _use_qft():
+    """Switch to QFT mode for hardcoded sequence validation.
+
+    Since Phase 67-03, the default arithmetic mode is Toffoli.
+    These tests validate QFT hardcoded sequences and must explicitly opt in.
+    """
+    ql.option("fault_tolerant", False)
 
 
 @pytest.mark.hardcoded_validation
@@ -57,6 +70,7 @@ class TestHardcodedSequenceValidation:
                 continue
 
             def circuit_builder(a=a, b=b, w=width):
+                _use_qft()
                 qa = ql.qint(a, width=w)
                 qb = ql.qint(b, width=w)
                 _r = qa + qb
@@ -92,6 +106,7 @@ class TestHardcodedSequenceValidation:
                 continue
 
             def circuit_builder(a=a, b=b, w=width):
+                _use_qft()
                 qa = ql.qint(a, width=w)
                 qa += b  # In-place classical addition
                 return (a + b) % (1 << w)
@@ -122,6 +137,7 @@ class TestHardcodedSequenceValidation:
                 continue
 
             def circuit_builder(a=a, b=b, w=width):
+                _use_qft()
                 qa = ql.qint(a, width=w)
                 qa += b
                 return (a + b) % (1 << w)
@@ -140,6 +156,7 @@ class TestHardcodedSequenceValidation:
         width = 17
 
         def circuit_builder(w=width):
+            _use_qft()
             qa = ql.qint(1, width=w)
             qa += 255  # In-place classical addition
             return (1 + 255) % (1 << w)
@@ -155,6 +172,7 @@ class TestHardcodedSequenceValidation:
         max_val = min((1 << width) - 1, 255)
 
         def circuit_builder(w=width, mv=max_val):
+            _use_qft()
             qa = ql.qint(1, width=w)
             qa += mv
             return (1 + mv) % (1 << w)
@@ -177,6 +195,7 @@ class TestHardcodedSequenceExecution:
     def test_qq_add_circuit_executes(self, width):
         """QQ_add hardcoded executes without error and produces non-trivial circuit."""
         circ = ql.circuit()
+        _use_qft()
         qa = ql.qint(0, width=width)
         qb = ql.qint(0, width=width)
         _r = qa + qb
@@ -193,6 +212,7 @@ class TestHardcodedSequenceExecution:
         internally via CQ_add's controlled path.
         """
         circ = ql.circuit()
+        _use_qft()
         qa = ql.qint(1, width=width)
 
         # Controlled CQ addition via context manager
@@ -206,6 +226,7 @@ class TestHardcodedSequenceExecution:
     def test_cq_add_circuit_executes(self, width):
         """CQ_add (classical-quantum) executes without error."""
         circ = ql.circuit()
+        _use_qft()
         qa = ql.qint(0, width=width)
         qa += 1  # In-place classical addition
 
@@ -221,6 +242,7 @@ class TestHardcodedBoundaryConditions:
         max_val = 255  # 2^8 - 1
 
         def circuit_builder():
+            _use_qft()
             qa = ql.qint(max_val, width=8)
             qb = ql.qint(1, width=8)
             _r = qa + qb
@@ -236,6 +258,7 @@ class TestHardcodedBoundaryConditions:
 
         # Test 0 + 0 = 0
         def circuit_zero(w=width):
+            _use_qft()
             qa = ql.qint(0, width=w)
             qa += 0
             return 0
@@ -245,6 +268,7 @@ class TestHardcodedBoundaryConditions:
 
         # Test 1 + 1 = 2
         def circuit_one(w=width):
+            _use_qft()
             qa = ql.qint(1, width=w)
             qa += 1
             return 2
@@ -254,6 +278,7 @@ class TestHardcodedBoundaryConditions:
 
         # Test max + 1 = 0 (overflow wrapping)
         def circuit_overflow(w=width, mv=max_val):
+            _use_qft()
             qa = ql.qint(mv, width=w)
             qa += 1
             return 0  # 65535 + 1 = 65536 mod 65536 = 0
@@ -265,6 +290,7 @@ class TestHardcodedBoundaryConditions:
         """Width 17 should fall back to dynamic generation."""
 
         def circuit_builder():
+            _use_qft()
             qa = ql.qint(1, width=17)
             qa += 1  # CQ_add in-place to avoid 3*17=51 qubit issue
             return 2
@@ -281,6 +307,7 @@ class TestHardcodedBoundaryConditions:
         if width <= 9:
             # Out-of-place QQ_add feasible (3*9=27 qubits)
             def circuit_builder(w=width):
+                _use_qft()
                 qa = ql.qint(0, width=w)
                 qb = ql.qint(0, width=w)
                 _r = qa + qb
@@ -290,6 +317,7 @@ class TestHardcodedBoundaryConditions:
         else:
             # In-place CQ_add for large widths
             def circuit_builder(w=width):
+                _use_qft()
                 qa = ql.qint(0, width=w)
                 qa += 0
                 return 0
@@ -309,6 +337,7 @@ class TestHardcodedBoundaryConditions:
         if width <= 9:
             # Out-of-place QQ_add feasible (3*9=27 qubits)
             def circuit_builder(w=width, mv=max_val):
+                _use_qft()
                 qa = ql.qint(mv, width=w)
                 qb = ql.qint(1, width=w)
                 _r = qa + qb
@@ -318,6 +347,7 @@ class TestHardcodedBoundaryConditions:
         else:
             # In-place CQ_add for large widths
             def circuit_builder(w=width, mv=max_val):
+                _use_qft()
                 qa = ql.qint(mv, width=w)
                 qa += 1
                 return 0  # max + 1 wraps to 0
@@ -328,8 +358,9 @@ class TestHardcodedBoundaryConditions:
 
 
 def _simulate_controlled_cq_add(width, init_val, add_val, ctrl_val):
-    """Simulate controlled CQ_add and extract qa register value.
+    """Simulate controlled CQ_add in QFT mode and extract qa register value.
 
+    Uses QFT mode explicitly because this validates QFT hardcoded sequences.
     The controlled CQ_add circuit has N+1 qubits: q[0..N-1] for qa, q[N] for ctrl.
     In Qiskit's big-endian bitstring, the first char is the highest qubit (ctrl),
     followed by qa bits. We skip the control bit to extract only the qa value.
@@ -339,6 +370,7 @@ def _simulate_controlled_cq_add(width, init_val, add_val, ctrl_val):
     """
     gc.collect()
     ql.circuit()
+    _use_qft()
     qa = ql.qint(init_val, width=width)
     ctrl = ql.qint(ctrl_val, width=1)
     with ctrl:

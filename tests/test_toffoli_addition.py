@@ -878,11 +878,11 @@ class TestControlledToffoliCQAddition:
 class TestToffoliFaultTolerantOption:
     """Test the fault_tolerant option itself (get/set/reset behavior)."""
 
-    def test_default_is_false(self):
-        """Default arithmetic mode is QFT (fault_tolerant=False)."""
+    def test_default_is_toffoli(self):
+        """Default arithmetic mode is Toffoli (fault_tolerant=True)."""
         gc.collect()
         ql.circuit()
-        assert ql.option("fault_tolerant") is False
+        assert ql.option("fault_tolerant") is True
 
     def test_set_true(self):
         """Setting fault_tolerant to True enables Toffoli mode."""
@@ -907,26 +907,73 @@ class TestToffoliFaultTolerantOption:
             ql.option("fault_tolerant", 1)
 
     def test_circuit_reset_restores_default(self):
-        """Creating a new circuit resets fault_tolerant to default (False)."""
+        """Creating a new circuit resets fault_tolerant to default (True/Toffoli)."""
         gc.collect()
         ql.circuit()
-        ql.option("fault_tolerant", True)
-        assert ql.option("fault_tolerant") is True
-        ql.circuit()  # Reset
+        ql.option("fault_tolerant", False)
         assert ql.option("fault_tolerant") is False
+        ql.circuit()  # Reset
+        assert ql.option("fault_tolerant") is True
+
+
+class TestDefaultModeToffoli:
+    """Verify that Toffoli is the default arithmetic mode (Phase 67-03)."""
+
+    def test_default_is_toffoli(self):
+        """Default arithmetic should be Toffoli without explicit option."""
+        gc.collect()
+        ql.circuit()
+        # Do NOT call ql.option('fault_tolerant', True) -- Toffoli is default
+        a = ql.qint(3, width=3)
+        b = ql.qint(2, width=3)
+        a += b
+        qasm = ql.to_openqasm()
+        # Should contain CCX/CX/X gates, NOT H or P gates from QFT
+        gate_lines = [
+            line.strip().lower()
+            for line in qasm.split("\n")
+            if line.strip()
+            and not line.strip().startswith("//")
+            and not line.strip().startswith("OPENQASM")
+            and not line.strip().startswith("include")
+            and not line.strip().startswith("qubit")
+            and not line.strip().startswith("bit")
+            and not line.strip().startswith("measure")
+            and not line.strip().startswith("{")
+            and not line.strip().startswith("}")
+        ]
+        h_gates = [gl for gl in gate_lines if gl.startswith("h ")]
+        p_gates = [gl for gl in gate_lines if gl.startswith("p(")]
+        assert len(h_gates) == 0, f"Default mode should not use H gates, found {len(h_gates)}"
+        assert len(p_gates) == 0, f"Default mode should not use P gates, found {len(p_gates)}"
+
+    def test_qft_opt_in(self):
+        """QFT mode available via explicit option."""
+        gc.collect()
+        ql.circuit()
+        ql.option("fault_tolerant", False)
+        a = ql.qint(3, width=3)
+        b = ql.qint(2, width=3)
+        a += b
+        qasm = ql.to_openqasm()
+        # QFT mode should use H/P gates
+        qasm_lower = qasm.lower()
+        has_rotation = "h " in qasm_lower or "rz" in qasm_lower or "p(" in qasm_lower
+        assert has_rotation, "QFT mode should use rotation gates"
 
 
 class TestToffoliQFTFallback:
     """Test that QFT path still works when fault_tolerant is False.
 
     Ensures the existing QFT arithmetic is not broken by the Toffoli wiring.
+    Since Phase 67-03, the default is Toffoli, so QFT requires explicit opt-in.
     """
 
     def test_qft_addition_still_works(self, verify_circuit):
-        """QFT addition (default mode) produces correct results."""
+        """QFT addition (via explicit opt-in) produces correct results."""
 
         def circuit_builder():
-            # Explicitly do NOT enable fault_tolerant
+            ql.option("fault_tolerant", False)
             assert ql.option("fault_tolerant") is False
             qa = ql.qint(3, width=4)
             qb = ql.qint(5, width=4)
@@ -940,7 +987,8 @@ class TestToffoliQFTFallback:
         """QFT path uses H and P gates (distinguishing it from Toffoli path)."""
         gc.collect()
         ql.circuit()
-        # Default mode is QFT
+        # Opt in to QFT mode
+        ql.option("fault_tolerant", False)
         assert ql.option("fault_tolerant") is False
 
         a = ql.qint(1, width=4)
