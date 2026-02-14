@@ -164,24 +164,40 @@ void hot_path_add_cq(circuit_t *circ, const unsigned int *self_qubits, int self_
             run_instruction(toff_seq, qa, invert, circ);
             toffoli_sequence_free(toff_seq); /* CQ sequences are not cached */
         } else {
-            /* n >= 2: allocate 1 ancilla qubit */
-            qubit_t ancilla_qubit = allocator_alloc(circ->allocator, 1, true);
-            if (ancilla_qubit == (qubit_t)-1)
+            /* n >= 2: allocate self_bits + 1 ancilla qubits
+             * (self_bits for temp register + 1 for carry)
+             *
+             * toffoli_CQ_add layout:
+             *   [0..self_bits-1]       = temp register (ancilla, initialized to classical value)
+             *   [self_bits..2*self_bits-1] = self register (target, gets sum)
+             *   [2*self_bits]          = carry ancilla
+             */
+            qubit_t temp_start = allocator_alloc(circ->allocator, self_bits + 1, true);
+            if (temp_start == (qubit_t)-1)
                 return; /* allocation failed */
 
-            /* Ancilla at virtual index self_bits (right after target register) */
-            qa[self_bits] = ancilla_qubit;
+            unsigned int tqa[256];
+            /* [0..self_bits-1] = temp ancilla qubits */
+            for (i = 0; i < self_bits; i++) {
+                tqa[i] = temp_start + i;
+            }
+            /* [self_bits..2*self_bits-1] = self qubits (target, gets sum) */
+            for (i = 0; i < self_bits; i++) {
+                tqa[self_bits + i] = self_qubits[i];
+            }
+            /* [2*self_bits] = carry ancilla */
+            tqa[2 * self_bits] = temp_start + self_bits;
 
             toff_seq = toffoli_CQ_add(self_bits, classical_value);
             if (toff_seq == NULL) {
-                allocator_free(circ->allocator, ancilla_qubit, 1);
+                allocator_free(circ->allocator, temp_start, self_bits + 1);
                 return;
             }
-            run_instruction(toff_seq, qa, invert, circ);
+            run_instruction(toff_seq, tqa, invert, circ);
             toffoli_sequence_free(toff_seq); /* CQ sequences are not cached */
 
-            /* Free ancilla (CDKM guarantees return to |0>) */
-            allocator_free(circ->allocator, ancilla_qubit, 1);
+            /* Free all ancilla (CDKM guarantees return to |0>) */
+            allocator_free(circ->allocator, temp_start, self_bits + 1);
         }
         return;
     }

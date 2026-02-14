@@ -152,24 +152,64 @@ class TestToffoliQQAddition:
         )
 
 
+def _verify_toffoli_cq(circuit_builder, width):
+    """Verify a Toffoli CQ addition/subtraction circuit.
+
+    For CQ add/sub (in-place), the result register is in the self qubits
+    at positions [0..width-1]. Ancilla qubits (temp register + carry) are
+    allocated at higher indices by the allocator.
+
+    Args:
+        circuit_builder: Callable that builds circuit and returns expected value
+        width: Bit width of result register
+
+    Returns:
+        Tuple (actual, expected)
+    """
+    gc.collect()
+    ql.circuit()
+
+    result = circuit_builder()
+    if isinstance(result, tuple):
+        expected, _keepalive = result
+    else:
+        expected = result
+        _keepalive = None
+
+    qasm_str = ql.to_openqasm()
+
+    # Get actual qubit count from the QASM qubit declaration
+    num_qubits = None
+    for line in qasm_str.split("\n"):
+        line = line.strip()
+        if line.startswith("qubit["):
+            num_qubits = int(line.split("[")[1].split("]")[0])
+            break
+
+    if num_qubits is None:
+        raise Exception(f"Could not find qubit count in QASM:\n{qasm_str}")
+
+    # Result register (self) starts at qubit 0
+    result_start = 0
+
+    _keepalive = None
+
+    try:
+        actual = _simulate_and_extract(qasm_str, num_qubits, result_start, width)
+        return (actual, expected)
+    except Exception as e:
+        raise Exception(f"Simulation failed: {e}\n\nQASM:\n{qasm_str}") from e
+
+
 class TestToffoliCQAddition:
     """Success Criterion 2: CQ_add_toffoli adds classical constant correctly.
 
     Exhaustively tests all input pairs at widths 1-4.
-    CQ_add (in-place) uses N+1 qubits with Toffoli path.
-
-    NOTE: CQ Toffoli adder has bugs in the MAJ/UMA CQ simplification
-    in ToffoliAddition.c (Plan 66-01). Width 1 works (single X gate),
-    but widths 2+ produce incorrect results. These tests document the
-    bugs for fixing in a subsequent plan.
+    CQ_add (in-place) uses 2*N+1 qubits with Toffoli path (N temp + N self + 1 carry).
     """
 
     @pytest.mark.parametrize("width", [1, 2, 3, 4])
-    @pytest.mark.xfail(
-        reason="CQ Toffoli MAJ/UMA simplification bugs in ToffoliAddition.c (widths 2+)",
-        strict=False,  # width=1 passes, widths 2+ fail
-    )
-    def test_cq_add_exhaustive(self, verify_circuit, width):
+    def test_cq_add_exhaustive(self, width):
         """CQ Toffoli addition produces correct results for all input pairs."""
         failures = []
 
@@ -182,7 +222,7 @@ class TestToffoliCQAddition:
                     qa += b
                     return (a + b) % (1 << w)
 
-                actual, expected = verify_circuit(circuit_builder, width)
+                actual, expected = _verify_toffoli_cq(circuit_builder, width)
                 if actual != expected:
                     failures.append(
                         format_failure_message("toffoli_cq_add", [a, b], width, expected, actual)
@@ -225,11 +265,7 @@ class TestToffoliSubtraction:
         )
 
     @pytest.mark.parametrize("width", [1, 2, 3, 4])
-    @pytest.mark.xfail(
-        reason="CQ Toffoli MAJ/UMA simplification bugs in ToffoliAddition.c (widths 2+)",
-        strict=False,
-    )
-    def test_cq_sub_exhaustive(self, verify_circuit, width):
+    def test_cq_sub_exhaustive(self, width):
         """CQ Toffoli subtraction produces correct results for all input pairs."""
         failures = []
 
@@ -242,7 +278,7 @@ class TestToffoliSubtraction:
                     qa -= b
                     return (a - b) % (1 << w)
 
-                actual, expected = verify_circuit(circuit_builder, width)
+                actual, expected = _verify_toffoli_cq(circuit_builder, width)
                 if actual != expected:
                     failures.append(
                         format_failure_message("toffoli_cq_sub", [a, b], width, expected, actual)
