@@ -15,7 +15,7 @@ circuit_t *init_circuit() {
     circ->used_layer = 0;
     circ->layer_floor = 0;
     circ->toff_decomp = DONTDECOMPOSETOFFOLI;
-    circ->arithmetic_mode = ARITH_QFT;
+    circ->arithmetic_mode = ARITH_TOFFOLI;
 
     // Create allocator for qubit management
     circ->allocator = allocator_create(QUBIT_BLOCK);
