@@ -10,16 +10,16 @@ See: .planning/PROJECT.md (updated 2026-02-14)
 ## Current Position
 
 Phase: 65 of 72 (Infrastructure Prerequisites)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-02-14 -- Roadmap created for v3.0 (8 phases, 21 requirements)
+Plan: 1 of 3 in current phase
+Status: Executing
+Last activity: 2026-02-14 -- Completed 65-01 (self-inverse gate fix)
 
-Progress: [________________________] 0% (v3.0 phases)
+Progress: [##______________________] 4% (v3.0 phases -- 1/~24 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 181 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 22, v2.3: 4)
+- Total plans completed: 182 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 22, v2.3: 4, v3.0: 1)
 - Average duration: ~13 min/plan
 - Total execution time: ~27.1 hours
 
@@ -50,6 +50,7 @@ Progress: [________________________] 0% (v3.0 phases)
 See PROJECT.md Key Decisions table for full history.
 Recent (v2.3): Keep all addition widths 1-16 hardcoded (data-driven), shared QFT/IQFT factoring, multiplication "investigate" for future.
 v3.0: Toffoli arithmetic as default (DSP-03), RCA before CLA, division via existing Python-level composition.
+Phase 65-01: Inline switch/case for self-inverse gate classification (no helper function). Fixed run_instruction() proactively for Phase 66+ Toffoli inversion.
 
 ### Blockers/Concerns
 
@@ -61,16 +62,16 @@ v3.0: Toffoli arithmetic as default (DSP-03), RCA before CLA, division via exist
 - 32-bit multiplication segfault (buffer overflow in C backend, discovered in Phase 61)
 
 **v3.0 specific:**
-- reverse_circuit_range() negates GateValue for self-inverse gates -- must fix in Phase 65
+- ~~reverse_circuit_range() negates GateValue for self-inverse gates~~ -- FIXED in 65-01 (b8a567a)
 - allocator_alloc() only reuses freed ancilla for count=1 -- must fix in Phase 65
 - Optimizer gate cancellation rules designed for QFT -- may need disabling for Toffoli initially
 
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Roadmap created for v3.0 milestone (8 phases, 21 requirements mapped)
+Stopped at: Completed 65-01-PLAN.md (self-inverse gate fix + tests)
 Resume file: N/A
-Resume action: Plan Phase 65 via `/gsd:plan-phase 65`
+Resume action: Execute 65-02-PLAN.md via `/gsd:execute-phase 65`
 
 ---
-*State updated: 2026-02-14 -- v3.0 roadmap created*
+*State updated: 2026-02-14 -- 65-01 complete (self-inverse gate value fix)*
