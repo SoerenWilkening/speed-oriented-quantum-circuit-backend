@@ -45,7 +45,22 @@ void run_instruction(sequence_t *res, const qubit_t qubit_array[], int invert, c
                     g.Control[i] = qubit_array[g.Control[i]];
                 }
             }
-            g.GateValue *= (invert ? -1.0 : 1.0); // Micro-opt: avoid pow() (Phase 61)
+            // Invert gate value only for non-self-inverse gates (Phase 65)
+            if (invert) {
+                switch (g.Gate) {
+                case X:
+                case Y:
+                case Z:
+                case H:
+                case M:
+                    // Self-inverse gates: GateValue unchanged
+                    break;
+                default:
+                    // Phase/rotation gates: negate for inversion
+                    g.GateValue = -g.GateValue;
+                    break;
+                }
+            }
 
             add_gate(circ, &g);
             // Free remapped large_control if we allocated one
@@ -79,9 +94,21 @@ void reverse_circuit_range(circuit_t *circ, int start_layer, int end_layer) {
             gate_t g;
             memcpy(&g, original_gate, sizeof(gate_t));
 
-            // Invert the gate value (phase gates: P(t) -> P(-t))
-            // Self-adjoint gates (X, H, CX) have GateValue that doesn't affect inversion
-            g.GateValue = -g.GateValue; // Micro-opt: pow(-1,1) is always -1 (Phase 61)
+            // Invert the gate value for rotation gates; self-inverse gates keep original value
+            // Invert gate value only for non-self-inverse gates (Phase 65)
+            switch (g.Gate) {
+            case X:
+            case Y:
+            case Z:
+            case H:
+            case M:
+                // Self-inverse gates: GateValue unchanged
+                break;
+            default:
+                // Phase/rotation gates (P, Rx, Ry, Rz, R): negate for inversion
+                g.GateValue = -g.GateValue;
+                break;
+            }
 
             // Handle n-controlled gates: allocate new large_control array
             if (g.NumControls > 2 && original_gate->large_control != NULL) {
