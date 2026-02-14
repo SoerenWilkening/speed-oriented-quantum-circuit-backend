@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v3.0 Fault-Tolerant Arithmetic -- Phase 67 Controlled Adder & Backend Dispatch
+**Current focus:** v3.0 Fault-Tolerant Arithmetic -- Phase 67 complete, ready for Phase 68
 
 ## Current Position
 
-Phase: 67 of 72 (Controlled Adder & Backend Dispatch)
-Plan: 2 of 3 in current phase
-Status: Plan 67-02 complete (controlled Toffoli hot-path dispatch), ready for 67-03
-Last activity: 2026-02-14 -- Completed 67-02 (controlled Toffoli dispatch + MCX fix)
+Phase: 67 of 72 (Controlled Adder & Backend Dispatch) -- COMPLETE
+Plan: 3 of 3 in current phase (all complete)
+Status: Phase 67 complete. Toffoli arithmetic is now the default mode.
+Last activity: 2026-02-14 -- Completed 67-03 (default arithmetic mode switch)
 
-Progress: [#########_______________] 29% (v3.0 phases -- 9/~24 plans)
+Progress: [##########______________] 33% (v3.0 phases -- 10/~24 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 190 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 22, v2.3: 4, v3.0: 9)
+- Total plans completed: 191 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 22, v2.3: 4, v3.0: 10)
 - Average duration: ~13 min/plan
-- Total execution time: ~28.5 hours
+- Total execution time: ~29.3 hours
 
 **By Milestone:**
 
@@ -58,6 +58,7 @@ Phase 66-02: CDKM stores sum in b-register, so hot_path_add_qq swaps self/other 
 Phase 66-03: CQ Toffoli uses temp-register QQ approach (X-init temp to classical value, run proven QQ CDKM adder, X-cleanup). CQ now requires 2*N+1 qubits (N temp + N self + 1 carry). BUG-CQ-TOFFOLI resolved.
 Phase 67-01: Controlled CDKM adder (cQQ/cCQ) uses CCX + MCX(3 controls) pattern. Control qubit at 2*bits+1 (not 2*bits). CX-based controlled temp init/cleanup for cCQ. toffoli_sequence_free now handles large_control cleanup.
 Phase 67-02: Controlled Toffoli dispatch wired into hot_path_add.c (no QFT fallback). Fixed MCX use-after-free: run_instruction transfers large_control ownership to circuit, free_circuit cleans up. 70 Toffoli tests pass.
+Phase 67-03: ARITH_TOFFOLI is now the default arithmetic mode (1-line change in init_circuit). QFT available via ql.option('fault_tolerant', False). All QFT tests updated with explicit opt-in. 72 Toffoli + 165 hardcoded sequence tests pass.
 
 ### Blockers/Concerns
 
@@ -78,9 +79,9 @@ Phase 67-02: Controlled Toffoli dispatch wired into hot_path_add.c (no QFT fallb
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 67-02-PLAN.md (controlled Toffoli hot-path dispatch)
+Stopped at: Completed Phase 67 (all 3 plans: controlled CDKM adder, hot-path dispatch, default mode switch)
 Resume file: N/A
-Resume action: Execute 67-03-PLAN.md (default arithmetic mode switch)
+Resume action: Plan Phase 68 or next v3.0 phase
 
 ---
-*State updated: 2026-02-14 -- 67-02 complete (controlled Toffoli dispatch + MCX use-after-free fix)*
+*State updated: 2026-02-14 -- Phase 67 complete (Toffoli arithmetic is now the default)*
