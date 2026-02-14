@@ -4,6 +4,7 @@
 
 #include "qubit_allocator.h"
 #include "QPU.h"
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -46,6 +47,18 @@ qubit_allocator_t *allocator_create(num_t initial_capacity) {
     // Zero all statistics
     memset(&alloc->stats, 0, sizeof(allocator_stats_t));
 
+#ifdef DEBUG
+    alloc->is_ancilla_map = calloc(initial_capacity, sizeof(bool));
+    if (alloc->is_ancilla_map == NULL) {
+        free(alloc->freed_blocks);
+        free(alloc->indices);
+        free(alloc);
+        return NULL;
+    }
+    alloc->ancilla_map_capacity = initial_capacity;
+    alloc->ancilla_outstanding = 0;
+#endif
+
 #ifdef DEBUG_OWNERSHIP
     // Allocate ownership tracking arrays
     alloc->owner_tags = calloc(initial_capacity, sizeof(char *));
@@ -65,6 +78,31 @@ void allocator_destroy(qubit_allocator_t *alloc) {
     if (alloc == NULL) {
         return;
     }
+
+#ifdef DEBUG
+    if (alloc->ancilla_outstanding > 0) {
+        fprintf(stderr, "ANCILLA LEAK: %u ancilla qubits not freed before destroy\n",
+                alloc->ancilla_outstanding);
+        for (num_t i = 0; i < alloc->next_qubit; i++) {
+            if (i < alloc->ancilla_map_capacity && alloc->is_ancilla_map[i]) {
+                // Check if qubit i is in the freed blocks list
+                bool found_freed = false;
+                for (num_t j = 0; j < alloc->freed_block_count; j++) {
+                    if (i >= alloc->freed_blocks[j].start &&
+                        i < alloc->freed_blocks[j].start + alloc->freed_blocks[j].count) {
+                        found_freed = true;
+                        break;
+                    }
+                }
+                if (!found_freed) {
+                    fprintf(stderr, "  Leaked ancilla qubit: %u\n", i);
+                }
+            }
+        }
+        assert(0 && "Ancilla leak detected");
+    }
+    free(alloc->is_ancilla_map);
+#endif
 
 #ifdef DEBUG_OWNERSHIP
     // Free all ownership tag strings
@@ -169,6 +207,34 @@ qubit_t allocator_alloc(qubit_allocator_t *alloc, num_t count, bool is_ancilla) 
         alloc->stats.ancilla_allocations += count;
     }
 
+#ifdef DEBUG
+    if (is_ancilla) {
+        // Expand ancilla map if needed
+        if (start_qubit + count > alloc->ancilla_map_capacity) {
+            num_t new_cap = alloc->ancilla_map_capacity;
+            while (new_cap < start_qubit + count) {
+                new_cap *= 2;
+            }
+            if (new_cap > ALLOCATOR_MAX_QUBITS)
+                new_cap = ALLOCATOR_MAX_QUBITS;
+            bool *new_map = realloc(alloc->is_ancilla_map, new_cap * sizeof(bool));
+            if (new_map != NULL) {
+                memset(new_map + alloc->ancilla_map_capacity, 0,
+                       (new_cap - alloc->ancilla_map_capacity) * sizeof(bool));
+                alloc->is_ancilla_map = new_map;
+                alloc->ancilla_map_capacity = new_cap;
+            }
+        }
+        // Mark qubits as ancilla
+        for (num_t i = 0; i < count; i++) {
+            if (start_qubit + i < alloc->ancilla_map_capacity) {
+                alloc->is_ancilla_map[start_qubit + i] = true;
+            }
+        }
+        alloc->ancilla_outstanding += count;
+    }
+#endif
+
     return start_qubit;
 }
 
@@ -186,6 +252,17 @@ int allocator_free(qubit_allocator_t *alloc, qubit_t start, num_t count) {
     // Update statistics
     alloc->stats.total_deallocations++;
     alloc->stats.current_in_use -= count;
+
+#ifdef DEBUG
+    // Decrement ancilla outstanding for any ancilla qubits being freed
+    for (num_t i = 0; i < count; i++) {
+        qubit_t q = start + i;
+        if (q < alloc->ancilla_map_capacity && alloc->is_ancilla_map[q]) {
+            alloc->ancilla_outstanding--;
+            alloc->is_ancilla_map[q] = false; // Clear the flag
+        }
+    }
+#endif
 
     // Expand freed_blocks array if needed
     if (alloc->freed_block_count >= alloc->freed_block_capacity) {

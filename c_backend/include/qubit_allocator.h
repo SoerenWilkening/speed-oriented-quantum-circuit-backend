@@ -60,6 +60,12 @@ typedef struct {
     num_t freed_block_capacity;  // Capacity of freed_blocks array
     allocator_stats_t stats;     // Usage statistics
 
+#ifdef DEBUG
+    bool *is_ancilla_map;       // [qubit] -> was allocated as ancilla
+    num_t ancilla_map_capacity; // Current capacity of the bitmap
+    num_t ancilla_outstanding;  // Count of allocated-but-not-freed ancilla qubits
+#endif
+
 #ifdef DEBUG_OWNERSHIP
     // Debug-only: track which entity owns each qubit
     char **owner_tags; // [qubit] -> "qint_3" or "ancilla_5"
