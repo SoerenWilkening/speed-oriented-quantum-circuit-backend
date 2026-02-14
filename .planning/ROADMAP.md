@@ -114,11 +114,12 @@ Plans:
   3. Subtraction works via inverted adder sequence (reversed gate order) for both QQ and CQ variants, verified for all input pairs at widths 1-4
   4. Mixed-width addition handles operands of different bit widths via zero-extension, verified for width combinations (2,3), (3,4), (4,6)
   5. Ancilla qubit is allocated before computation, uncomputed to |0>, and freed after each operation
-**Plans**: 2 plans
+**Plans**: 3 plans
 
 Plans:
-- [ ] 66-01-PLAN.md -- Implement CDKM adder in C (ToffoliAddition.c, types/circuit changes, hot path dispatch)
-- [ ] 66-02-PLAN.md -- Python wiring (Cython declarations, fault_tolerant option, build) and exhaustive verification tests
+- [x] 66-01-PLAN.md -- Implement CDKM adder in C (ToffoliAddition.c, types/circuit changes, hot path dispatch)
+- [x] 66-02-PLAN.md -- Python wiring (Cython declarations, fault_tolerant option, build) and exhaustive verification tests
+- [ ] 66-03-PLAN.md -- Gap closure: fix CQ Toffoli addition via temp-register QQ approach
 
 ### Phase 67: Controlled Adder & Backend Dispatch
 **Goal**: Users can switch all addition/subtraction to Toffoli-based circuits via `ql.option('fault_tolerant', True)` with controlled variants for quantum conditionals
@@ -246,7 +247,7 @@ Phases execute in numeric order: 65 -> 66 -> 67 -> 68 -> 69 -> 70 -> 71 -> 72
 | 63. Right-Sizing Implementation | v2.3 | 1/1 | Complete | 2026-02-08 |
 | 64. Regression Verification | v2.3 | 1/1 | Complete | 2026-02-08 |
 | 65. Infrastructure Prerequisites | v3.0 | 3/3 | Complete | 2026-02-14 |
-| 66. CDKM Ripple-Carry Adder | v3.0 | 0/2 | Not started | - |
+| 66. CDKM Ripple-Carry Adder | v3.0 | 2/3 | In progress | - |
 | 67. Controlled Adder & Backend Dispatch | v3.0 | 0/TBD | Not started | - |
 | 68. Schoolbook Multiplication | v3.0 | 0/TBD | Not started | - |
 | 69. Controlled Multiplication & Division | v3.0 | 0/TBD | Not started | - |
