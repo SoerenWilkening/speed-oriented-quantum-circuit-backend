@@ -36,11 +36,11 @@
 sequence_t *toffoli_QQ_add(int bits);
 
 /**
- * @brief Classical-quantum Toffoli addition: a += classical_value (CDKM-based).
+ * @brief Classical-quantum Toffoli addition: self += classical_value (CDKM-based).
  *
- * Generates a value-dependent gate sequence using CX/CCX/X gates only.
- * Classical bits simplify the MAJ/UMA pattern (no Toffoli when bit=0).
- * For bits >= 2, requires 1 ancilla qubit at virtual index bits.
+ * Uses temp-register approach: initializes a temp register to the classical value
+ * via X gates, runs the proven QQ CDKM adder, then undoes the X gates.
+ * For bits >= 2, requires bits+1 ancilla qubits (bits for temp + 1 carry).
  * For bits == 1, uses a single X gate if LSB=1, or identity if LSB=0.
  *
  * @param bits Width of target operand (1-64)
@@ -48,8 +48,9 @@ sequence_t *toffoli_QQ_add(int bits);
  * @return Fresh sequence - CALLER MUST FREE via toffoli_sequence_free()
  *
  * Qubit layout:
- *   [0..bits-1]  = register a (target, modified in place)
- *   [bits]       = ancilla carry (bits >= 2 only, returned to |0>)
+ *   [0..bits-1]       = temp register (initialized to classical value, cleaned to |0>)
+ *   [bits..2*bits-1]  = self register (target, modified: self += value)
+ *   [2*bits]          = carry ancilla (bits >= 2 only, returned to |0>)
  *
  * OWNERSHIP: Caller owns returned sequence_t*, must free via toffoli_sequence_free()
  */

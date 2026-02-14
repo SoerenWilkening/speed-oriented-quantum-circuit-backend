@@ -91,78 +91,6 @@ static void emit_UMA(sequence_t *seq, int *layer, int a, int b, int c) {
 }
 
 // ============================================================================
-// CQ MAJ/UMA helpers (classical bit simplification)
-// ============================================================================
-
-/**
- * @brief Emit MAJ for CQ when classical bit = 0.
- *
- * MAJ(carry, 0, a[i]) simplifies to:
- *   CNOT(target=carry, control=a[i])  -- carry ^= a[i]
- * (CNOT(b,c) is identity since b is classical 0, and Toffoli with b=0 is identity)
- */
-static void emit_MAJ_CQ_zero(sequence_t *seq, int *layer, int carry, int a_i) {
-    cx(&seq->seq[*layer][seq->gates_per_layer[*layer]++], carry, a_i);
-    (*layer)++;
-}
-
-/**
- * @brief Emit MAJ for CQ when classical bit = 1.
- *
- * MAJ(carry, 1, a[i]) simplifies to:
- *   X(a[i])                              -- a[i] ^= 1 (CNOT with b=1)
- *   CNOT(target=carry, control=a[i])     -- carry ^= a[i]
- *   CNOT(target=a[i], control=carry)     -- a[i] ^= carry (Toffoli with b=1)
- */
-static void emit_MAJ_CQ_one(sequence_t *seq, int *layer, int carry, int a_i) {
-    // X(a[i])
-    x(&seq->seq[*layer][seq->gates_per_layer[*layer]++], a_i);
-    (*layer)++;
-
-    // CNOT(target=carry, control=a[i])
-    cx(&seq->seq[*layer][seq->gates_per_layer[*layer]++], carry, a_i);
-    (*layer)++;
-
-    // CNOT(target=a[i], control=carry)
-    cx(&seq->seq[*layer][seq->gates_per_layer[*layer]++], a_i, carry);
-    (*layer)++;
-}
-
-/**
- * @brief Emit UMA for CQ when classical bit = 0.
- *
- * UMA(carry, 0, a[i]) simplifies to:
- *   CNOT(target=carry, control=a[i])  -- carry ^= a[i]
- * (Toffoli with b=0 is identity, and CNOT(b,a) with b=0 is identity)
- */
-static void emit_UMA_CQ_zero(sequence_t *seq, int *layer, int carry, int a_i) {
-    cx(&seq->seq[*layer][seq->gates_per_layer[*layer]++], carry, a_i);
-    (*layer)++;
-}
-
-/**
- * @brief Emit UMA for CQ when classical bit = 1.
- *
- * UMA(carry, 1, a[i]) simplifies to:
- *   CNOT(target=a[i], control=carry)     -- Toffoli with b=1 = CNOT
- *   CNOT(target=carry, control=a[i])     -- carry ^= a[i]
- *   X(carry)                              -- carry ^= 1 (CNOT with b=1)
- */
-static void emit_UMA_CQ_one(sequence_t *seq, int *layer, int carry, int a_i) {
-    // CNOT(target=a[i], control=carry)
-    cx(&seq->seq[*layer][seq->gates_per_layer[*layer]++], a_i, carry);
-    (*layer)++;
-
-    // CNOT(target=carry, control=a[i])
-    cx(&seq->seq[*layer][seq->gates_per_layer[*layer]++], carry, a_i);
-    (*layer)++;
-
-    // X(carry)
-    x(&seq->seq[*layer][seq->gates_per_layer[*layer]++], carry);
-    (*layer)++;
-}
-
-// ============================================================================
 // Sequence allocation helper
 // ============================================================================
 
@@ -283,8 +211,13 @@ sequence_t *toffoli_CQ_add(int bits, int64_t value) {
     // OWNERSHIP: Caller owns returned sequence, must free via toffoli_sequence_free()
     //
     // Qubit layout for toffoli_CQ_add(bits, value):
-    //   [0..bits-1]  = register a (target, modified in place: a += value)
-    //   [bits]       = ancilla carry (bits >= 2 only)
+    //   [0..bits-1]       = temp register (initialized to classical value, cleaned to |0>)
+    //   [bits..2*bits-1]  = self register (target, modified: self += value)
+    //   [2*bits]          = carry ancilla (bits >= 2 only)
+    //
+    // Uses temp-register approach: initialize temp to classical value via X gates,
+    // run the proven QQ CDKM adder (which preserves temp), then undo the X gates.
+    // This avoids the buggy 2-qubit MAJ/UMA CQ simplification entirely.
 
     // Bounds check
     if (bits < 1 || bits > 64) {
@@ -326,34 +259,23 @@ sequence_t *toffoli_CQ_add(int bits, int64_t value) {
         }
     }
 
-    // General case (bits >= 2): CQ CDKM adder
-    // Count layers: for each bit position, +6 if classical bit=1, +2 if bit=0
-    // (3 MAJ gates + 3 UMA gates for bit=1; 1 MAJ gate + 1 UMA gate for bit=0)
-    int num_layers = 0;
+    // General case (bits >= 2): temp-register + QQ CDKM adder
+    //
+    // Phase 1: X-init temp register (x_count X gates)
+    // Phase 2: QQ CDKM adder (6*bits layers)
+    // Phase 3: X-cleanup temp register (x_count X gates)
+    //
+    // Total layers = 2 * x_count + 6 * bits
+
+    // Count number of 1-bits in classical value
+    int x_count = 0;
     for (int i = 0; i < bits; i++) {
-        int classical_bit = bin[bits - 1 - i]; // i=0 is LSB
-        if (classical_bit == 1) {
-            num_layers += 6;
-        } else {
-            num_layers += 2;
+        if (bin[bits - 1 - i] == 1) { // LSB-first: bit i
+            x_count++;
         }
     }
 
-    if (num_layers == 0) {
-        // All classical bits are 0 -- but wait, each 0 bit contributes 2 layers
-        // This can't happen for bits >= 2. Safety fallback.
-        sequence_t *seq = malloc(sizeof(sequence_t));
-        if (seq == NULL) {
-            free(bin);
-            return NULL;
-        }
-        seq->num_layer = 0;
-        seq->used_layer = 0;
-        seq->gates_per_layer = NULL;
-        seq->seq = NULL;
-        free(bin);
-        return seq;
-    }
+    int num_layers = 2 * x_count + 6 * bits;
 
     sequence_t *seq = alloc_sequence(num_layers);
     if (seq == NULL) {
@@ -362,33 +284,39 @@ sequence_t *toffoli_CQ_add(int bits, int64_t value) {
     }
 
     int layer = 0;
-    int ancilla = bits; // ancilla carry qubit index
+    int carry = 2 * bits; // carry ancilla qubit index
 
-    // Forward MAJ sweep (CQ variant)
-    // For i=0 (LSB): carry = ancilla, a[i] = index i
-    // For i=1..bits-1: carry = a[i-1], a[i] = index i
+    // Phase 1: X-init temp register
+    // For each bit i (LSB-first), if classical bit is 1, apply X to temp qubit i
     for (int i = 0; i < bits; i++) {
-        int carry = (i == 0) ? ancilla : (i - 1);
-        int a_i = i;
-        int classical_bit = bin[bits - 1 - i]; // i=0 is LSB
-
-        if (classical_bit == 1) {
-            emit_MAJ_CQ_one(seq, &layer, carry, a_i);
-        } else {
-            emit_MAJ_CQ_zero(seq, &layer, carry, a_i);
+        if (bin[bits - 1 - i] == 1) {
+            x(&seq->seq[layer][seq->gates_per_layer[layer]++], i);
+            layer++;
         }
     }
 
-    // Reverse UMA sweep (CQ variant)
-    for (int i = bits - 1; i >= 0; i--) {
-        int carry = (i == 0) ? ancilla : (i - 1);
-        int a_i = i;
-        int classical_bit = bin[bits - 1 - i]; // i=0 is LSB
+    // Phase 2: QQ CDKM adder on temp (a-register) and self (b-register)
+    // a-register = [0..bits-1] (temp), b-register = [bits..2*bits-1] (self)
+    // Same MAJ/UMA chain as toffoli_QQ_add
 
-        if (classical_bit == 1) {
-            emit_UMA_CQ_one(seq, &layer, carry, a_i);
-        } else {
-            emit_UMA_CQ_zero(seq, &layer, carry, a_i);
+    // Forward MAJ sweep
+    emit_MAJ(seq, &layer, carry, bits + 0, 0);
+    for (int i = 1; i < bits; i++) {
+        emit_MAJ(seq, &layer, i - 1, bits + i, i);
+    }
+
+    // Reverse UMA sweep
+    for (int i = bits - 1; i >= 1; i--) {
+        emit_UMA(seq, &layer, i - 1, bits + i, i);
+    }
+    emit_UMA(seq, &layer, carry, bits + 0, 0);
+
+    // Phase 3: X-cleanup temp register (same X gates as Phase 1, X is self-inverse)
+    // CDKM preserves a-register, so temp still holds classical value -> X undoes it
+    for (int i = 0; i < bits; i++) {
+        if (bin[bits - 1 - i] == 1) {
+            x(&seq->seq[layer][seq->gates_per_layer[layer]++], i);
+            layer++;
         }
     }
 
