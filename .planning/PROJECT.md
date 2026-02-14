@@ -116,7 +116,21 @@ Write quantum algorithms in natural programming style that compiles to efficient
 
 ### Active
 
-(No active milestone — use `/gsd:new-milestone` to plan next)
+## Current Milestone: v3.0 Fault-Tolerant Arithmetic
+
+**Goal:** Implement Toffoli-based arithmetic (no phase/rotation gates) as an alternative to QFT-based operations, enabling future error-correction readiness.
+
+**Target features:**
+- Carry Look-Ahead Adder (Draper 2004) — QQ and CQ variants, O(log n) depth
+- Toffoli-based subtraction via CLA inverse
+- Schoolbook multiplication (arXiv:2410.00899) — QQ and CQ, built on CLA adder
+- Restoring division/modulo composed from Toffoli add/sub
+- `ql.option('fault_tolerant', True)` mode flag for automatic arithmetic selection
+- Existing QFT implementations remain as default
+
+**References:**
+- Addition: [Draper et al. 2004 — quant-ph/0406142](https://arxiv.org/abs/quant-ph/0406142)
+- Multiplication: [Schoolbook with fewer Toffoli — arXiv:2410.00899](https://arxiv.org/abs/2410.00899)
 
 **Deferred bugs (carry forward):**
 - Fix _reduce_mod result corruption (BUG-MOD-REDUCE) — needs fundamentally different circuit structure
@@ -261,4 +275,4 @@ Write quantum algorithms in natural programming style that compiles to efficient
 | 15% regression tolerance | Accounts for ~8% stdev observed in benchmarks | ✓ Good — prevents false positives |
 
 ---
-*Last updated: 2026-02-08 after v2.3 milestone completion*
+*Last updated: 2026-02-14 after v3.0 milestone start*

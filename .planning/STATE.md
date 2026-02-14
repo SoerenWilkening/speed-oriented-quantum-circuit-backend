@@ -5,16 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v2.3 milestone complete. Planning next milestone.
+**Current focus:** v3.0 Fault-Tolerant Arithmetic — Toffoli-based arithmetic without phase gates
 
 ## Current Position
 
-Phase: 64 of 64 (Regression Verification)
-Plan: 1 of 1 in current phase
-Status: v2.3 milestone archived
-Last activity: 2026-02-08 -- Archived v2.3 Hardcoding Right-Sizing milestone
-
-Progress: [██████████] 100% (4/4 plans across 3 phases)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-14 — Milestone v3.0 started
 
 ## Performance Metrics
 
@@ -67,10 +65,10 @@ Recent (v2.3): Keep all addition widths 1-16 hardcoded (data-driven), shared QFT
 
 ## Session Continuity
 
-Last session: 2026-02-08
-Stopped at: Archived v2.3 Hardcoding Right-Sizing milestone
-Resume file: N/A -- milestone complete
-Resume action: Start next milestone via `/gsd:new-milestone`
+Last session: 2026-02-14
+Stopped at: Milestone v3.0 started — defining requirements
+Resume file: N/A
+Resume action: Continue with requirements definition and roadmap creation
 
 ---
-*State updated: 2026-02-08 -- v2.3 milestone archived*
+*State updated: 2026-02-14 — v3.0 milestone started*
