@@ -1,384 +1,196 @@
 # Project Research Summary
 
-**Project:** Quantum Assembly v2.2 Performance Optimization
-**Domain:** Cython/C Performance Optimization for Quantum Computing Framework
-**Researched:** 2026-02-05
+**Project:** Quantum Assembly v3.0 — Toffoli-Based Fault-Tolerant Arithmetic
+**Domain:** Quantum circuit generation (Clifford+T gate set for fault-tolerant quantum computing)
+**Researched:** 2026-02-14
 **Confidence:** HIGH
 
 ## Executive Summary
 
-This research investigates profiling-driven performance optimization for the Quantum Assembly framework, a three-layer (Python/Cython/C) quantum circuit compiler. The project currently generates quantum circuits for arithmetic operations (addition, multiplication, comparison) but suffers from performance overhead in gate generation, particularly the run_instruction dispatch layer and dynamic sequence allocation. The recommended approach establishes profiling infrastructure across all layers (Python cProfile, Cython annotation, C-level timing), identifies hot paths via measurement, then applies targeted optimizations: completing static typing in Cython, migrating critical paths to C, eliminating malloc overhead via pre-allocation or pooling, and pre-computing gate sequences for common operations (1-16 bit addition).
+Quantum Assembly currently implements all arithmetic operations (addition, multiplication, division) using QFT-based circuits that rely on phase rotation gates (CP). While these work correctly, they are unsuitable for fault-tolerant quantum computing where each small-angle rotation requires expensive synthesis into hundreds of T-gates. This milestone adds Toffoli-based arithmetic as an alternative backend, allowing users to switch via `ql.option('fault_tolerant', True)` for circuits optimized for error-corrected quantum computers.
 
-The critical constraint is Python 3.11 for Cython profiling (Python 3.12+ breaks profiling due to PEP-669). The highest-value optimizations come from eliminating boundary crossing overhead (moving entire hot paths to C, not individual functions) and replacing dynamic QFT-based addition with hardcoded gate sequences for common bit widths. Current profiling shows inject_remapped_gates allocates per-gate (malloc in hot path - major bottleneck) and the compile.py optimizer runs Python-level gate list processing on every capture.
+The existing codebase infrastructure is already 95% compatible with this addition. All required gate primitives (CCX, CX, X) exist and work correctly. The sequence generation pipeline, qubit allocator, hot path dispatch mechanism, and operator overloading infrastructure are ready to use. The work is fundamentally about implementing new sequence generators (RCA/CLA adders, schoolbook multiplier, restoring divider) and wiring them through the existing dispatch mechanism. No new dependencies, languages, or architectural patterns are required.
 
-Key risks include premature optimization without profiling data (wasting effort on non-bottlenecks), boundary crossing overhead when moving code to C (can be 10x slower if done wrong), and validation failures for precomputed gate sequences (silently incorrect circuits). Mitigation: profile with production-scale workloads first, move entire hot paths (not individual functions) to C, and validate hardcoded sequences against dynamic computation during tests.
+The critical risk is ancilla qubit lifecycle management. QFT arithmetic uses zero ancilla qubits; Toffoli arithmetic uses O(n) ancilla that must be uncomputed to |0> after each operation. Incorrect uncomputation produces silent wrong results rather than crashes. Additionally, several existing bugs (reverse_circuit_range negating self-inverse gate values, qubit_array layout mismatches, allocator contiguous block reuse) must be fixed before Toffoli integration. The recommended approach: start with the simplest algorithm (CDKM ripple-carry adder with 1 ancilla), verify thoroughly, then build multiplication and division on top of the proven adder foundation.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The profiling stack focuses on cross-layer visibility for Python/Cython/C hybrid architecture. Python 3.11 is mandatory for Cython-level profiling due to PEP-669 breaking changes in 3.12+. The stack provides coverage across all three layers with tools that integrate with the existing pytest/setup.py infrastructure.
+The existing stack (C backend, Cython bindings, Python frontend) requires zero new dependencies. All Toffoli-based operations are implemented purely through existing gate primitives that are already functional.
 
 **Core technologies:**
-- **cProfile + snakeviz 2.2.2**: Python function-level timing with browser visualization - zero install overhead, identifies hot Python functions
-- **line_profiler 5.0.0**: Line-by-line Python and Cython timing - drills into specific hot functions identified by cProfile
-- **memray 1.19.1**: Memory allocation profiling - Bloomberg's production tool, traces Python AND native code allocations (critical for Cython/C)
-- **cython -a (annotation HTML)**: Cython-to-C boundary visualization - yellow lines show Python API overhead, guides optimization targets
-- **py-spy 0.4.1**: Sampling profiler with --native flag - profiles C extensions without code modification or slowdown
-- **perf (Linux) / valgrind**: C-level CPU and memory profiling - deep-dive analysis for C backend hot spots
+- **CDKM ripple-carry adder** (Cuccaro et al. 2004) — Foundation for all operations. 2n-1 Toffoli gates, 1 ancilla, O(n) depth. Simple to implement and verify.
+- **Draper CLA adder** (optional upgrade) — O(log n) depth optimization. 5n-6 Toffoli gates, 2n-2 ancilla. Complex prefix tree logic. Defer until RCA proven.
+- **Schoolbook multiplication** (Litinski 2024) — n^2+4n+3 Toffoli gates using controlled add-subtract technique. 50% gate reduction vs naive approach.
+- **Restoring division** — Already implemented at Python level using comparisons and conditional subtraction. Automatically works with Toffoli adders underneath.
+- **Existing infrastructure** — `ccx()`, `cx()`, `x()` gates, `run_instruction()` pipeline, `allocator_alloc()` for ancilla, hot path dispatch, sequence caching.
 
-**Integration approach:**
-- Add profiling optional dependency group to pyproject.toml
-- Environment variable QUANTUM_PROFILE=1 enables profiling build (Cython directives: profile=True, linetrace=True)
-- Makefile targets for profile, profile-line, profile-memory, cython-annotate
-
-**Critical constraint:** Pin profiling work to Python 3.11. Cython profiling is non-functional in CPython 3.12+ due to PEP-669 changes.
+**Critical version/compatibility notes:**
+- Existing `reverse_circuit_range()` function MUST be fixed before Toffoli integration (negates GateValue, breaks self-inverse gates).
+- Allocator currently only reuses freed ancilla for count=1 allocations; CLA needs contiguous blocks (fix before CLA).
 
 ### Expected Features
 
-Performance optimization for Cython/C code requires profiling infrastructure first, followed by targeted optimizations based on measurement data. Features categorized by necessity and complexity.
-
 **Must have (table stakes):**
-- Profiling infrastructure (Python/Cython/C) - cannot optimize without measurement; establishes baselines
-- Static typing for all cdef functions - Cython without types gives only 35% speedup; with types gives 10-100x
-- Bounds checking disabled for production - boundscheck=False in tight loops is standard Cython optimization
-- Memory views for array parameters - replaces slow Python list access with C-speed buffer protocol
-- Avoid Python object creation in hot paths - PyObject allocation is slow; use C types directly
+- Ripple-carry adder (QQ, CQ, cQQ, cCQ variants) — All four variants required to match existing QFT API surface
+- Subtraction via circuit inversion — Users write `a -= b`, must work transparently
+- `ql.option('fault_tolerant', True/False)` backend selector — Same API, different gate set
+- Schoolbook multiplication (QQ, CQ variants) — Core arithmetic operation
+- Restoring division (quantum and classical divisor) — Already works at Python level, must preserve behavior
+- Ancilla lifecycle management — Allocate, use, uncompute to |0>, free
+- Verification against QFT results — Correctness guarantee for all operations
 
-**Should have (competitive differentiators):**
-- Fix f() vs f.inverse() depth discrepancy - identified bug where inverse produces lower depth than forward
-- Hardcoded gate sequences for 1-16 bit addition - pre-computed sequences eliminate runtime QFT generation (10-50x improvement)
-- Sequence caching at C level - extend existing precompiled_*_width pattern to eliminate value-dependent allocations
-- nogil sections for parallel gate injection - release GIL during C backend calls if no Python callbacks
-- Object pooling for gate_t structures - reuse gate structs instead of malloc/free per gate (inject_remapped_gates allocates per gate currently)
+**Should have (competitive):**
+- Carry look-ahead adder — O(log n) depth improvement for large widths (n >= 16)
+- Controlled multiplication (cQQ, cCQ) — Needed for nested conditionals
+- Hardcoded sequences (widths 1-8) — Performance parity with existing QFT hardcoded sequences
+- Hot path C implementation — Eliminate Python/C boundary crossings
+- T-count reporting — Primary cost metric for fault-tolerant QC (each Toffoli = 7 T-gates)
+- Controlled add-subtract circuit — Litinski technique saves 50% Toffoli gates in multiplication
 
-**Defer (post-MVP):**
-- Memory arena for circuit operations - complex lifecycle management, requires profiling to confirm malloc is bottleneck
-- Python-to-C migration for compile.py - large effort, only if Python optimization insufficient
-- Custom allocator for all memory - glibc allocator is heavily optimized; custom allocator adds complexity overhead
-
-**Anti-features (explicitly avoid):**
-- Premature micro-optimization - optimize without profiling wastes effort on non-bottlenecks
-- Global nogil without analysis - can cause segfaults if Python objects accessed; hard to debug
-- Removing all bounds checking - masks bugs; crashes become silent corruption
-- LTO (Link-Time Optimization) - setup.py notes GCC LTO bug; removed for a reason
+**Defer (v2+):**
+- Karatsuba multiplication — Only helps for n > 100, far beyond target 1-64 bit range
+- Non-restoring division — Marginal T-count improvement (15%) over restoring, significantly more complex
+- Measurement-based uncomputation (Gidney's AND trick) — Requires mid-circuit measurement infrastructure
+- Modular arithmetic (mod 2^n - 1) — Specialized for Shor's algorithm, not general-purpose arithmetic
 
 ### Architecture Approach
 
-The architecture integrates profiling infrastructure and optimization into the existing three-layer Quantum Assembly framework (C backend -> Cython bindings -> Python frontend) while maintaining the ~400 LOC per file constraint. The approach enables cross-layer profiling from Python through Cython to C, provides migration paths for hot paths from Cython to C, and supports hardcoded gate sequences for common operations.
+Follow the existing QFT arithmetic pattern exactly: parallel file structure with separate sequence generators, separate precompiled caches, shared execution pipeline. The ToffoliAddition.c module generates `sequence_t*` using MAJ/UMA gate patterns, ToffoliMultiplication.c builds on the adder as a subroutine. Backend selection happens at hot path dispatch via flag check.
 
 **Major components:**
+1. **ToffoliAddition.c** — Implements QQ_add_toffoli, CQ_add_toffoli, cQQ_add_toffoli, cCQ_add_toffoli using MAJ/UMA chains. Returns cached sequence_t*. Manages ancilla allocation internally.
+2. **ToffoliMultiplication.c** — Schoolbook multiplication via n iterations of controlled add-subtract. Builds on Toffoli adder. Parallel to IntegerMultiplication.c.
+3. **ToffoliDivision.c** (optional) — C-level restoring division gate generation. Alternative to existing Python-level implementation.
+4. **hot_path_toffoli_add.c** — Qubit array assembly with ancilla positions, dispatch to run_instruction(). Parallel to hot_path_add.c.
+5. **Backend dispatch** — Extend hot_path_add_qq() to check `fault_tolerant` flag and call Toffoli vs QFT sequence generator.
 
-1. **Profiler Module** (profiler.h/c, _profiler.pyx, profiler.py ~650 LOC total)
-   - C-level instrumentation macros (PROF_ENTER, PROF_EXIT, PROF_COUNT) that compile to no-op when QUANTUM_PROFILE undefined
-   - Python context manager API: with ql.profile() as stats
-   - Zero overhead when disabled; cross-layer visibility when enabled
-   - Integrates with cProfile for Python layer
-
-2. **Hot Paths C API** (hot_paths.h/c ~480 LOC)
-   - Direct circuit generation functions: hot_QQ_add, hot_CQ_add, hot_cQQ_add, hot_cCQ_add
-   - Bypasses sequence_t/run_instruction overhead by generating gates directly into circuit
-   - Pre-mapped qubits eliminate qubit remapping overhead
-   - Falls back to dynamic generation for widths > 16 bits
-
-3. **Hardcoded Gate Sequences** (hardcoded_add.h + 4x .c files ~1650 LOC total)
-   - Pre-computed addition sequences for 1-16 bits (split into 4 files: 1-4, 5-8, 9-12, 13-16 bits)
-   - Static const arrays of gate descriptors (type, target, control, angle)
-   - Emission function remaps relative qubit indices to actual circuit qubits
-   - Validation: compare hardcoded output to dynamic sequence generation in tests
-
-**Data flow optimization:**
-- Current: Python -> Cython qint.__add__ -> Cython addition_inplace -> C QQ_add (allocate sequence_t) -> C run_instruction (remap + inject per gate with malloc)
-- Optimized: Python -> Cython qint.__add__ -> C hot_QQ_add (if width <= 16: emit hardcoded sequence; else: fallback) -> add_gate directly (no sequence_t allocation, no per-gate malloc)
-
-**Integration points:**
-- C backend: Instrument IntegerAddition.c, execution.c with PROF_ENTER/PROF_EXIT
-- Cython: Update _core.pxd to expose hot_paths.h, modify qint_arithmetic.pxi to call hot_* functions
-- Python: Add profiler.py wrapper for user-facing API
-- Build: setup.py adds new C sources, QUANTUM_PROFILE env var enables profiling directives
+**Data flow:** Python operator → Cython dispatch → hot path (check backend flag) → sequence generator (build MAJ/UMA chain) → run_instruction (execute with qubit mapping) → circuit layers.
 
 ### Critical Pitfalls
 
-Based on Cython documentation, scikit-learn best practices, and existing codebase analysis, the top risks are:
+1. **Ancilla qubits left dirty after uncomputation** — Toffoli adders use O(n) ancilla for carry bits that MUST be uncomputed to |0> or they corrupt all subsequent operations. QFT uses zero ancilla, so this infrastructure is untested. Prevention: MAJ/UMA chain must be symmetric (forward MAJ sweep, reverse UMA sweep). Add debug assertion that ancilla measure to 0 after free.
 
-1. **Optimizing Without Profiling (Premature Optimization)**
-   - Risk: Spend days optimizing code that accounts for 2-5% of runtime while actual bottleneck remains untouched
-   - Prevention: Profile first with cProfile/line_profiler on representative workloads; run cython -a to identify yellow lines; establish baselines before any optimization
-   - Detection: Compare development effort to actual speedup - if hours of work yield < 5% improvement, wrong target was optimized
-   - Phase: Address in Phase 1 (Profiling Infrastructure) - establish profiling before any optimization work
+2. **reverse_circuit_range() negates GateValue for self-inverse gates** — Current code negates GateValue to invert gates (works for CP(θ) → CP(-θ)). For Toffoli gates (GateValue=1, self-inverse), negation produces GateValue=-1 which is undefined. This breaks subtraction and division uncomputation. Prevention: Fix reverse_circuit_range() BEFORE any Toffoli integration. Check gate type, skip negation for self-inverse gates (X, CX, CCX).
 
-2. **Boundary Crossing Overhead When Moving Code to C**
-   - Risk: Moving individual function to C creates 10x performance regression due to Python/C boundary overhead (argument conversion, result marshaling)
-   - Prevention: Move entire hot paths, not individual functions; batch operations (pass array of N inputs, not call N times); keep data in C structs; measure call frequency
-   - Detection: Profile the call site, not just the function; use perf to see time in marshaling code
-   - Phase: Address in Phase 2 (C Migration) - design C API to minimize boundary crossings
+3. **qubit_array layout collision between QFT and Toffoli backends** — QFT adder uses [target, other] layout. Toffoli RCA uses [a, b, ancilla]. Toffoli CLA uses [a, b, g_ancilla, p_ancilla]. If backend selection happens at wrong level, qubit_array assembled for QFT will be executed with Toffoli sequence or vice versa, producing silent wrong results. Prevention: Separate hot path functions per backend OR explicit layout descriptor. Never share qubit_array assembly.
 
-3. **Malloc in Hot Paths**
-   - Risk: Memory allocation can take 100-1000x longer than actual computation; current inject_remapped_gates allocates per gate
-   - Prevention: Pre-allocate buffers once at initialization; use stack allocation for small fixed-size buffers; pool allocation for frequent structures; amortize allocation (allocate in blocks)
-   - Detection: Use valgrind --tool=massif to track allocation patterns; count malloc calls with instrumentation
-   - Specific target: inject_remapped_gates in _core.pyx lines 756-778 calls malloc(sizeof(gate_t)) per gate
-   - Phase: Address in Phase 3 (Memory Optimization) - implement gate pooling or pre-allocation
+4. **Carry-lookahead generate/propagate tree index off-by-one** — CLA prefix tree has O(log n) levels with complex index arithmetic. Off-by-one errors produce circuits that work for n=1,2,4,8 (powers of 2) but fail for n=3,5,6,7. Prevention: Start with CDKM ripple-carry first (simple, 1 ancilla, well-understood). Only implement CLA after RCA proven. Exhaustive test CLA for all inputs at widths 1-6.
 
-4. **Unrepresentative Profiling Workloads**
-   - Risk: Optimizations based on small test cases (10 gates) produce slower code on real workloads (10,000+ gates)
-   - Prevention: Profile with production-size circuits (1000+ gates); vary circuit types (addition, multiplication, comparison, arrays); include edge cases (wide integers, deep control nesting)
-   - Detection: Compare optimization gains on test vs production - if they differ by > 20%, workload is not representative
-   - Phase: Address in Phase 1 (Profiling Infrastructure) - create representative benchmark suite before optimization
-
-5. **Hardcoding Without Validation**
-   - Risk: Precomputed gate sequences are wrong due to computation error, causing silently incorrect quantum circuits
-   - Prevention: Generate lookup tables from same code path; validate on load (compare sample precomputed values to runtime computation); comprehensive test coverage for all precomputed paths; include assertions
-   - Phase: Address in Phase 3 (Gate Sequence Hardcoding) - include validation infrastructure in tests
+5. **Qubit count explosion from ancilla non-reuse** — Current allocator only reuses freed ancilla for count=1. CLA needs contiguous blocks (2n-2 ancilla). If not reused, each of n partial products in multiplication allocates fresh ancilla → O(n^2) total instead of O(n). Prevention: Fix allocator_alloc() to support contiguous block reuse from freed stack before implementing CLA or multiplication.
 
 ## Implications for Roadmap
 
-Based on research, the optimization work must follow a strict profiling-driven methodology. The architecture research identifies clear dependencies: profiling infrastructure is foundation for all optimization decisions, hot path migration requires profiling data to identify targets, and hardcoded sequences build on the C migration infrastructure. Suggested phase structure below.
+Based on research, suggested phase structure:
 
-### Phase 1: Profiling Infrastructure
-**Rationale:** Cannot optimize without measurement. Profiling identifies actual bottlenecks and prevents premature optimization (Pitfall 1, 4). Establishes baselines for measuring improvement. All subsequent optimization depends on profiling data.
+### Phase 1: Infrastructure Fixes
+**Rationale:** Three existing bugs block Toffoli integration. Must fix before any algorithm work.
+**Delivers:** Fixed reverse_circuit_range() for self-inverse gates, fixed allocator contiguous block reuse, fixed qubit_array layout contracts.
+**Addresses:** Pitfalls 2, 3, 5 from research.
+**Avoids:** Retroactive fixes to working code (much harder than fixing prerequisites).
 
-**Delivers:**
-- Cross-layer profiler (profiler.h/c, _profiler.pyx, profiler.py)
-- Makefile targets for profiling (profile, profile-line, profile-memory, cython-annotate)
-- Benchmark suite with production-scale workloads
-- Python 3.11 environment for Cython profiling
-- Baseline performance measurements
+### Phase 2: CDKM Ripple-Carry Adder (All Variants)
+**Rationale:** Simplest correct Toffoli adder. Only 1 ancilla, linear MAJ/UMA chain, well-documented. Foundation for all other operations.
+**Delivers:** QQ_add_toffoli, CQ_add_toffoli, cQQ_add_toffoli, cCQ_add_toffoli. Verified against QFT addition for all widths 1-8.
+**Uses:** Fixed allocator, fixed reverse_circuit_range for subtraction testing.
+**Implements:** ToffoliAddition.c MAJ/UMA pattern, ancilla lifecycle management.
+**Avoids:** CLA complexity (Pitfall 4), ancilla lifecycle bugs (Pitfall 1).
 
-**Addresses:**
-- Table stakes: Profiling infrastructure (required for optimization)
-- Avoids Pitfall 1: Optimizing without profiling
-- Avoids Pitfall 4: Unrepresentative profiling workloads
+### Phase 3: Backend Dispatch Integration
+**Rationale:** Wire Toffoli adder into operator overloading via fault_tolerant flag. Users can now switch backends for addition.
+**Delivers:** `ql.option('fault_tolerant', True)` working for `+`, `-`, `+=`, `-=` operators.
+**Uses:** hot_path_add.c modification, separate precompiled cache arrays.
+**Implements:** Backend selection pattern that extends to multiplication/division.
+**Avoids:** Backend collision (Pitfall 3), cached sequence mutation.
 
-**Complexity:** MEDIUM - New module creation, cross-layer integration
-**Risk:** LOW - Additive only, no existing code changes
-**Research needed:** STANDARD - Profiling patterns well-documented in Cython docs and scikit-learn best practices
+### Phase 4: Schoolbook Multiplication
+**Rationale:** Built on proven Toffoli adder. Schoolbook with controlled add-subtract is the recommended approach from literature (Litinski 2024).
+**Delivers:** QQ_mul_toffoli, CQ_mul_toffoli. Verified against QFT multiplication.
+**Uses:** Controlled Toffoli adder (cQQ_add_toffoli from Phase 2).
+**Implements:** ToffoliMultiplication.c, n iterations of shift-and-add with controlled add-subtract.
+**Avoids:** Karatsuba complexity (deferred), add-subtract sign errors (test plain controlled addition first).
 
-### Phase 2: Fix f() vs f.inverse() Depth Discrepancy
-**Rationale:** Identified bug where f.inverse(x) produces lower circuit depth than f(x) followed by optimization. Quick win with correctness and performance benefits. Can be fixed once profiling infrastructure identifies the exact cause in optimizer vs capture flow.
+### Phase 5: Restoring Division (Automatic via Python)
+**Rationale:** Already works at Python level. With Toffoli adders underneath, division automatically produces Toffoli circuits.
+**Delivers:** Division and modulo operations working with fault_tolerant backend. No new C code required.
+**Uses:** Existing qint_division.pxi comparison loop, Toffoli subtraction (inverted adder).
+**Implements:** Verification that existing division logic composes correctly with Toffoli primitives.
+**Avoids:** Rewriting division algorithm, non-restoring division complexity.
 
-**Delivers:**
-- Corrected depth for forward operations matching inverse
-- Understanding of optimizer behavior during capture vs post-capture
-- Validation tests for depth parity
+### Phase 6: Performance Optimization
+**Rationale:** Algorithms proven correct, now optimize. Hardcoded sequences for common widths, hot path migration, controlled multiplication.
+**Delivers:** Hardcoded Toffoli sequences (widths 1-8), hot_path_toffoli_add.c, cQQ_mul_toffoli, cCQ_mul_toffoli.
+**Uses:** Existing hardcoding pattern from scripts/generate_seq_*.py, hot path pattern from Phase 60.
+**Implements:** T-count reporting in circuit stats, comparative benchmarking vs QFT.
 
-**Addresses:**
-- Competitive feature: Fix depth discrepancy
-- Correctness issue with performance implications
-
-**Complexity:** MEDIUM - Requires understanding optimizer and capture interaction
-**Risk:** MEDIUM - Must maintain correctness (tests validate)
-**Research needed:** SKIP - Issue already identified in codebase, standard optimization pattern
-
-### Phase 3: Cython Quick Wins (Static Typing, Compiler Directives)
-**Rationale:** Low-risk optimizations guided by cython -a annotation HTML. Complete static typing in hot paths identified by profiling, add boundscheck=False/wraparound=False to verified tight loops, convert to memory views for array passing. Measurable 2-10x gains in typed sections with minimal code change risk.
-
-**Delivers:**
-- Complete static typing for hot path cdef functions
-- Compiler directives (boundscheck=False) in verified loops
-- Memory views for qubit array passing
-- cython -a annotation reports showing reduced yellow lines
-
-**Addresses:**
-- Table stakes: Static typing, bounds checking disabled, memory views
-- Avoids Pitfall 5: Over-typing (guided by annotation HTML)
-- Avoids Pitfall 10: Annotation misinterpretation
-
-**Complexity:** LOW - Standard Cython optimization patterns
-**Risk:** LOW - Guided by profiling and annotation reports
-**Research needed:** SKIP - Well-documented in Cython docs
-
-### Phase 4: C Hot Path Migration
-**Rationale:** Profiling data from Phase 1 identifies hot paths in Cython (likely qint.addition_inplace, run_instruction dispatch). Move entire hot paths to C (hot_paths.h/c) to eliminate run_instruction overhead and Python/C boundary crossings. Must move complete operations (not individual functions) to avoid Pitfall 2.
-
-**Delivers:**
-- hot_paths.h/c with hot_QQ_add, hot_CQ_add, hot_cQQ_add, hot_cCQ_add
-- Updated _core.pxd to expose hot_paths API
-- Modified qint_arithmetic.pxi to call hot_* functions directly
-- Validation tests comparing hot path output to sequence_t generation
-
-**Addresses:**
-- Table stakes: Avoid Python object creation in hot paths
-- Competitive feature: Sequence caching at C level
-- Avoids Pitfall 2: Boundary crossing overhead (move entire hot paths)
-- Avoids Pitfall 3: Malloc in hot paths (design API without per-call allocation)
-
-**Complexity:** HIGH - Careful qubit mapping, complete path migration
-**Risk:** MEDIUM - Must maintain correctness (tests validate)
-**Research needed:** SKIP - Architecture clearly defined in research
-
-### Phase 5: Hardcoded Gate Sequences (1-8 bits)
-**Rationale:** For default 8-bit width (most common use case), pre-computed addition sequences eliminate runtime QFT generation. Expected 10-50x improvement for cached widths. Builds on hot_paths infrastructure from Phase 4. Start with 1-8 bits to validate approach before extending to 16 bits.
-
-**Delivers:**
-- hardcoded_add.h with API declarations
-- hardcoded_add_1_4.c with 1-4 bit sequences
-- hardcoded_add_5_8.c with 5-8 bit sequences
-- hot_paths.c updated to use hardcoded sequences when available
-- Validation tests: compare hardcoded output to dynamic generation
-
-**Addresses:**
-- Competitive feature: Hardcoded gate sequences (high-impact differentiator)
-- Avoids Pitfall 8: Hardcoding without validation (include validation infrastructure)
-
-**Complexity:** MEDIUM - Repetitive but mechanical pre-computation
-**Risk:** LOW - Can validate against existing sequence_t output
-**Research needed:** SKIP - Pattern established in existing precompiled_* caches
-
-### Phase 6: Hardcoded Gate Sequences (9-16 bits)
-**Rationale:** Extend hardcoded sequences to 9-16 bits for broader coverage while staying within ~400 LOC per file constraint. Mechanical extension of Phase 5 approach.
-
-**Delivers:**
-- hardcoded_add_9_12.c with 9-12 bit sequences
-- hardcoded_add_13_16.c with 13-16 bit sequences
-- Extended validation tests
-
-**Addresses:**
-- Competitive feature: Extended hardcoded sequence coverage
-
-**Complexity:** LOW - Same pattern as Phase 5
-**Risk:** LOW - Mechanical extension
-**Research needed:** SKIP - Same approach as Phase 5
-
-### Phase 7: Memory Optimization (Object Pooling)
-**Rationale:** If profiling data shows malloc overhead remains after Phase 4 (likely in inject_remapped_gates if not yet migrated), implement gate_t object pooling. Only proceed if profiling shows malloc is bottleneck - deferred until measurement confirms need.
-
-**Delivers:**
-- Object pool for gate_t structures (if profiling confirms need)
-- Modified inject_remapped_gates or equivalent to use pool
-- Memory profiling showing reduced allocation count
-
-**Addresses:**
-- Competitive feature: Object pooling for gate_t
-- Avoids Pitfall 3: Malloc in hot paths
-
-**Complexity:** MEDIUM - Careful lifecycle management
-**Risk:** MEDIUM - Pool implementation requires correct reuse logic
-**Research needed:** SKIP - Standard object pooling pattern
-
-### Phase 8: Validation and Benchmarking
-**Rationale:** Confirm optimization achieved performance goals. Compare before/after benchmarks, generate profile reports demonstrating improvement, update documentation with optimization guidance.
-
-**Delivers:**
-- Benchmark comparison report (before vs after optimization)
-- Profile reports showing improvement metrics
-- Updated documentation for profiling workflow
-- Performance regression tests integrated with CI
-
-**Addresses:**
-- Avoids Pitfall 9: Regression without baseline tests
-- Validation of all optimization work
-
-**Complexity:** LOW - Measurement and documentation
-**Risk:** LOW
-**Research needed:** SKIP - Standard benchmarking
+### Phase 7 (Optional): Carry Look-Ahead Adder
+**Rationale:** Depth optimization for large widths. O(log n) vs O(n) depth. Only valuable for n >= 16.
+**Delivers:** QQ_add_cla, automatic adder strategy selection based on width.
+**Uses:** RCA as fallback, separate cache for CLA sequences.
+**Implements:** Generate/propagate prefix tree (Brent-Kung structure), 2n-2 ancilla management.
+**Avoids:** Index errors (Pitfall 4) via exhaustive testing against RCA results.
 
 ### Phase Ordering Rationale
 
-- **Phase 1 first (Profiling):** Fundamental dependency - cannot make informed optimization decisions without measurement data. Establishes baselines for measuring improvement. Prevents premature optimization.
-
-- **Phase 2 early (f/f.inverse fix):** Quick win for correctness once profiling identifies root cause. Can be parallelized with Phase 3 if profiling shows independent code paths.
-
-- **Phase 3 before Phase 4 (Cython before C):** Lower risk, faster to implement, provides measurable gains. Ensures Cython layer is optimized before moving to C (avoid moving already-optimizable Cython code).
-
-- **Phase 4 enables Phase 5/6 (hot_paths enables hardcoded):** Hardcoded sequences integrate with hot_paths API. Must have direct circuit generation infrastructure before pre-computed sequences.
-
-- **Phase 5 before Phase 6 (1-8 bits before 9-16):** Validate approach on most common use case (8-bit default) before extending. Mechanical extension reduces risk.
-
-- **Phase 7 deferred (Object pooling):** Only proceed if profiling shows malloc remains bottleneck after Phase 4. May not be needed if hot_paths eliminates per-gate allocation.
-
-- **Phase 8 last (Validation):** Requires all optimization work complete to measure total improvement.
+- **Infrastructure first:** Fixing reverse_circuit_range and allocator before any algorithm work prevents painful retrofits. These bugs would silently corrupt Toffoli circuits.
+- **RCA before CLA:** Ripple-carry is simpler (1 ancilla vs 2n-2, linear chain vs tree structure). Proves ancilla lifecycle management works before attempting complex CLA.
+- **Adder before multiplication:** Multiplication uses adder as subroutine. Testing adder in isolation simplifies multiplication debugging.
+- **Automatic division before C-level division:** Existing Python division composes with Toffoli primitives for free. C-level gate generation is optional optimization, not required for correctness.
+- **Optimization last:** Hardcoding and hot path migration are pure performance improvements. Defer until algorithms proven correct via dynamic generation.
 
 ### Research Flags
 
-**Phases with standard patterns (skip research-phase):**
-- **Phase 1 (Profiling):** Well-documented in Cython profiling tutorial, scikit-learn best practices, Bloomberg memray docs
-- **Phase 2 (f/f.inverse):** Issue identified in codebase, standard optimization flow analysis
-- **Phase 3 (Cython Quick Wins):** Official Cython documentation provides clear guidance on static typing, compiler directives, memory views
-- **Phase 4 (C Hot Paths):** Architecture clearly defined in ARCHITECTURE-PROFILER-OPTIMIZATION.md, pattern exists in codebase (precompiled_* caches)
-- **Phase 5/6 (Hardcoded Sequences):** Extension of existing precompiled pattern, validation approach defined in architecture research
-- **Phase 7 (Object Pooling):** Standard object pooling pattern if needed (conditional on profiling)
-- **Phase 8 (Validation):** Standard benchmarking and documentation
+Phases likely needing deeper research during planning:
+- **Phase 7 (CLA):** Complex prefix tree index arithmetic. Draper paper has detailed description but implementation subtleties. Consider `/gsd:research-phase` for Brent-Kung tree structure.
 
-**No phases require deeper research during planning.** All optimization patterns are well-documented in official Cython documentation, scikit-learn Cython best practices, and existing codebase patterns.
+Phases with standard patterns (skip research-phase):
+- **Phase 1 (Infrastructure):** Bug fixes in existing code. Straightforward C modifications.
+- **Phase 2 (RCA):** Cuccaro paper has explicit gate-by-gate description. MAJ/UMA pattern well-documented in Qiskit reference implementation.
+- **Phase 3 (Dispatch):** Existing hot path pattern from Phase 60. Direct application.
+- **Phase 4 (Multiplication):** Schoolbook algorithm is standard. Litinski paper provides exact gate counts and circuits.
+- **Phase 5 (Division):** Uses existing Python code, no algorithm changes.
+- **Phase 6 (Optimization):** Existing patterns for hardcoding and hot paths.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All tools verified via PyPI (versions current as of 2026-02-05); profiling workflow documented in official Cython and Python docs; memray is Bloomberg production tool |
-| Features | HIGH | Table stakes based on standard Cython optimization patterns (scikit-learn best practices); differentiators identified from existing codebase analysis (f/f.inverse discrepancy, precompiled_* pattern for hardcoded sequences) |
-| Architecture | HIGH | Based on existing three-layer structure analysis; profiler module follows established instrumentation patterns; hot_paths and hardcoded sequences extend existing precompiled_* caching pattern |
-| Pitfalls | HIGH | Verified against official Cython documentation, scikit-learn Cython best practices, and Python profiling guides; malloc in hot paths confirmed by _core.pyx line 756-778 analysis |
+| Stack | HIGH | All gate primitives verified in gate.c. No new dependencies. Cuccaro/Draper algorithms are well-established (2004, 1000+ citations each). |
+| Features | HIGH | Feature set derived from existing QFT API surface (must match) plus literature survey of standard Toffoli arithmetic operations. |
+| Architecture | HIGH | Parallel structure to existing IntegerAddition.c/IntegerMultiplication.c. Pattern proven in codebase. MAJ/UMA decomposition from Cuccaro paper is explicit. |
+| Pitfalls | HIGH | Codebase inspection revealed three critical bugs (reverse_circuit_range, qubit_array layout, allocator reuse) that directly impact Toffoli integration. Ancilla lifecycle management is well-understood risk from literature. |
 
 **Overall confidence:** HIGH
 
-All recommendations grounded in official documentation, established best practices, and existing codebase patterns. Python 3.11 constraint verified against Cython PEP-669 breaking change documentation.
-
 ### Gaps to Address
 
-The research provides clear guidance for implementation, but the following should be validated during execution:
+- **Exact CLA prefix tree implementation:** Draper paper describes algorithm conceptually but gate-level indexing requires careful translation. Qiskit CDKMRippleCarryAdder exists but no Qiskit CLA reference implementation found. Plan to implement RCA first, then use RCA as test oracle for CLA.
 
-- **Profiling workload representativeness:** Create benchmark suite with production-scale circuits (1000+ gates, varied operation types) during Phase 1 to ensure profiling data reflects real usage patterns. Validate benchmark suite against actual production workloads if available.
+- **Controlled multiplication Toffoli count:** Litinski 2024 gives n^2+4n+3 for uncontrolled QQ_mul. Controlled version (cQQ_mul_toffoli) requires additional control qubit on all gates. Unsure if controlled add-subtract technique still applies or if naive 2x cost. Resolution: implement uncontrolled first, research controlled separately if needed.
 
-- **GIL analysis for nogil sections:** During Phase 4 (C Migration), verify that run_instruction and hot path C code has no Python callbacks. Use cython -a to confirm all lines in nogil blocks are white (no Python API calls). This determines whether nogil optimization is viable.
+- **Optimizer interaction with Toffoli circuits:** Optimizer gate cancellation and commutation rules designed for QFT circuits. Unclear if optimizer helps, hinders, or breaks Toffoli circuits. Plan: disable optimizer for Toffoli initially (flag check), test with optimizer enabled after correctness proven, fix commutation rules if needed.
 
-- **Malloc bottleneck confirmation:** Phase 7 (Object Pooling) is conditional on profiling data showing malloc remains bottleneck after Phase 4. May not be needed if hot_paths eliminates per-gate allocation. Decide based on Phase 1 and Phase 4 profiling results.
-
-- **Hardcoded sequence validation approach:** During Phase 5, establish automated validation that compares hardcoded gate sequences to dynamic generation output. This prevents Pitfall 8 (silently incorrect circuits). Use pytest fixtures that generate both paths and assert equality.
-
-- **Cross-platform compiler flag compatibility:** The project notes setup.py removed -flto due to GCC LTO bug. During Phase 8, validate optimized builds work on both Linux and macOS. Document any platform-specific flags or limitations.
+- **BUG-DIV-02 and BUG-MOD-REDUCE interaction:** Division and modulo have existing deferred bugs. Division uses Toffoli comparison gates (IntegerComparison.c). Unknown if Toffoli arithmetic backend interacts with these bugs. Resolution: fix or work around existing bugs before Phase 5, or accept Phase 5 inherits existing limitations.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-
-**Stack:**
-- [line_profiler 5.0.0 - PyPI](https://pypi.org/project/line-profiler/)
-- [memray 1.19.1 - PyPI](https://pypi.org/project/memray/)
-- [snakeviz 2.2.2 - PyPI](https://pypi.org/project/snakeviz/)
-- [pytest-benchmark 5.2.3 - PyPI](https://pypi.org/project/pytest-benchmark/)
-- [py-spy 0.4.1 - PyPI](https://pypi.org/project/py-spy/)
-- [scalene 2.1.3 - PyPI](https://pypi.org/project/scalene/)
-- [Cython 3.2.4 - PyPI](https://pypi.org/project/Cython/)
-- [Python cProfile Documentation](https://docs.python.org/3/library/profile.html)
-- [Cython Profiling Tutorial](https://cython.readthedocs.io/en/latest/src/tutorial/profiling_tutorial.html)
-- [memray Documentation](https://bloomberg.github.io/memray/)
-
-**Features:**
-- [scikit-learn Cython Best Practices](https://scikit-learn.org/stable/developers/cython.html)
-- [Cython Static Typing Documentation](https://cython.readthedocs.io/en/latest/src/quickstart/cythonize.html)
-- [Finesse Cython Optimization Guide](https://finesse.ifosim.org/docs/latest/developer/codeguide/cython/optimising.html)
-
-**Architecture:**
-- [Cython Profiling Tutorial](https://cython.readthedocs.io/en/latest/src/tutorial/profiling_tutorial.html)
-- [Score-P Performance Measurement](https://zenodo.org/records/8424550)
-- Existing codebase: IntegerAddition.c, execution.c, qint_arithmetic.pxi, _core.pyx
-
-**Pitfalls:**
-- [Cython Faster Code via Static Typing](https://cython.readthedocs.io/en/latest/src/quickstart/cythonize.html)
-- [Cython Typed Memoryviews](https://cython.readthedocs.io/en/latest/src/userguide/memoryviews.html)
-- [scikit-learn Cython Best Practices](https://scikit-learn.org/stable/developers/cython.html)
-- [Some Reasons to Avoid Cython](https://pythonspeed.com/articles/cython-limitations/)
-- [Hidden Performance Overhead of Python C Extensions](https://pythonspeed.com/articles/python-extension-performance/)
+- [Cuccaro et al. 2004 - arXiv:quant-ph/0410184](https://arxiv.org/abs/quant-ph/0410184) — CDKM ripple-carry adder: 2n-1 Toffoli, 5n-3 CNOT, 1 ancilla, MAJ/UMA gate decomposition
+- [Draper et al. 2004 - arXiv:quant-ph/0406142](https://arxiv.org/abs/quant-ph/0406142) — CLA adder: 5n-6 Toffoli, O(log n) depth, 2n-2 ancilla, generate/propagate prefix tree
+- [Litinski 2024 - arXiv:2410.00899](https://arxiv.org/html/2410.00899v1) — Schoolbook multiplication: n^2+4n+3 Toffoli with controlled add-subtract
+- [Qiskit CDKMRippleCarryAdder](https://github.com/Qiskit/qiskit/blob/main/qiskit/circuit/library/arithmetic/adders/cdkm_ripple_carry_adder.py) — Reference implementation matching Cuccaro paper
+- Codebase inspection — gate.c (ccx/cx/x verified working), execution.c (run_instruction pipeline), qubit_allocator.c (ancilla allocation API), IntegerAddition.c (QFT adder pattern), hot_path_add.c (hot path dispatch pattern)
 
 ### Secondary (MEDIUM confidence)
-
-**Features:**
-- [Real Python - Profiling in Python](https://realpython.com/python-profiling/)
-- [Baeldung - Profiling C++ on Linux](https://www.baeldung.com/linux/profiling-c-cpp-code)
-
-**Pitfalls:**
-- [Premature Optimization Fallacy](https://the-pi-guy.com/blog/the_premature_optimization_fallacy_why_you_should_measure_performance_before_optimizing/)
-- [Ultimate Python Performance Guide 2025](https://www.fyld.pt/blog/python-performance-guide-writing-code-25/)
-- [Stack vs Heap Allocation in C](https://www.matecdev.com/posts/c-heap-vs-stack-allocation.html)
+- [Thapliyal - arXiv:1609.01241](https://ar5iv.labs.arxiv.org/html/1609.01241) — Restoring division T-count: 35n^2-28n
+- [Gidney 2018 - arXiv:1709.06648](https://arxiv.org/abs/1709.06648) — Measurement-based uncomputation (4n T-gates), deferred to future milestone
+- [Nature - Higher radix CLA](https://www.nature.com/articles/s41598-023-41122-4) — CLA variations, not directly applicable
+- [Comprehensive Study 2024 - arXiv:2406.03867v1](https://arxiv.org/html/2406.03867v1) — Survey of arithmetic circuits, contextual comparison
 
 ### Tertiary (LOW confidence)
-
-**Architecture:**
-- [Quantum Circuit Optimization Survey](https://arxiv.org/pdf/2408.08941)
-- [Gate Decomposition Optimization](https://quantum-journal.org/papers/q-2025-03-12-1659/)
+- [Babbush - arXiv:1611.07995](https://arxiv.org/pdf/1611.07995) — Factoring with 2n+2 qubits, mentions Toffoli modular multiplication but not detailed enough for implementation
 
 ---
-*Research completed: 2026-02-05*
+*Research completed: 2026-02-14*
 *Ready for roadmap: yes*
