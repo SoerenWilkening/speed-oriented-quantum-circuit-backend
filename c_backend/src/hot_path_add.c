@@ -47,62 +47,107 @@ void hot_path_add_qq(circuit_t *circ, const unsigned int *self_qubits, int self_
         qa[pos++] = other_qubits[i];
     }
 
-    /* Toffoli CDKM dispatch (uncontrolled only; controlled falls through to QFT) */
-    if (circ->arithmetic_mode == ARITH_TOFFOLI && !controlled) {
-        /*
-         * CDKM adder layout:
-         *   [0..bits-1]       = register a (source operand, preserved)
-         *   [bits..2*bits-1]  = register b (target, receives a+b)
-         *   [2*bits]          = ancilla carry (bits >= 2)
-         *
-         * Since self is the target (should receive the sum), we need:
-         *   a-register (indices 0..bits-1) = other_qubits (source)
-         *   b-register (indices bits..2*bits-1) = self_qubits (target)
-         *
-         * Build a swapped qubit array for the Toffoli path.
-         */
+    /* Toffoli CDKM dispatch (uncontrolled and controlled) */
+    if (circ->arithmetic_mode == ARITH_TOFFOLI) {
         unsigned int tqa[256];
         sequence_t *toff_seq;
-        if (result_bits == 1) {
-            /* 1-bit: CNOT(target=a[0], control=b[0]) -> a[0] ^= b[0]
-             * For 1-bit, CNOT is symmetric in terms of "a += b" since
-             * it's just XOR. self at [0], other at [1] works fine. */
-            toff_seq = toffoli_QQ_add(result_bits);
-            if (toff_seq == NULL)
-                return;
-            run_instruction(toff_seq, qa, invert, circ);
-        } else {
-            /* n >= 2: swap register positions for CDKM */
-            /* a-register [0..bits-1] = other (source, preserved) */
-            for (i = 0; i < other_bits; i++) {
-                tqa[i] = other_qubits[i];
-            }
-            /* b-register [bits..2*bits-1] = self (target, gets sum) */
-            for (i = 0; i < self_bits; i++) {
-                tqa[result_bits + i] = self_qubits[i];
-            }
 
-            /* Allocate 1 ancilla qubit */
-            qubit_t ancilla_qubit = allocator_alloc(circ->allocator, 1, true);
-            if (ancilla_qubit == (qubit_t)-1)
-                return; /* allocation failed */
+        if (controlled) {
+            /* Controlled Toffoli QQ path */
+            if (result_bits == 1) {
+                /* 1-bit controlled: CCX(target=a[0], ctrl1=b[0], ctrl2=control)
+                 * Layout: [0]=self(target), [1]=other(source), [2]=control
+                 * For 1-bit XOR is symmetric so no swap needed */
+                tqa[0] = self_qubits[0];
+                tqa[1] = other_qubits[0];
+                tqa[2] = control_qubit;
 
-            /* Ancilla at virtual index 2*result_bits (after both registers) */
-            tqa[2 * result_bits] = ancilla_qubit;
+                toff_seq = toffoli_cQQ_add(result_bits);
+                if (toff_seq == NULL)
+                    return;
+                run_instruction(toff_seq, tqa, invert, circ);
+            } else {
+                /* n >= 2: swap registers (same as uncontrolled Toffoli) + ancilla + control */
+                /* a-register [0..bits-1] = other (source, preserved) */
+                for (i = 0; i < other_bits; i++) {
+                    tqa[i] = other_qubits[i];
+                }
+                /* b-register [bits..2*bits-1] = self (target, gets sum) */
+                for (i = 0; i < self_bits; i++) {
+                    tqa[result_bits + i] = self_qubits[i];
+                }
 
-            toff_seq = toffoli_QQ_add(result_bits);
-            if (toff_seq == NULL) {
+                /* Allocate 1 ancilla for carry */
+                qubit_t ancilla_qubit = allocator_alloc(circ->allocator, 1, true);
+                if (ancilla_qubit == (qubit_t)-1)
+                    return;
+
+                /* Ancilla at 2*result_bits, control at 2*result_bits+1 */
+                tqa[2 * result_bits] = ancilla_qubit;
+                tqa[2 * result_bits + 1] = control_qubit;
+
+                toff_seq = toffoli_cQQ_add(result_bits);
+                if (toff_seq == NULL) {
+                    allocator_free(circ->allocator, ancilla_qubit, 1);
+                    return;
+                }
+                run_instruction(toff_seq, tqa, invert, circ);
                 allocator_free(circ->allocator, ancilla_qubit, 1);
-                return;
             }
-            run_instruction(toff_seq, tqa, invert, circ);
+        } else {
+            /*
+             * Uncontrolled Toffoli QQ path:
+             * CDKM adder layout:
+             *   [0..bits-1]       = register a (source operand, preserved)
+             *   [bits..2*bits-1]  = register b (target, receives a+b)
+             *   [2*bits]          = ancilla carry (bits >= 2)
+             *
+             * Since self is the target (should receive the sum), we need:
+             *   a-register (indices 0..bits-1) = other_qubits (source)
+             *   b-register (indices bits..2*bits-1) = self_qubits (target)
+             *
+             * Build a swapped qubit array for the Toffoli path.
+             */
+            if (result_bits == 1) {
+                /* 1-bit: CNOT(target=a[0], control=b[0]) -> a[0] ^= b[0]
+                 * For 1-bit, CNOT is symmetric in terms of "a += b" since
+                 * it's just XOR. self at [0], other at [1] works fine. */
+                toff_seq = toffoli_QQ_add(result_bits);
+                if (toff_seq == NULL)
+                    return;
+                run_instruction(toff_seq, qa, invert, circ);
+            } else {
+                /* n >= 2: swap register positions for CDKM */
+                /* a-register [0..bits-1] = other (source, preserved) */
+                for (i = 0; i < other_bits; i++) {
+                    tqa[i] = other_qubits[i];
+                }
+                /* b-register [bits..2*bits-1] = self (target, gets sum) */
+                for (i = 0; i < self_bits; i++) {
+                    tqa[result_bits + i] = self_qubits[i];
+                }
 
-            /* Free ancilla (CDKM guarantees return to |0>) */
-            allocator_free(circ->allocator, ancilla_qubit, 1);
+                /* Allocate 1 ancilla qubit */
+                qubit_t ancilla_qubit = allocator_alloc(circ->allocator, 1, true);
+                if (ancilla_qubit == (qubit_t)-1)
+                    return; /* allocation failed */
+
+                /* Ancilla at virtual index 2*result_bits (after both registers) */
+                tqa[2 * result_bits] = ancilla_qubit;
+
+                toff_seq = toffoli_QQ_add(result_bits);
+                if (toff_seq == NULL) {
+                    allocator_free(circ->allocator, ancilla_qubit, 1);
+                    return;
+                }
+                run_instruction(toff_seq, tqa, invert, circ);
+
+                /* Free ancilla (CDKM guarantees return to |0>) */
+                allocator_free(circ->allocator, ancilla_qubit, 1);
+            }
         }
         return;
     }
-    /* Toffoli mode with controlled: fall back to QFT path below */
 
     /* control + ancilla (QFT path) */
     sequence_t *seq;
@@ -153,55 +198,99 @@ void hot_path_add_cq(circuit_t *circ, const unsigned int *self_qubits, int self_
         qa[pos++] = self_qubits[i];
     }
 
-    /* Toffoli CDKM dispatch (uncontrolled only; controlled falls through to QFT) */
-    if (circ->arithmetic_mode == ARITH_TOFFOLI && !controlled) {
+    /* Toffoli CDKM dispatch (uncontrolled and controlled) */
+    if (circ->arithmetic_mode == ARITH_TOFFOLI) {
         sequence_t *toff_seq;
-        if (self_bits == 1) {
-            /* 1-bit: no ancilla needed */
-            toff_seq = toffoli_CQ_add(self_bits, classical_value);
-            if (toff_seq == NULL)
-                return;
-            run_instruction(toff_seq, qa, invert, circ);
-            toffoli_sequence_free(toff_seq); /* CQ sequences are not cached */
-        } else {
-            /* n >= 2: allocate self_bits + 1 ancilla qubits
-             * (self_bits for temp register + 1 for carry)
-             *
-             * toffoli_CQ_add layout:
-             *   [0..self_bits-1]       = temp register (ancilla, initialized to classical value)
-             *   [self_bits..2*self_bits-1] = self register (target, gets sum)
-             *   [2*self_bits]          = carry ancilla
-             */
-            qubit_t temp_start = allocator_alloc(circ->allocator, self_bits + 1, true);
-            if (temp_start == (qubit_t)-1)
-                return; /* allocation failed */
 
-            unsigned int tqa[256];
-            /* [0..self_bits-1] = temp ancilla qubits */
-            for (i = 0; i < self_bits; i++) {
-                tqa[i] = temp_start + i;
-            }
-            /* [self_bits..2*self_bits-1] = self qubits (target, gets sum) */
-            for (i = 0; i < self_bits; i++) {
-                tqa[self_bits + i] = self_qubits[i];
-            }
-            /* [2*self_bits] = carry ancilla */
-            tqa[2 * self_bits] = temp_start + self_bits;
+        if (controlled) {
+            /* Controlled Toffoli CQ path */
+            if (self_bits == 1) {
+                /* 1-bit controlled CQ: CX(target=self[0], ctrl=control) if value&1 */
+                unsigned int tqa[2];
+                tqa[0] = self_qubits[0];
+                tqa[1] = control_qubit;
+                toff_seq = toffoli_cCQ_add(self_bits, classical_value);
+                if (toff_seq == NULL)
+                    return;
+                run_instruction(toff_seq, tqa, invert, circ);
+                toffoli_sequence_free(toff_seq);
+            } else {
+                /* n >= 2: allocate self_bits + 1 ancilla (temp + carry) */
+                qubit_t temp_start = allocator_alloc(circ->allocator, self_bits + 1, true);
+                if (temp_start == (qubit_t)-1)
+                    return;
 
-            toff_seq = toffoli_CQ_add(self_bits, classical_value);
-            if (toff_seq == NULL) {
+                unsigned int tqa[256];
+                /* [0..self_bits-1] = temp ancilla qubits */
+                for (i = 0; i < self_bits; i++) {
+                    tqa[i] = temp_start + i;
+                }
+                /* [self_bits..2*self_bits-1] = self qubits (target) */
+                for (i = 0; i < self_bits; i++) {
+                    tqa[self_bits + i] = self_qubits[i];
+                }
+                /* [2*self_bits] = carry ancilla */
+                tqa[2 * self_bits] = temp_start + self_bits;
+                /* [2*self_bits+1] = external control */
+                tqa[2 * self_bits + 1] = control_qubit;
+
+                toff_seq = toffoli_cCQ_add(self_bits, classical_value);
+                if (toff_seq == NULL) {
+                    allocator_free(circ->allocator, temp_start, self_bits + 1);
+                    return;
+                }
+                run_instruction(toff_seq, tqa, invert, circ);
+                toffoli_sequence_free(toff_seq);
                 allocator_free(circ->allocator, temp_start, self_bits + 1);
-                return;
             }
-            run_instruction(toff_seq, tqa, invert, circ);
-            toffoli_sequence_free(toff_seq); /* CQ sequences are not cached */
+        } else {
+            /* Uncontrolled Toffoli CQ path (existing Phase 66 code) */
+            if (self_bits == 1) {
+                /* 1-bit: no ancilla needed */
+                toff_seq = toffoli_CQ_add(self_bits, classical_value);
+                if (toff_seq == NULL)
+                    return;
+                run_instruction(toff_seq, qa, invert, circ);
+                toffoli_sequence_free(toff_seq); /* CQ sequences are not cached */
+            } else {
+                /* n >= 2: allocate self_bits + 1 ancilla qubits
+                 * (self_bits for temp register + 1 for carry)
+                 *
+                 * toffoli_CQ_add layout:
+                 *   [0..self_bits-1]       = temp register (ancilla, initialized to classical
+                 * value) [self_bits..2*self_bits-1] = self register (target, gets sum)
+                 *   [2*self_bits]          = carry ancilla
+                 */
+                qubit_t temp_start = allocator_alloc(circ->allocator, self_bits + 1, true);
+                if (temp_start == (qubit_t)-1)
+                    return; /* allocation failed */
 
-            /* Free all ancilla (CDKM guarantees return to |0>) */
-            allocator_free(circ->allocator, temp_start, self_bits + 1);
+                unsigned int tqa[256];
+                /* [0..self_bits-1] = temp ancilla qubits */
+                for (i = 0; i < self_bits; i++) {
+                    tqa[i] = temp_start + i;
+                }
+                /* [self_bits..2*self_bits-1] = self qubits (target, gets sum) */
+                for (i = 0; i < self_bits; i++) {
+                    tqa[self_bits + i] = self_qubits[i];
+                }
+                /* [2*self_bits] = carry ancilla */
+                tqa[2 * self_bits] = temp_start + self_bits;
+
+                toff_seq = toffoli_CQ_add(self_bits, classical_value);
+                if (toff_seq == NULL) {
+                    allocator_free(circ->allocator, temp_start, self_bits + 1);
+                    return;
+                }
+                run_instruction(toff_seq, tqa, invert, circ);
+                toffoli_sequence_free(toff_seq); /* CQ sequences are not cached */
+
+                /* Free all ancilla (CDKM guarantees return to |0>) */
+                allocator_free(circ->allocator, temp_start, self_bits + 1);
+            }
         }
         return;
     }
-    /* Toffoli mode with controlled: fall back to QFT path below */
 
     /* control + ancilla (QFT path) */
     sequence_t *seq;
