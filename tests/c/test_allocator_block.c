@@ -277,6 +277,83 @@ static void test_no_reuse_for_oversized_request(void) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Test 11: Ancilla alloc and free -- no leak (Phase 65, Plan 03)     */
+/* ------------------------------------------------------------------ */
+static void test_ancilla_alloc_and_free_no_leak(void) {
+    printf("test_ancilla_alloc_and_free_no_leak... ");
+    fflush(stdout);
+
+    qubit_allocator_t *alloc = allocator_create(64);
+    assert(alloc != NULL);
+
+    /* Allocate 3 ancilla qubits */
+    qubit_t s = allocator_alloc(alloc, 3, true);
+    assert(s != (qubit_t)-1);
+
+    /* Free all 3 ancilla */
+    int rc = allocator_free(alloc, s, 3);
+    assert(rc == 0);
+
+    /* Destroy should NOT assert (no leak) */
+    allocator_destroy(alloc);
+    printf("PASS\n");
+}
+
+/* ------------------------------------------------------------------ */
+/* Test 12: Ancilla mixed with regular qubits                         */
+/* ------------------------------------------------------------------ */
+static void test_ancilla_mixed_with_regular(void) {
+    printf("test_ancilla_mixed_with_regular... ");
+    fflush(stdout);
+
+    qubit_allocator_t *alloc = allocator_create(64);
+    assert(alloc != NULL);
+
+    /* Allocate 2 regular, 3 ancilla, 2 regular */
+    qubit_t r1 = allocator_alloc(alloc, 2, false);
+    qubit_t anc = allocator_alloc(alloc, 3, true);
+    qubit_t r2 = allocator_alloc(alloc, 2, false);
+    assert(r1 == 0 && anc == 2 && r2 == 5);
+
+    /* Free only the ancilla */
+    int rc = allocator_free(alloc, anc, 3);
+    assert(rc == 0);
+
+    /* Destroy should NOT assert (ancilla freed, regular are not ancilla) */
+    allocator_destroy(alloc);
+    printf("PASS\n");
+}
+
+/* ------------------------------------------------------------------ */
+/* Test 13: Ancilla block reuse                                       */
+/* ------------------------------------------------------------------ */
+static void test_ancilla_block_reuse(void) {
+    printf("test_ancilla_block_reuse... ");
+    fflush(stdout);
+
+    qubit_allocator_t *alloc = allocator_create(64);
+    assert(alloc != NULL);
+
+    /* Allocate 4 ancilla, free them */
+    qubit_t s1 = allocator_alloc(alloc, 4, true);
+    assert(s1 == 0);
+    int rc = allocator_free(alloc, s1, 4);
+    assert(rc == 0);
+
+    /* Allocate 4 ancilla again (should reuse) */
+    qubit_t s2 = allocator_alloc(alloc, 4, true);
+    assert(s2 == 0 && "Ancilla block should be reused");
+
+    /* Free them */
+    rc = allocator_free(alloc, s2, 4);
+    assert(rc == 0);
+
+    /* Destroy -- no leak */
+    allocator_destroy(alloc);
+    printf("PASS\n");
+}
+
+/* ------------------------------------------------------------------ */
 /* Main                                                               */
 /* ------------------------------------------------------------------ */
 int main(void) {
@@ -292,7 +369,10 @@ int main(void) {
     test_coalesce_three_way();
     test_mixed_single_and_block();
     test_no_reuse_for_oversized_request();
+    test_ancilla_alloc_and_free_no_leak();
+    test_ancilla_mixed_with_regular();
+    test_ancilla_block_reuse();
 
-    printf("\n=== ALL 10 TESTS PASSED ===\n");
+    printf("\n=== ALL 13 TESTS PASSED ===\n");
     return 0;
 }

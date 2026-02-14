@@ -100,9 +100,12 @@ test_reverse_circuit: test_reverse_circuit.c $(REVERSE_SRCS)
 test_allocator_block: test_allocator_block.c $(ALLOC_SRCS)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
+test_allocator_block_debug: test_allocator_block.c $(ALLOC_SRCS)
+	$(CC) $(CFLAGS) -DDEBUG -o $@ $^ $(LDFLAGS)
+
 .PHONY: clean
 clean:
-	rm -f test_comparison test_hot_path_mul test_hot_path_add test_hot_path_xor test_reverse_circuit test_allocator_block
+	rm -f test_comparison test_hot_path_mul test_hot_path_add test_hot_path_xor test_reverse_circuit test_allocator_block test_allocator_block_debug
 
 .PHONY: run
 run: test_comparison
@@ -119,3 +122,7 @@ run_reverse: test_reverse_circuit
 .PHONY: run_alloc
 run_alloc: test_allocator_block
 	./test_allocator_block
+
+.PHONY: run_alloc_debug
+run_alloc_debug: test_allocator_block_debug
+	./test_allocator_block_debug
