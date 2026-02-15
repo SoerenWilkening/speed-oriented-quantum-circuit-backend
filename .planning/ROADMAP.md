@@ -83,7 +83,7 @@
 - [x] **Phase 68: Schoolbook Multiplication** - QQ/CQ Toffoli-based multiplication using shift-and-add -- completed 2026-02-15
 - [x] **Phase 69: Controlled Multiplication & Division** - cQQ/cCQ multiplication and restoring division via Toffoli add/sub -- completed 2026-02-15
 - [x] **Phase 70: Cross-Backend Verification** - Exhaustive equivalence testing between Toffoli and QFT backends -- completed 2026-02-15
-- [ ] **Phase 71: Carry Look-Ahead Adder** - O(log n) depth addition with 2n-2 ancilla (Draper et al. 2004)
+- [ ] **Phase 71: Carry Look-Ahead Adder** - O(log n) depth addition with Brent-Kung and Kogge-Stone prefix trees
 - [ ] **Phase 72: Performance Polish** - Hardcoded sequences, T-count reporting, controlled add-subtract optimization
 
 ## Phase Details
@@ -194,11 +194,13 @@ Plans:
   2. CLA adder produces identical results to RCA adder for all input pairs at widths 1-6
   3. CLA circuit depth is measurably less than RCA circuit depth for widths >= 8
   4. All 2n-2 ancilla qubits are correctly uncomputed to |0> and freed after each CLA operation
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 71-01: TBD
-- [ ] 71-02: TBD
+- [ ] 71-01-PLAN.md -- Infrastructure (cla_override, option plumbing) + Brent-Kung QQ adder + QQ dispatch + smoke tests
+- [ ] 71-02-PLAN.md -- Kogge-Stone QQ adder + BK/KS CQ adders + CQ dispatch + variant selection tests
+- [ ] 71-03-PLAN.md -- Controlled CLA variants (cQQ/cCQ for BK+KS) + controlled dispatch + controlled tests
+- [ ] 71-04-PLAN.md -- Comprehensive verification: CLA vs RCA equivalence, depth comparison, ancilla cleanup, gate purity
 
 ### Phase 72: Performance Polish
 **Goal**: Toffoli arithmetic is optimized for production use with hardcoded sequences, resource reporting, and gate count reduction
@@ -252,7 +254,7 @@ Phases execute in numeric order: 65 -> 66 -> 67 -> 68 -> 69 -> 70 -> 71 -> 72
 | 68. Schoolbook Multiplication | v3.0 | 2/2 | Complete | 2026-02-15 |
 | 69. Controlled Multiplication & Division | v3.0 | 3/3 | Complete | 2026-02-15 |
 | 70. Cross-Backend Verification | v3.0 | 2/2 | Complete | 2026-02-15 |
-| 71. Carry Look-Ahead Adder | v3.0 | 0/TBD | Not started | - |
+| 71. Carry Look-Ahead Adder | v3.0 | 0/4 | Not started | - |
 | 72. Performance Polish | v3.0 | 0/TBD | Not started | - |
 
 ---
