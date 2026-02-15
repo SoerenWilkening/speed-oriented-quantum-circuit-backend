@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v3.0 Fault-Tolerant Arithmetic -- Phase 69 complete (all 3 plans)
+**Current focus:** v3.0 Fault-Tolerant Arithmetic -- Phase 70 in progress (1/2 plans complete)
 
 ## Current Position
 
-Phase: 69 of 72 (Controlled Multiplication/Division) -- COMPLETE
-Plan: 3 of 3 complete
-Status: Phase 69 complete. All controlled multiplication/division implemented, tested, and verified.
-Last activity: 2026-02-15 -- Completed 69-02 (Controlled Toffoli multiplication verification tests)
+Phase: 70 of 72 (Cross-Backend Verification) -- IN PROGRESS
+Plan: 1 of 2 complete
+Status: Phase 70 Plan 01 complete. Cross-backend addition/subtraction equivalence tests created. Plan 02 (multiplication/division) next.
+Last activity: 2026-02-15 -- Completed 70-01 (Cross-backend addition/subtraction equivalence tests)
 
-Progress: [##############__________] 50% (v3.0 phases -- 16/~24 plans)
+Progress: [###############_________] 52% (v3.0 phases -- 17/~24 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 196 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 22, v2.3: 4, v3.0: 15)
+- Total plans completed: 197 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 22, v2.3: 4, v3.0: 16)
 - Average duration: ~13 min/plan
 - Total execution time: ~30.2 hours
 
@@ -64,6 +64,7 @@ Phase 68-02: Exhaustive Toffoli multiplication verification at widths 1-3 (QQ an
 Phase 69-01: Controlled Toffoli multiplication uses AND-ancilla pattern for cQQ (CCX compute AND, cQQ_add, CCX uncompute) and direct cQQ_add with ext_ctrl for cCQ. Width 1 uses MCX(3 controls). Carry+AND ancilla reused per loop iteration. hot_path_mul.c now routes all controlled+Toffoli to new functions.
 Phase 69-02: BUG-COND-MUL-01 root-caused: scope cleanup in __exit__ calls _do_uncompute on out-of-place mul results created inside with-blocks, reversing all gates. C backend is correct. Workaround: current_scope_depth.set(0) during multiplication. All 12 controlled mul tests pass with workaround.
 Phase 69-03: Toffoli division/modulo verification with MCX-to-basis-gate transpilation for MPS compatibility. Toffoli div failures differ from QFT (width 3 even values with div=1). Modulo widely broken (BUG-MOD-REDUCE). Controlled division blocked by missing controlled XOR. Gate purity confirmed. Used allocated_start for result extraction.
+Phase 70-01: Cross-backend equivalence tests for addition/subtraction (Toffoli vs QFT) at widths 1-8. Discovered BUG-CQQ-QFT: QFT controlled QQ in-place addition produces incorrect results at width 2+ (CCP rotation angle errors). Used in-place cQQ (qa += qb) instead of out-of-place due to missing controlled XOR. Widths 7-8 marked slow.
 
 ### Blockers/Concerns
 
@@ -71,6 +72,7 @@ Phase 69-03: Toffoli division/modulo verification with MCX-to-basis-gate transpi
 - BUG-DIV-02: MSB comparison leak in division
 - BUG-MOD-REDUCE: _reduce_mod result corruption (needs different circuit structure)
 - BUG-COND-MUL-01: Controlled multiplication scope auto-uncomputation (root-caused in 69-02: __exit__ scope cleanup reverses out-of-place mul results; workaround: scope-depth trick)
+- BUG-CQQ-QFT: QFT controlled QQ in-place addition (CCP decomposition) incorrect at width 2+ (discovered in Phase 70-01)
 - BUG-WIDTH-ADD: Mixed-width QFT addition off-by-one (discovered in v1.8)
 - 32-bit multiplication segfault (buffer overflow in C backend, discovered in Phase 61)
 
@@ -84,9 +86,9 @@ Phase 69-03: Toffoli division/modulo verification with MCX-to-basis-gate transpi
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 69-02-PLAN.md (Controlled Toffoli multiplication verification tests)
+Stopped at: Completed 70-01-PLAN.md (Cross-backend addition/subtraction equivalence tests)
 Resume file: N/A
-Resume action: Phase 69 complete. Continue to Phase 70.
+Resume action: Continue to Phase 70 Plan 02 (cross-backend multiplication/division tests).
 
 ---
-*State updated: 2026-02-15 -- Phase 69 complete (all 3 plans: controlled mul implementation, controlled mul tests, division tests)*
+*State updated: 2026-02-15 -- Phase 70 Plan 01 complete (cross-backend addition/subtraction tests, BUG-CQQ-QFT discovered)*
