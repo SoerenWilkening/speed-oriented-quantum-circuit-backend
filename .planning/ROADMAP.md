@@ -179,11 +179,11 @@ Plans:
   2. For widths 1-6, every multiplication input pair produces identical results between Toffoli and QFT backends (QQ, CQ, cQQ, cCQ variants)
   3. For widths 2-6, division/modulo results match between Toffoli and QFT backends for classical and quantum divisors
   4. A regression test suite runs both backends and compares results, integrated into `pytest tests/python/ -v`
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 70-01: TBD
-- [ ] 70-02: TBD
+- [ ] 70-01-PLAN.md -- Cross-backend test infrastructure + addition/subtraction equivalence tests (widths 1-8)
+- [ ] 70-02-PLAN.md -- Multiplication and division/modulo cross-backend equivalence tests (widths 1-6 mul, 2-6 div)
 
 ### Phase 71: Carry Look-Ahead Adder
 **Goal**: Users can perform O(log n) depth addition for large register widths using the Draper CLA algorithm
