@@ -80,7 +80,7 @@
 - [x] **Phase 65: Infrastructure Prerequisites** - Fix reverse_circuit_range, allocator block reuse, and ancilla lifecycle contracts -- completed 2026-02-14
 - [x] **Phase 66: CDKM Ripple-Carry Adder** - QQ/CQ addition and subtraction via MAJ/UMA chain with 1 ancilla -- completed 2026-02-14
 - [x] **Phase 67: Controlled Adder & Backend Dispatch** - cQQ/cCQ controlled addition and fault_tolerant mode switching -- completed 2026-02-14
-- [ ] **Phase 68: Schoolbook Multiplication** - QQ/CQ Toffoli-based multiplication using shift-and-add
+- [x] **Phase 68: Schoolbook Multiplication** - QQ/CQ Toffoli-based multiplication using shift-and-add -- completed 2026-02-15
 - [ ] **Phase 69: Controlled Multiplication & Division** - cQQ/cCQ multiplication and restoring division via Toffoli add/sub
 - [ ] **Phase 70: Cross-Backend Verification** - Exhaustive equivalence testing between Toffoli and QFT backends
 - [ ] **Phase 71: Carry Look-Ahead Adder** - O(log n) depth addition with 2n-2 ancilla (Draper et al. 2004)
@@ -150,8 +150,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 68-01-PLAN.md -- Implement ToffoliMultiplication.c (QQ/CQ shift-and-add) and wire Toffoli dispatch into hot_path_mul.c
-- [ ] 68-02-PLAN.md -- Exhaustive verification tests for Toffoli multiplication (widths 1-3), gate purity, operator dispatch
+- [x] 68-01-PLAN.md -- Implement ToffoliMultiplication.c (QQ/CQ shift-and-add) and wire Toffoli dispatch into hot_path_mul.c
+- [x] 68-02-PLAN.md -- Exhaustive verification tests for Toffoli multiplication (widths 1-3), gate purity, operator dispatch
 
 ### Phase 69: Controlled Multiplication & Division
 **Goal**: Users can perform controlled multiplication and division/modulo using Toffoli-based circuits, completing the full arithmetic surface
@@ -249,7 +249,7 @@ Phases execute in numeric order: 65 -> 66 -> 67 -> 68 -> 69 -> 70 -> 71 -> 72
 | 65. Infrastructure Prerequisites | v3.0 | 3/3 | Complete | 2026-02-14 |
 | 66. CDKM Ripple-Carry Adder | v3.0 | 3/3 | Complete | 2026-02-14 |
 | 67. Controlled Adder & Backend Dispatch | v3.0 | 3/3 | Complete | 2026-02-14 |
-| 68. Schoolbook Multiplication | v3.0 | 0/TBD | Not started | - |
+| 68. Schoolbook Multiplication | v3.0 | 2/2 | Complete | 2026-02-15 |
 | 69. Controlled Multiplication & Division | v3.0 | 0/TBD | Not started | - |
 | 70. Cross-Backend Verification | v3.0 | 0/TBD | Not started | - |
 | 71. Carry Look-Ahead Adder | v3.0 | 0/TBD | Not started | - |
