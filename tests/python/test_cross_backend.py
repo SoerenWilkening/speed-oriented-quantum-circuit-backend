@@ -19,6 +19,7 @@ allocated_start for backend-independent physical qubit positions.
 
 import gc
 import os
+import random
 import sys
 import warnings
 
@@ -38,6 +39,108 @@ from verify_helpers import (
 )
 
 warnings.filterwarnings("ignore", message="Value .* exceeds")
+
+
+# ---------------------------------------------------------------------------
+# Known division/modulo failure sets (union of Toffoli and QFT known bugs)
+# Cross-backend comparison is meaningless for these cases (one or both wrong).
+# ---------------------------------------------------------------------------
+
+# Union of known division failures across backends.
+# Toffoli failures from test_toffoli_division.py KNOWN_TOFFOLI_DIV_FAILURES.
+# QFT failures from test_div.py KNOWN_DIV_MSB_LEAK (actually Toffoli since 67-03).
+# BUG-QFT-DIV: QFT division is severely broken at width 2+ (discovered during
+# Phase 70-02 cross-backend testing -- first time QFT division was explicitly
+# tested since Phase 67-03 made Toffoli the default). QFT produces incorrect
+# quotients for most input pairs. Width 2: 8 of 9 cases fail.
+KNOWN_DIV_FAILURES = {
+    # Width 2 -- BUG-QFT-DIV: QFT division broken (Toffoli is correct)
+    (2, 0, 2),
+    (2, 1, 1),
+    (2, 1, 2),
+    (2, 2, 2),
+    (2, 2, 3),
+    (2, 3, 1),
+    (2, 3, 2),
+    (2, 3, 3),
+    # Width 3 -- Toffoli failures (even a values with div=1)
+    (3, 0, 1),
+    (3, 2, 1),
+    (3, 4, 1),
+    (3, 6, 1),
+    # Width 3 -- reported as "QFT" but actually Toffoli since 67-03
+    (3, 5, 1),
+    (3, 7, 1),
+    # Width 4 -- Toffoli failures
+    (4, 0, 1),
+    (4, 0, 2),
+    (4, 1, 1),
+    (4, 1, 2),
+    (4, 3, 1),
+    (4, 7, 3),
+    (4, 13, 1),
+    (4, 14, 1),
+    (4, 15, 1),
+    (4, 15, 2),
+    # Width 4 -- reported as "QFT" but actually Toffoli
+    (4, 14, 2),
+}
+
+# Known modulo failures (BUG-MOD-REDUCE + BUG-QFT-DIV -- widespread).
+# At width 2, most cases are buggy in one or both backends.
+# BUG-QFT-DIV: QFT modulo also produces wrong results at width 2+ (discovered
+# during Phase 70-02 cross-backend testing).
+KNOWN_MOD_FAILURES = {
+    # Width 2 -- BUG-MOD-REDUCE (both backends wrong, from test_toffoli_division.py)
+    (2, 0, 1),
+    (2, 0, 2),
+    (2, 0, 3),
+    (2, 1, 1),
+    (2, 1, 2),
+    (2, 2, 1),
+    (2, 2, 3),
+    (2, 3, 1),
+    (2, 3, 2),
+    # Width 2 -- BUG-QFT-DIV (QFT wrong, Toffoli correct, discovered in 70-02)
+    (2, 1, 3),
+    (2, 2, 2),
+    (2, 3, 3),
+}
+
+# Known quantum division failures at width 2.
+# Union of Toffoli failures + BUG-QFT-DIV cross-backend mismatches.
+KNOWN_QDIV_FAILURES = {
+    # Toffoli failures (from test_toffoli_division.py)
+    (2, 1, 1),
+    (2, 2, 2),
+    (2, 3, 2),
+    (2, 3, 3),
+    # BUG-QFT-DIV: QFT quantum division wrong (discovered in 70-02)
+    (2, 0, 2),
+    (2, 0, 3),
+    (2, 2, 1),
+    (2, 2, 3),
+    (2, 3, 1),
+}
+
+# Known quantum modulo failures at width 2.
+# Union of Toffoli failures + BUG-QFT-DIV cross-backend mismatches.
+KNOWN_QMOD_FAILURES = {
+    # Toffoli failures (from test_toffoli_division.py)
+    (2, 1, 1),
+    (2, 2, 1),
+    (2, 2, 2),
+    (2, 3, 1),
+    (2, 3, 2),
+    # BUG-QFT-DIV: QFT quantum modulo wrong (discovered in 70-02)
+    (2, 0, 1),
+    (2, 0, 2),
+    (2, 0, 3),
+    (2, 1, 2),
+    (2, 1, 3),
+    (2, 2, 3),
+    (2, 3, 3),
+}
 
 
 # ---------------------------------------------------------------------------
@@ -118,19 +221,21 @@ def _run_backend(backend, build_fn, width, use_mps=False):
     return actual
 
 
-def _compare_backends(build_fn, width, use_mps_toffoli=False):
+def _compare_backends(build_fn, width, use_mps_toffoli=False, use_mps_qft=False):
     """Run both backends and return (toffoli_result, qft_result).
 
     Args:
         build_fn: Callable returning (result_qint, expected_value, keepalive_list)
         width: Result register width
         use_mps_toffoli: Whether Toffoli backend needs MPS (for MCX gates)
+        use_mps_qft: Whether QFT backend needs MPS (for large qubit counts,
+                     e.g., quantum division at 37+ qubits)
 
     Returns:
         Tuple (toffoli_result, qft_result)
     """
     toffoli_result = _run_backend("toffoli", build_fn, width, use_mps=use_mps_toffoli)
-    qft_result = _run_backend("qft", build_fn, width, use_mps=False)
+    qft_result = _run_backend("qft", build_fn, width, use_mps=use_mps_qft)
     return toffoli_result, qft_result
 
 
@@ -952,4 +1057,385 @@ class TestCrossBackendMultiplication:
         # Guard against trivially passing with all zeros
         assert saw_nonzero, (
             f"All cCQ mul results were 0 at width {width} -- test may be trivially passing"
+        )
+
+
+# ---------------------------------------------------------------------------
+# TestCrossBackendDivision
+# ---------------------------------------------------------------------------
+
+
+def _generate_div_pairs(width, sample_size=20):
+    """Generate (a, divisor) pairs for division testing.
+
+    Divisor ranges from 1 to 2^width - 1 (no division by zero).
+    Exhaustive for width <= 3, sampled for width >= 4.
+
+    Returns:
+        List of (a, divisor) tuples
+    """
+    max_val = (1 << width) - 1
+    if width <= 3:
+        pairs = []
+        for a in range(1 << width):
+            for d in range(1, 1 << width):
+                pairs.append((a, d))
+        return pairs
+    else:
+        pairs = set()
+        # Edge cases
+        for a in [0, 1, max_val - 1, max_val]:
+            for d in [1, 2, max_val - 1, max_val]:
+                pairs.add((a, d))
+        # Random fill
+        rng = random.Random(42)
+        while len(pairs) < sample_size:
+            a = rng.randint(0, max_val)
+            d = rng.randint(1, max_val)
+            pairs.add((a, d))
+        return sorted(pairs)
+
+
+def _generate_qdiv_pairs(width, sample_size=5):
+    """Generate (a, b) pairs for quantum divisor division testing.
+
+    b ranges from 1 to 2^width - 1 (no division by zero).
+    Exhaustive for width <= 2, sampled for width >= 3.
+
+    Returns:
+        List of (a, b) tuples
+    """
+    max_val = (1 << width) - 1
+    if width <= 2:
+        pairs = []
+        for a in range(1 << width):
+            for b in range(1, 1 << width):
+                pairs.append((a, b))
+        return pairs
+    else:
+        pairs = set()
+        for a in [0, 1, max_val - 1, max_val]:
+            for b in [1, 2, max_val - 1, max_val]:
+                pairs.add((a, b))
+        rng = random.Random(42)
+        while len(pairs) < sample_size:
+            a = rng.randint(0, max_val)
+            b = rng.randint(1, max_val)
+            pairs.add((a, b))
+        return sorted(pairs)
+
+
+class TestCrossBackendDivision:
+    """Cross-backend equivalence tests for division and modulo.
+
+    Tests classical divisor (widths 2-6) and quantum divisor (widths 2-4).
+    The primary goal is proving backends AGREE, not that results are correct.
+    If both backends produce the same wrong answer (e.g., BUG-MOD-REDUCE),
+    that is a pass for cross-backend equivalence. Only flag mismatches between
+    backends as test failures.
+
+    Known-buggy cases (BUG-DIV-02, BUG-MOD-REDUCE) are skipped because
+    cross-backend comparison is meaningless when one or both backends are
+    known to produce incorrect results.
+    """
+
+    @pytest.mark.parametrize(
+        "width",
+        [
+            2,
+            pytest.param(
+                3,
+                marks=pytest.mark.xfail(
+                    reason="BUG-QFT-DIV: QFT division is pervasively broken at width 3+ "
+                    "(26 of 36 non-known cases fail at width 3). First discovered in Phase 70-02.",
+                    strict=False,
+                ),
+            ),
+            pytest.param(
+                4,
+                marks=pytest.mark.xfail(
+                    reason="BUG-QFT-DIV: QFT division is pervasively broken at width 3+",
+                    strict=False,
+                ),
+            ),
+            pytest.param(
+                5,
+                marks=[
+                    pytest.mark.slow,
+                    pytest.mark.xfail(
+                        reason="BUG-QFT-DIV: QFT division broken at width 3+",
+                        strict=False,
+                    ),
+                ],
+            ),
+            pytest.param(
+                6,
+                marks=[
+                    pytest.mark.slow,
+                    pytest.mark.xfail(
+                        reason="BUG-QFT-DIV: QFT division broken at width 3+",
+                        strict=False,
+                    ),
+                ],
+            ),
+        ],
+    )
+    def test_div_classical(self, width):
+        """Classical divisor division (a // int) produces identical results in both backends.
+
+        Exhaustive for widths 2-3, sampled for widths 4-6.
+        Known BUG-DIV-02 and BUG-QFT-DIV cases are skipped at width 2.
+        Widths 3+ are xfail because QFT division is pervasively broken
+        (BUG-QFT-DIV discovered during Phase 70-02 cross-backend testing).
+        Uses MPS for both backends (QFT division circuits too large for statevector).
+        """
+        if width <= 3:
+            sample_size = None  # exhaustive
+        elif width <= 4:
+            sample_size = 20
+        else:
+            sample_size = 15
+
+        pairs = _generate_div_pairs(width, sample_size=sample_size or 999)
+
+        failures = []
+        for a, d in pairs:
+            if (width, a, d) in KNOWN_DIV_FAILURES:
+                continue
+
+            def build_fn(a=a, d=d, w=width):
+                qa = ql.qint(a, width=w)
+                qr = qa // d
+                return qr, a // d, [qa, qr]
+
+            toffoli_result, qft_result = _compare_backends(
+                build_fn, width, use_mps_toffoli=True, use_mps_qft=True
+            )
+            if toffoli_result != qft_result:
+                expected = a // d
+                failures.append(
+                    f"w={width} a={a} div={d}: toffoli={toffoli_result}, "
+                    f"qft={qft_result}, expected={expected}"
+                )
+
+        assert not failures, f"{len(failures)} cross-backend div mismatches:\n" + "\n".join(
+            failures[:20]
+        )
+
+    @pytest.mark.parametrize(
+        "width",
+        [
+            2,
+            pytest.param(
+                3,
+                marks=pytest.mark.xfail(
+                    reason="BUG-QFT-DIV: QFT modulo is pervasively broken at width 3+ "
+                    "(same root cause as QFT division). First discovered in Phase 70-02.",
+                    strict=False,
+                ),
+            ),
+            pytest.param(
+                4,
+                marks=pytest.mark.xfail(
+                    reason="BUG-QFT-DIV: QFT modulo broken at width 3+",
+                    strict=False,
+                ),
+            ),
+            pytest.param(
+                5,
+                marks=[
+                    pytest.mark.slow,
+                    pytest.mark.xfail(
+                        reason="BUG-QFT-DIV: QFT modulo broken at width 3+",
+                        strict=False,
+                    ),
+                ],
+            ),
+            pytest.param(
+                6,
+                marks=[
+                    pytest.mark.slow,
+                    pytest.mark.xfail(
+                        reason="BUG-QFT-DIV: QFT modulo broken at width 3+",
+                        strict=False,
+                    ),
+                ],
+            ),
+        ],
+    )
+    def test_mod_classical(self, width):
+        """Classical divisor modulo (a % int) produces identical results in both backends.
+
+        BUG-MOD-REDUCE means both backends often produce the SAME wrong answer.
+        This is expected and acceptable for cross-backend equivalence -- we only
+        check that backends agree, not that the result is mathematically correct.
+
+        Known-buggy cases at width 2 are skipped (BUG-MOD-REDUCE + BUG-QFT-DIV).
+        Widths 3+ are xfail because QFT modulo is pervasively broken (BUG-QFT-DIV).
+
+        Uses MPS for both backends (QFT division circuits too large for statevector).
+        """
+        if width <= 3:
+            sample_size = None
+        elif width <= 4:
+            sample_size = 20
+        else:
+            sample_size = 15
+
+        pairs = _generate_div_pairs(width, sample_size=sample_size or 999)
+
+        failures = []
+        for a, d in pairs:
+            if (width, a, d) in KNOWN_MOD_FAILURES:
+                continue
+
+            def build_fn(a=a, d=d, w=width):
+                qa = ql.qint(a, width=w)
+                qr = qa % d
+                return qr, a % d, [qa, qr]
+
+            toffoli_result, qft_result = _compare_backends(
+                build_fn, width, use_mps_toffoli=True, use_mps_qft=True
+            )
+            if toffoli_result != qft_result:
+                expected = a % d
+                failures.append(
+                    f"w={width} a={a} div={d}: toffoli={toffoli_result}, "
+                    f"qft={qft_result}, expected={expected}"
+                )
+
+        assert not failures, f"{len(failures)} cross-backend mod mismatches:\n" + "\n".join(
+            failures[:20]
+        )
+
+    @pytest.mark.parametrize(
+        "width",
+        [
+            pytest.param(
+                2,
+                marks=pytest.mark.xfail(
+                    reason="BUG-QFT-DIV: QFT quantum division broken at all widths. "
+                    "MPS simulation may also be non-deterministic for QFT circuits "
+                    "with 34+ qubits.",
+                    strict=False,
+                ),
+            ),
+            pytest.param(
+                3,
+                marks=[
+                    pytest.mark.slow,
+                    pytest.mark.xfail(
+                        reason="BUG-QFT-DIV: QFT quantum division broken at all widths",
+                        strict=False,
+                    ),
+                ],
+            ),
+            pytest.param(
+                4,
+                marks=[
+                    pytest.mark.slow,
+                    pytest.mark.xfail(
+                        reason="BUG-QFT-DIV: QFT quantum division broken; "
+                        "also ~120 qubits may be infeasible",
+                        strict=False,
+                    ),
+                ],
+            ),
+        ],
+    )
+    def test_div_quantum(self, width):
+        """Quantum divisor division (a // qint(b)) produces identical results in both backends.
+
+        Width 2: exhaustive (37 qubits with Toffoli, 34 with QFT).
+        Width 3-4: sampled (82+ qubits, very slow with MPS).
+
+        Known quantum division failures are skipped (BUG-DIV-02 + BUG-QFT-DIV).
+        Uses MPS for both backends (quantum division circuits too large for statevector).
+        """
+        pairs = _generate_qdiv_pairs(width, sample_size=5)
+
+        failures = []
+        for a, b in pairs:
+            if (width, a, b) in KNOWN_QDIV_FAILURES:
+                continue
+
+            def build_fn(a=a, b=b, w=width):
+                qa = ql.qint(a, width=w)
+                qb = ql.qint(b, width=w)
+                qr = qa // qb
+                return qr, a // b, [qa, qb, qr]
+
+            toffoli_result, qft_result = _compare_backends(
+                build_fn, width, use_mps_toffoli=True, use_mps_qft=True
+            )
+            if toffoli_result != qft_result:
+                expected = a // b
+                failures.append(
+                    f"w={width} a={a} b={b}: toffoli={toffoli_result}, "
+                    f"qft={qft_result}, expected={expected}"
+                )
+
+        assert not failures, f"{len(failures)} cross-backend qdiv mismatches:\n" + "\n".join(
+            failures[:20]
+        )
+
+    @pytest.mark.parametrize(
+        "width",
+        [
+            pytest.param(
+                2,
+                marks=pytest.mark.xfail(
+                    reason="BUG-QFT-DIV: QFT quantum modulo broken at all widths. "
+                    "MPS simulation may also be non-deterministic for QFT circuits.",
+                    strict=False,
+                ),
+            ),
+            pytest.param(
+                3,
+                marks=[
+                    pytest.mark.slow,
+                    pytest.mark.xfail(
+                        reason="BUG-QFT-DIV: QFT quantum modulo broken at all widths",
+                        strict=False,
+                    ),
+                ],
+            ),
+        ],
+    )
+    def test_mod_quantum(self, width):
+        """Quantum divisor modulo (a % qint(b)) produces identical results in both backends.
+
+        Only widths 2-3 (quantum modulo extremely slow at width 4+).
+        Known quantum modulo failures are skipped (BUG-MOD-REDUCE + BUG-QFT-DIV).
+
+        BUG-MOD-REDUCE may cause both backends to agree on wrong answers
+        (which is acceptable for cross-backend equivalence).
+
+        Uses MPS for both backends (quantum modulo circuits too large for statevector).
+        """
+        pairs = _generate_qdiv_pairs(width, sample_size=5)
+
+        failures = []
+        for a, b in pairs:
+            if (width, a, b) in KNOWN_QMOD_FAILURES:
+                continue
+
+            def build_fn(a=a, b=b, w=width):
+                qa = ql.qint(a, width=w)
+                qb = ql.qint(b, width=w)
+                qr = qa % qb
+                return qr, a % b, [qa, qb, qr]
+
+            toffoli_result, qft_result = _compare_backends(
+                build_fn, width, use_mps_toffoli=True, use_mps_qft=True
+            )
+            if toffoli_result != qft_result:
+                expected = a % b
+                failures.append(
+                    f"w={width} a={a} b={b}: toffoli={toffoli_result}, "
+                    f"qft={qft_result}, expected={expected}"
+                )
+
+        assert not failures, f"{len(failures)} cross-backend qmod mismatches:\n" + "\n".join(
+            failures[:20]
         )
