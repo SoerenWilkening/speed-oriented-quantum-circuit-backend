@@ -81,7 +81,7 @@
 - [x] **Phase 66: CDKM Ripple-Carry Adder** - QQ/CQ addition and subtraction via MAJ/UMA chain with 1 ancilla -- completed 2026-02-14
 - [x] **Phase 67: Controlled Adder & Backend Dispatch** - cQQ/cCQ controlled addition and fault_tolerant mode switching -- completed 2026-02-14
 - [x] **Phase 68: Schoolbook Multiplication** - QQ/CQ Toffoli-based multiplication using shift-and-add -- completed 2026-02-15
-- [ ] **Phase 69: Controlled Multiplication & Division** - cQQ/cCQ multiplication and restoring division via Toffoli add/sub
+- [x] **Phase 69: Controlled Multiplication & Division** - cQQ/cCQ multiplication and restoring division via Toffoli add/sub -- completed 2026-02-15
 - [ ] **Phase 70: Cross-Backend Verification** - Exhaustive equivalence testing between Toffoli and QFT backends
 - [ ] **Phase 71: Carry Look-Ahead Adder** - O(log n) depth addition with 2n-2 ancilla (Draper et al. 2004)
 - [ ] **Phase 72: Performance Polish** - Hardcoded sequences, T-count reporting, controlled add-subtract optimization
@@ -166,9 +166,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 69-01-PLAN.md -- Implement controlled Toffoli multiplication (cQQ/cCQ) in C and wire hot_path dispatch
-- [ ] 69-02-PLAN.md -- Exhaustive verification tests for controlled Toffoli multiplication (widths 1-3)
-- [ ] 69-03-PLAN.md -- Division/modulo Toffoli verification tests (classical + quantum divisors, controlled context)
+- [x] 69-01-PLAN.md -- Implement controlled Toffoli multiplication (cQQ/cCQ) in C and wire hot_path dispatch
+- [x] 69-02-PLAN.md -- Exhaustive verification tests for controlled Toffoli multiplication (widths 1-3)
+- [x] 69-03-PLAN.md -- Division/modulo Toffoli verification tests (classical + quantum divisors, controlled context)
 
 ### Phase 70: Cross-Backend Verification
 **Goal**: Toffoli and QFT backends are proven to produce identical computational results for all arithmetic operations across practical widths
@@ -250,7 +250,7 @@ Phases execute in numeric order: 65 -> 66 -> 67 -> 68 -> 69 -> 70 -> 71 -> 72
 | 66. CDKM Ripple-Carry Adder | v3.0 | 3/3 | Complete | 2026-02-14 |
 | 67. Controlled Adder & Backend Dispatch | v3.0 | 3/3 | Complete | 2026-02-14 |
 | 68. Schoolbook Multiplication | v3.0 | 2/2 | Complete | 2026-02-15 |
-| 69. Controlled Multiplication & Division | v3.0 | 0/TBD | Not started | - |
+| 69. Controlled Multiplication & Division | v3.0 | 3/3 | Complete | 2026-02-15 |
 | 70. Cross-Backend Verification | v3.0 | 0/TBD | Not started | - |
 | 71. Carry Look-Ahead Adder | v3.0 | 0/TBD | Not started | - |
 | 72. Performance Polish | v3.0 | 0/TBD | Not started | - |
