@@ -1,7 +1,12 @@
-"""Verification tests for multiplication operations.
+"""Verification tests for QFT multiplication operations.
 
 Tests that qint multiplication (QQ and CQ variants) produces correct results
 through the full pipeline: Python API -> C backend -> OpenQASM -> Qiskit simulation.
+
+These tests use QFT mode explicitly (fault_tolerant=False) because the verify_circuit
+fixture extracts results from the highest qubit indices, which doesn't account for
+ancilla qubits allocated by the Toffoli path. Toffoli multiplication correctness
+is verified separately in test_toffoli_multiplication.py.
 
 Coverage:
 - Exhaustive: All input pairs for widths 1-3 bits (84 pairs per variant)
@@ -85,6 +90,7 @@ def test_qq_mul_exhaustive(verify_circuit, width, a, b):
     """
 
     def circuit_builder(a=a, b=b, w=width):
+        ql.option("fault_tolerant", False)  # QFT mode for verify_circuit fixture
         qa = ql.qint(a, width=w)
         qb = ql.qint(b, width=w)
         _r = qa * qb
@@ -103,6 +109,7 @@ def test_qq_mul_sampled(verify_circuit, width, a, b):
     """
 
     def circuit_builder(a=a, b=b, w=width):
+        ql.option("fault_tolerant", False)  # QFT mode for verify_circuit fixture
         qa = ql.qint(a, width=w)
         qb = ql.qint(b, width=w)
         _r = qa * qb
@@ -124,6 +131,7 @@ def test_cq_mul_exhaustive(verify_circuit, width, a, b):
     """
 
     def circuit_builder(a=a, b=b, w=width):
+        ql.option("fault_tolerant", False)  # QFT mode for verify_circuit fixture
         qa = ql.qint(a, width=w)
         qa *= b
         return (a * b) % (1 << w)
@@ -141,6 +149,7 @@ def test_cq_mul_sampled(verify_circuit, width, a, b):
     """
 
     def circuit_builder(a=a, b=b, w=width):
+        ql.option("fault_tolerant", False)  # QFT mode for verify_circuit fixture
         qa = ql.qint(a, width=w)
         qa *= b
         return (a * b) % (1 << w)

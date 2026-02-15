@@ -1,7 +1,12 @@
-"""Verification tests for qint addition operations.
+"""Verification tests for QFT addition operations.
 
 Tests that addition (QQ and CQ variants) produces correct results
 through the full pipeline: Python API -> C backend -> OpenQASM -> Qiskit simulation.
+
+These tests use QFT mode explicitly (fault_tolerant=False) because the verify_circuit
+fixture extracts results from the highest qubit indices, which doesn't account for
+ancilla qubits allocated by the Toffoli path. Toffoli addition correctness
+is verified separately in test_toffoli_addition.py.
 
 Coverage:
 - Exhaustive: All input pairs for widths 1-4 bits (QQ and CQ)
@@ -67,6 +72,7 @@ def test_qq_add_exhaustive(verify_circuit, width, a, b):
     """
 
     def circuit_builder(a=a, b=b, w=width):
+        ql.option("fault_tolerant", False)  # QFT mode for verify_circuit fixture
         qa = ql.qint(a, width=w)
         qb = ql.qint(b, width=w)
         _r = qa + qb
@@ -85,6 +91,7 @@ def test_qq_add_sampled(verify_circuit, width, a, b):
     """
 
     def circuit_builder(a=a, b=b, w=width):
+        ql.option("fault_tolerant", False)  # QFT mode for verify_circuit fixture
         qa = ql.qint(a, width=w)
         qb = ql.qint(b, width=w)
         _r = qa + qb
@@ -106,6 +113,7 @@ def test_cq_add_exhaustive(verify_circuit, width, a, b):
     """
 
     def circuit_builder(a=a, b=b, w=width):
+        ql.option("fault_tolerant", False)  # QFT mode for verify_circuit fixture
         qa = ql.qint(a, width=w)
         qa += b
         return (a + b) % (1 << w)
@@ -123,6 +131,7 @@ def test_cq_add_sampled(verify_circuit, width, a, b):
     """
 
     def circuit_builder(a=a, b=b, w=width):
+        ql.option("fault_tolerant", False)  # QFT mode for verify_circuit fixture
         qa = ql.qint(a, width=w)
         qa += b
         return (a + b) % (1 << w)

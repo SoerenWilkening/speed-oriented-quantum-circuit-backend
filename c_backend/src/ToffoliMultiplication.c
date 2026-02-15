@@ -10,6 +10,10 @@
  *   toffoli_mul_qq  -- quantum * quantum (controlled additions per multiplier bit)
  *   toffoli_mul_cq  -- quantum * classical (uncontrolled additions for set bits)
  *
+ * Qubit arrays use LSB-first convention from the C hot path perspective:
+ *   index 0 = LSB (weight 2^0), index n-1 = MSB (weight 2^(n-1)).
+ * This matches the CDKM adder's internal convention.
+ *
  * References:
  *   Schoolbook multiplication: sum_{j=0}^{n-1} a * b[j] * 2^j
  *   CDKM adder: Cuccaro et al., arXiv:quant-ph/0410184
@@ -27,11 +31,13 @@
  * @brief Toffoli schoolbook QQ multiplication: ret = self * other.
  *
  * Uses controlled CDKM adders: for each bit j of the multiplier (other),
- * performs a controlled addition of self[0..n-1-j] into ret[j..n-1],
+ * performs a controlled addition of self[0..width-1] into ret[j..j+width-1],
  * controlled by other[j].
  *
  * The shift is implicit: adding into ret[j..] effectively multiplies by 2^j.
  * Each iteration uses progressively smaller addition width (n-j).
+ *
+ * LSB-first convention: index 0 = LSB, index n-1 = MSB.
  *
  * @param circ          Active circuit
  * @param ret_qubits    Result register (accumulator, starts at |0>)
@@ -55,9 +61,12 @@ void toffoli_mul_qq(circuit_t *circ, const unsigned int *ret_qubits, int ret_bit
         sequence_t *toff_seq;
 
         if (width == 1) {
-            /* 1-bit controlled addition: CCX(target=ret[n-1], ctrl1=self[0], ctrl2=other[j])
+            /* 1-bit controlled addition: CCX
              * toffoli_cQQ_add(1) layout: [0]=target, [1]=source, [2]=control
-             * target = ret[n-1] (accumulator bit), source = self[0], control = other[j] */
+             *
+             * LSB-first: ret[n-1] = MSB of ret, self[0] = LSB of self,
+             *            other[j] = multiplier bit with weight 2^j.
+             * For j = n-1: adds self[0] (LSB) into ret[n-1] (MSB). */
             tqa[0] = ret_qubits[n - 1];
             tqa[1] = self_qubits[0];
             tqa[2] = other_qubits[j];
@@ -74,26 +83,28 @@ void toffoli_mul_qq(circuit_t *circ, const unsigned int *ret_qubits, int ret_bit
                 return;
 
             /* CDKM convention (matching hot_path_add.c):
-             *   a-register [0..width-1]       = self (multiplicand, preserved)
-             *   b-register [width..2*width-1]  = ret slice (accumulator, gets sum)
+             *   a-register [0..width-1]       = source (preserved)
+             *   b-register [width..2*width-1]  = target (gets sum)
              *   [2*width]                      = carry ancilla
-             *   [2*width+1]                    = control qubit (other[j])
+             *   [2*width+1]                    = control qubit
              *
-             * toffoli_cQQ_add modifies the b-register (positions [width..2*width-1]).
-             * The a-register (positions [0..width-1]) is preserved.
+             * For multiplier bit j (weight 2^j):
+             *   self slice: self[0..width-1] (the lower width=n-j bits of multiplicand)
+             *   ret slice:  ret[j..j+width-1] (shifted by j positions in result)
+             *   control:    other[j] (multiplier bit with weight 2^j)
              */
 
-            /* a-register = self[0..width-1] (multiplicand, preserved) */
+            /* a-register = self[0..width-1] (multiplicand lower bits, preserved) */
             for (int i = 0; i < width; i++) {
                 tqa[i] = self_qubits[i];
             }
-            /* b-register = ret[j..j+width-1] (accumulator, modified) */
+            /* b-register = ret[j..j+width-1] (accumulator, shifted, modified) */
             for (int i = 0; i < width; i++) {
                 tqa[width + i] = ret_qubits[j + i];
             }
             /* carry ancilla */
             tqa[2 * width] = ancilla;
-            /* control qubit = other[j] (multiplier bit j) */
+            /* control qubit = other[j] (multiplier bit with weight 2^j) */
             tqa[2 * width + 1] = other_qubits[j];
 
             toff_seq = toffoli_cQQ_add(width);
@@ -110,11 +121,13 @@ void toffoli_mul_qq(circuit_t *circ, const unsigned int *ret_qubits, int ret_bit
 /**
  * @brief Toffoli schoolbook CQ multiplication: ret = self * classical_value.
  *
- * Decomposes classical_value into binary. For each set bit j, performs an
- * uncontrolled addition of self[0..n-1-j] into ret[j..n-1].
+ * Decomposes classical_value into binary. For each set bit j (weight 2^j),
+ * performs an uncontrolled addition of self[0..width-1] into ret[j..j+width-1].
  *
  * Only adds for set bits of the classical value (compile-time decision),
  * so uses cheaper uncontrolled CDKM adders (toffoli_QQ_add).
+ *
+ * LSB-first convention: index 0 = LSB, index n-1 = MSB.
  *
  * @param circ            Active circuit
  * @param ret_qubits      Result register (accumulator, starts at |0>)
@@ -146,8 +159,10 @@ void toffoli_mul_cq(circuit_t *circ, const unsigned int *ret_qubits, int ret_bit
         sequence_t *toff_seq;
 
         if (width == 1) {
-            /* 1-bit uncontrolled addition: CNOT(target=ret[n-1], control=self[0])
-             * toffoli_QQ_add(1) layout: [0]=target, [1]=source */
+            /* 1-bit uncontrolled addition: CNOT
+             * toffoli_QQ_add(1) layout: [0]=target, [1]=source
+             *
+             * LSB-first: ret[n-1] = MSB of ret, self[0] = LSB of self */
             tqa[0] = ret_qubits[n - 1];
             tqa[1] = self_qubits[0];
 
@@ -166,16 +181,20 @@ void toffoli_mul_cq(circuit_t *circ, const unsigned int *ret_qubits, int ret_bit
             }
 
             /* CDKM convention (matching hot_path_add.c):
-             *   a-register [0..width-1]       = self (multiplicand, preserved)
-             *   b-register [width..2*width-1]  = ret slice (accumulator, gets sum)
+             *   a-register [0..width-1]       = source (preserved)
+             *   b-register [width..2*width-1]  = target (gets sum)
              *   [2*width]                      = carry ancilla
+             *
+             * For classical bit j (weight 2^j):
+             *   self slice: self[0..width-1] (the lower width=n-j bits of multiplicand)
+             *   ret slice:  ret[j..j+width-1] (shifted by j positions in result)
              */
 
-            /* a-register = self[0..width-1] (multiplicand, preserved) */
+            /* a-register = self[0..width-1] (multiplicand lower bits, preserved) */
             for (int i = 0; i < width; i++) {
                 tqa[i] = self_qubits[i];
             }
-            /* b-register = ret[j..j+width-1] (accumulator, modified) */
+            /* b-register = ret[j..j+width-1] (accumulator, shifted, modified) */
             for (int i = 0; i < width; i++) {
                 tqa[width + i] = ret_qubits[j + i];
             }
