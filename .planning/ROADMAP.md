@@ -163,12 +163,12 @@ Plans:
   3. `a // b` and `a % b` produce correct quotient and remainder using Toffoli add/sub underneath when fault_tolerant is active, verified for widths 2-4 with classical divisors
   4. `a // b` and `a % b` work with quantum divisors using Toffoli add/sub, verified for widths 2-3
   5. Division operations inside `with` blocks (controlled context) work correctly with Toffoli dispatch
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 69-01: TBD
-- [ ] 69-02: TBD
-- [ ] 69-03: TBD
+- [ ] 69-01-PLAN.md -- Implement controlled Toffoli multiplication (cQQ/cCQ) in C and wire hot_path dispatch
+- [ ] 69-02-PLAN.md -- Exhaustive verification tests for controlled Toffoli multiplication (widths 1-3)
+- [ ] 69-03-PLAN.md -- Division/modulo Toffoli verification tests (classical + quantum divisors, controlled context)
 
 ### Phase 70: Cross-Backend Verification
 **Goal**: Toffoli and QFT backends are proven to produce identical computational results for all arithmetic operations across practical widths
