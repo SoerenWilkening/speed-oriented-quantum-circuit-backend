@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v3.0 Fault-Tolerant Arithmetic -- Phase 70 in progress (1/2 plans complete)
+**Current focus:** v3.0 Fault-Tolerant Arithmetic -- Phase 70 complete (2/2 plans)
 
 ## Current Position
 
-Phase: 70 of 72 (Cross-Backend Verification) -- IN PROGRESS
-Plan: 1 of 2 complete
-Status: Phase 70 Plan 01 complete. Cross-backend addition/subtraction equivalence tests created. Plan 02 (multiplication/division) next.
-Last activity: 2026-02-15 -- Completed 70-01 (Cross-backend addition/subtraction equivalence tests)
+Phase: 70 of 72 (Cross-Backend Verification) -- COMPLETE
+Plan: 2 of 2 complete
+Status: Phase 70 complete. Cross-backend equivalence tests for all arithmetic operations (add/sub/mul/div/mod). BUG-QFT-DIV discovered.
+Last activity: 2026-02-15 -- Completed 70-02 (Cross-backend multiplication/division equivalence tests)
 
-Progress: [###############_________] 52% (v3.0 phases -- 17/~24 plans)
+Progress: [################________] 53% (v3.0 phases -- 18/~24 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 197 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 22, v2.3: 4, v3.0: 16)
+- Total plans completed: 198 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 22, v2.3: 4, v3.0: 17)
 - Average duration: ~13 min/plan
 - Total execution time: ~30.2 hours
 
@@ -65,6 +65,7 @@ Phase 69-01: Controlled Toffoli multiplication uses AND-ancilla pattern for cQQ 
 Phase 69-02: BUG-COND-MUL-01 root-caused: scope cleanup in __exit__ calls _do_uncompute on out-of-place mul results created inside with-blocks, reversing all gates. C backend is correct. Workaround: current_scope_depth.set(0) during multiplication. All 12 controlled mul tests pass with workaround.
 Phase 69-03: Toffoli division/modulo verification with MCX-to-basis-gate transpilation for MPS compatibility. Toffoli div failures differ from QFT (width 3 even values with div=1). Modulo widely broken (BUG-MOD-REDUCE). Controlled division blocked by missing controlled XOR. Gate purity confirmed. Used allocated_start for result extraction.
 Phase 70-01: Cross-backend equivalence tests for addition/subtraction (Toffoli vs QFT) at widths 1-8. Discovered BUG-CQQ-QFT: QFT controlled QQ in-place addition produces incorrect results at width 2+ (CCP rotation angle errors). Used in-place cQQ (qa += qb) instead of out-of-place due to missing controlled XOR. Widths 7-8 marked slow.
+Phase 70-02: Cross-backend equivalence tests for multiplication (widths 1-6) and division/modulo (widths 2-6). Multiplication QQ/CQ match at all widths; controlled mul xfail at width 2+ (BUG-CQQ-QFT). Discovered BUG-QFT-DIV: QFT division/modulo is pervasively broken at all tested widths (first explicit QFT division testing since Phase 67-03). MPS required for both backends in division tests (34+ qubit QFT circuits). 87 total cross-backend test cases.
 
 ### Blockers/Concerns
 
@@ -72,7 +73,8 @@ Phase 70-01: Cross-backend equivalence tests for addition/subtraction (Toffoli v
 - BUG-DIV-02: MSB comparison leak in division
 - BUG-MOD-REDUCE: _reduce_mod result corruption (needs different circuit structure)
 - BUG-COND-MUL-01: Controlled multiplication scope auto-uncomputation (root-caused in 69-02: __exit__ scope cleanup reverses out-of-place mul results; workaround: scope-depth trick)
-- BUG-CQQ-QFT: QFT controlled QQ in-place addition (CCP decomposition) incorrect at width 2+ (discovered in Phase 70-01)
+- BUG-CQQ-QFT: QFT controlled QQ in-place addition (CCP decomposition) incorrect at width 2+ (discovered in Phase 70-01). Also affects controlled multiplication (confirmed in Phase 70-02).
+- BUG-QFT-DIV: QFT division/modulo is pervasively broken at all tested widths (discovered in Phase 70-02). Width 2: 8/9 cases wrong. Width 3: 26/36 cases wrong. First explicit QFT division test since Phase 67-03 made Toffoli default. QFT quantum division/modulo also broken.
 - BUG-WIDTH-ADD: Mixed-width QFT addition off-by-one (discovered in v1.8)
 - 32-bit multiplication segfault (buffer overflow in C backend, discovered in Phase 61)
 
@@ -86,9 +88,9 @@ Phase 70-01: Cross-backend equivalence tests for addition/subtraction (Toffoli v
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 70-01-PLAN.md (Cross-backend addition/subtraction equivalence tests)
+Stopped at: Completed 70-02-PLAN.md (Cross-backend multiplication/division equivalence tests)
 Resume file: N/A
-Resume action: Continue to Phase 70 Plan 02 (cross-backend multiplication/division tests).
+Resume action: Phase 70 complete. Continue to Phase 71.
 
 ---
-*State updated: 2026-02-15 -- Phase 70 Plan 01 complete (cross-backend addition/subtraction tests, BUG-CQQ-QFT discovered)*
+*State updated: 2026-02-15 -- Phase 70 complete (cross-backend verification for all arithmetic ops, BUG-QFT-DIV discovered)*
