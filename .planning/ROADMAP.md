@@ -82,7 +82,7 @@
 - [x] **Phase 67: Controlled Adder & Backend Dispatch** - cQQ/cCQ controlled addition and fault_tolerant mode switching -- completed 2026-02-14
 - [x] **Phase 68: Schoolbook Multiplication** - QQ/CQ Toffoli-based multiplication using shift-and-add -- completed 2026-02-15
 - [x] **Phase 69: Controlled Multiplication & Division** - cQQ/cCQ multiplication and restoring division via Toffoli add/sub -- completed 2026-02-15
-- [ ] **Phase 70: Cross-Backend Verification** - Exhaustive equivalence testing between Toffoli and QFT backends
+- [x] **Phase 70: Cross-Backend Verification** - Exhaustive equivalence testing between Toffoli and QFT backends -- completed 2026-02-15
 - [ ] **Phase 71: Carry Look-Ahead Adder** - O(log n) depth addition with 2n-2 ancilla (Draper et al. 2004)
 - [ ] **Phase 72: Performance Polish** - Hardcoded sequences, T-count reporting, controlled add-subtract optimization
 
@@ -182,8 +182,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 70-01-PLAN.md -- Cross-backend test infrastructure + addition/subtraction equivalence tests (widths 1-8)
-- [ ] 70-02-PLAN.md -- Multiplication and division/modulo cross-backend equivalence tests (widths 1-6 mul, 2-6 div)
+- [x] 70-01-PLAN.md -- Cross-backend test infrastructure + addition/subtraction equivalence tests (widths 1-8)
+- [x] 70-02-PLAN.md -- Multiplication and division/modulo cross-backend equivalence tests (widths 1-6 mul, 2-6 div)
 
 ### Phase 71: Carry Look-Ahead Adder
 **Goal**: Users can perform O(log n) depth addition for large register widths using the Draper CLA algorithm
@@ -251,7 +251,7 @@ Phases execute in numeric order: 65 -> 66 -> 67 -> 68 -> 69 -> 70 -> 71 -> 72
 | 67. Controlled Adder & Backend Dispatch | v3.0 | 3/3 | Complete | 2026-02-14 |
 | 68. Schoolbook Multiplication | v3.0 | 2/2 | Complete | 2026-02-15 |
 | 69. Controlled Multiplication & Division | v3.0 | 3/3 | Complete | 2026-02-15 |
-| 70. Cross-Backend Verification | v3.0 | 0/TBD | Not started | - |
+| 70. Cross-Backend Verification | v3.0 | 2/2 | Complete | 2026-02-15 |
 | 71. Carry Look-Ahead Adder | v3.0 | 0/TBD | Not started | - |
 | 72. Performance Polish | v3.0 | 0/TBD | Not started | - |
 
