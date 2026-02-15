@@ -149,6 +149,57 @@ void toffoli_mul_qq(circuit_t *circ, const unsigned int *ret_qubits, int ret_bit
 void toffoli_mul_cq(circuit_t *circ, const unsigned int *ret_qubits, int ret_bits,
                     const unsigned int *self_qubits, int self_bits, int64_t classical_value);
 
+// ============================================================================
+// Controlled Toffoli Multiplication (Phase 69)
+// ============================================================================
+
+/**
+ * @brief Controlled Toffoli QQ multiplication: ret = self * other, controlled.
+ *
+ * Uses the AND-ancilla pattern: for each multiplier bit other[j], computes
+ * and_ancilla = other[j] AND ext_ctrl via CCX, uses and_ancilla as the single
+ * control for toffoli_cQQ_add, then uncomputes AND via a second CCX.
+ *
+ * For width 1: emits a single MCX with 3 controls (self[0], other[j], ext_ctrl).
+ * Ancilla: 1 carry + 1 AND = 2 ancilla (allocated before loop, freed after).
+ *
+ * @param circ          Active circuit
+ * @param ret_qubits    Result register qubits (accumulator, starts at |0>)
+ * @param ret_bits      Width of result register (n)
+ * @param self_qubits   Multiplicand register qubits (preserved)
+ * @param self_bits     Width of multiplicand
+ * @param other_qubits  Multiplier register qubits (preserved)
+ * @param other_bits    Width of multiplier
+ * @param ext_ctrl      External control qubit
+ */
+void toffoli_cmul_qq(circuit_t *circ, const unsigned int *ret_qubits, int ret_bits,
+                     const unsigned int *self_qubits, int self_bits,
+                     const unsigned int *other_qubits, int other_bits, unsigned int ext_ctrl);
+
+/**
+ * @brief Controlled Toffoli CQ multiplication: ret = self * classical_value, controlled.
+ *
+ * For each set bit j of classical_value, performs a controlled addition of
+ * self[0..width-1] into ret[j..j+width-1] using toffoli_cQQ_add with ext_ctrl.
+ *
+ * No AND-ancilla needed: classical bit selection is compile-time; only the
+ * runtime ext_ctrl gates each addition.
+ *
+ * For width 1: uses toffoli_cQQ_add(1) with ext_ctrl as control (CCX).
+ * Ancilla: 1 carry (allocated before loop, freed after).
+ *
+ * @param circ            Active circuit
+ * @param ret_qubits      Result register qubits (accumulator, starts at |0>)
+ * @param ret_bits        Width of result register (n)
+ * @param self_qubits     Multiplicand register qubits (preserved)
+ * @param self_bits       Width of multiplicand
+ * @param classical_value Classical integer to multiply by
+ * @param ext_ctrl        External control qubit
+ */
+void toffoli_cmul_cq(circuit_t *circ, const unsigned int *ret_qubits, int ret_bits,
+                     const unsigned int *self_qubits, int self_bits, int64_t classical_value,
+                     unsigned int ext_ctrl);
+
 /**
  * @brief Free a Toffoli addition sequence.
  *
