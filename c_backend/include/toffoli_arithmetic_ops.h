@@ -8,12 +8,13 @@
  * Phase 66: Core CDKM adder implementation (QQ, CQ).
  * Phase 67: Controlled variants (cQQ, cCQ) using CCX + MCX gates.
  *
- * Dependencies: types.h
+ * Dependencies: types.h, QPU.h (for circuit_t in multiplication functions)
  */
 
 #ifndef TOFFOLI_ARITHMETIC_OPS_H
 #define TOFFOLI_ARITHMETIC_OPS_H
 
+#include "QPU.h"
 #include "types.h"
 #include <stdint.h>
 
@@ -108,6 +109,45 @@ sequence_t *toffoli_cQQ_add(int bits);
  * NOT cached (value-dependent).
  */
 sequence_t *toffoli_cCQ_add(int bits, int64_t value);
+
+// ============================================================================
+// Toffoli Multiplication (Phase 68)
+// ============================================================================
+
+/**
+ * @brief Toffoli schoolbook QQ multiplication: ret = self * other.
+ *
+ * Uses controlled CDKM adders in a shift-and-add loop. For each bit j of
+ * the multiplier (other), performs a controlled addition of self[0..n-1-j]
+ * into ret[j..n-1], controlled by other[j].
+ *
+ * @param circ          Active circuit
+ * @param ret_qubits    Result register qubits (accumulator, starts at |0>)
+ * @param ret_bits      Width of result register (n)
+ * @param self_qubits   Multiplicand register qubits (preserved)
+ * @param self_bits     Width of multiplicand
+ * @param other_qubits  Multiplier register qubits (preserved)
+ * @param other_bits    Width of multiplier
+ */
+void toffoli_mul_qq(circuit_t *circ, const unsigned int *ret_qubits, int ret_bits,
+                    const unsigned int *self_qubits, int self_bits,
+                    const unsigned int *other_qubits, int other_bits);
+
+/**
+ * @brief Toffoli schoolbook CQ multiplication: ret = self * classical_value.
+ *
+ * Decomposes classical_value into binary. For each set bit j, performs an
+ * uncontrolled addition of self[0..n-1-j] into ret[j..n-1].
+ *
+ * @param circ            Active circuit
+ * @param ret_qubits      Result register qubits (accumulator, starts at |0>)
+ * @param ret_bits        Width of result register (n)
+ * @param self_qubits     Multiplicand register qubits (preserved)
+ * @param self_bits       Width of multiplicand
+ * @param classical_value Classical integer to multiply by
+ */
+void toffoli_mul_cq(circuit_t *circ, const unsigned int *ret_qubits, int ret_bits,
+                    const unsigned int *self_qubits, int self_bits, int64_t classical_value);
 
 /**
  * @brief Free a Toffoli addition sequence.
