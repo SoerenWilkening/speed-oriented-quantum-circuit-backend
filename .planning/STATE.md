@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v3.0 Fault-Tolerant Arithmetic -- Phase 67 complete, ready for Phase 68
+**Current focus:** v3.0 Fault-Tolerant Arithmetic -- Phase 68 in progress
 
 ## Current Position
 
-Phase: 67 of 72 (Controlled Adder & Backend Dispatch) -- COMPLETE
-Plan: 3 of 3 in current phase (all complete)
-Status: Phase 67 complete. Toffoli arithmetic is now the default mode.
-Last activity: 2026-02-14 -- Completed 67-03 (default arithmetic mode switch)
+Phase: 68 of 72 (Schoolbook Multiplication) -- IN PROGRESS
+Plan: 1 of 2 in current phase (Plan 01 complete)
+Status: Plan 01 complete (ToffoliMultiplication.c + hot_path dispatch). Plan 02 (tests) remaining.
+Last activity: 2026-02-15 -- Completed 68-01 (Toffoli multiplication implementation)
 
-Progress: [##########______________] 33% (v3.0 phases -- 10/~24 plans)
+Progress: [###########_____________] 37% (v3.0 phases -- 11/~24 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 191 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 22, v2.3: 4, v3.0: 10)
+- Total plans completed: 192 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 22, v2.3: 4, v3.0: 11)
 - Average duration: ~13 min/plan
-- Total execution time: ~29.3 hours
+- Total execution time: ~30.0 hours
 
 **By Milestone:**
 
@@ -41,7 +41,7 @@ Progress: [##########______________] 33% (v3.0 phases -- 10/~24 plans)
 | v2.1 Compile Enhancements | 52-54 | 6 | Complete (2026-02-05) |
 | v2.2 Performance Optimization | 55-61 | 22 | Complete (2026-02-08) |
 | v2.3 Hardcoding Right-Sizing | 62-64 | 4 | Complete (2026-02-08) |
-| v3.0 Fault-Tolerant Arithmetic | 65-72 | TBD | In progress |
+| v3.0 Fault-Tolerant Arithmetic | 65-72 | 11+ | In progress |
 
 ## Accumulated Context
 
@@ -59,6 +59,7 @@ Phase 66-03: CQ Toffoli uses temp-register QQ approach (X-init temp to classical
 Phase 67-01: Controlled CDKM adder (cQQ/cCQ) uses CCX + MCX(3 controls) pattern. Control qubit at 2*bits+1 (not 2*bits). CX-based controlled temp init/cleanup for cCQ. toffoli_sequence_free now handles large_control cleanup.
 Phase 67-02: Controlled Toffoli dispatch wired into hot_path_add.c (no QFT fallback). Fixed MCX use-after-free: run_instruction transfers large_control ownership to circuit, free_circuit cleans up. 70 Toffoli tests pass.
 Phase 67-03: ARITH_TOFFOLI is now the default arithmetic mode (1-line change in init_circuit). QFT available via ql.option('fault_tolerant', False). All QFT tests updated with explicit opt-in. 72 Toffoli + 165 hardcoded sequence tests pass.
+Phase 68-01: Toffoli schoolbook multiplication via shift-and-add loop calling CDKM adders. QQ uses controlled adders per multiplier bit; CQ uses uncontrolled adders for set classical bits. Controlled mul falls through to QFT (Phase 69 scope). Fixed test_mul.py and test_add.py for Toffoli default mode (explicit QFT opt-in).
 
 ### Blockers/Concerns
 
@@ -78,10 +79,10 @@ Phase 67-03: ARITH_TOFFOLI is now the default arithmetic mode (1-line change in 
 
 ## Session Continuity
 
-Last session: 2026-02-14
-Stopped at: Completed Phase 67 (all 3 plans: controlled CDKM adder, hot-path dispatch, default mode switch)
+Last session: 2026-02-15
+Stopped at: Completed 68-01-PLAN.md (Toffoli multiplication implementation)
 Resume file: N/A
-Resume action: Plan Phase 68 or next v3.0 phase
+Resume action: Execute 68-02-PLAN.md (Toffoli multiplication verification tests)
 
 ---
-*State updated: 2026-02-14 -- Phase 67 complete (Toffoli arithmetic is now the default)*
+*State updated: 2026-02-15 -- Phase 68 Plan 01 complete (Toffoli schoolbook multiplication)*
