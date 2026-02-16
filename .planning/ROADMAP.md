@@ -212,12 +212,12 @@ Plans:
   1. Hardcoded Toffoli gate sequences for widths 1-8 eliminate runtime sequence generation, with measurable dispatch speedup
   2. `ql.stats()` reports T-count alongside existing gate counts, computed as 7 * Toffoli_count for fault-tolerant circuits
   3. Controlled add-subtract optimization in multiplication reduces Toffoli count by approximately 50% compared to naive controlled addition approach, verified by gate count comparison
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 72-01: TBD
-- [ ] 72-02: TBD
-- [ ] 72-03: TBD
+- [ ] 72-01-PLAN.md -- Generate hardcoded Toffoli sequence C files (QQ/cQQ for widths 1-8) via Python script
+- [ ] 72-02-PLAN.md -- Wire hardcoded sequences into ToffoliAddition.c + T-count exposure in Python API + tests
+- [ ] 72-03-PLAN.md -- AND-ancilla MCX decomposition in QQ multiplication to eliminate 3-control gates
 
 ## Progress
 
@@ -257,7 +257,16 @@ Phases execute in numeric order: 65 -> 66 -> 67 -> 68 -> 69 -> 70 -> 71 -> 72
 | 69. Controlled Multiplication & Division | v3.0 | 3/3 | Complete | 2026-02-15 |
 | 70. Cross-Backend Verification | v3.0 | 2/2 | Complete | 2026-02-15 |
 | 71. Carry Look-Ahead Adder | v3.0 | 6/6 | Complete | 2026-02-17 |
-| 72. Performance Polish | v3.0 | 0/TBD | Not started | - |
+| 72. Performance Polish | v3.0 | 0/3 | Not started | - |
+
+### Phase 73: Toffoli CQ/cCQ Classical-Bit Gate Reduction
+
+**Goal:** [To be planned]
+**Depends on:** Phase 72
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 73 to break down)
 
 ---
 *Roadmap created: 2026-02-02*
