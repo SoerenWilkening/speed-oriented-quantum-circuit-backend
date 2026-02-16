@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v3.0 Fault-Tolerant Arithmetic -- Phase 71 in progress (3/4 plans)
+**Current focus:** v3.0 Fault-Tolerant Arithmetic -- Phase 71 COMPLETE (4/4 plans)
 
 ## Current Position
 
-Phase: 71 of 72 (Carry Look-Ahead Adder) -- IN PROGRESS
-Plan: 3 of 4 complete
-Status: 71-03 complete. Controlled CLA stubs (cQQ/cCQ x BK/KS) + controlled dispatch in hot_path_add + 18 tests. All 40 CLA tests pass via RCA fallback.
-Last activity: 2026-02-16 -- Completed 71-03 (controlled CLA adders + dispatch + tests)
+Phase: 71 of 72 (Carry Look-Ahead Adder) -- COMPLETE
+Plan: 4 of 4 complete
+Status: Phase 71 COMPLETE. CLA infrastructure + stubs + dispatch + comprehensive verification suite. 80 total CLA tests (40 addition + 40 verification). All pass via RCA fallback. CLA algorithm deferred.
+Last activity: 2026-02-16 -- Completed 71-04 (CLA verification suite, Phase 71 final quality gate)
 
-Progress: [###################_____] 62% (v3.0 phases -- 21/~24 plans)
+Progress: [######################__] 65% (v3.0 phases -- 22/~24 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 201 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 22, v2.3: 4, v3.0: 20)
+- Total plans completed: 202 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 22, v2.3: 4, v3.0: 21)
 - Average duration: ~13 min/plan
 - Total execution time: ~30.7 hours
 
@@ -69,6 +69,7 @@ Phase 70-02: Cross-backend equivalence tests for multiplication (widths 1-6) and
 Phase 71-01: CLA infrastructure (cla_override field, option plumbing, dispatch in hot_path_add.c with CLA_THRESHOLD=4). BK CLA algorithm deferred -- in-place quantum CLA ancilla uncomputation is fundamentally impossible with single prefix tree pass. toffoli_QQ_add_bk() returns NULL, silent fallback to RCA. 13 CLA smoke tests pass via fallback.
 Phase 71-02: KS QQ + BK/KS CQ CLA adder stubs all return NULL (same uncomputation impossibility). qubit_saving field in circuit_t for BK vs KS variant selection. CQ CLA dispatch with temp-register approach and goto-based RCA fallback. 22 exhaustive CLA tests pass via RCA fallback.
 Phase 71-03: Controlled CLA stubs (cQQ/cCQ x BK/KS) all return NULL. Controlled CLA dispatch in both QQ and CQ hot_path_add paths with silent RCA fallback. ext_ctrl placed after CLA ancilla in qubit layout. 18 controlled CLA tests + 22 existing = 40 total CLA tests pass.
+Phase 71-04: Comprehensive CLA verification suite: CLA vs RCA equivalence at widths 1-6 (QQ/CQ/sub), depth comparison xfail (CLA deferred), gate purity, mixed-width, multiplication propagation, ancilla cleanup via statevector. 40 verification tests (32 pass + 4 xfail + 4 slow). Phase 71 complete.
 
 ### Blockers/Concerns
 
@@ -91,9 +92,9 @@ Phase 71-03: Controlled CLA stubs (cQQ/cCQ x BK/KS) all return NULL. Controlled 
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 71-03-PLAN.md (controlled CLA adders + dispatch + 18 tests)
+Stopped at: Completed 71-04-PLAN.md (CLA verification suite, Phase 71 complete)
 Resume file: N/A
-Resume action: Continue Phase 71 with plan 71-04.
+Resume action: Continue to Phase 72 or next phase.
 
 ---
-*State updated: 2026-02-16 -- Phase 71-03 complete (controlled CLA stubs + dispatch + 18 tests, 40 total CLA tests)*
+*State updated: 2026-02-16 -- Phase 71-04 complete (CLA verification suite, 80 total CLA tests, Phase 71 done)*
