@@ -83,7 +83,7 @@
 - [x] **Phase 68: Schoolbook Multiplication** - QQ/CQ Toffoli-based multiplication using shift-and-add -- completed 2026-02-15
 - [x] **Phase 69: Controlled Multiplication & Division** - cQQ/cCQ multiplication and restoring division via Toffoli add/sub -- completed 2026-02-15
 - [x] **Phase 70: Cross-Backend Verification** - Exhaustive equivalence testing between Toffoli and QFT backends -- completed 2026-02-15
-- [ ] **Phase 71: Carry Look-Ahead Adder** - O(log n) depth addition with Brent-Kung and Kogge-Stone prefix trees
+- [x] **Phase 71: Carry Look-Ahead Adder** - O(log n) depth addition with Brent-Kung and Kogge-Stone prefix trees -- completed 2026-02-17
 - [ ] **Phase 72: Performance Polish** - Hardcoded sequences, T-count reporting, controlled add-subtract optimization
 
 ## Phase Details
@@ -201,8 +201,8 @@ Plans:
 - [x] 71-02-PLAN.md -- Kogge-Stone QQ adder stub + BK/KS CQ stubs + CQ dispatch + variant selection tests
 - [x] 71-03-PLAN.md -- Controlled CLA stubs (cQQ/cCQ for BK+KS) + controlled dispatch + controlled tests
 - [x] 71-04-PLAN.md -- Comprehensive verification: CLA vs RCA equivalence, depth comparison (xfail), ancilla cleanup, gate purity
-- [ ] 71-05-PLAN.md -- Gap closure: Implement working BK QQ CLA adder with prefix tree + update dispatch ancilla count
-- [ ] 71-06-PLAN.md -- Gap closure: Wire BK CQ/cQQ/cCQ variants + remove depth comparison xfail markers
+- [x] 71-05-PLAN.md -- Gap closure: Implement working BK QQ CLA adder with prefix tree + update dispatch ancilla count
+- [x] 71-06-PLAN.md -- Gap closure: Wire BK CQ/cQQ/cCQ variants + remove depth comparison xfail markers
 
 ### Phase 72: Performance Polish
 **Goal**: Toffoli arithmetic is optimized for production use with hardcoded sequences, resource reporting, and gate count reduction
@@ -256,7 +256,7 @@ Phases execute in numeric order: 65 -> 66 -> 67 -> 68 -> 69 -> 70 -> 71 -> 72
 | 68. Schoolbook Multiplication | v3.0 | 2/2 | Complete | 2026-02-15 |
 | 69. Controlled Multiplication & Division | v3.0 | 3/3 | Complete | 2026-02-15 |
 | 70. Cross-Backend Verification | v3.0 | 2/2 | Complete | 2026-02-15 |
-| 71. Carry Look-Ahead Adder | v3.0 | 4/6 | In progress | - |
+| 71. Carry Look-Ahead Adder | v3.0 | 6/6 | Complete | 2026-02-17 |
 | 72. Performance Polish | v3.0 | 0/TBD | Not started | - |
 
 ---
