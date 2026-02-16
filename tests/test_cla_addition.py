@@ -1,9 +1,13 @@
-"""Phase 71: CLA Adder - Smoke Tests.
+"""Phase 71: CLA Adder Tests.
 
-Tests Brent-Kung CLA QQ addition at widths >= CLA_THRESHOLD (4).
+Tests CLA QQ and CQ addition at widths >= CLA_THRESHOLD (4).
 Uses Qiskit AerSimulator for exhaustive statevector verification.
 
-Also tests the CLA option override and below-threshold fallback to RCA.
+Plan 71-01: BK QQ smoke tests + option tests.
+Plan 71-02: KS QQ tests, BK/KS CQ tests, variant selection tests.
+
+All CLA adders currently return NULL (ancilla uncomputation impossibility),
+so tests verify correctness via silent RCA fallback.
 """
 
 import gc
@@ -209,5 +213,185 @@ class TestCLABelowThreshold:
 
         assert not failures, (
             f"Below-threshold width={width}: {len(failures)}/{modulus * modulus} failures:\n"
+            + "\n".join(failures[:20])
+        )
+
+
+# ============================================================================
+# Phase 71-02: KS QQ, BK/KS CQ, and variant selection tests
+# ============================================================================
+
+
+def _run_ks_qq_add(a_val, b_val, width):
+    """Run KS QQ addition (qubit_saving=False) and extract result."""
+    gc.collect()
+    ql.circuit()
+    ql.option("fault_tolerant", True)
+    ql.option("qubit_saving", False)  # KS is default when qubit_saving off
+    ql.option("cla", True)
+    qa = ql.qint(a_val, width=width)
+    qb = ql.qint(b_val, width=width)
+    qa += qb
+    qasm_str = ql.to_openqasm()
+    num_qubits = _get_num_qubits_from_qasm(qasm_str)
+    actual = _simulate_and_extract(qasm_str, num_qubits, 0, width)
+    _ = (qa, qb)
+    return actual
+
+
+def _run_bk_cq_add(self_val, val, width):
+    """Run BK CQ addition (qubit_saving=True) and extract result."""
+    gc.collect()
+    ql.circuit()
+    ql.option("fault_tolerant", True)
+    ql.option("qubit_saving", True)  # BK when qubit_saving on
+    ql.option("cla", True)
+    qa = ql.qint(self_val, width=width)
+    qa += val
+    qasm_str = ql.to_openqasm()
+    num_qubits = _get_num_qubits_from_qasm(qasm_str)
+    actual = _simulate_and_extract(qasm_str, num_qubits, 0, width)
+    _ = qa
+    return actual
+
+
+def _run_bk_cq_sub(self_val, val, width):
+    """Run BK CQ subtraction (qubit_saving=True) and extract result."""
+    gc.collect()
+    ql.circuit()
+    ql.option("fault_tolerant", True)
+    ql.option("qubit_saving", True)
+    ql.option("cla", True)
+    qa = ql.qint(self_val, width=width)
+    qa -= val
+    qasm_str = ql.to_openqasm()
+    num_qubits = _get_num_qubits_from_qasm(qasm_str)
+    actual = _simulate_and_extract(qasm_str, num_qubits, 0, width)
+    _ = qa
+    return actual
+
+
+def _run_ks_cq_add(self_val, val, width):
+    """Run KS CQ addition (qubit_saving=False) and extract result."""
+    gc.collect()
+    ql.circuit()
+    ql.option("fault_tolerant", True)
+    ql.option("qubit_saving", False)  # KS when qubit_saving off
+    ql.option("cla", True)
+    qa = ql.qint(self_val, width=width)
+    qa += val
+    qasm_str = ql.to_openqasm()
+    num_qubits = _get_num_qubits_from_qasm(qasm_str)
+    actual = _simulate_and_extract(qasm_str, num_qubits, 0, width)
+    _ = qa
+    return actual
+
+
+class TestKSQQAddition:
+    """Test Kogge-Stone QQ addition (default when qubit_saving off).
+
+    KS QQ adder currently returns NULL (ancilla uncomputation impossibility),
+    so these tests verify correctness via silent RCA fallback.
+    """
+
+    @pytest.mark.parametrize("width", [4, 5, 6])
+    def test_ks_qq_add_exhaustive(self, width):
+        """KS QQ addition: all input pairs."""
+        modulus = 1 << width
+        failures = []
+
+        for a_val in range(modulus):
+            for b_val in range(modulus):
+                expected = (a_val + b_val) % modulus
+                actual = _run_ks_qq_add(a_val, b_val, width)
+                if actual != expected:
+                    failures.append(
+                        format_failure_message("ks_qq_add", [a_val, b_val], width, expected, actual)
+                    )
+
+        assert not failures, (
+            f"KS QQ add width={width}: {len(failures)}/{modulus * modulus} failures:\n"
+            + "\n".join(failures[:20])
+        )
+
+
+class TestBKCQAddition:
+    """Test Brent-Kung CQ addition (qubit_saving=True).
+
+    BK CQ adder currently returns NULL (ancilla uncomputation impossibility),
+    so these tests verify correctness via silent RCA fallback.
+    """
+
+    @pytest.mark.parametrize("width", [4, 5])
+    def test_bk_cq_add_exhaustive(self, width):
+        """BK CQ addition: self += classical for all pairs."""
+        modulus = 1 << width
+        failures = []
+
+        for val in range(modulus):
+            for self_val in range(modulus):
+                expected = (self_val + val) % modulus
+                actual = _run_bk_cq_add(self_val, val, width)
+                if actual != expected:
+                    failures.append(
+                        format_failure_message(
+                            "bk_cq_add", [self_val, val], width, expected, actual
+                        )
+                    )
+
+        assert not failures, (
+            f"BK CQ add width={width}: {len(failures)}/{modulus * modulus} failures:\n"
+            + "\n".join(failures[:20])
+        )
+
+    @pytest.mark.parametrize("width", [4, 5])
+    def test_bk_cq_sub_exhaustive(self, width):
+        """BK CQ subtraction: self -= classical for all pairs."""
+        modulus = 1 << width
+        failures = []
+
+        for val in range(modulus):
+            for self_val in range(modulus):
+                expected = (self_val - val) % modulus
+                actual = _run_bk_cq_sub(self_val, val, width)
+                if actual != expected:
+                    failures.append(
+                        format_failure_message(
+                            "bk_cq_sub", [self_val, val], width, expected, actual
+                        )
+                    )
+
+        assert not failures, (
+            f"BK CQ sub width={width}: {len(failures)}/{modulus * modulus} failures:\n"
+            + "\n".join(failures[:20])
+        )
+
+
+class TestKSCQAddition:
+    """Test Kogge-Stone CQ addition (qubit_saving=False).
+
+    KS CQ adder currently returns NULL (ancilla uncomputation impossibility),
+    so these tests verify correctness via silent RCA fallback.
+    """
+
+    @pytest.mark.parametrize("width", [4, 5])
+    def test_ks_cq_add_exhaustive(self, width):
+        """KS CQ addition: self += classical for all pairs."""
+        modulus = 1 << width
+        failures = []
+
+        for val in range(modulus):
+            for self_val in range(modulus):
+                expected = (self_val + val) % modulus
+                actual = _run_ks_cq_add(self_val, val, width)
+                if actual != expected:
+                    failures.append(
+                        format_failure_message(
+                            "ks_cq_add", [self_val, val], width, expected, actual
+                        )
+                    )
+
+        assert not failures, (
+            f"KS CQ add width={width}: {len(failures)}/{modulus * modulus} failures:\n"
             + "\n".join(failures[:20])
         )

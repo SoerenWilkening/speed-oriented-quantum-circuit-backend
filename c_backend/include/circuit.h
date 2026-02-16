@@ -78,6 +78,8 @@ typedef struct circuit_s {
 
     int cla_override; // 0 = auto (CLA when width >= threshold), 1 = force RCA (no CLA)
 
+    int qubit_saving; // 0 = off (use Kogge-Stone CLA), 1 = on (use Brent-Kung CLA)
+
     // Legacy fields (deprecated, kept for backward compatibility)
     qubit_t qubit_indices[MAXQUBITS];
     qubit_t used_qubit_indices;

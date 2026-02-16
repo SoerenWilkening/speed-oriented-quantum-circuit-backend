@@ -17,6 +17,7 @@ circuit_t *init_circuit() {
     circ->toff_decomp = DONTDECOMPOSETOFFOLI;
     circ->arithmetic_mode = ARITH_TOFFOLI;
     circ->cla_override = 0; // Auto: use CLA when width >= threshold
+    circ->qubit_saving = 0; // Off: use Kogge-Stone (depth-optimized)
 
     // Create allocator for qubit management
     circ->allocator = allocator_create(QUBIT_BLOCK);

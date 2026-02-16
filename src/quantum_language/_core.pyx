@@ -216,6 +216,8 @@ def option(key: str, value=None):
 		if not isinstance(value, bool):
 			raise ValueError("qubit_saving option requires bool value")
 		_qubit_saving_mode = value
+		# Also set C-level qubit_saving for CLA variant selection (BK vs KS)
+		(<circuit_s*><circuit_t*><unsigned long long>_get_circuit()).qubit_saving = 1 if value else 0
 	elif key == 'fault_tolerant':
 		if value is None:
 			return (<circuit_s*><circuit_t*><unsigned long long>_get_circuit()).arithmetic_mode == 1

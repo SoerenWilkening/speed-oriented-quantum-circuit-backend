@@ -130,6 +130,7 @@ cdef extern from "qubit_allocator.h":
 		unsigned int layer_floor
 		unsigned int arithmetic_mode    # 0=ARITH_QFT, 1=ARITH_TOFFOLI
 		int cla_override               # 0=auto CLA, 1=force RCA
+		int qubit_saving               # 0=off (KS), 1=on (BK)
 
 	ctypedef struct allocator_stats_t:
 		unsigned int peak_allocated
