@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v3.0 Fault-Tolerant Arithmetic -- Phase 72 in progress (2/3 plans)
+**Current focus:** v3.0 Fault-Tolerant Arithmetic -- Phase 72 complete (3/3 plans)
 
 ## Current Position
 
 Phase: 72 of 72 (Performance Polish)
-Plan: 2 of 3 complete
-Status: AND-ancilla MCX decomposition eliminates all 3-control gates from QQ multiplication. MCX tracking added to gate_counts. 41 multiplication tests pass.
-Last activity: 2026-02-16 -- Completed 72-03 (AND-ancilla MCX decomposition for QQ multiplication)
+Plan: 3 of 3 complete
+Status: Phase 72 complete. Hardcoded Toffoli sequences wired into dispatch (widths 1-8), T-count + MCX exposed in Python API, AND-ancilla MCX decomposition for multiplication. 17 hardcoded + 41 mul tests pass.
+Last activity: 2026-02-16 -- Completed 72-02 (hardcoded Toffoli integration + T-count tests)
 
-Progress: [########################] 73% (v3.0 phases -- 26/~26 plans)
+Progress: [########################] 100% (v3.0 phases -- 27/~27 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 206 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 22, v2.3: 4, v3.0: 25)
+- Total plans completed: 207 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 22, v2.3: 4, v3.0: 26)
 - Average duration: ~13 min/plan
-- Total execution time: ~32.3 hours
+- Total execution time: ~32.6 hours
 
 **By Milestone:**
 
@@ -74,6 +74,7 @@ Phase 71-05 (gap closure): BK CLA algorithm implementation with 6-phase compute-
 Phase 71-06 (gap closure): BK CQ/cQQ/cCQ CLA adders via sequence-copy pattern. CQ: X-init temp + copy QQ gates + X-cleanup. cQQ: inject ext_ctrl into every gate (X->CX, CX->CCX, CCX->MCX). cCQ: CX-init + copy cQQ gates + CX-cleanup. Fixed depth measurement: ql.circuit() creates new circuit, must store reference. BK depth ~50% less than RCA (width 8: 19 vs 35). Phase 71 gap closure complete.
 Phase 72-01: Toffoli hardcoded sequence generation. QQ as static const (CX/CCX max 2 controls), cQQ as dynamic init with caching (MCX needs large_control). Separate toffoli_sequences.h header. 8 per-width C files + dispatch for widths 1-8. Generation script: scripts/generate_toffoli_seq.py (856 lines).
 Phase 72-03: AND-ancilla MCX decomposition for QQ multiplication. Each MCX(3-control) in controlled CDKM adder decomposed into 3 CCX via AND-ancilla. Inline gate emission (not cached sequences) for decomposed controlled addition. gate_counts_t now separates CCX (2 controls) from MCX (3+ controls). Python gate_counts dict exposes 'MCX' and 'T' keys. 20 new tests + 21 existing = 41 multiplication tests pass.
+Phase 72-02: Hardcoded Toffoli CDKM sequences wired into ToffoliAddition.c dispatch for widths 1-8. Lookup between cache check and dynamic generation (first call: hardcoded hit -> cache store; subsequent: cache hit). 9 Toffoli C files added to setup.py. 17 tests: T-count reporting (T=7*(CCX+MCX)), QQ correctness at widths 1-4, gate purity, controlled QQ, subtraction. Phase 72 complete.
 
 ### Roadmap Evolution
 
@@ -100,9 +101,9 @@ Phase 72-03: AND-ancilla MCX decomposition for QQ multiplication. Each MCX(3-con
 ## Session Continuity
 
 Last session: 2026-02-16
-Stopped at: Completed 72-03-PLAN.md (AND-ancilla MCX decomposition for QQ multiplication)
+Stopped at: Completed 72-02-PLAN.md (hardcoded Toffoli integration + T-count tests). Phase 72 complete.
 Resume file: N/A
-Resume action: Phase 72-02 (T-count exposure) or next milestone.
+Resume action: Next milestone or phase.
 
 ---
-*State updated: 2026-02-16 -- Phase 72-03 complete (AND-ancilla MCX decomposition, 41 multiplication tests, MCX tracking in gate_counts)*
+*State updated: 2026-02-16 -- Phase 72-02 complete (hardcoded Toffoli dispatch, 17 tests, Phase 72 done)*
