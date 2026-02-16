@@ -166,7 +166,9 @@ cdef extern from "circuit_stats.h":
 		size_t p_gates
 		size_t cx_gates
 		size_t ccx_gates
+		size_t mcx_gates
 		size_t other_gates
+		size_t t_count
 
 	size_t circuit_gate_count(circuit_s *circ)
 	unsigned int circuit_depth(circuit_s *circ)

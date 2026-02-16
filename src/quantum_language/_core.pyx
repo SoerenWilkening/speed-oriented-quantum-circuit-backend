@@ -425,7 +425,7 @@ cdef class circuit:
 		-------
 		dict
 			Gate type to count mapping with keys 'X', 'Y', 'Z', 'H', 'P',
-			'CNOT', 'CCX', 'other'.
+			'CNOT', 'CCX', 'MCX', 'other', 'T'.
 
 		Examples
 		--------
@@ -443,7 +443,9 @@ cdef class circuit:
 			'P': counts.p_gates,
 			'CNOT': counts.cx_gates,
 			'CCX': counts.ccx_gates,
-			'other': counts.other_gates
+			'MCX': counts.mcx_gates,
+			'other': counts.other_gates,
+			'T': counts.t_count,
 		}
 
 	def draw_data(self):

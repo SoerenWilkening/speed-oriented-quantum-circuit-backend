@@ -58,8 +58,10 @@ typedef struct {
     size_t h_gates;     // Hadamard gates
     size_t p_gates;     // Phase gates
     size_t cx_gates;    // Controlled-X (CNOT)
-    size_t ccx_gates;   // Toffoli (CCX)
+    size_t ccx_gates;   // Toffoli (CCX, exactly 2 controls)
+    size_t mcx_gates;   // Multi-controlled X (3+ controls)
     size_t other_gates; // Other gate types
+    size_t t_count;     // T-gate count (7 * (ccx_gates + mcx_gates) for fault-tolerant cost)
 } gate_counts_t;
 
 /**
@@ -68,7 +70,8 @@ typedef struct {
  * Classifies gates by control count:
  * - 0 controls = X/Y/Z/H/P
  * - 1 control = CNOT (CX)
- * - 2+ controls = CCX
+ * - 2 controls = CCX (Toffoli)
+ * - 3+ controls = MCX (multi-controlled X)
  *
  * @param circ Circuit to query
  * @return Gate counts structure (all zeros if circ is NULL)

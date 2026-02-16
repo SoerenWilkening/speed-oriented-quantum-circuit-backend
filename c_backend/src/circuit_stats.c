@@ -42,8 +42,10 @@ gate_counts_t circuit_gate_counts(circuit_t *circ) {
                     counts.x_gates++;
                 else if (g->NumControls == 1)
                     counts.cx_gates++;
+                else if (g->NumControls == 2)
+                    counts.ccx_gates++; // Exactly 2 controls = Toffoli
                 else
-                    counts.ccx_gates++; // 2+ controls = Toffoli variant
+                    counts.mcx_gates++; // 3+ controls = multi-controlled X
                 break;
             case Y:
                 counts.y_gates++;
@@ -63,6 +65,9 @@ gate_counts_t circuit_gate_counts(circuit_t *circ) {
             }
         }
     }
+
+    // T-count: each Toffoli/MCX decomposes to 7 T gates (minimum)
+    counts.t_count = 7 * (counts.ccx_gates + counts.mcx_gates);
 
     return counts;
 }
