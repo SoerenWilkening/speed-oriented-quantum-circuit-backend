@@ -602,47 +602,336 @@ sequence_t *toffoli_cCQ_add(int bits, int64_t value) {
 }
 
 // ============================================================================
-// Brent-Kung Carry Look-Ahead Adder (Phase 71)
+// Brent-Kung Carry Look-Ahead Adder (Phase 71, Plan 05)
 // ============================================================================
+
+/**
+ * @brief BK tree merge descriptor: one prefix-tree operation.
+ */
+typedef struct {
+    int pos;     /* position being updated (target of group generate) */
+    int partner; /* position being merged from (source) */
+    int level;   /* tree level (0-based) */
+    int is_down; /* 0 = up-sweep, 1 = down-sweep/tail */
+} bk_merge_t;
+
+/**
+ * @brief Compute BK prefix tree merge list.
+ *
+ * Generates an ordered list of merge operations for the Brent-Kung parallel
+ * prefix tree operating on n_carries carry positions (0..n_carries-1).
+ *
+ * The merge list consists of:
+ * 1. Up-sweep merges: reduce phase, doubling stride at each level.
+ * 2. Down-sweep merges: propagate phase, filling gaps between up-sweep positions.
+ * 3. Tail merges: chain extension for positions beyond the power-of-2 aligned part.
+ *
+ * @param n_carries Number of carry positions (bits - 1)
+ * @param merges Output array (caller-allocated, max 128 entries)
+ * @param max_merges Maximum entries in merges array
+ * @return Number of merges written
+ */
+static int bk_compute_merges(int n_carries, bk_merge_t *merges, int max_merges) {
+    if (n_carries <= 1)
+        return 0;
+
+    int count = 0;
+    int up_sweep[128] = {0}; /* 1 if position was an up-sweep merge target */
+    int covered[128] = {0};  /* 1 if position has complete prefix coverage */
+    covered[0] = 1;          /* position 0 is trivially complete (single generate) */
+
+    /* Track which positions the up-sweep reaches (for coverage simulation) */
+    /* We use a simplified prefix tracking: after merge (pos, partner),
+     * pos has prefix up to min(partner's leftmost) */
+    int leftmost[128]; /* leftmost position in each position's prefix group */
+    for (int i = 0; i < n_carries && i < 128; i++)
+        leftmost[i] = i;
+
+    /* Up-sweep: reduce phase */
+    int max_level = -1;
+    int k = 0;
+    while (1) {
+        int stride = 1 << (k + 1);
+        int half = 1 << k;
+        int found = 0;
+        int pos = stride - 1;
+        while (pos < n_carries && count < max_merges) {
+            int partner = pos - half;
+            if (partner >= 0) {
+                merges[count].pos = pos;
+                merges[count].partner = partner;
+                merges[count].level = k;
+                merges[count].is_down = 0;
+                count++;
+                up_sweep[pos] = 1;
+                /* Update coverage: pos now covers down to leftmost[partner] */
+                leftmost[pos] = leftmost[partner];
+                if (leftmost[pos] == 0)
+                    covered[pos] = 1;
+                found = 1;
+                if (k > max_level)
+                    max_level = k;
+            }
+            pos += stride;
+        }
+        if (!found)
+            break;
+        k++;
+    }
+
+    /* Down-sweep: propagate phase */
+    for (int dk = max_level - 1; dk >= 0; dk--) {
+        int half = 1 << dk;
+        int stride = half << 1;
+        int pos = stride + half - 1; /* first down-sweep position at this level */
+        while (pos < n_carries && count < max_merges) {
+            if (!up_sweep[pos]) {
+                int partner = pos - half;
+                if (partner >= 0) {
+                    merges[count].pos = pos;
+                    merges[count].partner = partner;
+                    merges[count].level = dk;
+                    merges[count].is_down = 1;
+                    count++;
+                    up_sweep[pos] = 1; /* mark as covered for tail check */
+                    leftmost[pos] = leftmost[partner];
+                    if (leftmost[pos] == 0)
+                        covered[pos] = 1;
+                }
+            }
+            pos += stride;
+        }
+    }
+
+    /* Tail merges: chain from last complete position to uncovered positions.
+     * These handle positions beyond the power-of-2 aligned BK tree. */
+    for (int i = 1; i < n_carries && count < max_merges; i++) {
+        if (!covered[i]) {
+            /* Find nearest complete position to the left */
+            for (int j = i - 1; j >= 0; j--) {
+                if (covered[j]) {
+                    merges[count].pos = i;
+                    merges[count].partner = j;
+                    merges[count].level = 0;
+                    merges[count].is_down = 1;
+                    count++;
+                    leftmost[i] = 0;
+                    covered[i] = 1;
+                    break;
+                }
+            }
+        }
+    }
+
+    return count;
+}
+
+/**
+ * @brief Compute ancilla count for Brent-Kung CLA adder.
+ *
+ * For n-bit addition, the BK CLA needs:
+ *   - (n-1) generate ancilla g[0..n-2]
+ *   - num_merges tree propagate-product ancilla (one per BK tree merge)
+ *   - (n-1) carry-copy ancilla c[0..n-2]
+ *   Total: 2*(n-1) + num_merges
+ *
+ * @param bits Width of operands (>= 2)
+ * @return Number of ancilla qubits needed (0 for bits < 2)
+ */
+int bk_cla_ancilla_count(int bits) {
+    if (bits < 2)
+        return 0;
+
+    int n_carries = bits - 1;
+    bk_merge_t merges[128];
+    int num_merges = bk_compute_merges(n_carries, merges, 128);
+
+    return 2 * n_carries + num_merges;
+}
 
 /**
  * @brief Brent-Kung CLA QQ adder: b += a (in-place on b-register).
  *
- * STUB: Returns NULL to fall through to RCA (CDKM) adder.
+ * Uses the compute-copy-uncompute pattern with a Brent-Kung parallel
+ * prefix tree for O(log n) depth carry computation:
  *
- * The Brent-Kung parallel prefix CLA algorithm has a fundamental ancilla
- * uncomputation challenge for in-place quantum addition: after computing
- * carries via the prefix tree and extracting sums, the tree cannot be
- * reversed because the propagate controls (stored in b) have been modified
- * by the sum computation. This creates a chicken-and-egg problem where
- * cleaning ancilla requires original b values, but the sum computation
- * (which is the desired output) destroys those values.
+ * Phase A: Initialize single-bit generates and propagates
+ * Phase B: BK prefix tree (up-sweep + down-sweep) computes group generates
+ * Phase C: Copy carries from generate ancilla to carry-copy ancilla
+ * Phase D: Reverse Phase B (uncompute tree, restoring generates)
+ * Phase E: Uncompute propagates and generates
+ * Phase F: Sum extraction using carries
  *
- * The CLA infrastructure (cla_override field, option plumbing, dispatch
- * logic in hot_path_add.c, ancilla allocation) is fully in place. When
- * this function returns NULL, the dispatch silently falls through to the
- * proven CDKM RCA adder.
+ * Qubit layout:
+ *   [0..n-1]              = register a (source, PRESERVED)
+ *   [n..2n-1]             = register b (target, gets a+b)
+ *   [2n..3n-2]            = generate ancilla g[0..n-2]
+ *   [3n-1..3n-2+tree_sz]  = tree propagate-product ancilla
+ *   [3n-1+tree_sz..end]   = carry-copy ancilla c[0..n-2]
  *
- * Future work: implement using a hybrid CLA-RCA approach (e.g., CLA tree
- * for carry computation + CDKM-style MAJ/UMA for sum extraction with
- * built-in uncomputation), or use Bennett's compute-copy-uncompute trick
- * with additional ancilla.
- *
- * Qubit layout (for future implementation):
- *   [0..bits-1]            = register a (source, preserved)
- *   [bits..2*bits-1]       = register b (target, gets a+b)
- *   [2*bits..4*bits-3]     = 2*(bits-1) ancilla qubits
- *   Total: 4*bits - 2 qubits
+ * After operation: a[] unchanged, b[] = a+b, g[] = |0>,
+ * tree ancilla = |0>, c[] = carry values (NOT uncomputed).
+ * Circuit is forward-only; subtraction uses RCA fallback at dispatch level.
  *
  * OWNERSHIP: Returns cached sequence - DO NOT FREE
  *
  * @param bits Width of operands (2-64; returns NULL for bits < 2)
- * @return NULL (CLA not yet implemented; falls through to RCA)
+ * @return Cached sequence, or NULL for bits < 2 or allocation failure
  */
 sequence_t *toffoli_QQ_add_bk(int bits) {
-    (void)bits; // suppress unused parameter warning
-    // CLA algorithm not yet implemented -- fall through to RCA
-    return NULL;
+    if (bits < 2 || bits > 64)
+        return NULL;
+
+    /* Check cache */
+    if (precompiled_toffoli_QQ_add_bk[bits] != NULL)
+        return precompiled_toffoli_QQ_add_bk[bits];
+
+    int n = bits;
+    int n_carries = n - 1;
+
+    /* Compute merge list */
+    bk_merge_t merges[128];
+    int num_merges = bk_compute_merges(n_carries, merges, 128);
+
+    /* Qubit index helpers */
+    /* a[i] = i, b[i] = n+i, g[i] = 2*n+i */
+    int tree_base = 3 * n - 1;               /* first tree ancilla qubit */
+    int carry_base = tree_base + num_merges; /* first carry-copy ancilla */
+
+    /* Track propagate source for each carry position.
+     * Initially prop_src[i] = b[i] = n+i. Tree merges update this. */
+    int prop_src[128];
+    for (int i = 0; i < n_carries && i < 128; i++)
+        prop_src[i] = n + i; /* b[i] */
+
+    /* Compute gate count:
+     * Phase A: (n-1) CCX + n CX = 2n-1 layers
+     * Phase B: 2 gates per merge = 2*num_merges layers
+     * Phase C: (n-1) CX layers (copy carries)
+     * Phase D: 2*num_merges layers (reverse of Phase B)
+     * Phase E: n CX + (n-1) CCX = 2n-1 layers
+     * Phase F: n CX + (n-1) CX = 2n-1 layers (sum extraction)
+     * Total: 3*(2n-1) + 4*num_merges + (n-1) = 7n - 4 + 4*num_merges
+     *
+     * Order: A -> B -> C -> D -> E -> F
+     * Note: carry-copy ancilla c[] are NOT uncomputed (remain dirty).
+     * Subtraction handled at dispatch level by falling through to RCA.
+     */
+    int num_layers = 7 * n - 4 + 4 * num_merges;
+
+    sequence_t *seq = alloc_sequence(num_layers);
+    if (seq == NULL)
+        return NULL;
+
+    int layer = 0;
+    int tree_anc_idx = 0; /* index into tree ancilla (0-based) */
+
+    /* ===== Phase A: Initialize generate and propagate ===== */
+    /* For i = 0 to n-2: CCX(target=g[i], ctrl1=a[i], ctrl2=b[i]) */
+    for (int i = 0; i < n_carries; i++) {
+        ccx(&seq->seq[layer][seq->gates_per_layer[layer]++], 2 * n + i, /* g[i] */
+            i,                                                          /* a[i] */
+            n + i);                                                     /* b[i] */
+        layer++;
+    }
+    /* For i = 0 to n-1: CX(target=b[i], control=a[i]) */
+    for (int i = 0; i < n; i++) {
+        cx(&seq->seq[layer][seq->gates_per_layer[layer]++], n + i, /* b[i] */
+           i);                                                     /* a[i] */
+        layer++;
+    }
+
+    /* ===== Phase B: BK prefix tree (up-sweep + down-sweep) ===== */
+    /* Record gate arguments for Phase D reversal (3 qubits per CCX gate) */
+    int phase_b_gates[512][3]; /* [gate_idx][target, ctrl1, ctrl2] */
+    int phase_b_count = 0;
+
+    for (int m = 0; m < num_merges; m++) {
+        int pos = merges[m].pos;
+        int partner = merges[m].partner;
+        int tree_qubit = tree_base + tree_anc_idx;
+
+        /* Step 1: Update group generate */
+        /* CCX(target=g[pos], ctrl1=prop_src[pos], ctrl2=g[partner]) */
+        int t1 = 2 * n + pos;
+        int c1a = prop_src[pos];
+        int c1b = 2 * n + partner;
+        phase_b_gates[phase_b_count][0] = t1;
+        phase_b_gates[phase_b_count][1] = c1a;
+        phase_b_gates[phase_b_count][2] = c1b;
+        phase_b_count++;
+        ccx(&seq->seq[layer][seq->gates_per_layer[layer]++], t1, c1a, c1b);
+        layer++;
+
+        /* Step 2: Compute group propagate product */
+        /* CCX(target=tree_anc, ctrl1=prop_src[pos], ctrl2=prop_src[partner]) */
+        int t2 = tree_qubit;
+        int c2a = prop_src[pos];
+        int c2b = prop_src[partner];
+        phase_b_gates[phase_b_count][0] = t2;
+        phase_b_gates[phase_b_count][1] = c2a;
+        phase_b_gates[phase_b_count][2] = c2b;
+        phase_b_count++;
+        ccx(&seq->seq[layer][seq->gates_per_layer[layer]++], t2, c2a, c2b);
+        layer++;
+
+        /* Update prop_src[pos] to point to the new tree ancilla */
+        prop_src[pos] = tree_qubit;
+        tree_anc_idx++;
+    }
+
+    /* ===== Phase C: Copy carries ===== */
+    /* For i = 0 to n-2: CX(target=c[i], control=g[i]) */
+    for (int i = 0; i < n_carries; i++) {
+        cx(&seq->seq[layer][seq->gates_per_layer[layer]++], carry_base + i, /* c[i] */
+           2 * n + i);                                                      /* g[i] */
+        layer++;
+    }
+
+    /* ===== Phase D: Reverse BK prefix tree ===== */
+    /* Replay every gate from Phase B in reverse order.
+     * CCX is self-inverse, so replaying backwards uncomputes the tree. */
+    for (int g_idx = phase_b_count - 1; g_idx >= 0; g_idx--) {
+        ccx(&seq->seq[layer][seq->gates_per_layer[layer]++], phase_b_gates[g_idx][0], /* target */
+            phase_b_gates[g_idx][1],                                                  /* ctrl1 */
+            phase_b_gates[g_idx][2]);                                                 /* ctrl2 */
+        layer++;
+    }
+
+    /* ===== Phase E: Uncompute propagates and generates ===== */
+    /* For i = n-1 down to 0: CX(target=b[i], control=a[i]) */
+    for (int i = n - 1; i >= 0; i--) {
+        cx(&seq->seq[layer][seq->gates_per_layer[layer]++], n + i, /* b[i] */
+           i);                                                     /* a[i] */
+        layer++;
+    }
+    /* For i = n-2 down to 0: CCX(target=g[i], ctrl1=a[i], ctrl2=b[i]) */
+    for (int i = n_carries - 1; i >= 0; i--) {
+        ccx(&seq->seq[layer][seq->gates_per_layer[layer]++], 2 * n + i, /* g[i] */
+            i,                                                          /* a[i] */
+            n + i);                                                     /* b[i] */
+        layer++;
+    }
+
+    /* ===== Phase F: Sum extraction ===== */
+    /* For i = 0 to n-1: CX(target=b[i], control=a[i]) */
+    for (int i = 0; i < n; i++) {
+        cx(&seq->seq[layer][seq->gates_per_layer[layer]++], n + i, /* b[i] */
+           i);                                                     /* a[i] */
+        layer++;
+    }
+    /* For i = 1 to n-1: CX(target=b[i], control=c[i-1]) */
+    for (int i = 1; i < n; i++) {
+        cx(&seq->seq[layer][seq->gates_per_layer[layer]++], n + i, /* b[i] */
+           carry_base + i - 1);                                    /* c[i-1] */
+        layer++;
+    }
+
+    seq->used_layer = layer;
+
+    /* Cache and return */
+    precompiled_toffoli_QQ_add_bk[bits] = seq;
+    return seq;
 }
 
 // ============================================================================

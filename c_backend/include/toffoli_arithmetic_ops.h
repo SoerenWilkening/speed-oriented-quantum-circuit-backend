@@ -115,13 +115,25 @@ sequence_t *toffoli_cCQ_add(int bits, int64_t value);
 // ============================================================================
 
 /**
+ * @brief Compute ancilla count for Brent-Kung CLA adder.
+ *
+ * Returns the total number of ancilla qubits needed: 2*(n-1) + tree_merges.
+ * Used by hot_path_add.c to allocate the correct ancilla block.
+ *
+ * @param bits Width of operands (>= 2)
+ * @return Number of ancilla qubits needed (0 for bits < 2)
+ */
+int bk_cla_ancilla_count(int bits);
+
+/**
  * @brief Brent-Kung CLA QQ addition: b += a (O(log n) depth).
  *
- * STUB: Returns NULL -- ancilla uncomputation impossibility (see Phase 71-01).
- * Dispatch silently falls through to CDKM RCA adder.
+ * Implements the Brent-Kung parallel prefix CLA using a compute-copy-uncompute
+ * pattern: compute carries via prefix tree, copy to carry-copy ancilla, reverse
+ * tree to uncompute generates/propagates, then extract sums using carries.
  *
  * @param bits Width of operands (2-64; returns NULL for bits < 2)
- * @return NULL (CLA not yet implemented; falls through to RCA)
+ * @return Cached sequence, or NULL on failure
  *
  * OWNERSHIP: Returns cached sequence - DO NOT FREE
  */

@@ -77,17 +77,15 @@ void hot_path_add_qq(circuit_t *circ, const unsigned int *self_qubits, int self_
                     tqa[result_bits + i] = self_qubits[i];
                 }
 
-                /* Controlled CLA dispatch: try CLA for width >= threshold.
-                 * Same variant selection as uncontrolled path.
+                /* Controlled CLA dispatch: forward only (BK CLA not invertible).
                  * Layout: [0..bits-1] a, [bits..2*bits-1] b,
                  *         [2*bits..] CLA ancilla, [after ancilla] ext_ctrl
                  */
-#define CLA_THRESHOLD 4
-                if (circ->cla_override == 0 && result_bits >= CLA_THRESHOLD) {
+#define CLA_THRESHOLD 2
+                if (!invert && circ->cla_override == 0 && result_bits >= CLA_THRESHOLD) {
                     int cla_ancilla_count;
                     if (circ->qubit_saving) {
-                        /* Brent-Kung: 2*(n-1) ancilla */
-                        cla_ancilla_count = 2 * (result_bits - 1);
+                        cla_ancilla_count = bk_cla_ancilla_count(result_bits);
                     } else {
                         /* Kogge-Stone: ~n*ceil(log2(n)) ancilla */
                         int log_n = 0;
@@ -174,16 +172,17 @@ void hot_path_add_qq(circuit_t *circ, const unsigned int *self_qubits, int self_
                     tqa[result_bits + i] = self_qubits[i];
                 }
 
-                /* CLA dispatch: use CLA for width >= threshold.
-                 * Variant selection: qubit_saving=1 -> Brent-Kung (fewer ancilla),
-                 *                    qubit_saving=0 -> Kogge-Stone (fewer depth levels).
+                /* CLA dispatch: use CLA for forward addition (invert=0) only.
+                 * BK CLA carry-copy ancilla are not fully uncomputed, so the
+                 * circuit is not invertible. Subtraction falls through to RCA.
+                 * Variant selection: qubit_saving=1 -> Brent-Kung,
+                 *                    qubit_saving=0 -> Kogge-Stone.
                  */
-#define CLA_THRESHOLD 4
-                if (circ->cla_override == 0 && result_bits >= CLA_THRESHOLD) {
+#define CLA_THRESHOLD 2
+                if (!invert && circ->cla_override == 0 && result_bits >= CLA_THRESHOLD) {
                     int cla_ancilla_count;
                     if (circ->qubit_saving) {
-                        /* Brent-Kung: 2*(n-1) ancilla */
-                        cla_ancilla_count = 2 * (result_bits - 1);
+                        cla_ancilla_count = bk_cla_ancilla_count(result_bits);
                     } else {
                         /* Kogge-Stone: ~n*ceil(log2(n)) ancilla (approximate) */
                         int log_n = 0;
@@ -306,17 +305,17 @@ void hot_path_add_cq(circuit_t *circ, const unsigned int *self_qubits, int self_
                 run_instruction(toff_seq, tqa, invert, circ);
                 toffoli_sequence_free(toff_seq);
             } else {
-                /* Controlled CQ CLA dispatch: try CLA for width >= threshold.
+                /* Controlled CQ CLA dispatch: forward only (BK CLA not invertible).
                  * Layout: [0..bits-1] temp, [bits..2*bits-1] self,
                  *         [2*bits..] CLA ancilla, [after ancilla] ext_ctrl
                  * Total allocation: bits (temp) + CLA ancilla count
                  */
-#define CLA_THRESHOLD 4
-                if (circ->cla_override == 0 && self_bits >= CLA_THRESHOLD) {
+#define CLA_THRESHOLD 2
+                if (!invert && circ->cla_override == 0 && self_bits >= CLA_THRESHOLD) {
                     int cla_ancilla_count;
                     if (circ->qubit_saving) {
-                        /* Brent-Kung: 2*(n-1) CLA ancilla */
-                        cla_ancilla_count = 2 * (self_bits - 1);
+                        /* Brent-Kung: use actual tree-based ancilla count */
+                        cla_ancilla_count = bk_cla_ancilla_count(self_bits);
                     } else {
                         /* Kogge-Stone: ~n*ceil(log2(n)) CLA ancilla */
                         int log_n = 0;
@@ -406,19 +405,19 @@ void hot_path_add_cq(circuit_t *circ, const unsigned int *self_qubits, int self_
                 run_instruction(toff_seq, qa, invert, circ);
                 toffoli_sequence_free(toff_seq); /* CQ sequences are not cached */
             } else {
-                /* CQ CLA dispatch: try CLA for width >= threshold.
+                /* CQ CLA dispatch: forward only (BK CLA not invertible).
                  * CQ CLA uses temp-register approach internally:
                  *   [0..bits-1]       = temp (from allocated block)
                  *   [bits..2*bits-1]  = self (target)
                  *   [2*bits..]        = CLA ancilla
                  * Total allocation: bits (temp) + CLA ancilla count
                  */
-#define CLA_THRESHOLD 4
-                if (circ->cla_override == 0 && self_bits >= CLA_THRESHOLD) {
+#define CLA_THRESHOLD 2
+                if (!invert && circ->cla_override == 0 && self_bits >= CLA_THRESHOLD) {
                     int cla_ancilla_count;
                     if (circ->qubit_saving) {
-                        /* Brent-Kung: 2*(n-1) CLA ancilla */
-                        cla_ancilla_count = 2 * (self_bits - 1);
+                        /* Brent-Kung: use actual tree-based ancilla count */
+                        cla_ancilla_count = bk_cla_ancilla_count(self_bits);
                     } else {
                         /* Kogge-Stone: ~n*ceil(log2(n)) CLA ancilla */
                         int log_n = 0;
