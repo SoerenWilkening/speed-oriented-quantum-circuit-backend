@@ -1,13 +1,20 @@
 /**
  * @file ToffoliMultiplication.c
- * @brief Toffoli-based schoolbook multiplication (Phase 68, 69).
+ * @brief Toffoli-based schoolbook multiplication (Phase 68, 69, 72).
  *
  * Implements shift-and-add multiplication using the CDKM ripple-carry adders
  * from ToffoliAddition.c as subroutines. Each multiplier bit controls whether
  * a shifted copy of the multiplicand is added to the result accumulator.
  *
+ * Phase 72 optimization (MUL-05): QQ multiplication uses AND-ancilla
+ * decomposition of MCX(3-control) gates. Instead of calling the cached
+ * toffoli_cQQ_add() sequence (which contains MCX gates with 3 controls),
+ * the controlled CDKM adder is built inline with each MCX decomposed into
+ * 3 CCX gates via AND-ancilla. This eliminates ALL 3-control gates from
+ * uncontrolled QQ multiplication.
+ *
  * Four variants:
- *   toffoli_mul_qq   -- quantum * quantum (controlled additions per multiplier bit)
+ *   toffoli_mul_qq   -- quantum * quantum (AND-decomposed controlled additions)
  *   toffoli_mul_cq   -- quantum * classical (uncontrolled additions for set bits)
  *   toffoli_cmul_qq  -- controlled quantum * quantum (AND-ancilla + cQQ adder)
  *   toffoli_cmul_cq  -- controlled quantum * classical (cQQ adder with ext_ctrl)
@@ -19,7 +26,7 @@
  * References:
  *   Schoolbook multiplication: sum_{j=0}^{n-1} a * b[j] * 2^j
  *   CDKM adder: Cuccaro et al., arXiv:quant-ph/0410184
- *   AND-ancilla pattern: Beauregard (2003), Haner et al. (2018)
+ *   AND-ancilla decomposition: Beauregard (2003), Haner et al. (2018)
  */
 
 #include "Integer.h"
@@ -33,12 +40,169 @@
 #include <stdlib.h>
 #include <string.h>
 
+// ============================================================================
+// AND-ancilla MCX decomposition helpers (Phase 72, MUL-05)
+// ============================================================================
+
+/**
+ * @brief Emit decomposed cMAJ using AND-ancilla to eliminate MCX(3-control).
+ *
+ * Original cMAJ(a, b, c, ext_ctrl):
+ *   1. CCX(target=b, ctrl1=c, ctrl2=ext_ctrl)
+ *   2. CCX(target=a, ctrl1=c, ctrl2=ext_ctrl)
+ *   3. MCX(target=c, controls=[a, b, ext_ctrl])  <-- 3-control gate
+ *
+ * Decomposed cMAJ replaces MCX(c, [a,b,ext]) with:
+ *   3a. CCX(target=and_anc, ctrl1=a, ctrl2=b)       -- compute partial AND
+ *   3b. CCX(target=c, ctrl1=and_anc, ctrl2=ext_ctrl) -- apply via AND-ancilla
+ *   3c. CCX(target=and_anc, ctrl1=a, ctrl2=b)       -- uncompute AND
+ *
+ * Total: 5 CCX gates, zero MCX(3-control) gates.
+ *
+ * @param circ     Active circuit (gates emitted directly via add_gate)
+ * @param a        Qubit index for 'a' (carry-in / previous carry)
+ * @param b        Qubit index for 'b' (source bit)
+ * @param c        Qubit index for 'c' (target bit, becomes carry-out)
+ * @param ext_ctrl Qubit index for external control qubit
+ * @param and_anc  Qubit index for AND-ancilla (reused, starts and ends at |0>)
+ */
+static void emit_cMAJ_decomposed(circuit_t *circ, int a, int b, int c, int ext_ctrl, int and_anc) {
+    gate_t g;
+
+    /* Step 1: CCX(target=b, ctrl1=c, ctrl2=ext_ctrl) */
+    memset(&g, 0, sizeof(gate_t));
+    ccx(&g, (qubit_t)b, (qubit_t)c, (qubit_t)ext_ctrl);
+    add_gate(circ, &g);
+
+    /* Step 2: CCX(target=a, ctrl1=c, ctrl2=ext_ctrl) */
+    memset(&g, 0, sizeof(gate_t));
+    ccx(&g, (qubit_t)a, (qubit_t)c, (qubit_t)ext_ctrl);
+    add_gate(circ, &g);
+
+    /* Step 3a: CCX(target=and_anc, ctrl1=a, ctrl2=b) -- compute AND */
+    memset(&g, 0, sizeof(gate_t));
+    ccx(&g, (qubit_t)and_anc, (qubit_t)a, (qubit_t)b);
+    add_gate(circ, &g);
+
+    /* Step 3b: CCX(target=c, ctrl1=and_anc, ctrl2=ext_ctrl) */
+    memset(&g, 0, sizeof(gate_t));
+    ccx(&g, (qubit_t)c, (qubit_t)and_anc, (qubit_t)ext_ctrl);
+    add_gate(circ, &g);
+
+    /* Step 3c: CCX(target=and_anc, ctrl1=a, ctrl2=b) -- uncompute AND */
+    memset(&g, 0, sizeof(gate_t));
+    ccx(&g, (qubit_t)and_anc, (qubit_t)a, (qubit_t)b);
+    add_gate(circ, &g);
+}
+
+/**
+ * @brief Emit decomposed cUMA using AND-ancilla to eliminate MCX(3-control).
+ *
+ * Original cUMA(a, b, c, ext_ctrl):
+ *   1. MCX(target=c, controls=[a, b, ext_ctrl])  <-- 3-control gate
+ *   2. CCX(target=a, ctrl1=c, ctrl2=ext_ctrl)
+ *   3. CCX(target=b, ctrl1=a, ctrl2=ext_ctrl)
+ *
+ * Decomposed cUMA replaces MCX(c, [a,b,ext]) with:
+ *   1a. CCX(target=and_anc, ctrl1=a, ctrl2=b)       -- compute partial AND
+ *   1b. CCX(target=c, ctrl1=and_anc, ctrl2=ext_ctrl) -- apply via AND-ancilla
+ *   1c. CCX(target=and_anc, ctrl1=a, ctrl2=b)       -- uncompute AND
+ *
+ * Total: 5 CCX gates, zero MCX(3-control) gates.
+ *
+ * @param circ     Active circuit (gates emitted directly via add_gate)
+ * @param a        Qubit index for 'a'
+ * @param b        Qubit index for 'b' (becomes sum bit)
+ * @param c        Qubit index for 'c'
+ * @param ext_ctrl Qubit index for external control qubit
+ * @param and_anc  Qubit index for AND-ancilla (reused, starts and ends at |0>)
+ */
+static void emit_cUMA_decomposed(circuit_t *circ, int a, int b, int c, int ext_ctrl, int and_anc) {
+    gate_t g;
+
+    /* Step 1a: CCX(target=and_anc, ctrl1=a, ctrl2=b) -- compute AND */
+    memset(&g, 0, sizeof(gate_t));
+    ccx(&g, (qubit_t)and_anc, (qubit_t)a, (qubit_t)b);
+    add_gate(circ, &g);
+
+    /* Step 1b: CCX(target=c, ctrl1=and_anc, ctrl2=ext_ctrl) */
+    memset(&g, 0, sizeof(gate_t));
+    ccx(&g, (qubit_t)c, (qubit_t)and_anc, (qubit_t)ext_ctrl);
+    add_gate(circ, &g);
+
+    /* Step 1c: CCX(target=and_anc, ctrl1=a, ctrl2=b) -- uncompute AND */
+    memset(&g, 0, sizeof(gate_t));
+    ccx(&g, (qubit_t)and_anc, (qubit_t)a, (qubit_t)b);
+    add_gate(circ, &g);
+
+    /* Step 2: CCX(target=a, ctrl1=c, ctrl2=ext_ctrl) */
+    memset(&g, 0, sizeof(gate_t));
+    ccx(&g, (qubit_t)a, (qubit_t)c, (qubit_t)ext_ctrl);
+    add_gate(circ, &g);
+
+    /* Step 3: CCX(target=b, ctrl1=a, ctrl2=ext_ctrl) */
+    memset(&g, 0, sizeof(gate_t));
+    ccx(&g, (qubit_t)b, (qubit_t)a, (qubit_t)ext_ctrl);
+    add_gate(circ, &g);
+}
+
+/**
+ * @brief Emit a decomposed controlled CDKM addition inline (no MCX(3+) gates).
+ *
+ * Replaces toffoli_cQQ_add(width) by emitting the controlled CDKM adder
+ * directly into the circuit using decomposed cMAJ/cUMA helpers. Each MCX
+ * with 3 controls is decomposed into 3 CCX gates via AND-ancilla.
+ *
+ * Uses the same qubit semantics as the CDKM adder:
+ *   - Forward sweep: decomposed-cMAJ on each bit position
+ *   - Reverse sweep: decomposed-cUMA on each bit position (reverse order)
+ *
+ * @param circ     Active circuit
+ * @param a_qubits Source register (preserved), length = width
+ * @param b_qubits Target register (gets sum), length = width
+ * @param carry    Carry ancilla qubit (starts and ends at |0>)
+ * @param ext_ctrl External control qubit
+ * @param and_anc  AND-ancilla qubit (starts and ends at |0>)
+ * @param width    Number of bits in the addition (>= 2)
+ */
+static void emit_controlled_add_decomposed(circuit_t *circ, const unsigned int *a_qubits,
+                                           const unsigned int *b_qubits, unsigned int carry,
+                                           unsigned int ext_ctrl, unsigned int and_anc, int width) {
+    /* Forward cMAJ sweep */
+    /* First: cMAJ(carry, b[0], a[0], ext_ctrl) */
+    emit_cMAJ_decomposed(circ, (int)carry, (int)b_qubits[0], (int)a_qubits[0], (int)ext_ctrl,
+                         (int)and_anc);
+
+    /* Remaining: cMAJ(a[i-1], b[i], a[i], ext_ctrl) for i = 1..width-1 */
+    for (int i = 1; i < width; i++) {
+        emit_cMAJ_decomposed(circ, (int)a_qubits[i - 1], (int)b_qubits[i], (int)a_qubits[i],
+                             (int)ext_ctrl, (int)and_anc);
+    }
+
+    /* Reverse cUMA sweep */
+    for (int i = width - 1; i >= 1; i--) {
+        emit_cUMA_decomposed(circ, (int)a_qubits[i - 1], (int)b_qubits[i], (int)a_qubits[i],
+                             (int)ext_ctrl, (int)and_anc);
+    }
+
+    /* Last: cUMA(carry, b[0], a[0], ext_ctrl) */
+    emit_cUMA_decomposed(circ, (int)carry, (int)b_qubits[0], (int)a_qubits[0], (int)ext_ctrl,
+                         (int)and_anc);
+}
+
 /**
  * @brief Toffoli schoolbook QQ multiplication: ret = self * other.
  *
- * Uses controlled CDKM adders: for each bit j of the multiplier (other),
- * performs a controlled addition of self[0..width-1] into ret[j..j+width-1],
- * controlled by other[j].
+ * Uses AND-ancilla decomposed controlled CDKM adders (Phase 72 optimization):
+ * for each bit j of the multiplier (other), performs a controlled addition of
+ * self[0..width-1] into ret[j..j+width-1], controlled by other[j].
+ *
+ * The controlled addition is emitted inline with each MCX(3-control) gate
+ * decomposed into 3 CCX gates via an AND-ancilla. This eliminates ALL
+ * 3-control gates from the multiplication circuit.
+ *
+ * Ancilla budget: 1 carry + 1 AND = 2 ancilla (allocated before loop, reused
+ * per iteration -- both CDKM carry and AND-ancilla return to |0> each iteration).
  *
  * The shift is implicit: adding into ret[j..] effectively multiplies by 2^j.
  * Each iteration uses progressively smaller addition width (n-j).
@@ -58,70 +222,54 @@ void toffoli_mul_qq(circuit_t *circ, const unsigned int *ret_qubits, int ret_bit
                     const unsigned int *other_qubits, int other_bits) {
     int n = ret_bits;
 
+    /* Allocate 1 carry ancilla before the loop (reused, CDKM returns to |0>) */
+    qubit_t carry = allocator_alloc(circ->allocator, 1, true);
+    if (carry == (qubit_t)-1)
+        return;
+
+    /* Allocate 1 AND-ancilla for MCX decomposition (reused, uncomputed each step) */
+    qubit_t and_anc = allocator_alloc(circ->allocator, 1, true);
+    if (and_anc == (qubit_t)-1) {
+        allocator_free(circ->allocator, carry, 1);
+        return;
+    }
+
     for (int j = 0; j < n; j++) {
         int width = n - j; /* Addition width for this iteration */
         if (width < 1)
             break;
 
-        unsigned int tqa[256];
-        sequence_t *toff_seq;
-
         if (width == 1) {
-            /* 1-bit controlled addition: CCX
-             * toffoli_cQQ_add(1) layout: [0]=target, [1]=source, [2]=control
+            /* 1-bit controlled addition: CCX (2 controls, no MCX needed)
+             * ret[n-1] ^= self[0] AND other[j]
              *
              * LSB-first: ret[n-1] = MSB of ret, self[0] = LSB of self,
              *            other[j] = multiplier bit with weight 2^j.
              * For j = n-1: adds self[0] (LSB) into ret[n-1] (MSB). */
-            tqa[0] = ret_qubits[n - 1];
-            tqa[1] = self_qubits[0];
-            tqa[2] = other_qubits[j];
-
-            toff_seq = toffoli_cQQ_add(1);
-            if (toff_seq == NULL)
-                return;
-            run_instruction(toff_seq, tqa, 0, circ);
+            gate_t g;
+            memset(&g, 0, sizeof(gate_t));
+            ccx(&g, ret_qubits[n - 1], self_qubits[0], other_qubits[j]);
+            add_gate(circ, &g);
         } else {
-            /* General case: controlled addition of width bits
-             * Allocate 1 ancilla for carry */
-            qubit_t ancilla = allocator_alloc(circ->allocator, 1, true);
-            if (ancilla == (qubit_t)-1)
-                return;
-
-            /* CDKM convention (matching hot_path_add.c):
-             *   a-register [0..width-1]       = source (preserved)
-             *   b-register [width..2*width-1]  = target (gets sum)
-             *   [2*width]                      = carry ancilla
-             *   [2*width+1]                    = control qubit
+            /* General case: AND-decomposed controlled addition of width bits.
              *
-             * For multiplier bit j (weight 2^j):
-             *   self slice: self[0..width-1] (the lower width=n-j bits of multiplicand)
-             *   ret slice:  ret[j..j+width-1] (shifted by j positions in result)
-             *   control:    other[j] (multiplier bit with weight 2^j)
+             * Uses decomposed cMAJ/cUMA that replace MCX(3-control) with
+             * 3 CCX gates each via AND-ancilla pattern.
+             *
+             * Qubit mapping:
+             *   a-register = self[0..width-1] (multiplicand, preserved)
+             *   b-register = ret[j..j+width-1] (accumulator, gets sum)
+             *   carry      = carry ancilla (reused)
+             *   ext_ctrl   = other[j] (multiplier bit with weight 2^j)
+             *   and_anc    = AND-ancilla (reused)
              */
-
-            /* a-register = self[0..width-1] (multiplicand lower bits, preserved) */
-            for (int i = 0; i < width; i++) {
-                tqa[i] = self_qubits[i];
-            }
-            /* b-register = ret[j..j+width-1] (accumulator, shifted, modified) */
-            for (int i = 0; i < width; i++) {
-                tqa[width + i] = ret_qubits[j + i];
-            }
-            /* carry ancilla */
-            tqa[2 * width] = ancilla;
-            /* control qubit = other[j] (multiplier bit with weight 2^j) */
-            tqa[2 * width + 1] = other_qubits[j];
-
-            toff_seq = toffoli_cQQ_add(width);
-            if (toff_seq == NULL) {
-                allocator_free(circ->allocator, ancilla, 1);
-                return;
-            }
-            run_instruction(toff_seq, tqa, 0, circ);
-            allocator_free(circ->allocator, ancilla, 1);
+            emit_controlled_add_decomposed(circ, self_qubits, &ret_qubits[j], carry,
+                                           other_qubits[j], and_anc, width);
         }
     }
+
+    allocator_free(circ->allocator, and_anc, 1);
+    allocator_free(circ->allocator, carry, 1);
 }
 
 /**
