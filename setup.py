@@ -40,7 +40,13 @@ c_sources = [
     # Toffoli arithmetic (Phase 66, 68)
     os.path.join(PROJECT_ROOT, "c_backend", "src", "ToffoliAddition.c"),
     os.path.join(PROJECT_ROOT, "c_backend", "src", "ToffoliMultiplication.c"),
-    # Hardcoded addition sequences: 16 per-width files + unified dispatch
+    # Hardcoded Toffoli addition sequences: 8 per-width files + dispatch
+    *[
+        os.path.join(PROJECT_ROOT, "c_backend", "src", "sequences", f"toffoli_add_seq_{i}.c")
+        for i in range(1, 9)
+    ],
+    os.path.join(PROJECT_ROOT, "c_backend", "src", "sequences", "toffoli_add_seq_dispatch.c"),
+    # Hardcoded QFT addition sequences: 16 per-width files + unified dispatch
     *[
         os.path.join(PROJECT_ROOT, "c_backend", "src", "sequences", f"add_seq_{i}.c")
         for i in range(1, 17)

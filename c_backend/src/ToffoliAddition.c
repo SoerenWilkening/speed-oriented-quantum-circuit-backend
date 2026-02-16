@@ -19,6 +19,7 @@
 #include "Integer.h"
 #include "gate.h"
 #include "toffoli_arithmetic_ops.h"
+#include "toffoli_sequences.h"
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -235,6 +236,16 @@ sequence_t *toffoli_QQ_add(int bits) {
         return precompiled_toffoli_QQ_add[bits];
     }
 
+    // Use hardcoded sequences for widths 1-8
+    if (bits <= TOFFOLI_HARDCODED_MAX_WIDTH) {
+        const sequence_t *hardcoded = get_hardcoded_toffoli_QQ_add(bits);
+        if (hardcoded != NULL) {
+            // SAFETY: Const cast is safe -- static sequences have program lifetime
+            precompiled_toffoli_QQ_add[bits] = (sequence_t *)hardcoded;
+            return (sequence_t *)hardcoded;
+        }
+    }
+
     // 1-bit special case: single CNOT, no ancilla
     if (bits == 1) {
         sequence_t *seq = alloc_sequence(1);
@@ -426,6 +437,15 @@ sequence_t *toffoli_cQQ_add(int bits) {
     // Check cache
     if (precompiled_toffoli_cQQ_add[bits] != NULL) {
         return precompiled_toffoli_cQQ_add[bits];
+    }
+
+    // Use hardcoded sequences for widths 1-8
+    if (bits <= TOFFOLI_HARDCODED_MAX_WIDTH) {
+        const sequence_t *hardcoded = get_hardcoded_toffoli_cQQ_add(bits);
+        if (hardcoded != NULL) {
+            precompiled_toffoli_cQQ_add[bits] = (sequence_t *)hardcoded;
+            return (sequence_t *)hardcoded;
+        }
     }
 
     // 1-bit special case: single CCX, no ancilla
