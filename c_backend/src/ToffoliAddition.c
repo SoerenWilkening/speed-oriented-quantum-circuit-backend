@@ -28,6 +28,7 @@
 static sequence_t *precompiled_toffoli_QQ_add[65] = {NULL};
 static sequence_t *precompiled_toffoli_cQQ_add[65] = {NULL};
 static sequence_t *precompiled_toffoli_QQ_add_bk[65] = {NULL};
+static sequence_t *precompiled_toffoli_QQ_add_ks[65] = {NULL};
 
 // No cache for CQ/cCQ: value-dependent sequences, generated fresh each call.
 
@@ -639,6 +640,160 @@ sequence_t *toffoli_cCQ_add(int bits, int64_t value) {
 sequence_t *toffoli_QQ_add_bk(int bits) {
     (void)bits; // suppress unused parameter warning
     // CLA algorithm not yet implemented -- fall through to RCA
+    return NULL;
+}
+
+// ============================================================================
+// Kogge-Stone Carry Look-Ahead Adder (Phase 71, Plan 02)
+// ============================================================================
+
+/**
+ * @brief Compute ancilla count for Kogge-Stone prefix tree.
+ *
+ * For n-bit addition, the KS tree needs:
+ *   - (n-1) ancilla for initial generate values g[0..n-2]
+ *   - Additional ancilla for propagate products at each tree level
+ *
+ * At each level k (0 to ceil(log2(n))-1), each merge position needs
+ * a propagate product ancilla. The exact count depends on n.
+ *
+ * @param bits Width of operands (>= 2)
+ * @return Number of ancilla qubits needed
+ */
+static int ks_ancilla_count(int bits) {
+    if (bits < 2)
+        return 0;
+
+    /* Count tree levels: ceil(log2(bits)) */
+    int levels = 0;
+    int tmp = bits;
+    while (tmp > 1) {
+        levels++;
+        tmp = (tmp + 1) >> 1;
+    }
+
+    /* n-1 initial generates */
+    int count = bits - 1;
+
+    /* Propagate products: at each level k, positions i >= 2^k merge.
+     * Each merge needs 1 propagate product ancilla.
+     * At level k: number of merges = n - 2^k (positions 2^k through n-1).
+     * But we only count for positions with carry bits (0..n-2). */
+    for (int k = 0; k < levels; k++) {
+        int stride = 1 << k;
+        for (int i = bits - 2; i >= stride; i--) {
+            count++; /* one propagate product ancilla per merge */
+        }
+    }
+
+    return count;
+}
+
+/**
+ * @brief Kogge-Stone CLA QQ adder: b += a (in-place on b-register).
+ *
+ * STUB: Returns NULL to fall through to RCA (CDKM) adder.
+ *
+ * The Kogge-Stone parallel prefix CLA has the same fundamental ancilla
+ * uncomputation challenge as Brent-Kung: after computing carries via the
+ * prefix tree and extracting sums, the tree cannot be reversed because
+ * the propagate controls (stored in b) have been modified by the sum
+ * computation. The Kogge-Stone variant uses more ancilla (~n*log(n))
+ * but fewer depth levels than Brent-Kung. However, the chicken-and-egg
+ * uncomputation problem is identical.
+ *
+ * When this function returns NULL, the dispatch in hot_path_add.c
+ * silently falls through to the proven CDKM RCA adder.
+ *
+ * Qubit layout (for future implementation):
+ *   [0..bits-1]            = register a (source, preserved)
+ *   [bits..2*bits-1]       = register b (target, gets a+b)
+ *   [2*bits..]             = ks_ancilla_count(bits) ancilla qubits
+ *   Total: 2*bits + ks_ancilla_count(bits)
+ *
+ * OWNERSHIP: Returns cached sequence - DO NOT FREE
+ *
+ * @param bits Width of operands (2-64; returns NULL for bits < 2)
+ * @return NULL (CLA not yet implemented; falls through to RCA)
+ */
+sequence_t *toffoli_QQ_add_ks(int bits) {
+    (void)bits; // suppress unused parameter warning
+    // CLA algorithm not yet implemented -- fall through to RCA
+    // Same fundamental ancilla uncomputation issue as Brent-Kung.
+    return NULL;
+}
+
+// ============================================================================
+// CQ CLA Adders (Phase 71, Plan 02)
+// ============================================================================
+
+/**
+ * @brief Brent-Kung CLA CQ adder: self += classical_value.
+ *
+ * STUB: Returns NULL to fall through to RCA (CDKM) CQ adder.
+ *
+ * Would use the temp-register approach (same as toffoli_CQ_add):
+ * 1. X-init temp register with classical value bits
+ * 2. Run toffoli_QQ_add_bk() on temp + self registers
+ * 3. X-cleanup temp register
+ *
+ * Since toffoli_QQ_add_bk() returns NULL (ancilla uncomputation
+ * impossibility), this function also returns NULL. The CQ dispatch
+ * in hot_path_add.c silently falls through to the proven CDKM
+ * RCA CQ adder (toffoli_CQ_add).
+ *
+ * Qubit layout (for future implementation):
+ *   [0..bits-1]       = temp register (initialized to classical value, cleaned to |0>)
+ *   [bits..2*bits-1]  = self register (target, gets self + value)
+ *   [2*bits..4*bits-3] = CLA ancilla (2*(bits-1) for BK)
+ *   Total: 4*bits - 2 qubits
+ *
+ * OWNERSHIP: Caller owns returned sequence_t*, must free via toffoli_sequence_free()
+ * NOT cached (value-dependent).
+ *
+ * @param bits Width of target operand (1-64)
+ * @param value Classical integer value to add
+ * @return NULL (BK QQ CLA not implemented; falls through to RCA)
+ */
+sequence_t *toffoli_CQ_add_bk(int bits, int64_t value) {
+    (void)bits;
+    (void)value;
+    // BK QQ CLA not implemented -- fall through to RCA CQ
+    return NULL;
+}
+
+/**
+ * @brief Kogge-Stone CLA CQ adder: self += classical_value.
+ *
+ * STUB: Returns NULL to fall through to RCA (CDKM) CQ adder.
+ *
+ * Would use the temp-register approach (same as toffoli_CQ_add):
+ * 1. X-init temp register with classical value bits
+ * 2. Run toffoli_QQ_add_ks() on temp + self registers
+ * 3. X-cleanup temp register
+ *
+ * Since toffoli_QQ_add_ks() returns NULL (ancilla uncomputation
+ * impossibility), this function also returns NULL. The CQ dispatch
+ * in hot_path_add.c silently falls through to the proven CDKM
+ * RCA CQ adder (toffoli_CQ_add).
+ *
+ * Qubit layout (for future implementation):
+ *   [0..bits-1]       = temp register (initialized to classical value, cleaned to |0>)
+ *   [bits..2*bits-1]  = self register (target, gets self + value)
+ *   [2*bits..]        = CLA ancilla (ks_ancilla_count(bits) for KS)
+ *   Total: 2*bits + ks_ancilla_count(bits)
+ *
+ * OWNERSHIP: Caller owns returned sequence_t*, must free via toffoli_sequence_free()
+ * NOT cached (value-dependent).
+ *
+ * @param bits Width of target operand (1-64)
+ * @param value Classical integer value to add
+ * @return NULL (KS QQ CLA not implemented; falls through to RCA)
+ */
+sequence_t *toffoli_CQ_add_ks(int bits, int64_t value) {
+    (void)bits;
+    (void)value;
+    // KS QQ CLA not implemented -- fall through to RCA CQ
     return NULL;
 }
 
