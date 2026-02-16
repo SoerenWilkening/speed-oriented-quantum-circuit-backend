@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v3.0 Fault-Tolerant Arithmetic -- Phase 71 in progress (1/4 plans)
+**Current focus:** v3.0 Fault-Tolerant Arithmetic -- Phase 71 in progress (2/4 plans)
 
 ## Current Position
 
 Phase: 71 of 72 (Carry Look-Ahead Adder) -- IN PROGRESS
-Plan: 1 of 4 complete
-Status: 71-01 complete. CLA infrastructure + dispatch in place. BK algorithm deferred (ancilla uncomputation impossibility).
-Last activity: 2026-02-15 -- Completed 71-01 (CLA infrastructure + BK QQ adder stub)
+Plan: 2 of 4 complete
+Status: 71-02 complete. KS QQ + BK/KS CQ CLA stubs + dispatch selection + 22 tests. All CLA variants share ancilla uncomputation impossibility.
+Last activity: 2026-02-16 -- Completed 71-02 (KS QQ + BK/KS CQ CLA adders + dispatch)
 
-Progress: [#################_______] 56% (v3.0 phases -- 19/~24 plans)
+Progress: [##################______] 59% (v3.0 phases -- 20/~24 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 199 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 22, v2.3: 4, v3.0: 18)
+- Total plans completed: 200 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 22, v2.3: 4, v3.0: 19)
 - Average duration: ~13 min/plan
 - Total execution time: ~30.2 hours
 
@@ -67,6 +67,7 @@ Phase 69-03: Toffoli division/modulo verification with MCX-to-basis-gate transpi
 Phase 70-01: Cross-backend equivalence tests for addition/subtraction (Toffoli vs QFT) at widths 1-8. Discovered BUG-CQQ-QFT: QFT controlled QQ in-place addition produces incorrect results at width 2+ (CCP rotation angle errors). Used in-place cQQ (qa += qb) instead of out-of-place due to missing controlled XOR. Widths 7-8 marked slow.
 Phase 70-02: Cross-backend equivalence tests for multiplication (widths 1-6) and division/modulo (widths 2-6). Multiplication QQ/CQ match at all widths; controlled mul xfail at width 2+ (BUG-CQQ-QFT). Discovered BUG-QFT-DIV: QFT division/modulo is pervasively broken at all tested widths (first explicit QFT division testing since Phase 67-03). MPS required for both backends in division tests (34+ qubit QFT circuits). 87 total cross-backend test cases.
 Phase 71-01: CLA infrastructure (cla_override field, option plumbing, dispatch in hot_path_add.c with CLA_THRESHOLD=4). BK CLA algorithm deferred -- in-place quantum CLA ancilla uncomputation is fundamentally impossible with single prefix tree pass. toffoli_QQ_add_bk() returns NULL, silent fallback to RCA. 13 CLA smoke tests pass via fallback.
+Phase 71-02: KS QQ + BK/KS CQ CLA adder stubs all return NULL (same uncomputation impossibility). qubit_saving field in circuit_t for BK vs KS variant selection. CQ CLA dispatch with temp-register approach and goto-based RCA fallback. 22 exhaustive CLA tests pass via RCA fallback.
 
 ### Blockers/Concerns
 
@@ -88,10 +89,10 @@ Phase 71-01: CLA infrastructure (cla_override field, option plumbing, dispatch i
 
 ## Session Continuity
 
-Last session: 2026-02-15
-Stopped at: Completed 71-01-PLAN.md (CLA infrastructure + BK QQ adder stub)
+Last session: 2026-02-16
+Stopped at: Completed 71-02-PLAN.md (KS QQ + BK/KS CQ CLA adders + dispatch)
 Resume file: N/A
-Resume action: Continue Phase 71 with plan 71-02.
+Resume action: Continue Phase 71 with plan 71-03.
 
 ---
-*State updated: 2026-02-15 -- Phase 71-01 complete (CLA infrastructure in place, BK algorithm deferred due to ancilla uncomputation impossibility)*
+*State updated: 2026-02-16 -- Phase 71-02 complete (KS QQ + BK/KS CQ CLA stubs + dispatch selection + 22 tests)*
