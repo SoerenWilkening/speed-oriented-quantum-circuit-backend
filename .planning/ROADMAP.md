@@ -241,7 +241,7 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 65 -> 66 -> 67 -> 68 -> 69 -> 70 -> 71 -> 72 -> 73 -> 74
+Phases execute in numeric order: 65 -> 66 -> 67 -> 68 -> 69 -> 70 -> 71 -> 72 -> 73 -> 74 -> 75
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -279,6 +279,7 @@ Phases execute in numeric order: 65 -> 66 -> 67 -> 68 -> 69 -> 70 -> 71 -> 72 ->
 | 72. Performance Polish | v3.0 | 3/3 | Complete | 2026-02-18 |
 | 73. Toffoli CQ/cCQ Classical-Bit Gate Reduction | v3.0 | 2/2 | Complete | 2026-02-17 |
 | 74. MCX/CCX Gate Decomposition & Sequence Refactoring | v3.0 | 5/5 | Complete | 2026-02-17 |
+| 75. Clifford+T Decomposed Sequence Generation | v3.0 | 0/3 | In Progress | |
 
 ### Phase 74: MCX/CCX Gate Decomposition & Sequence Refactoring
 **Goal**: All MCX gates (3+ controls) are automatically decomposed into CCX/CX/X gates, with an opt-in `toffoli_decompose` option to further decompose CCX into Clifford+T. Sequences containing CCX gates get dedicated fast-path functions. Large C files are refactored for maintainability.
@@ -298,6 +299,23 @@ Plans:
 - [x] 74-03-PLAN.md -- MCX auto-decomposition: AND-ancilla decomposition at all 9 MCX emission points + gate purity tests
 - [x] 74-04-PLAN.md -- CCX->Clifford+T: decomposition helper, inline integration, Clifford+T test suite
 - [x] 74-05-PLAN.md -- Hardcoded decomposed cQQ sequences (widths 1-8) + dispatch + comprehensive verification
+
+### Phase 75: Clifford+T Decomposed Sequence Generation for All Toffoli Addition
+**Goal**: Pre-computed Clifford+T hardcoded sequences for all Toffoli addition variants (CDKM and BK CLA) eliminate runtime CCX decomposition overhead when `toffoli_decompose=True`, providing exact T-count and zero-allocation dispatch for widths 1-8
+**Depends on**: Phase 74
+**Requirements**: INF-03, INF-04
+**Success Criteria** (what must be TRUE):
+  1. With `toffoli_decompose=True`, CDKM addition at widths 1-8 uses hardcoded Clifford+T sequences (H/T/Tdg/CX/X only, zero CCX)
+  2. With `toffoli_decompose=True`, BK CLA addition at widths 2-8 uses hardcoded Clifford+T sequences (zero CCX)
+  3. Clifford+T hardcoded addition produces identical arithmetic results to non-decomposed addition for all input pairs at widths 1-4
+  4. T-count is exact when `toffoli_decompose=True` (sum of actual T+Tdg gates, not 7*CCX estimate)
+  5. All existing Toffoli arithmetic tests pass with zero regressions
+**Plans**: 3 plans
+
+Plans:
+- [ ] 75-01-PLAN.md -- CDKM Clifford+T generation script + 32 per-width C files + dispatch
+- [ ] 75-02-PLAN.md -- BK CLA Clifford+T generation script + 28 per-width C files + dispatch
+- [ ] 75-03-PLAN.md -- Header + dispatch wiring + setup.py + comprehensive test suite
 
 ---
 *Roadmap created: 2026-02-02*
