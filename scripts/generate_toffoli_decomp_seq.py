@@ -53,6 +53,95 @@ import sys
 from dataclasses import dataclass, field
 
 # ============================================================================
+# Gate dataclass for Clifford+T sequences
+# ============================================================================
+
+
+@dataclass
+class CliffordTGate:
+    """Gate in Clifford+T basis: H, T, Tdg, X (0 controls), CX (1 control)."""
+
+    gate_type: str  # "H", "T", "Tdg", "X", "CX"
+    target: int
+    control: int = -1  # Only for CX
+
+    def to_c_static(self) -> str:
+        """Generate C static const initializer."""
+        gate_enum = {
+            "H": "H",
+            "T": "T_GATE",
+            "Tdg": "TDG_GATE",
+            "X": "X",
+            "CX": "X",  # CX is X with 1 control
+        }[self.gate_type]
+
+        gate_value = {
+            "H": "0",
+            "T": "M_PI / 4.0",
+            "Tdg": "-M_PI / 4.0",
+            "X": "1",
+            "CX": "1",
+        }[self.gate_type]
+
+        num_controls = 1 if self.gate_type == "CX" else 0
+        ctrl_init = f"{{{self.control}}}" if num_controls == 1 else "{0}"
+
+        return (
+            f"{{.Gate = {gate_enum},\n"
+            f"                                      .Target = {self.target},\n"
+            f"                                      .NumControls = {num_controls},\n"
+            f"                                      .Control = {ctrl_init},\n"
+            f"                                      .large_control = NULL,\n"
+            f"                                      .GateValue = {gate_value},\n"
+            f"                                      .NumBasisGates = 0}}"
+        )
+
+
+def ccx_to_clifford_t(target: int, ctrl1: int, ctrl2: int) -> list[CliffordTGate]:
+    """Expand CCX(target, ctrl1, ctrl2) into 15 Clifford+T gates.
+
+    Sequence matches gate.c:emit_ccx_clifford_t exactly.
+    """
+    return [
+        CliffordTGate("H", target),
+        CliffordTGate("CX", target, ctrl2),
+        CliffordTGate("Tdg", target),
+        CliffordTGate("CX", target, ctrl1),
+        CliffordTGate("T", target),
+        CliffordTGate("CX", target, ctrl2),
+        CliffordTGate("Tdg", target),
+        CliffordTGate("CX", target, ctrl1),
+        CliffordTGate("T", target),
+        CliffordTGate("T", ctrl2),
+        CliffordTGate("H", target),
+        CliffordTGate("CX", ctrl2, ctrl1),
+        CliffordTGate("T", ctrl1),
+        CliffordTGate("Tdg", ctrl2),
+        CliffordTGate("CX", ctrl2, ctrl1),
+    ]
+
+
+def toffoli_to_clifford_t(gates: list["ToffoliGate"]) -> list[CliffordTGate]:
+    """Convert a list of ToffoliGate (X/CX/CCX) to CliffordTGate (H/T/Tdg/X/CX).
+
+    CX and X gates pass through. CCX gates expand to 15 Clifford+T gates.
+    """
+    result = []
+    for gate in gates:
+        if gate.num_controls == 0:
+            result.append(CliffordTGate("X", gate.target))
+        elif gate.num_controls == 1:
+            result.append(CliffordTGate("CX", gate.target, gate.controls[0]))
+        elif gate.num_controls == 2:
+            result.extend(ccx_to_clifford_t(gate.target, gate.controls[0], gate.controls[1]))
+        else:
+            raise ValueError(
+                f"Cannot convert gate with {gate.num_controls} controls to Clifford+T."
+            )
+    return result
+
+
+# ============================================================================
 # Gate dataclass for decomposed Toffoli sequences
 # ============================================================================
 
@@ -195,6 +284,127 @@ def _gate_description(gate: ToffoliGate) -> str:
     else:
         ctrls = ",".join(str(c) for c in gate.controls)
         return f"MCX(target={gate.target}, ctrls=[{ctrls}])"
+
+
+# ============================================================================
+# C code generation for Clifford+T cQQ (static const -- max 1 control!)
+# ============================================================================
+
+
+def generate_clifft_cqq_static_c(gates: list[CliffordTGate], width: int) -> str:
+    """Generate static const C code for cQQ Clifford+T variant (all gates max 1 control)."""
+    lines = []
+    num_layers = len(gates)
+
+    # Each gate is on its own layer
+    for i, gate in enumerate(gates):
+        gate_str = gate.to_c_static()
+        lines.append(f"static const gate_t TOFFOLI_CLIFFT_CQQ_{width}_L{i}[] = {{{gate_str}}};")
+        lines.append("")
+
+    # Layer pointer array
+    if num_layers > 6:
+        chunks = [list(range(i, min(i + 6, num_layers))) for i in range(0, num_layers, 6)]
+        chunk_lines = []
+        for chunk in chunks:
+            names = ", ".join(f"TOFFOLI_CLIFFT_CQQ_{width}_L{j}" for j in chunk)
+            chunk_lines.append(f"    {names}")
+        layers_str = ",\n".join(chunk_lines)
+        lines.append(
+            f"static const gate_t *TOFFOLI_CLIFFT_CQQ_{width}_LAYERS[] = {{\n{layers_str}}};"
+        )
+    else:
+        names = ", ".join(f"TOFFOLI_CLIFFT_CQQ_{width}_L{i}" for i in range(num_layers))
+        lines.append(f"static const gate_t *TOFFOLI_CLIFFT_CQQ_{width}_LAYERS[] = {{{names}}};")
+
+    # Gates per layer array (all 1s)
+    gpl_str = ", ".join("1" for _ in range(num_layers))
+    lines.append(f"static const num_t TOFFOLI_CLIFFT_CQQ_{width}_GPL[] = {{{gpl_str}}};")
+    lines.append("")
+
+    # Sequence struct
+    lines.append(
+        f"static const sequence_t HARDCODED_TOFFOLI_CLIFFT_CQQ_{width} = "
+        f"{{.seq = (gate_t **)TOFFOLI_CLIFFT_CQQ_{width}_LAYERS,"
+    )
+    lines.append(f"                                              .num_layer = {num_layers},")
+    lines.append(f"                                              .used_layer = {num_layers},")
+    lines.append(
+        f"                                              .gates_per_layer = "
+        f"(num_t *)TOFFOLI_CLIFFT_CQQ_{width}_GPL}};"
+    )
+
+    return "\n".join(lines)
+
+
+def generate_clifft_cqq_width_file(width: int) -> str:
+    """Generate complete C source file for cQQ Clifford+T at one width."""
+    output = []
+
+    # Header
+    output.append("//")
+    output.append(
+        f"// toffoli_clifft_cqq_{width}.c - CDKM cQQ Clifford+T addition for {width}-bit width"
+    )
+    output.append("//")
+    output.append(
+        "// Generated by scripts/generate_toffoli_decomp_seq.py --clifford-t - DO NOT EDIT MANUALLY"
+    )
+    output.append("//")
+    output.append("// Contains: Toffoli CDKM cQQ Clifford+T addition (static const, zero CCX/MCX)")
+    output.append(
+        "// Algorithm: CDKM ripple-carry adder with AND-ancilla MCX decomposition + CCX->Clifford+T"
+    )
+    output.append("// All gates: H/T/Tdg/CX/X (max 1 control) -- fully static const.")
+    output.append("//")
+    output.append("")
+    output.append('#include "toffoli_sequences.h"')
+    output.append("")
+    output.append(f"#ifdef TOFFOLI_SEQ_WIDTH_{width}")
+    output.append("")
+    output.append("#include <math.h>")
+    output.append("")
+
+    # Generate gate sequences
+    cqq_gates = generate_decomp_cqq_gates(width)
+    clifft_gates = toffoli_to_clifford_t(cqq_gates)
+
+    if width == 1:
+        cqq_num_qubits = 3
+    else:
+        cqq_num_qubits = 2 * width + 3
+    output.append("// ============================================================================")
+    output.append(f"// TOFFOLI CLIFFT cQQ_ADD WIDTH {width} ({len(clifft_gates)} layers)")
+    if width == 1:
+        output.append("// Qubit layout: [0] = target, [1] = source, [2] = ext_ctrl")
+    else:
+        output.append(
+            f"// Qubit layout: [0,{width - 1}] = target (a), "
+            f"[{width},{2 * width - 1}] = source (b), "
+            f"[{2 * width}] = carry, [{2 * width + 1}] = ext_ctrl, [{2 * width + 2}] = and_anc"
+        )
+    output.append(f"// Total qubits: {cqq_num_qubits}")
+    output.append("// All gates: H/T/Tdg/CX/X (max 1 control) -- zero CCX, zero MCX")
+    output.append("// ============================================================================")
+    output.append("")
+    output.append(generate_clifft_cqq_static_c(clifft_gates, width))
+    output.append("")
+
+    # Dispatch helper
+    output.append("// ============================================================================")
+    output.append(f"// DISPATCH HELPER FOR WIDTH {width}")
+    output.append("// ============================================================================")
+    output.append("")
+    output.append(f"const sequence_t *get_hardcoded_toffoli_clifft_cQQ_add_{width}(int bits) {{")
+    output.append("    (void)bits;")
+    output.append(f"    return &HARDCODED_TOFFOLI_CLIFFT_CQQ_{width};")
+    output.append("}")
+    output.append("")
+
+    output.append(f"#endif // TOFFOLI_SEQ_WIDTH_{width}")
+    output.append("")
+
+    return "\n".join(output)
 
 
 # ============================================================================
@@ -395,6 +605,75 @@ def generate_dispatch_file(max_width: int = 8) -> str:
 # ============================================================================
 
 
+def validate_clifford_t(max_width: int = 8) -> bool:
+    """Validate Clifford+T cQQ generated gate sequences against expected counts."""
+    all_ok = True
+
+    # Expected Clifford+T cQQ layer counts:
+    # Width 1: 1 CCX -> 15 Clifford+T gates
+    # Width N >= 2: 10*N CCX -> 150*N Clifford+T gates
+    print("=" * 60)
+    print("Clifford+T cQQ_add layer count validation")
+    print("=" * 60)
+    for w in range(1, max_width + 1):
+        cqq_gates = generate_decomp_cqq_gates(w)
+        clifft_gates = toffoli_to_clifford_t(cqq_gates)
+        actual = len(clifft_gates)
+        # Count by type in source
+        cx_count = sum(1 for g in cqq_gates if g.num_controls <= 1)
+        ccx_count = sum(1 for g in cqq_gates if g.num_controls == 2)
+        x_count = sum(1 for g in cqq_gates if g.num_controls == 0)
+        expected = x_count + cx_count + ccx_count * 15  # X->1, CX->1, CCX->15
+        # For width 1: 1 CCX -> 15
+        # For width N >= 2: all are CCX, so 10*N * 15 = 150*N
+        status = "OK" if actual == expected else "MISMATCH"
+        if actual != expected:
+            all_ok = False
+        print(f"  width {w:2d}: {actual:4d} layers  expected {expected:4d}  [{status}]")
+
+    print()
+
+    # Verify all Clifford+T gates have max 1 control
+    print("=" * 60)
+    print("Clifford+T cQQ gate control count validation (must be <= 1)")
+    print("=" * 60)
+    for w in range(1, max_width + 1):
+        cqq_gates = generate_decomp_cqq_gates(w)
+        clifft_gates = toffoli_to_clifford_t(cqq_gates)
+        max_ctrl = 0
+        for g in clifft_gates:
+            ctrl = 1 if g.gate_type == "CX" else 0
+            max_ctrl = max(max_ctrl, ctrl)
+        status = "OK" if max_ctrl <= 1 else "FAIL"
+        if max_ctrl > 1:
+            all_ok = False
+        print(f"  width {w:2d}: max controls = {max_ctrl}  [{status}]")
+
+    print()
+
+    # Verify gate type distribution
+    print("=" * 60)
+    print("Clifford+T cQQ gate type distribution")
+    print("=" * 60)
+    for w in range(1, max_width + 1):
+        cqq_gates = generate_decomp_cqq_gates(w)
+        clifft_gates = toffoli_to_clifford_t(cqq_gates)
+        counts = {"H": 0, "T": 0, "Tdg": 0, "X": 0, "CX": 0}
+        for g in clifft_gates:
+            counts[g.gate_type] += 1
+        parts = ", ".join(f"{k}={v}" for k, v in counts.items() if v > 0)
+        print(f"  width {w:2d}: {parts}, total={len(clifft_gates)}")
+
+    print()
+
+    if all_ok:
+        print("ALL CLIFFORD+T cQQ VALIDATIONS PASSED")
+    else:
+        print("CLIFFORD+T cQQ VALIDATION FAILED - see mismatches above")
+
+    return all_ok
+
+
 def validate(max_width: int = 8) -> bool:
     """Validate generated gate sequences against expected counts."""
     all_ok = True
@@ -547,8 +826,17 @@ def main():
         default=8,
         help="Maximum width to generate (default: 8)",
     )
+    parser.add_argument(
+        "--clifford-t",
+        action="store_true",
+        help="Generate Clifford+T decomposed cQQ sequences (CCX expanded to 15 H/T/Tdg/CX gates)",
+    )
 
     args = parser.parse_args()
+
+    if args.validate and args.clifford_t:
+        ok = validate_clifford_t(args.max_width)
+        sys.exit(0 if ok else 1)
 
     if args.validate:
         ok = validate(args.max_width)
@@ -566,7 +854,37 @@ def main():
 
     max_width = args.max_width
 
-    if args.width:
+    if args.clifford_t:
+        # Clifford+T cQQ generation mode
+        if args.width:
+            if args.width < 1 or args.width > max_width:
+                print(f"Error: width must be 1-{max_width}", file=sys.stderr)
+                sys.exit(1)
+            content = generate_clifft_cqq_width_file(args.width)
+            if args.dry_run:
+                print(content)
+            else:
+                os.makedirs(output_dir, exist_ok=True)
+                path = os.path.join(output_dir, f"toffoli_clifft_cqq_{args.width}.c")
+                with open(path, "w") as f:
+                    f.write(content)
+                print(f"Written: {path}")
+        else:
+            # Full Clifford+T cQQ generation
+            if args.dry_run:
+                for w in range(1, max_width + 1):
+                    print(f"// === FILE: toffoli_clifft_cqq_{w}.c ===")
+                    print(generate_clifft_cqq_width_file(w))
+                    print()
+            else:
+                os.makedirs(output_dir, exist_ok=True)
+                for w in range(1, max_width + 1):
+                    content = generate_clifft_cqq_width_file(w)
+                    path = os.path.join(output_dir, f"toffoli_clifft_cqq_{w}.c")
+                    with open(path, "w") as f:
+                        f.write(content)
+                    print(f"Written: {path}")
+    elif args.width:
         # Single width mode
         if args.width < 1 or args.width > max_width:
             print(f"Error: width must be 1-{max_width}", file=sys.stderr)
