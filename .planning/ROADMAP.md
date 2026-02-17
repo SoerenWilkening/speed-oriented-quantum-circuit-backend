@@ -219,10 +219,27 @@ Plans:
 - [x] 72-02-PLAN.md -- Wire hardcoded sequences into ToffoliAddition.c + T-count exposure in Python API + tests
 - [x] 72-03-PLAN.md -- AND-ancilla MCX decomposition in QQ multiplication to eliminate 3-control gates
 
+### Phase 73: Toffoli CQ/cCQ Classical-Bit Gate Reduction
+**Goal**: CQ and cCQ Toffoli arithmetic uses inline generators that exploit known classical bit values to eliminate unnecessary gates, reducing T-count for fault-tolerant circuits
+**Depends on**: Phase 72
+**Requirements**: ADD-02, ADD-04, ADD-05, INF-03, INF-04
+**Success Criteria** (what must be TRUE):
+  1. Inline CQ CDKM generator eliminates CX gates at zero-bit positions and folds X-init into MAJ chain, verified correct at widths 1-4
+  2. Inline cCQ CDKM generator eliminates CCX gates at zero-bit positions (14T per position), verified correct at widths 1-4
+  3. BK CLA CQ/cCQ generators apply classical-bit simplification to Phase A/E, verified correct at widths 2-4
+  4. Subtraction works via inverted inline sequences for all CQ/cCQ variants
+  5. Hardcoded CQ/cCQ increment (value=1) sequences for widths 1-8 match inline generator output
+  6. T-count reporting reflects reduced gate counts for CQ/cCQ operations
+**Plans**: 2 plans
+
+Plans:
+- [ ] 73-01-PLAN.md -- Inline CQ/cCQ CDKM and BK CLA generators with classical-bit gate simplification + exhaustive tests
+- [ ] 73-02-PLAN.md -- Hardcoded CQ/cCQ increment sequences (widths 1-8) + dispatch + propagation tests
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 65 -> 66 -> 67 -> 68 -> 69 -> 70 -> 71 -> 72
+Phases execute in numeric order: 65 -> 66 -> 67 -> 68 -> 69 -> 70 -> 71 -> 72 -> 73
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -258,15 +275,7 @@ Phases execute in numeric order: 65 -> 66 -> 67 -> 68 -> 69 -> 70 -> 71 -> 72
 | 70. Cross-Backend Verification | v3.0 | 2/2 | Complete | 2026-02-15 |
 | 71. Carry Look-Ahead Adder | v3.0 | 6/6 | Complete | 2026-02-17 |
 | 72. Performance Polish | v3.0 | 3/3 | Complete | 2026-02-18 |
-
-### Phase 73: Toffoli CQ/cCQ Classical-Bit Gate Reduction
-
-**Goal:** [To be planned]
-**Depends on:** Phase 72
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (run /gsd:plan-phase 73 to break down)
+| 73. Toffoli CQ/cCQ Classical-Bit Gate Reduction | v3.0 | 0/2 | In Progress | |
 
 ---
 *Roadmap created: 2026-02-02*
