@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v3.0 Fault-Tolerant Arithmetic -- Phase 74 in progress (2/5 plans complete)
+**Current focus:** v3.0 Fault-Tolerant Arithmetic -- Phase 74 in progress (3/5 plans complete)
 
 ## Current Position
 
 Phase: 74 of 74 (MCX/CCX Gate Decomposition & Sequence Refactoring)
-Plan: 2 of 5 complete
-Status: ToffoliAddition.c split into CDKM/CLA/Helpers modules, hot_path_add.c Toffoli dispatch extracted. Plans 74-01 + 74-02 complete (wave 1 done).
-Last activity: 2026-02-17 -- Completed 74-01 (sequence refactoring / file split)
+Plan: 3 of 5 complete
+Status: AND-ancilla MCX decomposition complete. All controlled adders, multiplication, and comparisons now MCX-free. Plans 74-01 + 74-02 + 74-03 complete (waves 1-2 done).
+Last activity: 2026-02-17 -- Completed 74-03 (MCX decomposition via AND-ancilla)
 
 Progress: [########################] 100% (v3.0 phases -- 30/~34 plans)
 
@@ -41,7 +41,7 @@ Progress: [########################] 100% (v3.0 phases -- 30/~34 plans)
 | v2.1 Compile Enhancements | 52-54 | 6 | Complete (2026-02-05) |
 | v2.2 Performance Optimization | 55-61 | 22 | Complete (2026-02-08) |
 | v2.3 Hardcoding Right-Sizing | 62-64 | 4 | Complete (2026-02-08) |
-| v3.0 Fault-Tolerant Arithmetic | 65-73 | 29 | Complete (2026-02-17) |
+| v3.0 Fault-Tolerant Arithmetic | 65-74 | 31 | In Progress (2026-02-17) |
 
 ## Accumulated Context
 
@@ -79,6 +79,7 @@ Phase 73-01: Inline CQ/cCQ CDKM + BK CLA generators with classical-bit gate simp
 Phase 73-02: Hardcoded CQ/cCQ increment (value=1) sequences for widths 1-8. CQ uses static const (no MCX), cCQ uses dynamic init with caching (MCX needs large_control). copy_hardcoded_sequence() deep-copies static to caller-owned memory. Early-return in toffoli_CQ_add/toffoli_cCQ_add for value=1. 14 new tests + 128 existing = 142 Toffoli tests pass. Phase 73 complete.
 Phase 74-01: ToffoliAddition.c (1968 lines) split into ToffoliAdditionCDKM.c (778), ToffoliAdditionCLA.c (934), ToffoliAdditionHelpers.c (151) + toffoli_addition_internal.h (60). Split by algorithm (CDKM vs CLA), not operation type. Toffoli dispatch extracted from hot_path_add.c (530->145 lines) into hot_path_add_toffoli.c (414 lines). Pure refactoring, zero logic changes.
 Phase 74-02: T_GATE/TDG_GATE enum values, gate primitives (t_gate/tdg_gate), inverse recognition (T/Tdg as mutual inverses). toffoli_decompose field in circuit_t with Python API. Replaced mcx_gates with t_gates/tdg_gates in gate_counts_t. Dual T-count formula: actual when T present, 7*CCX estimate otherwise. QASM exports "t"/"tdg". Updated 4 test files (removed MCX references). 90+ tests pass.
+Phase 74-03: AND-ancilla MCX decomposition for all 9 MCX emission points. CDKM: emit_cMAJ/emit_cUMA get and_anc param, MCX(3)->3 CCX (5 layers instead of 3). CLA: emit_mcx3_seq/emit_mcx_recursive_seq helpers. Multiplication: cmul_qq width-1 MCX(3)->3 CCX. Comparison: recursive AND-ancilla decomposition for CQ_equal_width (bits>=3) and cCQ_equal_width (bits>=2). Python qint_comparison.pxi allocates AND-ancilla via circuit allocator. Hardcoded cQQ/cCQ sequences bypassed (contain MCX). 23 MCX purity tests confirm zero MCX gates in all Toffoli-mode output.
 
 ### Roadmap Evolution
 
@@ -106,9 +107,9 @@ Phase 74-02: T_GATE/TDG_GATE enum values, gate primitives (t_gate/tdg_gate), inv
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 74-01-PLAN.md (sequence refactoring / file split). Phase 74 plans 1-2/5 complete (wave 1 done).
-Resume file: .planning/phases/74-mcx-ccx-gate-decomposition-sequence-refactoring/74-03-PLAN.md (wave 2, depends on 74-01+74-02)
-Resume action: Execute 74-03 (MCX decomposition, wave 2).
+Stopped at: Completed 74-03-PLAN.md (MCX decomposition via AND-ancilla). Phase 74 plans 1-3/5 complete (waves 1-2 done).
+Resume file: .planning/phases/74-mcx-ccx-gate-decomposition-sequence-refactoring/74-04-PLAN.md (wave 3, depends on 74-03)
+Resume action: Execute 74-04 (CCX -> Clifford+T decomposition, wave 3).
 
 ---
-*State updated: 2026-02-17 -- Phase 74 plan 01 complete (ToffoliAddition.c split + hot_path_add.c Toffoli dispatch extraction)*
+*State updated: 2026-02-17 -- Phase 74 plan 03 complete (AND-ancilla MCX decomposition in all controlled operations)*
