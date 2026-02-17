@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v3.0 Fault-Tolerant Arithmetic -- Phase 73 plan 01 complete (1/2 plans)
+**Current focus:** v3.0 Fault-Tolerant Arithmetic -- Phase 73 complete (2/2 plans)
 
 ## Current Position
 
 Phase: 73 of 73 (CQ/cCQ Classical-Bit Gate Reduction)
-Plan: 1 of 2 complete
-Status: Inline CQ/cCQ CDKM + BK CLA generators with classical-bit gate simplification. 39 new tests + 89 existing pass. T-count reduced for sparse classical values.
-Last activity: 2026-02-17 -- Completed 73-01 (inline CQ/cCQ generators + exhaustive tests)
+Plan: 2 of 2 complete
+Status: Hardcoded CQ/cCQ increment sequences for widths 1-8. 14 new tests + 128 existing pass. Phase 73 complete.
+Last activity: 2026-02-17 -- Completed 73-02 (hardcoded CQ/cCQ increment + verification tests)
 
-Progress: [########################] 100% (v3.0 phases -- 28/~28 plans)
+Progress: [########################] 100% (v3.0 phases -- 29/~29 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 208 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 22, v2.3: 4, v3.0: 27)
+- Total plans completed: 209 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 22, v2.3: 4, v3.0: 28)
 - Average duration: ~13 min/plan
-- Total execution time: ~32.6 hours
+- Total execution time: ~33.0 hours
 
 **By Milestone:**
 
@@ -41,7 +41,7 @@ Progress: [########################] 100% (v3.0 phases -- 28/~28 plans)
 | v2.1 Compile Enhancements | 52-54 | 6 | Complete (2026-02-05) |
 | v2.2 Performance Optimization | 55-61 | 22 | Complete (2026-02-08) |
 | v2.3 Hardcoding Right-Sizing | 62-64 | 4 | Complete (2026-02-08) |
-| v3.0 Fault-Tolerant Arithmetic | 65-73 | 28 | In Progress |
+| v3.0 Fault-Tolerant Arithmetic | 65-73 | 29 | In Progress |
 
 ## Accumulated Context
 
@@ -76,6 +76,7 @@ Phase 72-01: Toffoli hardcoded sequence generation. QQ as static const (CX/CCX m
 Phase 72-03: AND-ancilla MCX decomposition for QQ multiplication. Each MCX(3-control) in controlled CDKM adder decomposed into 3 CCX via AND-ancilla. Inline gate emission (not cached sequences) for decomposed controlled addition. gate_counts_t now separates CCX (2 controls) from MCX (3+ controls). Python gate_counts dict exposes 'MCX' and 'T' keys. 20 new tests + 21 existing = 41 multiplication tests pass.
 Phase 72-02: Hardcoded Toffoli CDKM sequences wired into ToffoliAddition.c dispatch for widths 1-8. Lookup between cache check and dynamic generation (first call: hardcoded hit -> cache store; subsequent: cache hit). 9 Toffoli C files added to setup.py. 17 tests: T-count reporting (T=7*(CCX+MCX)), QQ correctness at widths 1-4, gate purity, controlled QQ, subtraction. Phase 72 complete.
 Phase 73-01: Inline CQ/cCQ CDKM + BK CLA generators with classical-bit gate simplification. CQ: skip MAJ at bit=0 (carry=|0>), fold X-init at bit=1. cCQ: CX-init + standard cMAJ at bit=1, skip at bit=0. BK CLA Phase F must be inlined (temp=|0> after Phase E makes copied CX a NOP). 39 exhaustive tests + 89 existing pass. BK Phase F bug found during testing and auto-fixed (Rule 1).
+Phase 73-02: Hardcoded CQ/cCQ increment (value=1) sequences for widths 1-8. CQ uses static const (no MCX), cCQ uses dynamic init with caching (MCX needs large_control). copy_hardcoded_sequence() deep-copies static to caller-owned memory. Early-return in toffoli_CQ_add/toffoli_cCQ_add for value=1. 14 new tests + 128 existing = 142 Toffoli tests pass. Phase 73 complete.
 
 ### Roadmap Evolution
 
@@ -102,9 +103,9 @@ Phase 73-01: Inline CQ/cCQ CDKM + BK CLA generators with classical-bit gate simp
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 73-01-PLAN.md (inline CQ/cCQ generators + exhaustive tests)
+Stopped at: Completed 73-02-PLAN.md (hardcoded CQ/cCQ increment + verification tests). Phase 73 complete.
 Resume file: N/A
-Resume action: Execute 73-02-PLAN.md or `/gsd:progress` to continue Phase 73.
+Resume action: `/gsd:progress` to check status. Phase 73 is the last v3.0 phase.
 
 ---
-*State updated: 2026-02-17 -- Phase 73 plan 01 complete (inline CQ/cCQ CDKM + BK CLA generators)*
+*State updated: 2026-02-17 -- Phase 73 plan 02 complete (hardcoded CQ/cCQ increment sequences + dispatch + tests)*
