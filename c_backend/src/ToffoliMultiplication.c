@@ -449,10 +449,23 @@ void toffoli_cmul_qq(circuit_t *circ, const unsigned int *ret_qubits, int ret_bi
             add_gate(circ, &g);
 
             /* Step 2: Build tqa for toffoli_cQQ_add(width) with and_anc as control.
+             * Phase 74-03: cQQ_add now expects AND-ancilla at [2*width+2].
+             * We allocate a second AND-ancilla for the cQQ_add sequence itself
+             * (the outer and_anc is used as ext_ctrl, the inner one is for the
+             * decomposed MCX gates within cQQ_add).
              *   a-register [0..width-1]       = self[0..width-1] (source, preserved)
              *   b-register [width..2*width-1]  = ret[j..j+width-1] (accumulator)
              *   [2*width]                      = carry ancilla
-             *   [2*width+1]                    = and_anc (control for cQQ_add) */
+             *   [2*width+1]                    = and_anc (control for cQQ_add)
+             *   [2*width+2]                    = inner AND-ancilla for cQQ_add MCX decomp */
+            /* Allocate inner AND-ancilla for cQQ_add's decomposed MCX gates */
+            qubit_t inner_and = allocator_alloc(circ->allocator, 1, true);
+            if (inner_and == (qubit_t)-1) {
+                allocator_free(circ->allocator, and_anc, 1);
+                allocator_free(circ->allocator, carry, 1);
+                return;
+            }
+
             unsigned int tqa[256];
             for (int i = 0; i < width; i++) {
                 tqa[i] = self_qubits[i];
@@ -462,14 +475,17 @@ void toffoli_cmul_qq(circuit_t *circ, const unsigned int *ret_qubits, int ret_bi
             }
             tqa[2 * width] = carry;
             tqa[2 * width + 1] = and_anc;
+            tqa[2 * width + 2] = inner_and;
 
             sequence_t *toff_seq = toffoli_cQQ_add(width);
             if (toff_seq == NULL) {
+                allocator_free(circ->allocator, inner_and, 1);
                 allocator_free(circ->allocator, and_anc, 1);
                 allocator_free(circ->allocator, carry, 1);
                 return;
             }
             run_instruction(toff_seq, tqa, 0, circ);
+            allocator_free(circ->allocator, inner_and, 1);
 
             /* Step 3: Uncompute AND: and_anc = 0 (CCX is self-inverse).
              * Safe because other[j] and ext_ctrl are preserved by cQQ_add. */
@@ -551,10 +567,19 @@ void toffoli_cmul_cq(circuit_t *circ, const unsigned int *ret_qubits, int ret_bi
             run_instruction(toff_seq, tqa, 0, circ);
         } else {
             /* General case: controlled addition using toffoli_cQQ_add.
+             * Phase 74-03: cQQ_add now expects AND-ancilla at [2*width+2].
              *   a-register [0..width-1]       = self[0..width-1] (source, preserved)
              *   b-register [width..2*width-1]  = ret[j..j+width-1] (accumulator)
              *   [2*width]                      = carry ancilla
-             *   [2*width+1]                    = ext_ctrl (external control) */
+             *   [2*width+1]                    = ext_ctrl (external control)
+             *   [2*width+2]                    = AND-ancilla for cQQ_add MCX decomp */
+            qubit_t cq_and = allocator_alloc(circ->allocator, 1, true);
+            if (cq_and == (qubit_t)-1) {
+                allocator_free(circ->allocator, carry, 1);
+                free(bin);
+                return;
+            }
+
             for (int i = 0; i < width; i++) {
                 tqa[i] = self_qubits[i];
             }
@@ -563,14 +588,17 @@ void toffoli_cmul_cq(circuit_t *circ, const unsigned int *ret_qubits, int ret_bi
             }
             tqa[2 * width] = carry;
             tqa[2 * width + 1] = ext_ctrl;
+            tqa[2 * width + 2] = cq_and;
 
             toff_seq = toffoli_cQQ_add(width);
             if (toff_seq == NULL) {
+                allocator_free(circ->allocator, cq_and, 1);
                 allocator_free(circ->allocator, carry, 1);
                 free(bin);
                 return;
             }
             run_instruction(toff_seq, tqa, 0, circ);
+            allocator_free(circ->allocator, cq_and, 1);
         }
     }
 

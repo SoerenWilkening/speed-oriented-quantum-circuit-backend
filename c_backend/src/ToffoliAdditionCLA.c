@@ -627,10 +627,101 @@ sequence_t *toffoli_CQ_add_ks(int bits, int64_t value) {
 // ============================================================================
 
 /**
+ * @brief Emit AND-ancilla MCX(3) decomposition into a sequence layer.
+ *
+ * Replaces MCX(target, [c1, c2, ext_ctrl]) with 3 CCX gates:
+ *   CCX(and_anc, c1, c2) -- compute AND
+ *   CCX(target, and_anc, ext_ctrl) -- apply
+ *   CCX(and_anc, c1, c2) -- uncompute AND
+ *
+ * Each gate emitted as a separate layer (increments *layer 3 times).
+ *
+ * @param seq     Sequence to emit into
+ * @param layer   Pointer to current layer index
+ * @param target  Target qubit
+ * @param c1      First control
+ * @param c2      Second control
+ * @param ext_ctrl Third control (external)
+ * @param and_anc AND-ancilla qubit
+ */
+static void emit_mcx3_seq(sequence_t *seq, int *layer, int target, int c1, int c2, int ext_ctrl,
+                          int and_anc) {
+    ccx(&seq->seq[*layer][seq->gates_per_layer[*layer]++], and_anc, c1, c2);
+    (*layer)++;
+    ccx(&seq->seq[*layer][seq->gates_per_layer[*layer]++], target, and_anc, ext_ctrl);
+    (*layer)++;
+    ccx(&seq->seq[*layer][seq->gates_per_layer[*layer]++], and_anc, c1, c2);
+    (*layer)++;
+}
+
+/**
+ * @brief Emit recursive AND-ancilla MCX(k) decomposition into a sequence.
+ *
+ * For k controls, uses recursive pattern:
+ * - k==2: CCX (1 layer)
+ * - k==3: 3 CCX via AND-ancilla (3 layers)
+ * - k>3: 2 CCX (compute/uncompute AND of first 2 controls) + recursive MCX(k-1)
+ *
+ * Total CCX: 2*(k-2) + 1, total ancilla: k-2 (starting at anc_start).
+ *
+ * @param seq         Sequence to emit into
+ * @param layer       Pointer to current layer index
+ * @param target      Target qubit
+ * @param controls    Array of control qubits
+ * @param num_controls Number of controls (>= 2)
+ * @param anc_start   First available AND-ancilla qubit index
+ */
+static void emit_mcx_recursive_seq(sequence_t *seq, int *layer, int target, const qubit_t *controls,
+                                   int num_controls, int anc_start) {
+    if (num_controls == 2) {
+        ccx(&seq->seq[*layer][seq->gates_per_layer[*layer]++], target, controls[0], controls[1]);
+        (*layer)++;
+    } else if (num_controls == 3) {
+        emit_mcx3_seq(seq, layer, target, (int)controls[0], (int)controls[1], (int)controls[2],
+                      anc_start);
+    } else {
+        /* k > 3: peel off 2 controls into AND-ancilla, recurse with k-1 */
+        int and_anc = anc_start;
+
+        /* Compute AND of first 2 controls */
+        ccx(&seq->seq[*layer][seq->gates_per_layer[*layer]++], and_anc, controls[0], controls[1]);
+        (*layer)++;
+
+        /* Build reduced control list: [and_anc, controls[2], ..., controls[k-1]] */
+        qubit_t reduced[128];
+        reduced[0] = (qubit_t)and_anc;
+        for (int i = 2; i < num_controls; i++)
+            reduced[i - 1] = controls[i];
+
+        /* Recurse with k-1 controls, next ancilla */
+        emit_mcx_recursive_seq(seq, layer, target, reduced, num_controls - 1, anc_start + 1);
+
+        /* Uncompute AND */
+        ccx(&seq->seq[*layer][seq->gates_per_layer[*layer]++], and_anc, controls[0], controls[1]);
+        (*layer)++;
+    }
+}
+
+/**
+ * @brief Count layers needed for recursive MCX decomposition.
+ *
+ * @param num_controls Number of controls (>= 2)
+ * @return Number of layers (CCX gates)
+ */
+static int mcx_recursive_layer_count(int num_controls) {
+    if (num_controls <= 2)
+        return 1;
+    if (num_controls == 3)
+        return 3;
+    /* k > 3: 2 (compute/uncompute AND) + recursive(k-1) */
+    return 2 + mcx_recursive_layer_count(num_controls - 1);
+}
+
+/**
  * @brief Controlled Brent-Kung CLA QQ adder: b += a, controlled by ext_ctrl.
  *
  * Every gate in the uncontrolled QQ BK sequence gets an additional control
- * qubit (ext_ctrl).
+ * qubit (ext_ctrl). Phase 74-03: MCX(3+) gates decomposed via AND-ancilla.
  *
  * OWNERSHIP: Returns cached sequence - DO NOT FREE
  *
@@ -653,14 +744,37 @@ sequence_t *toffoli_cQQ_add_bk(int bits) {
     /* ext_ctrl qubit index = 2*bits + bk_cla_ancilla_count(bits) */
     int ext_ctrl = 2 * bits + bk_cla_ancilla_count(bits);
 
-    /* Allocate new sequence with same layer count */
-    sequence_t *seq = alloc_sequence((int)seq_qq->num_layer);
+    /* Count total layers needed after MCX decomposition.
+     * Each gate in QQ sequence becomes:
+     *   X -> CX (1 layer)
+     *   CX -> CCX (1 layer)
+     *   CCX -> MCX(3) decomposed (3 layers)
+     * No MCX(n>2) exists in the QQ BK sequence (only X, CX, CCX). */
+    int total_layers = 0;
+    for (num_t l = 0; l < seq_qq->num_layer; l++) {
+        for (num_t g = 0; g < seq_qq->gates_per_layer[l]; g++) {
+            gate_t *src = &seq_qq->seq[l][g];
+            if (src->NumControls == 2) {
+                /* CCX -> MCX(3) decomposed = 3 layers */
+                total_layers += 3;
+            } else {
+                /* X->CX or CX->CCX = 1 layer each */
+                total_layers += 1;
+            }
+        }
+    }
+
+    /* AND-ancilla qubit at ext_ctrl + 1 */
+    int and_anc = ext_ctrl + 1;
+
+    /* Allocate new sequence */
+    sequence_t *seq = alloc_sequence(total_layers);
     if (seq == NULL)
         return NULL;
 
     int layer = 0;
 
-    /* Copy each gate from QQ sequence, injecting ext_ctrl */
+    /* Copy each gate from QQ sequence, injecting ext_ctrl with MCX decomposition */
     for (num_t l = 0; l < seq_qq->num_layer; l++) {
         for (num_t g = 0; g < seq_qq->gates_per_layer[l]; g++) {
             gate_t *src = &seq_qq->seq[l][g];
@@ -668,34 +782,19 @@ sequence_t *toffoli_cQQ_add_bk(int bits) {
             if (src->NumControls == 0) {
                 /* X -> CX with ext_ctrl */
                 cx(&seq->seq[layer][seq->gates_per_layer[layer]++], src->Target, (qubit_t)ext_ctrl);
+                layer++;
             } else if (src->NumControls == 1) {
                 /* CX -> CCX with [original_ctrl, ext_ctrl] */
                 ccx(&seq->seq[layer][seq->gates_per_layer[layer]++], src->Target, src->Control[0],
                     (qubit_t)ext_ctrl);
+                layer++;
             } else if (src->NumControls == 2) {
-                /* CCX -> MCX with [ctrl1, ctrl2, ext_ctrl] */
-                qubit_t ctrls[3] = {src->Control[0], src->Control[1], (qubit_t)ext_ctrl};
-                mcx(&seq->seq[layer][seq->gates_per_layer[layer]++], src->Target, ctrls, 3);
-            } else {
-                /* MCX with n controls -> MCX with n+1 controls */
-                num_t new_count = src->NumControls + 1;
-                qubit_t *ctrls = malloc(new_count * sizeof(qubit_t));
-                if (ctrls != NULL) {
-                    if (src->large_control != NULL) {
-                        for (num_t c = 0; c < src->NumControls; c++)
-                            ctrls[c] = src->large_control[c];
-                    } else {
-                        for (num_t c = 0; c < src->NumControls && c < 2; c++)
-                            ctrls[c] = src->Control[c];
-                    }
-                    ctrls[src->NumControls] = (qubit_t)ext_ctrl;
-                    mcx(&seq->seq[layer][seq->gates_per_layer[layer]++], src->Target, ctrls,
-                        new_count);
-                    free(ctrls);
-                }
+                /* CCX -> MCX(3) decomposed via AND-ancilla */
+                emit_mcx3_seq(seq, &layer, (int)src->Target, (int)src->Control[0],
+                              (int)src->Control[1], ext_ctrl, and_anc);
             }
+            /* Note: QQ BK sequence has no MCX (only X, CX, CCX) */
         }
-        layer++;
     }
 
     seq->used_layer = layer;

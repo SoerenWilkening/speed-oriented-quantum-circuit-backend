@@ -74,9 +74,10 @@ sequence_t *toffoli_CQ_add(int bits, int64_t value);
  *   [bits..2*bits-1]   = register b (source, unchanged)
  *   [2*bits]           = ancilla carry (bits >= 2 only, returned to |0>)
  *   [2*bits+1]         = external control qubit
+ *   [2*bits+2]         = AND-ancilla for MCX decomposition (bits >= 2 only)
  *
  * For bits == 1: [0]=a, [1]=b, [2]=ext_control. Total qubits: 3.
- * For bits >= 2: Total qubits: 2*bits + 2.
+ * For bits >= 2: Total qubits: 2*bits + 3 (Phase 74-03: +1 for AND-ancilla).
  *
  * OWNERSHIP: Returns cached sequence - DO NOT FREE
  */
@@ -101,9 +102,10 @@ sequence_t *toffoli_cQQ_add(int bits);
  *   [bits..2*bits-1]  = self register (target, modified: self += value)
  *   [2*bits]          = carry ancilla (bits >= 2 only, returned to |0>)
  *   [2*bits+1]        = external control qubit
+ *   [2*bits+2]        = AND-ancilla for MCX decomposition (bits >= 2 only)
  *
  * For bits == 1: [0]=self, [1]=ext_control. Total qubits: 2.
- * For bits >= 2: Total qubits: 2*bits + 2.
+ * For bits >= 2: Total qubits: 2*bits + 3 (Phase 74-03: +1 for AND-ancilla).
  *
  * OWNERSHIP: Caller owns returned sequence_t*, must free via toffoli_sequence_free()
  * NOT cached (value-dependent).

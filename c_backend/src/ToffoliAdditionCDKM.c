@@ -108,23 +108,27 @@ static void emit_UMA(sequence_t *seq, int *layer, int a, int b, int c) {
 // ============================================================================
 
 /**
- * @brief Emit controlled MAJ (Majority) gate triplet.
+ * @brief Emit controlled MAJ (Majority) gate sequence with AND-ancilla decomposition.
  *
- * cMAJ(a, b, c, ext_ctrl):
- *   1. CCX(target=b, ctrl1=c, ctrl2=ext_ctrl)     -- controlled b ^= c
- *   2. CCX(target=a, ctrl1=c, ctrl2=ext_ctrl)     -- controlled a ^= c
- *   3. MCX(target=c, controls=[a, b, ext_ctrl])   -- controlled c ^= (a AND b)
+ * cMAJ(a, b, c, ext_ctrl) decomposed:
+ *   1. CCX(target=b, ctrl1=c, ctrl2=ext_ctrl)       -- controlled b ^= c
+ *   2. CCX(target=a, ctrl1=c, ctrl2=ext_ctrl)       -- controlled a ^= c
+ *   3a. CCX(target=and_anc, ctrl1=a, ctrl2=b)       -- compute partial AND
+ *   3b. CCX(target=c, ctrl1=and_anc, ctrl2=ext_ctrl) -- apply via AND-ancilla
+ *   3c. CCX(target=and_anc, ctrl1=a, ctrl2=b)       -- uncompute AND
  *
- * Each operation conditioned on ext_ctrl being |1>.
+ * Replaces MCX(3) with 3 CCX gates. Total: 5 CCX, zero MCX.
+ * Phase 74-03: AND-ancilla MCX decomposition.
  *
  * @param seq      Sequence to emit gates into
- * @param layer    Pointer to current layer index (incremented by 3)
+ * @param layer    Pointer to current layer index (incremented by 5)
  * @param a        Qubit index for 'a' (carry-in / previous carry)
  * @param b        Qubit index for 'b' (source bit)
  * @param c        Qubit index for 'c' (target bit, becomes carry-out)
  * @param ext_ctrl Qubit index for external control qubit
+ * @param and_anc  Qubit index for AND-ancilla (reused, starts/ends at |0>)
  */
-static void emit_cMAJ(sequence_t *seq, int *layer, int a, int b, int c, int ext_ctrl) {
+static void emit_cMAJ(sequence_t *seq, int *layer, int a, int b, int c, int ext_ctrl, int and_anc) {
     // Step 1: CCX(target=b, ctrl1=c, ctrl2=ext_ctrl)
     ccx(&seq->seq[*layer][seq->gates_per_layer[*layer]++], b, c, ext_ctrl);
     (*layer)++;
@@ -133,37 +137,51 @@ static void emit_cMAJ(sequence_t *seq, int *layer, int a, int b, int c, int ext_
     ccx(&seq->seq[*layer][seq->gates_per_layer[*layer]++], a, c, ext_ctrl);
     (*layer)++;
 
-    // Step 3: MCX(target=c, controls=[a, b, ext_ctrl]) -- 3 controls
-    {
-        qubit_t ctrls[3] = {(qubit_t)a, (qubit_t)b, (qubit_t)ext_ctrl};
-        mcx(&seq->seq[*layer][seq->gates_per_layer[*layer]++], c, ctrls, 3);
-    }
+    // Step 3a: CCX(target=and_anc, ctrl1=a, ctrl2=b) -- compute AND
+    ccx(&seq->seq[*layer][seq->gates_per_layer[*layer]++], and_anc, a, b);
+    (*layer)++;
+
+    // Step 3b: CCX(target=c, ctrl1=and_anc, ctrl2=ext_ctrl) -- apply
+    ccx(&seq->seq[*layer][seq->gates_per_layer[*layer]++], c, and_anc, ext_ctrl);
+    (*layer)++;
+
+    // Step 3c: CCX(target=and_anc, ctrl1=a, ctrl2=b) -- uncompute AND
+    ccx(&seq->seq[*layer][seq->gates_per_layer[*layer]++], and_anc, a, b);
     (*layer)++;
 }
 
 /**
- * @brief Emit controlled UMA (UnMajority-and-Add) gate triplet.
+ * @brief Emit controlled UMA (UnMajority-and-Add) gate sequence with AND-ancilla decomposition.
  *
- * cUMA(a, b, c, ext_ctrl):
- *   1. MCX(target=c, controls=[a, b, ext_ctrl])   -- undoes cMAJ's MCX
- *   2. CCX(target=a, ctrl1=c, ctrl2=ext_ctrl)     -- controlled restore a
- *   3. CCX(target=b, ctrl1=a, ctrl2=ext_ctrl)     -- controlled b = sum bit
+ * cUMA(a, b, c, ext_ctrl) decomposed:
+ *   1a. CCX(target=and_anc, ctrl1=a, ctrl2=b)       -- compute partial AND
+ *   1b. CCX(target=c, ctrl1=and_anc, ctrl2=ext_ctrl) -- apply via AND-ancilla
+ *   1c. CCX(target=and_anc, ctrl1=a, ctrl2=b)       -- uncompute AND
+ *   2. CCX(target=a, ctrl1=c, ctrl2=ext_ctrl)       -- controlled restore a
+ *   3. CCX(target=b, ctrl1=a, ctrl2=ext_ctrl)       -- controlled b = sum bit
  *
- * Each operation conditioned on ext_ctrl being |1>.
+ * Replaces MCX(3) with 3 CCX gates. Total: 5 CCX, zero MCX.
+ * Phase 74-03: AND-ancilla MCX decomposition.
  *
  * @param seq      Sequence to emit gates into
- * @param layer    Pointer to current layer index (incremented by 3)
+ * @param layer    Pointer to current layer index (incremented by 5)
  * @param a        Qubit index for 'a'
  * @param b        Qubit index for 'b' (becomes sum bit)
  * @param c        Qubit index for 'c'
  * @param ext_ctrl Qubit index for external control qubit
+ * @param and_anc  Qubit index for AND-ancilla (reused, starts/ends at |0>)
  */
-static void emit_cUMA(sequence_t *seq, int *layer, int a, int b, int c, int ext_ctrl) {
-    // Step 1: MCX(target=c, controls=[a, b, ext_ctrl]) -- 3 controls
-    {
-        qubit_t ctrls[3] = {(qubit_t)a, (qubit_t)b, (qubit_t)ext_ctrl};
-        mcx(&seq->seq[*layer][seq->gates_per_layer[*layer]++], c, ctrls, 3);
-    }
+static void emit_cUMA(sequence_t *seq, int *layer, int a, int b, int c, int ext_ctrl, int and_anc) {
+    // Step 1a: CCX(target=and_anc, ctrl1=a, ctrl2=b) -- compute AND
+    ccx(&seq->seq[*layer][seq->gates_per_layer[*layer]++], and_anc, a, b);
+    (*layer)++;
+
+    // Step 1b: CCX(target=c, ctrl1=and_anc, ctrl2=ext_ctrl) -- apply
+    ccx(&seq->seq[*layer][seq->gates_per_layer[*layer]++], c, and_anc, ext_ctrl);
+    (*layer)++;
+
+    // Step 1c: CCX(target=and_anc, ctrl1=a, ctrl2=b) -- uncompute AND
+    ccx(&seq->seq[*layer][seq->gates_per_layer[*layer]++], and_anc, a, b);
     (*layer)++;
 
     // Step 2: CCX(target=a, ctrl1=c, ctrl2=ext_ctrl)
@@ -280,12 +298,14 @@ static int compute_CQ_layer_count(int bits, int *bin) {
 // ============================================================================
 
 /**
- * @brief Emit cCQ-simplified controlled MAJ gate sequence.
+ * @brief Emit cCQ-simplified controlled MAJ gate sequence with AND-ancilla decomposition.
  *
  * For cCQ, temp initialization uses CX(temp[i], ext_ctrl), which entangles
  * temp[i] with ext_ctrl for bit=1 positions. Therefore:
  * - bit=0 positions: temp[i]=|0> unconditionally -> can simplify
  * - bit=1 positions: temp[i] is entangled -> fold CX-init, emit standard cMAJ
+ *
+ * Phase 74-03: MCX(3) decomposed to 3 CCX via AND-ancilla.
  *
  * @param seq             Sequence to emit gates into
  * @param layer           Pointer to current layer index
@@ -295,20 +315,27 @@ static int compute_CQ_layer_count(int bits, int *bin) {
  * @param classical_bit_c Known classical value of qubit c (0 or 1)
  * @param a_known_zero    1 if qubit a is known to be |0> (first cMAJ only)
  * @param ext_ctrl        External control qubit index
+ * @param and_anc         Qubit index for AND-ancilla
  */
 static void emit_cCQ_MAJ(sequence_t *seq, int *layer, int a, int b, int c, int classical_bit_c,
-                         int a_known_zero, int ext_ctrl) {
+                         int a_known_zero, int ext_ctrl, int and_anc) {
     if (classical_bit_c == 0) {
         /* temp[i] unconditionally |0>: skip CCX steps (one control is |0>) */
         /* Step 1: CCX(b, c=|0>, ext_ctrl) -> NOP */
         /* Step 2: CCX(a, c=|0>, ext_ctrl) -> NOP */
         if (a_known_zero) {
             /* First cMAJ: carry=|0> AND temp[0]=|0> -> MCX has |0> control -> NOP */
-            /* Entire cMAJ eliminated: 2 CCX + 1 MCX = 21T saved */
+            /* Entire cMAJ eliminated */
         } else {
-            /* Step 3: MCX(c, [a, b, ext_ctrl]) -> emit as-is (c is target) */
-            qubit_t ctrls[3] = {(qubit_t)a, (qubit_t)b, (qubit_t)ext_ctrl};
-            mcx(&seq->seq[*layer][seq->gates_per_layer[*layer]++], c, ctrls, 3);
+            /* Step 3: MCX(c, [a, b, ext_ctrl]) -> AND-ancilla decomposition */
+            /* 3a: CCX(and_anc, a, b) -- compute AND */
+            ccx(&seq->seq[*layer][seq->gates_per_layer[*layer]++], and_anc, a, b);
+            (*layer)++;
+            /* 3b: CCX(c, and_anc, ext_ctrl) -- apply */
+            ccx(&seq->seq[*layer][seq->gates_per_layer[*layer]++], c, and_anc, ext_ctrl);
+            (*layer)++;
+            /* 3c: CCX(and_anc, a, b) -- uncompute AND */
+            ccx(&seq->seq[*layer][seq->gates_per_layer[*layer]++], and_anc, a, b);
             (*layer)++;
         }
     } else {
@@ -316,17 +343,18 @@ static void emit_cCQ_MAJ(sequence_t *seq, int *layer, int a, int b, int c, int c
         /* CX(c, ext_ctrl) to conditionally initialize temp */
         cx(&seq->seq[*layer][seq->gates_per_layer[*layer]++], c, ext_ctrl);
         (*layer)++;
-        /* Steps 1-3: emit standard cMAJ (temp is entangled, cannot simplify) */
-        emit_cMAJ(seq, layer, a, b, c, ext_ctrl);
+        /* Steps 1-3: emit standard cMAJ with AND-ancilla (temp is entangled, cannot simplify) */
+        emit_cMAJ(seq, layer, a, b, c, ext_ctrl, and_anc);
     }
 }
 
 /**
  * @brief Compute layer count for inline cCQ CDKM adder.
  *
- * - First cMAJ (i=0): if bit[0]==0, 0 layers; if bit[0]==1, 4 layers (CX-init + 3 cMAJ)
- * - Subsequent cMAJs (i>=1): if bit[i]==0, 1 layer (MCX only); if bit[i]==1, 4 layers
- * - cUMA chain: 3*bits layers (unchanged)
+ * Phase 74-03: MCX(3) replaced with 3 CCX via AND-ancilla.
+ * - First cMAJ (i=0): if bit[0]==0, 0 layers; if bit[0]==1, 6 layers (CX-init + 5 cMAJ)
+ * - Subsequent cMAJs (i>=1): if bit[i]==0, 3 layers (AND-ancilla decomp); if bit[i]==1, 6 layers
+ * - cUMA chain: 5*bits layers (5 gates per cUMA with AND-ancilla)
  * - Cleanup: popcount(value) CX gates
  *
  * @param bits Number of bits
@@ -342,22 +370,22 @@ static int compute_cCQ_layer_count(int bits, int *bin) {
         /* First cMAJ: entirely eliminated */
         layers += 0;
     } else {
-        /* First cMAJ: CX-init + 3 standard cMAJ gates = 4 layers */
-        layers += 4;
+        /* First cMAJ: CX-init + 5 decomposed cMAJ gates = 6 layers */
+        layers += 6;
     }
     for (int i = 1; i < bits; i++) {
         int bit_i = bin[bits - 1 - i];
         if (bit_i == 0) {
-            /* Skip 2 CCX, emit 1 MCX */
-            layers += 1;
+            /* Skip 2 CCX, emit 3 CCX (AND-ancilla decomposition of MCX(3)) */
+            layers += 3;
         } else {
-            /* CX-init + 3 standard cMAJ gates = 4 layers */
-            layers += 4;
+            /* CX-init + 5 decomposed cMAJ gates = 6 layers */
+            layers += 6;
         }
     }
 
-    /* Reverse cUMA sweep: unchanged, 3 gates per cUMA = 3*bits */
-    layers += 3 * bits;
+    /* Reverse cUMA sweep: 5 gates per decomposed cUMA = 5*bits */
+    layers += 5 * bits;
 
     /* Cleanup: 1 CX per bit=1 position */
     for (int i = 0; i < bits; i++) {
@@ -579,9 +607,11 @@ sequence_t *toffoli_cQQ_add(int bits) {
     //   [bits..2*bits-1]   = register b (source, unchanged)
     //   [2*bits]           = ancilla carry (bits >= 2 only)
     //   [2*bits+1]         = external control qubit
+    //   [2*bits+2]         = AND-ancilla for MCX decomposition (bits >= 2 only)
     //
     // For bits == 1: no ancilla. [0]=a, [1]=b, [2]=ext_control.
     //   Single CCX(target=0, ctrl1=1, ctrl2=2). Total qubits: 3.
+    // For bits >= 2: Total qubits: 2*bits + 3 (Phase 74-03: +1 for AND-ancilla).
 
     // Bounds check
     if (bits < 1 || bits > 64) {
@@ -593,14 +623,9 @@ sequence_t *toffoli_cQQ_add(int bits) {
         return precompiled_toffoli_cQQ_add[bits];
     }
 
-    // Use hardcoded sequences for widths 1-8
-    if (bits <= TOFFOLI_HARDCODED_MAX_WIDTH) {
-        const sequence_t *hardcoded = get_hardcoded_toffoli_cQQ_add(bits);
-        if (hardcoded != NULL) {
-            precompiled_toffoli_cQQ_add[bits] = (sequence_t *)hardcoded;
-            return (sequence_t *)hardcoded;
-        }
-    }
+    // Phase 74-03: Skip hardcoded cQQ sequences (they contain MCX gates).
+    // Dynamic generator now produces MCX-free sequences via AND-ancilla decomposition.
+    // Hardcoded MCX-free cQQ sequences can be regenerated in a future plan.
 
     // 1-bit special case: single CCX, no ancilla
     if (bits == 1) {
@@ -617,10 +642,11 @@ sequence_t *toffoli_cQQ_add(int bits) {
     }
 
     // General case (bits >= 2): controlled CDKM ripple-carry adder
-    // Forward sweep: n cMAJ calls (3n layers)
-    // Reverse sweep: n cUMA calls (3n layers)
-    // Total: 6n layers
-    int num_layers = 6 * bits;
+    // Phase 74-03: MCX(3) decomposed via AND-ancilla.
+    // Forward sweep: n decomposed cMAJ calls (5n layers)
+    // Reverse sweep: n decomposed cUMA calls (5n layers)
+    // Total: 10n layers
+    int num_layers = 10 * bits;
 
     sequence_t *seq = alloc_sequence(num_layers);
     if (seq == NULL)
@@ -629,23 +655,24 @@ sequence_t *toffoli_cQQ_add(int bits) {
     int layer = 0;
     int ancilla = 2 * bits;      // ancilla carry qubit index
     int ext_ctrl = 2 * bits + 1; // external control qubit
+    int and_anc = 2 * bits + 2;  // AND-ancilla for MCX decomposition
 
     // Forward cMAJ sweep
-    // First: cMAJ(ancilla, b[0], a[0], ext_ctrl)
-    emit_cMAJ(seq, &layer, ancilla, bits + 0, 0, ext_ctrl);
+    // First: cMAJ(ancilla, b[0], a[0], ext_ctrl, and_anc)
+    emit_cMAJ(seq, &layer, ancilla, bits + 0, 0, ext_ctrl, and_anc);
 
-    // Remaining: cMAJ(a[i-1], b[i], a[i], ext_ctrl) for i = 1..bits-1
+    // Remaining: cMAJ(a[i-1], b[i], a[i], ext_ctrl, and_anc) for i = 1..bits-1
     for (int i = 1; i < bits; i++) {
-        emit_cMAJ(seq, &layer, i - 1, bits + i, i, ext_ctrl);
+        emit_cMAJ(seq, &layer, i - 1, bits + i, i, ext_ctrl, and_anc);
     }
 
     // Reverse cUMA sweep
     for (int i = bits - 1; i >= 1; i--) {
-        emit_cUMA(seq, &layer, i - 1, bits + i, i, ext_ctrl);
+        emit_cUMA(seq, &layer, i - 1, bits + i, i, ext_ctrl, and_anc);
     }
 
-    // Last: cUMA(ancilla, b[0], a[0], ext_ctrl)
-    emit_cUMA(seq, &layer, ancilla, bits + 0, 0, ext_ctrl);
+    // Last: cUMA(ancilla, b[0], a[0], ext_ctrl, and_anc)
+    emit_cUMA(seq, &layer, ancilla, bits + 0, 0, ext_ctrl, and_anc);
 
     seq->used_layer = layer;
 
@@ -662,8 +689,10 @@ sequence_t *toffoli_cCQ_add(int bits, int64_t value) {
     //   [bits..2*bits-1]  = self register (target, modified: self += value)
     //   [2*bits]          = carry ancilla (bits >= 2 only)
     //   [2*bits+1]        = external control qubit
+    //   [2*bits+2]        = AND-ancilla for MCX decomposition (bits >= 2 only)
     //
     // Phase 73: Inline cCQ generator with classical-bit gate simplification.
+    // Phase 74-03: MCX(3) decomposed via AND-ancilla.
     // For bit=0 positions, temp[i]=|0> unconditionally -> eliminate CCX gates.
     // For bit=1 positions, CX-init entangles temp[i] -> fold init, emit standard cMAJ.
     // NOT cached (value-dependent).
@@ -673,13 +702,8 @@ sequence_t *toffoli_cCQ_add(int bits, int64_t value) {
         return NULL;
     }
 
-    // Use hardcoded controlled increment sequence for value=1, widths 1-8
-    if (value == 1 && bits <= TOFFOLI_HARDCODED_MAX_WIDTH) {
-        const sequence_t *hardcoded = get_hardcoded_toffoli_cCQ_inc(bits);
-        if (hardcoded != NULL) {
-            return copy_hardcoded_sequence(hardcoded);
-        }
-    }
+    // Phase 74-03: Skip hardcoded cCQ sequences (they contain MCX gates).
+    // Dynamic generator now produces MCX-free sequences via AND-ancilla decomposition.
 
     // Convert value to binary (MSB-first: bin[0]=MSB, bin[bits-1]=LSB)
     int *bin = two_complement(value, bits);
@@ -717,13 +741,15 @@ sequence_t *toffoli_cCQ_add(int bits, int64_t value) {
     }
 
     // General case (bits >= 2): Inline cCQ CDKM with classical-bit simplification
+    // Phase 74-03: MCX(3) decomposed via AND-ancilla.
     //
     // Forward sweep: emit_cCQ_MAJ for each position (simplified based on classical bits)
-    // Reverse sweep: emit_cUMA for each position (standard, no simplification)
+    // Reverse sweep: emit_cUMA for each position (with AND-ancilla decomposition)
     // Cleanup: CX(temp[i], ext_ctrl) for each bit=1 position
 
     int num_layers = compute_cCQ_layer_count(bits, bin);
     int ext_ctrl = 2 * bits + 1; // external control qubit
+    int and_anc = 2 * bits + 2;  // AND-ancilla for MCX decomposition
 
     sequence_t *seq = alloc_sequence(num_layers);
     if (seq == NULL) {
@@ -738,20 +764,20 @@ sequence_t *toffoli_cCQ_add(int bits, int64_t value) {
     // First cMAJ: a=carry (known |0>), b=self[0], c=temp[0]
     emit_cCQ_MAJ(seq, &layer, carry, bits + 0, 0, bin[bits - 1], /* classical bit[0] (LSB) */
                  1,                                              /* a_known_zero = 1 */
-                 ext_ctrl);
+                 ext_ctrl, and_anc);
 
     // Remaining cMAJs: a=temp[i-1] (quantum after cMAJ), b=self[i], c=temp[i]
     for (int i = 1; i < bits; i++) {
         emit_cCQ_MAJ(seq, &layer, i - 1, bits + i, i, bin[bits - 1 - i], /* classical bit[i] */
                      0,                                                  /* a_known_zero = 0 */
-                     ext_ctrl);
+                     ext_ctrl, and_anc);
     }
 
-    // Reverse cUMA sweep (standard, no simplification)
+    // Reverse cUMA sweep (with AND-ancilla decomposition)
     for (int i = bits - 1; i >= 1; i--) {
-        emit_cUMA(seq, &layer, i - 1, bits + i, i, ext_ctrl);
+        emit_cUMA(seq, &layer, i - 1, bits + i, i, ext_ctrl, and_anc);
     }
-    emit_cUMA(seq, &layer, carry, bits + 0, 0, ext_ctrl);
+    emit_cUMA(seq, &layer, carry, bits + 0, 0, ext_ctrl, and_anc);
 
     // Cleanup: CX(temp[i], ext_ctrl) for each bit=1 position
     // CDKM preserves temp register, so temp[i] is still entangled with ext_ctrl.

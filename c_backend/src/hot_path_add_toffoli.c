@@ -160,15 +160,18 @@ static void toffoli_qq_cont(circuit_t *circ, const unsigned int *self_qubits, in
         tqa[result_bits + i] = self_qubits[i];
     }
 
-    /* Controlled CLA dispatch: forward only */
+    /* Controlled CLA dispatch: forward only.
+     * Phase 74-03: +1 AND-ancilla for MCX decomposition in controlled CLA. */
     if (!invert && circ->cla_override == 0 && result_bits >= CLA_THRESHOLD) {
         int cla_ancilla_count = compute_cla_ancilla_count(circ, result_bits);
-        qubit_t cla_ancilla = allocator_alloc(circ->allocator, cla_ancilla_count, true);
+        /* Allocate CLA ancilla + 1 AND-ancilla */
+        qubit_t cla_ancilla = allocator_alloc(circ->allocator, cla_ancilla_count + 1, true);
         if (cla_ancilla != (qubit_t)-1) {
             for (i = 0; i < cla_ancilla_count; i++) {
                 tqa[2 * result_bits + i] = cla_ancilla + i;
             }
             tqa[2 * result_bits + cla_ancilla_count] = control_qubit;
+            tqa[2 * result_bits + cla_ancilla_count + 1] = cla_ancilla + cla_ancilla_count;
 
             if (circ->qubit_saving) {
                 toff_seq = toffoli_cQQ_add_bk(result_bits);
@@ -177,28 +180,29 @@ static void toffoli_qq_cont(circuit_t *circ, const unsigned int *self_qubits, in
             }
             if (toff_seq != NULL) {
                 run_instruction(toff_seq, tqa, invert, circ);
-                allocator_free(circ->allocator, cla_ancilla, cla_ancilla_count);
+                allocator_free(circ->allocator, cla_ancilla, cla_ancilla_count + 1);
                 return;
             }
-            allocator_free(circ->allocator, cla_ancilla, cla_ancilla_count);
+            allocator_free(circ->allocator, cla_ancilla, cla_ancilla_count + 1);
         }
     }
 
-    /* Controlled RCA (CDKM) path: 1 ancilla for carry */
-    qubit_t ancilla_qubit = allocator_alloc(circ->allocator, 1, true);
+    /* Controlled RCA (CDKM) path: 1 carry ancilla + 1 AND-ancilla (Phase 74-03) */
+    qubit_t ancilla_qubit = allocator_alloc(circ->allocator, 2, true);
     if (ancilla_qubit == (qubit_t)-1)
         return;
 
-    tqa[2 * result_bits] = ancilla_qubit;
-    tqa[2 * result_bits + 1] = control_qubit;
+    tqa[2 * result_bits] = ancilla_qubit;         /* carry ancilla */
+    tqa[2 * result_bits + 1] = control_qubit;     /* ext_ctrl */
+    tqa[2 * result_bits + 2] = ancilla_qubit + 1; /* AND-ancilla */
 
     toff_seq = toffoli_cQQ_add(result_bits);
     if (toff_seq == NULL) {
-        allocator_free(circ->allocator, ancilla_qubit, 1);
+        allocator_free(circ->allocator, ancilla_qubit, 2);
         return;
     }
     run_instruction(toff_seq, tqa, invert, circ);
-    allocator_free(circ->allocator, ancilla_qubit, 1);
+    allocator_free(circ->allocator, ancilla_qubit, 2);
 }
 
 /**
@@ -329,10 +333,16 @@ static void toffoli_cq_cont(circuit_t *circ, const unsigned int *self_qubits, in
         return;
     }
 
-    /* Controlled CQ CLA dispatch: forward only */
+    /* Controlled CQ CLA dispatch: forward only.
+     * Phase 74-03: cCQ BK CLA copies from cQQ BK which now has decomposed MCX.
+     * The cCQ BK simplified phases (A, E, F) don't produce MCX because
+     * classical-bit simplification eliminates them. Only phases B-D (copied from
+     * cQQ BK) contain decomposed gates, and the AND-ancilla qubit position
+     * is ext_ctrl + 1 = 2*bits + cla_ancilla + 1. We need to allocate it. */
     if (!invert && circ->cla_override == 0 && self_bits >= CLA_THRESHOLD) {
         int cla_ancilla_count = compute_cla_ancilla_count(circ, self_bits);
-        int total_cla_ancilla = self_bits + cla_ancilla_count;
+        /* +1 AND-ancilla for MCX decomposition in cQQ BK phases B-D */
+        int total_cla_ancilla = self_bits + cla_ancilla_count + 1;
         qubit_t cla_start = allocator_alloc(circ->allocator, total_cla_ancilla, true);
         if (cla_start != (qubit_t)-1) {
             unsigned int cla_qa[256];
@@ -346,6 +356,8 @@ static void toffoli_cq_cont(circuit_t *circ, const unsigned int *self_qubits, in
                 cla_qa[2 * self_bits + i] = cla_start + self_bits + i;
             }
             cla_qa[2 * self_bits + cla_ancilla_count] = control_qubit;
+            cla_qa[2 * self_bits + cla_ancilla_count + 1] =
+                cla_start + self_bits + cla_ancilla_count;
 
             if (circ->qubit_saving) {
                 toff_seq = toffoli_cCQ_add_bk(self_bits, classical_value);
@@ -362,9 +374,9 @@ static void toffoli_cq_cont(circuit_t *circ, const unsigned int *self_qubits, in
         }
     }
 
-    /* Controlled RCA (CDKM) CQ path: self_bits + 1 ancilla */
+    /* Controlled RCA (CDKM) CQ path: self_bits + 2 ancilla (Phase 74-03: +1 for AND-ancilla) */
     {
-        qubit_t temp_start = allocator_alloc(circ->allocator, self_bits + 1, true);
+        qubit_t temp_start = allocator_alloc(circ->allocator, self_bits + 2, true);
         if (temp_start == (qubit_t)-1)
             return;
 
@@ -375,17 +387,18 @@ static void toffoli_cq_cont(circuit_t *circ, const unsigned int *self_qubits, in
         for (i = 0; i < self_bits; i++) {
             tqa[self_bits + i] = self_qubits[i];
         }
-        tqa[2 * self_bits] = temp_start + self_bits;
-        tqa[2 * self_bits + 1] = control_qubit;
+        tqa[2 * self_bits] = temp_start + self_bits;         /* carry ancilla */
+        tqa[2 * self_bits + 1] = control_qubit;              /* ext_ctrl */
+        tqa[2 * self_bits + 2] = temp_start + self_bits + 1; /* AND-ancilla */
 
         toff_seq = toffoli_cCQ_add(self_bits, classical_value);
         if (toff_seq == NULL) {
-            allocator_free(circ->allocator, temp_start, self_bits + 1);
+            allocator_free(circ->allocator, temp_start, self_bits + 2);
             return;
         }
         run_instruction(toff_seq, tqa, invert, circ);
         toffoli_sequence_free(toff_seq);
-        allocator_free(circ->allocator, temp_start, self_bits + 1);
+        allocator_free(circ->allocator, temp_start, self_bits + 2);
     }
 }
 
