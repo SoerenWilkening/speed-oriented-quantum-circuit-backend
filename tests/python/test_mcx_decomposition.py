@@ -19,9 +19,9 @@ Test coverage:
 import quantum_language as ql
 
 
-def _get_mcx_count():
-    """Return the number of MCX (3+ control) gates in the current circuit."""
-    gc = ql.circuit().gate_counts
+def _get_mcx_count(circ):
+    """Return the number of MCX (3+ control) gates in the given circuit."""
+    gc = circ.gate_counts
     return gc.get("other", 0)
 
 
@@ -35,30 +35,30 @@ class TestToffoliAddQQNoMCX:
 
     def test_add_qq_width_2(self):
         """Width-2 QQ addition: no MCX."""
-        ql.circuit()
+        c = ql.circuit()
         ql.option("fault_tolerant", True)
         a = ql.qint(1, width=2)
         b = ql.qint(1, width=2)
         a += b
-        assert _get_mcx_count() == 0, f"MCX gates found: {_get_mcx_count()}"
+        assert _get_mcx_count(c) == 0, f"MCX gates found: {_get_mcx_count(c)}"
 
     def test_add_qq_width_3(self):
         """Width-3 QQ addition: no MCX."""
-        ql.circuit()
+        c = ql.circuit()
         ql.option("fault_tolerant", True)
         a = ql.qint(1, width=3)
         b = ql.qint(1, width=3)
         a += b
-        assert _get_mcx_count() == 0, f"MCX gates found: {_get_mcx_count()}"
+        assert _get_mcx_count(c) == 0, f"MCX gates found: {_get_mcx_count(c)}"
 
     def test_add_qq_width_4(self):
         """Width-4 QQ addition (CLA threshold): no MCX."""
-        ql.circuit()
+        c = ql.circuit()
         ql.option("fault_tolerant", True)
         a = ql.qint(1, width=4)
         b = ql.qint(1, width=4)
         a += b
-        assert _get_mcx_count() == 0, f"MCX gates found: {_get_mcx_count()}"
+        assert _get_mcx_count(c) == 0, f"MCX gates found: {_get_mcx_count(c)}"
 
 
 class TestToffoliAddCQNoMCX:
@@ -66,11 +66,11 @@ class TestToffoliAddCQNoMCX:
 
     def test_add_cq_width_3(self):
         """Width-3 CQ addition: no MCX."""
-        ql.circuit()
+        c = ql.circuit()
         ql.option("fault_tolerant", True)
         a = ql.qint(0, width=3)
         a += 3
-        assert _get_mcx_count() == 0, f"MCX gates found: {_get_mcx_count()}"
+        assert _get_mcx_count(c) == 0, f"MCX gates found: {_get_mcx_count(c)}"
 
 
 # ============================================================================
@@ -87,45 +87,45 @@ class TestControlledToffoliAddNoMCX:
 
     def test_controlled_add_qq_width_2(self):
         """Controlled QQ addition width-2: no MCX."""
-        ql.circuit()
+        c = ql.circuit()
         ql.option("fault_tolerant", True)
         a = ql.qint(1, width=2)
         b = ql.qint(1, width=2)
         ctrl = ql.qbool(True)
         with ctrl:
             a += b
-        assert _get_mcx_count() == 0, f"MCX gates found: {_get_mcx_count()}"
+        assert _get_mcx_count(c) == 0, f"MCX gates found: {_get_mcx_count(c)}"
 
     def test_controlled_add_qq_width_3(self):
         """Controlled QQ addition width-3: no MCX."""
-        ql.circuit()
+        c = ql.circuit()
         ql.option("fault_tolerant", True)
         a = ql.qint(1, width=3)
         b = ql.qint(1, width=3)
         ctrl = ql.qbool(True)
         with ctrl:
             a += b
-        assert _get_mcx_count() == 0, f"MCX gates found: {_get_mcx_count()}"
+        assert _get_mcx_count(c) == 0, f"MCX gates found: {_get_mcx_count(c)}"
 
     def test_controlled_add_cq_width_2(self):
         """Controlled CQ addition width-2: no MCX."""
-        ql.circuit()
+        c = ql.circuit()
         ql.option("fault_tolerant", True)
         a = ql.qint(0, width=2)
         ctrl = ql.qbool(True)
         with ctrl:
             a += 1
-        assert _get_mcx_count() == 0, f"MCX gates found: {_get_mcx_count()}"
+        assert _get_mcx_count(c) == 0, f"MCX gates found: {_get_mcx_count(c)}"
 
     def test_controlled_add_cq_width_3(self):
         """Controlled CQ addition width-3: no MCX."""
-        ql.circuit()
+        c = ql.circuit()
         ql.option("fault_tolerant", True)
         a = ql.qint(0, width=3)
         ctrl = ql.qbool(True)
         with ctrl:
             a += 2
-        assert _get_mcx_count() == 0, f"MCX gates found: {_get_mcx_count()}"
+        assert _get_mcx_count(c) == 0, f"MCX gates found: {_get_mcx_count(c)}"
 
 
 # ============================================================================
@@ -138,20 +138,20 @@ class TestToffoliMulNoMCX:
 
     def test_mul_qq_width_2(self):
         """Width-2 QQ multiplication: no MCX."""
-        ql.circuit()
+        c = ql.circuit()
         ql.option("fault_tolerant", True)
         a = ql.qint(1, width=2)
         b = ql.qint(1, width=2)
         _ = a * b
-        assert _get_mcx_count() == 0, f"MCX gates found: {_get_mcx_count()}"
+        assert _get_mcx_count(c) == 0, f"MCX gates found: {_get_mcx_count(c)}"
 
     def test_mul_cq_width_2(self):
         """Width-2 CQ multiplication: no MCX."""
-        ql.circuit()
+        c = ql.circuit()
         ql.option("fault_tolerant", True)
         a = ql.qint(1, width=2)
         _ = a * 2
-        assert _get_mcx_count() == 0, f"MCX gates found: {_get_mcx_count()}"
+        assert _get_mcx_count(c) == 0, f"MCX gates found: {_get_mcx_count(c)}"
 
 
 # ============================================================================
@@ -168,24 +168,24 @@ class TestControlledToffoliMulNoMCX:
 
     def test_controlled_mul_qq_width_2(self):
         """Controlled QQ multiplication width-2: no MCX."""
-        ql.circuit()
+        c = ql.circuit()
         ql.option("fault_tolerant", True)
         a = ql.qint(1, width=2)
         b = ql.qint(1, width=2)
         ctrl = ql.qbool(True)
         with ctrl:
             _ = a * b
-        assert _get_mcx_count() == 0, f"MCX gates found: {_get_mcx_count()}"
+        assert _get_mcx_count(c) == 0, f"MCX gates found: {_get_mcx_count(c)}"
 
     def test_controlled_mul_cq_width_2(self):
         """Controlled CQ multiplication width-2: no MCX."""
-        ql.circuit()
+        c = ql.circuit()
         ql.option("fault_tolerant", True)
         a = ql.qint(1, width=2)
         ctrl = ql.qbool(True)
         with ctrl:
             _ = a * 3
-        assert _get_mcx_count() == 0, f"MCX gates found: {_get_mcx_count()}"
+        assert _get_mcx_count(c) == 0, f"MCX gates found: {_get_mcx_count(c)}"
 
 
 # ============================================================================
@@ -202,52 +202,52 @@ class TestEqualityCQNoMCX:
 
     def test_equality_cq_width_1(self):
         """Width-1 equality: uses CX, no MCX possible."""
-        ql.circuit()
+        c = ql.circuit()
         a = ql.qint(1, width=1)
         _ = a == 1
-        assert _get_mcx_count() == 0, f"MCX gates found: {_get_mcx_count()}"
+        assert _get_mcx_count(c) == 0, f"MCX gates found: {_get_mcx_count(c)}"
 
     def test_equality_cq_width_2(self):
         """Width-2 equality: uses CCX, no MCX needed."""
-        ql.circuit()
+        c = ql.circuit()
         a = ql.qint(1, width=2)
         _ = a == 1
-        assert _get_mcx_count() == 0, f"MCX gates found: {_get_mcx_count()}"
+        assert _get_mcx_count(c) == 0, f"MCX gates found: {_get_mcx_count(c)}"
 
     def test_equality_cq_width_3(self):
         """Width-3 equality: MCX(3) decomposed to AND-ancilla CCX."""
-        ql.circuit()
+        c = ql.circuit()
         a = ql.qint(1, width=3)
         _ = a == 1
-        assert _get_mcx_count() == 0, f"MCX gates found: {_get_mcx_count()}"
+        assert _get_mcx_count(c) == 0, f"MCX gates found: {_get_mcx_count(c)}"
 
     def test_equality_cq_width_4(self):
         """Width-4 equality: MCX(4) decomposed recursively."""
-        ql.circuit()
+        c = ql.circuit()
         a = ql.qint(5, width=4)
         _ = a == 5
-        assert _get_mcx_count() == 0, f"MCX gates found: {_get_mcx_count()}"
+        assert _get_mcx_count(c) == 0, f"MCX gates found: {_get_mcx_count(c)}"
 
     def test_equality_cq_width_8(self):
         """Width-8 equality: MCX(8) decomposed recursively."""
-        ql.circuit()
+        c = ql.circuit()
         a = ql.qint(42, width=8)
         _ = a == 42
-        assert _get_mcx_count() == 0, f"MCX gates found: {_get_mcx_count()}"
+        assert _get_mcx_count(c) == 0, f"MCX gates found: {_get_mcx_count(c)}"
 
     def test_equality_cq_all_zeros(self):
         """Equality with zero (all bits need X flip): no MCX."""
-        ql.circuit()
+        c = ql.circuit()
         a = ql.qint(0, width=4)
         _ = a == 0
-        assert _get_mcx_count() == 0, f"MCX gates found: {_get_mcx_count()}"
+        assert _get_mcx_count(c) == 0, f"MCX gates found: {_get_mcx_count(c)}"
 
     def test_equality_cq_all_ones(self):
         """Equality with max value (no X flips needed): no MCX."""
-        ql.circuit()
+        c = ql.circuit()
         a = ql.qint(15, width=4)
         _ = a == 15
-        assert _get_mcx_count() == 0, f"MCX gates found: {_get_mcx_count()}"
+        assert _get_mcx_count(c) == 0, f"MCX gates found: {_get_mcx_count(c)}"
 
 
 # ============================================================================
@@ -264,30 +264,30 @@ class TestControlledEqualityNoMCX:
 
     def test_controlled_equality_width_2(self):
         """Controlled width-2 equality: MCX(3) decomposed."""
-        ql.circuit()
+        c = ql.circuit()
         a = ql.qint(1, width=2)
         ctrl = ql.qbool(True)
         with ctrl:
             _ = a == 1
-        assert _get_mcx_count() == 0, f"MCX gates found: {_get_mcx_count()}"
+        assert _get_mcx_count(c) == 0, f"MCX gates found: {_get_mcx_count(c)}"
 
     def test_controlled_equality_width_3(self):
         """Controlled width-3 equality: MCX(4) decomposed."""
-        ql.circuit()
+        c = ql.circuit()
         a = ql.qint(3, width=3)
         ctrl = ql.qbool(True)
         with ctrl:
             _ = a == 3
-        assert _get_mcx_count() == 0, f"MCX gates found: {_get_mcx_count()}"
+        assert _get_mcx_count(c) == 0, f"MCX gates found: {_get_mcx_count(c)}"
 
     def test_controlled_equality_width_4(self):
         """Controlled width-4 equality: MCX(5) decomposed."""
-        ql.circuit()
+        c = ql.circuit()
         a = ql.qint(7, width=4)
         ctrl = ql.qbool(True)
         with ctrl:
             _ = a == 7
-        assert _get_mcx_count() == 0, f"MCX gates found: {_get_mcx_count()}"
+        assert _get_mcx_count(c) == 0, f"MCX gates found: {_get_mcx_count(c)}"
 
 
 # ============================================================================
@@ -304,7 +304,7 @@ class TestCLAControlledNoMCX:
 
     def test_cla_controlled_width_4(self):
         """Controlled CLA width-4: no MCX."""
-        ql.circuit()
+        c = ql.circuit()
         ql.option("fault_tolerant", True)
         ql.option("cla", True)
         a = ql.qint(1, width=4)
@@ -312,4 +312,4 @@ class TestCLAControlledNoMCX:
         ctrl = ql.qbool(True)
         with ctrl:
             a += b
-        assert _get_mcx_count() == 0, f"MCX gates found: {_get_mcx_count()}"
+        assert _get_mcx_count(c) == 0, f"MCX gates found: {_get_mcx_count(c)}"
