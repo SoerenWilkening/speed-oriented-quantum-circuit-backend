@@ -37,8 +37,10 @@ c_sources = [
     os.path.join(PROJECT_ROOT, "c_backend", "src", "hot_path_mul.c"),
     os.path.join(PROJECT_ROOT, "c_backend", "src", "hot_path_add.c"),
     os.path.join(PROJECT_ROOT, "c_backend", "src", "hot_path_xor.c"),
-    # Toffoli arithmetic (Phase 66, 68)
-    os.path.join(PROJECT_ROOT, "c_backend", "src", "ToffoliAddition.c"),
+    # Toffoli arithmetic (Phase 66, 68, 74 split)
+    os.path.join(PROJECT_ROOT, "c_backend", "src", "ToffoliAdditionHelpers.c"),
+    os.path.join(PROJECT_ROOT, "c_backend", "src", "ToffoliAdditionCDKM.c"),
+    os.path.join(PROJECT_ROOT, "c_backend", "src", "ToffoliAdditionCLA.c"),
     os.path.join(PROJECT_ROOT, "c_backend", "src", "ToffoliMultiplication.c"),
     # Hardcoded Toffoli addition sequences: 8 per-width files + dispatch
     *[
