@@ -135,7 +135,11 @@ class TestOptimizedMulGateCounts:
 
     @pytest.mark.parametrize("width", [2, 3, 4])
     def test_no_mcx_3plus_in_qq_mul(self, width):
-        """Optimized QQ multiplication should have no MCX gates with 3+ controls."""
+        """Optimized QQ multiplication should have no MCX gates with 3+ controls.
+
+        MCX gates (3+ controls) are now counted under 'other' in gate_counts.
+        After AND-ancilla decomposition, there should be zero of them.
+        """
         gc.collect()
         c = ql.circuit()
         _enable_toffoli()
@@ -144,8 +148,10 @@ class TestOptimizedMulGateCounts:
         result = a * b
         counts = c.gate_counts
 
-        assert counts["MCX"] == 0, (
-            f"Width {width}: found {counts['MCX']} MCX(3+ control) gates "
+        # MCX (3+ controls) now counted under 'other'; should be zero
+        # after AND-ancilla decomposition
+        assert counts["other"] == 0, (
+            f"Width {width}: found {counts['other']} other gates "
             f"(expected 0 after AND-ancilla decomposition)"
         )
 
@@ -180,9 +186,9 @@ class TestOptimizedMulGateCounts:
 
     @pytest.mark.parametrize("width", [2, 3, 4])
     def test_t_count_equals_7_times_ccx(self, width):
-        """T-count = 7 * (CCX + MCX) for Toffoli multiplication.
+        """T-count = 7 * CCX for Toffoli multiplication.
 
-        After optimization, MCX should be 0, so T = 7 * CCX.
+        After AND-ancilla optimization, no MCX gates remain, so T = 7 * CCX.
         """
         gc.collect()
         c = ql.circuit()
@@ -192,10 +198,9 @@ class TestOptimizedMulGateCounts:
         result = a * b
         counts = c.gate_counts
 
-        expected_t = 7 * (counts["CCX"] + counts["MCX"])
+        expected_t = 7 * counts["CCX"]
         assert counts["T"] == expected_t, (
-            f"Width {width}: T={counts['T']} != "
-            f"7*(CCX+MCX)={expected_t} (CCX={counts['CCX']}, MCX={counts['MCX']})"
+            f"Width {width}: T={counts['T']} != 7*CCX={expected_t} (CCX={counts['CCX']})"
         )
 
         _ = (a, b, result)

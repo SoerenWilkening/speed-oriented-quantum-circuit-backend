@@ -4,6 +4,7 @@ Tests for CIRC-01, CIRC-02, CIRC-03, CIRC-04 requirements.
 """
 
 import pytest
+
 from quantum_language import circuit, qint
 
 
@@ -36,7 +37,19 @@ class TestCircuitStatistics:
         assert hasattr(c, "gate_counts")
         counts = c.gate_counts
         assert isinstance(counts, dict)
-        expected_keys = {"X", "Y", "Z", "H", "P", "CNOT", "CCX", "other"}
+        expected_keys = {
+            "X",
+            "Y",
+            "Z",
+            "H",
+            "P",
+            "CNOT",
+            "CCX",
+            "T_gates",
+            "Tdg_gates",
+            "other",
+            "T",
+        }
         assert set(counts.keys()) == expected_keys
 
     def test_stats_increase_with_operations(self):
@@ -64,7 +77,8 @@ class TestCircuitStatistics:
         _ = a + b
 
         counts = c.gate_counts
-        total = sum(counts.values())
+        # 'T' is a derived field (total T-cost), not an independent gate count
+        total = sum(v for k, v in counts.items() if k != "T")
         assert total == c.gate_count
 
 

@@ -127,7 +127,7 @@ def _verify_qq_sub(a_val, b_val, width):
 
 
 class TestTCount:
-    """Verify T-count appears in gate_counts and equals 7 * (CCX + MCX)."""
+    """Verify T-count appears in gate_counts and equals 7 * CCX."""
 
     def test_t_count_in_gate_counts(self):
         """gate_counts dict has 'T' key."""
@@ -138,19 +138,17 @@ class TestTCount:
         counts = c.gate_counts
         assert "T" in counts, "gate_counts missing 'T' key"
 
-    def test_t_count_equals_7_times_ccx_plus_mcx(self):
-        """T = 7 * (CCX + MCX) for Toffoli arithmetic."""
+    def test_t_count_equals_7_times_ccx(self):
+        """T = 7 * CCX for Toffoli arithmetic (no decomposition)."""
         c = ql.circuit()
         a = ql.qint(0, width=4)
         b = ql.qint(0, width=4)
         a += b
         counts = c.gate_counts
-        assert counts["T"] == 7 * (counts["CCX"] + counts["MCX"]), (
-            f"T={counts['T']} != 7*(CCX+MCX)={7 * (counts['CCX'] + counts['MCX'])}"
-        )
+        assert counts["T"] == 7 * counts["CCX"], f"T={counts['T']} != 7*CCX={7 * counts['CCX']}"
 
     def test_t_count_zero_for_qft(self):
-        """T = 0 for QFT arithmetic (no CCX/MCX gates)."""
+        """T = 0 for QFT arithmetic (no CCX gates)."""
         c = ql.circuit()
         ql.option("fault_tolerant", False)
         a = ql.qint(0, width=4)

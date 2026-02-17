@@ -59,9 +59,11 @@ typedef struct {
     size_t p_gates;     // Phase gates
     size_t cx_gates;    // Controlled-X (CNOT)
     size_t ccx_gates;   // Toffoli (CCX, exactly 2 controls)
-    size_t mcx_gates;   // Multi-controlled X (3+ controls)
+    size_t t_gates;     // T gates (actual T_GATE count)
+    size_t tdg_gates;   // Tdg gates (actual TDG_GATE count)
     size_t other_gates; // Other gate types
-    size_t t_count;     // T-gate count (7 * (ccx_gates + mcx_gates) for fault-tolerant cost)
+    size_t t_count;     // Total T-cost: t_gates + tdg_gates when decomposed, or 7 * ccx_gates as
+                        // estimate when not
 } gate_counts_t;
 
 /**

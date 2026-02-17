@@ -45,7 +45,8 @@ gate_counts_t circuit_gate_counts(circuit_t *circ) {
                 else if (g->NumControls == 2)
                     counts.ccx_gates++; // Exactly 2 controls = Toffoli
                 else
-                    counts.mcx_gates++; // 3+ controls = multi-controlled X
+                    counts.other_gates++; // 3+ controls = other (MCX should not appear in
+                                          // decomposed mode)
                 break;
             case Y:
                 counts.y_gates++;
@@ -59,6 +60,12 @@ gate_counts_t circuit_gate_counts(circuit_t *circ) {
             case P:
                 counts.p_gates++;
                 break;
+            case T_GATE:
+                counts.t_gates++;
+                break;
+            case TDG_GATE:
+                counts.tdg_gates++;
+                break;
             default:
                 counts.other_gates++;
                 break;
@@ -66,8 +73,14 @@ gate_counts_t circuit_gate_counts(circuit_t *circ) {
         }
     }
 
-    // T-count: each Toffoli/MCX decomposes to 7 T gates (minimum)
-    counts.t_count = 7 * (counts.ccx_gates + counts.mcx_gates);
+    // T-count: actual T/Tdg gates if present, otherwise estimate from CCX count
+    if (counts.t_gates > 0 || counts.tdg_gates > 0) {
+        // Actual T/Tdg gates present (toffoli_decompose was on)
+        counts.t_count = counts.t_gates + counts.tdg_gates;
+    } else {
+        // Estimate from CCX count (each CCX = 7 T gates)
+        counts.t_count = 7 * counts.ccx_gates;
+    }
 
     return counts;
 }

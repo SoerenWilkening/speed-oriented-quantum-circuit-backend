@@ -171,6 +171,7 @@ def option(key: str, value=None):
 		- 'qubit_saving': Enable eager uncomputation (bool)
 		- 'fault_tolerant': Enable Toffoli-based arithmetic (bool)
 		- 'cla': Enable carry look-ahead adder dispatch (bool)
+		- 'toffoli_decompose': Decompose CCX gates to Clifford+T (bool)
 	value : bool, optional
 		New value for option. If None, returns current value.
 
@@ -230,6 +231,12 @@ def option(key: str, value=None):
 		if not isinstance(value, bool):
 			raise ValueError("cla option requires bool value")
 		(<circuit_s*><circuit_t*><unsigned long long>_get_circuit()).cla_override = 0 if value else 1
+	elif key == 'toffoli_decompose':
+		if value is None:
+			return (<circuit_s*><circuit_t*><unsigned long long>_get_circuit()).toffoli_decompose == 1
+		if not isinstance(value, bool):
+			raise ValueError("toffoli_decompose option requires bool value")
+		(<circuit_s*><circuit_t*><unsigned long long>_get_circuit()).toffoli_decompose = 1 if value else 0
 	else:
 		raise ValueError(f"Unknown option: {key}")
 
@@ -425,7 +432,7 @@ cdef class circuit:
 		-------
 		dict
 			Gate type to count mapping with keys 'X', 'Y', 'Z', 'H', 'P',
-			'CNOT', 'CCX', 'MCX', 'other', 'T'.
+			'CNOT', 'CCX', 'T_gates', 'Tdg_gates', 'other', 'T'.
 
 		Examples
 		--------
@@ -443,7 +450,8 @@ cdef class circuit:
 			'P': counts.p_gates,
 			'CNOT': counts.cx_gates,
 			'CCX': counts.ccx_gates,
-			'MCX': counts.mcx_gates,
+			'T_gates': counts.t_gates,
+			'Tdg_gates': counts.tdg_gates,
 			'other': counts.other_gates,
 			'T': counts.t_count,
 		}

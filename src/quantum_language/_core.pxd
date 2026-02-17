@@ -6,7 +6,7 @@ from libc.stdint cimport int64_t
 cdef extern from "types.h":
 	ctypedef unsigned int qubit_t
 	ctypedef enum Standardgate_t:
-		X, Y, Z, R, H, Rx, Ry, Rz, P, M
+		X, Y, Z, R, H, Rx, Ry, Rz, P, M, T_GATE, TDG_GATE
 
 	ctypedef struct gate_t:
 		qubit_t Control[2]  # MAXCONTROLS = 2
@@ -135,6 +135,7 @@ cdef extern from "qubit_allocator.h":
 		unsigned int arithmetic_mode    # 0=ARITH_QFT, 1=ARITH_TOFFOLI
 		int cla_override               # 0=auto CLA, 1=force RCA
 		int qubit_saving               # 0=off (KS), 1=on (BK)
+		int toffoli_decompose          # 0=off (CCX in output), 1=on (decompose to Clifford+T)
 
 	ctypedef struct allocator_stats_t:
 		unsigned int peak_allocated
@@ -166,7 +167,8 @@ cdef extern from "circuit_stats.h":
 		size_t p_gates
 		size_t cx_gates
 		size_t ccx_gates
-		size_t mcx_gates
+		size_t t_gates
+		size_t tdg_gates
 		size_t other_gates
 		size_t t_count
 

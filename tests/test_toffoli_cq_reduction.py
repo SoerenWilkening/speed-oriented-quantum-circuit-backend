@@ -589,9 +589,7 @@ class TestHardcodedIncGateCount:
         a += 1
         counts = c.gate_counts
 
-        total_gates = (
-            counts.get("X", 0) + counts.get("CNOT", 0) + counts.get("CCX", 0) + counts.get("MCX", 0)
-        )
+        total_gates = counts.get("X", 0) + counts.get("CNOT", 0) + counts.get("CCX", 0)
         # After optimizer: 4 X + 8 CNOT + 6 CCX = 18
         assert total_gates == 18, f"CQ inc W4: total gates={total_gates}, expected 18"
         # T-count: 6 CCX * 7T = 42T
