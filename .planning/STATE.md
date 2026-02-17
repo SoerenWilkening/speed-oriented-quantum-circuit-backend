@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v3.0 Fault-Tolerant Arithmetic -- Phase 74 complete (5/5 plans). Milestone v3.0 complete.
+**Current focus:** Phase 75 Clifford+T Decomposed Sequence Generation -- Plan 02 complete (2/3 plans).
 
 ## Current Position
 
-Phase: 74 of 74 (MCX/CCX Gate Decomposition & Sequence Refactoring)
-Plan: 5 of 5 complete
-Status: Phase 74 complete. All 5 plans executed (waves 1-3 done). v3.0 Fault-Tolerant Arithmetic milestone complete.
-Last activity: 2026-02-17 -- Completed 74-05 (hardcoded MCX-decomposed cQQ sequences)
+Phase: 75 (Clifford+T Decomposed Sequence Generation for All Toffoli Addition)
+Plan: 2 of 3 complete
+Status: Plan 02 complete (BK CLA Clifford+T generation). Plan 03 remaining (wiring).
+Last activity: 2026-02-17 -- Completed 75-02 (BK CLA Clifford+T hardcoded sequences)
 
-Progress: [########################] 100% (v3.0 phases -- 32/32 plans)
+Progress: [########----------------] 33% (Phase 75 -- 2/3 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 213 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 22, v2.3: 4, v3.0: 32)
+- Total plans completed: 214 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 22, v2.3: 4, v3.0: 32, post-v3.0: 1)
 - Average duration: ~13 min/plan
-- Total execution time: ~33.9 hours
+- Total execution time: ~34.0 hours
 
 **By Milestone:**
 
@@ -82,11 +82,13 @@ Phase 74-02: T_GATE/TDG_GATE enum values, gate primitives (t_gate/tdg_gate), inv
 Phase 74-03: AND-ancilla MCX decomposition for all 9 MCX emission points. CDKM: emit_cMAJ/emit_cUMA get and_anc param, MCX(3)->3 CCX (5 layers instead of 3). CLA: emit_mcx3_seq/emit_mcx_recursive_seq helpers. Multiplication: cmul_qq width-1 MCX(3)->3 CCX. Comparison: recursive AND-ancilla decomposition for CQ_equal_width (bits>=3) and cCQ_equal_width (bits>=2). Python qint_comparison.pxi allocates AND-ancilla via circuit allocator. Hardcoded cQQ/cCQ sequences bypassed (contain MCX). 23 MCX purity tests confirm zero MCX gates in all Toffoli-mode output.
 Phase 74-04: CCX->Clifford+T decomposition via emit_ccx_clifford_t() helper (15-gate exact sequence: 2H+4T+3Tdg+6CX per CCX). Integrated into all inline emission paths in ToffoliMultiplication.c via emit_ccx_or_clifford_t multiplexer. Only inline circuit-based paths decomposed; cached sequence paths defer to Plan 05. T-count exact when decompose=on (T = T_gates + Tdg_gates, no estimates). 19-test suite with equivalence testing pattern (on/off produce same results). 4:3 T/Tdg ratio verified.
 Phase 74-05: MCX-decomposed hardcoded cQQ sequences for widths 1-8 via AND-ancilla pattern (MCX(3)->3 CCX). Static const arrays with max 2 controls per gate. Generation script: scripts/generate_toffoli_decomp_seq.py. Dispatch wired into toffoli_cQQ_add() in ToffoliAdditionCDKM.c. 94-test suite: purity (zero MCX), CCX presence, T-count=7*CCX, controlled/uncontrolled equivalence, subtraction, CQ purity. Phase 74 complete. v3.0 milestone complete.
+Phase 75-02: BK CLA Clifford+T hardcoded sequences for widths 2-8. Python BK prefix tree port matching C bk_compute_merges(). 28 per-width C files (QQ/cQQ/CQ_inc/cCQ_inc x 7 widths) + dispatch file. All static const with only H/T/Tdg/CX/X gates (zero CCX). BK merge counts: width 7=7, width 8=9 (corrected from plan's estimate of 6).
 
 ### Roadmap Evolution
 
 - Phase 73 added: Toffoli CQ/cCQ Classical-Bit Gate Reduction
 - Phase 74 added: MCX/CCX Gate Decomposition & Sequence Refactoring
+- Phase 75 added: Clifford+T Decomposed Sequence Generation for All Toffoli Addition
 
 ### Blockers/Concerns
 
@@ -109,8 +111,8 @@ Phase 74-05: MCX-decomposed hardcoded cQQ sequences for widths 1-8 via AND-ancil
 ## Session Continuity
 
 Last session: 2026-02-17
-Stopped at: Completed 74-05-PLAN.md (hardcoded MCX-decomposed cQQ sequences). Phase 74 complete (5/5 plans). v3.0 Fault-Tolerant Arithmetic milestone complete.
-Resume action: Start next milestone or run /gsd:audit-milestone to verify v3.0 completeness.
+Stopped at: Completed 75-02-PLAN.md (BK CLA Clifford+T hardcoded sequence generation). Phase 75 plan 2 of 3 complete.
+Resume action: Execute 75-03-PLAN.md (wiring dispatch into C backend).
 
 ---
-*State updated: 2026-02-17 -- Phase 74 plan 05 complete (MCX-decomposed hardcoded cQQ sequences for widths 1-8). Phase 74 complete. v3.0 milestone complete.*
+*State updated: 2026-02-17 -- Phase 75 plan 02 complete (BK CLA Clifford+T hardcoded sequences for widths 2-8). 29 generated C files.*
