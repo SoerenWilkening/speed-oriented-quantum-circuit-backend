@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A quantum programming framework that enables writing quantum algorithms using standard programming constructs — operator overloading on variable-width quantum integers (qint, 1-64 bits) and quantum booleans (qbool), with Python's `with` statement implementing quantum conditionals. Operations compile to optimized quantum circuits via a C backend with Cython bindings. Includes `@ql.compile` for function-level compilation with gate capture/replay/optimization, circuit optimization, pixel-art circuit visualization scaling to 200+ qubits, statistics, OpenQASM 3.0 export, and Qiskit-based verification.
+A quantum programming framework that enables writing quantum algorithms using standard programming constructs — operator overloading on variable-width quantum integers (qint, 1-64 bits) and quantum booleans (qbool), with Python's `with` statement implementing quantum conditionals. Operations compile to optimized quantum circuits via a C backend with Cython bindings. Supports dual arithmetic backends: QFT-based (phase rotations) and Toffoli-based (fault-tolerant, Clifford+T decomposable) with CDKM ripple-carry and Brent-Kung carry look-ahead adders. Includes `@ql.compile` for function-level compilation with gate capture/replay/optimization, circuit optimization, pixel-art circuit visualization scaling to 200+ qubits, T-count reporting, statistics, OpenQASM 3.0 export, and Qiskit-based verification.
 
 ## Core Value
 
@@ -114,30 +114,29 @@ Write quantum algorithms in natural programming style that compiles to efficient
 - ✓ Evaluation: multiplication "investigate", bitwise "skip", division "skip" for hardcoding — v2.3
 - ✓ Zero regression verified — 60-94% first-call improvement for addition operations — v2.3
 
+- ✓ Toffoli-based CDKM ripple-carry adder (QQ/CQ/cQQ/cCQ) with 1-ancilla lifecycle — v3.0
+- ✓ Toffoli-based schoolbook multiplication (QQ/CQ/cQQ/cCQ) via shift-and-add — v3.0
+- ✓ Restoring division/modulo with Toffoli add/sub underneath — v3.0
+- ✓ Brent-Kung Carry Look-Ahead Adder with O(log n) depth (~50% depth reduction) — v3.0
+- ✓ `ql.option('fault_tolerant')` backend dispatch — Toffoli default, QFT opt-in — v3.0
+- ✓ Cross-backend verification: Toffoli/QFT equivalence for add (1-8), mul (1-6), div (2-6) — v3.0
+- ✓ Hardcoded Toffoli sequences for widths 1-8 (QQ/cQQ/CQ-inc/cCQ-inc) — v3.0
+- ✓ Inline CQ/cCQ generators with classical-bit gate simplification — v3.0
+- ✓ MCX auto-decomposition (AND-ancilla pattern, zero MCX in output) — v3.0
+- ✓ CCX->Clifford+T decomposition via `ql.option('toffoli_decompose', True)` — v3.0
+- ✓ T_GATE/TDG_GATE enum, exact T-count reporting, QASM T/Tdg export — v3.0
+- ✓ ~120 Clifford+T hardcoded sequence C files for CDKM and BK CLA (widths 1-8) — v3.0
+
 ### Active
-
-## Current Milestone: v3.0 Fault-Tolerant Arithmetic
-
-**Goal:** Implement Toffoli-based arithmetic (no phase/rotation gates) as an alternative to QFT-based operations, enabling future error-correction readiness.
-
-**Target features:**
-- Carry Look-Ahead Adder (Draper 2004) — QQ and CQ variants, O(log n) depth
-- Toffoli-based subtraction via CLA inverse
-- Schoolbook multiplication (arXiv:2410.00899) — QQ and CQ, built on CLA adder
-- Restoring division/modulo composed from Toffoli add/sub
-- `ql.option('fault_tolerant', True)` mode flag for automatic arithmetic selection
-- Existing QFT implementations remain as default
-
-**References:**
-- Addition: [Draper et al. 2004 — quant-ph/0406142](https://arxiv.org/abs/quant-ph/0406142)
-- Multiplication: [Schoolbook with fewer Toffoli — arXiv:2410.00899](https://arxiv.org/abs/2410.00899)
 
 **Deferred bugs (carry forward):**
 - Fix _reduce_mod result corruption (BUG-MOD-REDUCE) — needs fundamentally different circuit structure
-- Fix controlled multiplication corruption (BUG-COND-MUL-01) — not yet investigated
+- Fix controlled multiplication scope uncomputation (BUG-COND-MUL-01) — root-caused in Phase 69-02, workaround active
 - Fix MSB comparison leak in division (BUG-DIV-02) — 9 cases per div/mod test file
 - Fix mixed-width QFT addition off-by-one (BUG-WIDTH-ADD) — discovered in Phase 43
 - Fix 32-bit multiplication segfault (buffer overflow in C backend) — discovered in Phase 61
+- Fix QFT controlled QQ addition CCP rotation errors (BUG-CQQ-QFT) — discovered in Phase 70-01
+- Fix QFT division/modulo pervasive failures (BUG-QFT-DIV) — discovered in Phase 70-02
 
 **Deferred features (carry forward):**
 - Parametric compilation (compile once for all classical values) — PAR-01, PAR-02
@@ -147,6 +146,8 @@ Write quantum algorithms in natural programming style that compiles to efficient
 - Hardcoded sequences for multiplication — ADV-OPT-01 (EVAL-01 recommends "investigate")
 - SIMD vectorization for bulk gate operations — ADV-OPT-03
 - Multi-threaded circuit building — ADV-OPT-04
+- Automatic depth/ancilla tradeoff (RCA vs CLA selection) — OPT-01
+- Modular arithmetic via Toffoli gates (for Shor's algorithm) — FTE-02
 
 ### Out of Scope
 
@@ -162,10 +163,10 @@ Write quantum algorithms in natural programming style that compiles to efficient
 
 **Architecture:** Three-layer stateless design — C backend (gate primitives, circuit management, integer operations) -> Cython bindings -> Python frontend (qint/qbool classes, operator overloading). All functions take explicit parameters; no global state.
 
-**Current state:** v2.3 shipped — hardcoding right-sizing complete. Benchmark infrastructure (import time, first-call generation, cached dispatch) established. Data-driven decision: keep all addition widths 1-16 hardcoded (2-6x dispatch speedup). Shared QFT/IQFT factoring reduced generated C by 32.9% and binary size by 11.1%. Evaluation: multiplication "investigate" for future, bitwise and division "skip". Zero regression verified with 60-94% first-call improvement. Profiling infrastructure (cProfile, memray, Cython annotations, py-spy, pytest-benchmark) used to drive all optimization decisions. Top 3 hot paths (multiplication, addition, XOR) migrated to C with nogil. Memory leaks eliminated, 59-93% allocation reduction. `@ql.compile` supports ancilla tracking, inverse/adjoint generation, auto-uncompute, and `ql.qarray` arguments. 106 compilation tests. Pixel-art circuit visualization scaling to 200+ qubits. Exhaustive verification suite with 8,365+ tests. Clean modular C backend. Variable-width quantum integers (1-64 bits). Automatic uncomputation with dependency tracking. CNOT-based quantum copy. Memory-safe Python-to-C bridge.
+**Current state:** v3.0 shipped — fault-tolerant Toffoli arithmetic complete. Dual arithmetic backends: QFT (phase rotations) and Toffoli (CCX/CX/X only), with Toffoli as default. CDKM ripple-carry adder and Brent-Kung carry look-ahead adder for all 4 variants (QQ/CQ/cQQ/cCQ). Schoolbook multiplication and restoring division via Toffoli add/sub. MCX gates auto-decomposed via AND-ancilla pattern. CCX->Clifford+T decomposition with ~120 hardcoded sequence C files. T-count reporting (exact when Clifford+T active, 7*CCX estimate otherwise). Cross-backend verification suite proves Toffoli/QFT equivalence. Inline CQ/cCQ generators exploit classical bit values for gate reduction. `@ql.compile` supports ancilla tracking, inverse/adjoint generation, auto-uncompute, and `ql.qarray` arguments. Pixel-art circuit visualization scaling to 200+ qubits. Exhaustive verification suite with 8,365+ tests. Clean modular C backend with Toffoli modules (CDKM, CLA, Helpers, Multiplication). Variable-width quantum integers (1-64 bits). Automatic uncomputation with dependency tracking. CNOT-based quantum copy. Memory-safe Python-to-C bridge.
 
 **Codebase:**
-- ~345,901 lines of code (Python, Cython, C)
+- ~1,059,000 lines of code (604K C, 395K Python, 60K Cython)
 - Version 0.1.0
 - Tech stack: Python 3.11+, Cython, C backend, Qiskit (optional verification)
 
@@ -189,6 +190,11 @@ Write quantum algorithms in natural programming style that compiles to efficient
 - Dirty ancilla from widened comparisons (gt/le) — known limitation, not a correctness bug
 - Mixed-width QFT addition off-by-one (BUG-WIDTH-ADD) — discovered in v1.8
 - Layer-based uncomputation tracking unreliable when optimizer parallelizes gates — future: use instruction counter
+- QFT controlled QQ addition CCP rotation errors at width 2+ (BUG-CQQ-QFT) — discovered in v3.0
+- QFT division/modulo pervasively broken at all tested widths (BUG-QFT-DIV) — discovered in v3.0
+- BK CLA subtraction falls back to RCA (carry-copy ancilla not uncomputed in reverse)
+- Kogge-Stone CLA stubs return NULL (Brent-Kung only implementation)
+- 32-bit multiplication segfault (buffer overflow in C backend) — discovered in v2.2
 
 ## Constraints
 
@@ -275,4 +281,17 @@ Write quantum algorithms in natural programming style that compiles to efficient
 | 15% regression tolerance | Accounts for ~8% stdev observed in benchmarks | ✓ Good — prevents false positives |
 
 ---
-*Last updated: 2026-02-14 after v3.0 milestone start*
+| Toffoli arithmetic as default mode | Fault-tolerant circuits should be default for error-correction readiness | ✓ Good — QFT available via opt-out |
+| CDKM ripple-carry before CLA | Simpler algorithm, 1 ancilla, proven correct before optimizing depth | ✓ Good — solid foundation |
+| CQ via temp-register QQ approach | Direct MAJ/UMA simplification was buggy; X-init temp + QQ adder + X-cleanup is provably correct | ✓ Good — BUG-CQ-TOFFOLI fixed |
+| BK CLA compute-copy-uncompute pattern | In-place quantum CLA ancilla uncomputation impossible with single pass | ✓ Good — correct BK at ~50% depth reduction |
+| AND-ancilla MCX decomposition | MCX(3)->3 CCX via AND-ancilla eliminates all 3+ control gates | ✓ Good — zero MCX in all Toffoli output |
+| CCX->Clifford+T exact 15-gate sequence | 2H+4T+3Tdg+6CX per CCX, matches literature | ✓ Good — 4:3 T/Tdg ratio verified |
+| Dual T-count formula | Exact when T gates present, 7*CCX estimate otherwise | ✓ Good — accurate for both modes |
+| Inline CQ/cCQ classical-bit generators | Skip gates at zero-bit positions (7-14T per position saved) | ✓ Good — significant T-count reduction |
+| Split ToffoliAddition.c by algorithm | CDKM/CLA/Helpers modules vs monolithic file | ✓ Good — maintainable at ~800 lines each |
+| ~120 Clifford+T hardcoded C files | Pre-computed for CDKM + BK CLA, all 4 variants, widths 1-8 | ✓ Good — zero runtime decomposition overhead |
+| Division via Python-level composition | Reuse existing restoring division with Toffoli add/sub underneath | ✓ Good — no new C division code needed |
+
+---
+*Last updated: 2026-02-18 after v3.0 milestone completion*

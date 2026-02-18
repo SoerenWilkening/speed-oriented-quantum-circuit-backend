@@ -1,5 +1,33 @@
 # Project Milestones: Quantum Assembly
 
+## v3.0 Fault-Tolerant Arithmetic (Shipped: 2026-02-18)
+
+**Delivered:** Complete Toffoli-based fault-tolerant arithmetic backend — CDKM ripple-carry adder, Brent-Kung carry look-ahead adder, schoolbook multiplication, restoring division, all with controlled variants and Clifford+T gate decomposition. Toffoli arithmetic is the default mode with QFT available via opt-out.
+
+**Phases completed:** 65-75 (35 plans total)
+
+**Key accomplishments:**
+
+- CDKM ripple-carry adder (QQ/CQ/cQQ/cCQ) with MAJ/UMA chains and 1-ancilla lifecycle management
+- Brent-Kung Carry Look-Ahead Adder with O(log n) depth (~50% depth reduction vs RCA at width 8)
+- Toffoli schoolbook multiplication and restoring division completing full arithmetic surface
+- Toffoli-default mode via `ql.option('fault_tolerant')` with seamless QFT fallback
+- Cross-backend verification proving Toffoli/QFT equivalence for addition (widths 1-8), multiplication (widths 1-6), division (widths 2-6)
+- Clifford+T gate decomposition with ~120 hardcoded sequence C files eliminating runtime decomposition overhead
+
+**Stats:**
+
+- 40 feat commits, 232 files changed (+330,063 lines)
+- ~1,059K total LOC (604K C, 395K Python, 60K Cython)
+- 11 phases, 35 plans
+- 4 days (2026-02-14 → 2026-02-18)
+
+**Git range:** `11fb70d` → `aaa5865`
+
+**What's next:** TBD — next milestone planning via `/gsd:new-milestone`
+
+---
+
 ## v2.3 Hardcoding Right-Sizing (Shipped: 2026-02-08)
 
 **Delivered:** Data-driven evaluation and right-sizing of hardcoded gate sequences — benchmarked all 9 operation types, kept addition widths 1-16 with shared QFT/IQFT factoring (32.9% source reduction, 11.1% binary size reduction), confirmed zero regression.
@@ -385,3 +413,5 @@
 **What's next:** v1.1 — QPU State Removal
 
 ---
+
+
