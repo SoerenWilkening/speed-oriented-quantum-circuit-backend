@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** Phase 75 Clifford+T Decomposed Sequence Generation -- Plan 02 complete (2/3 plans).
+**Current focus:** Phase 75 Clifford+T Decomposed Sequence Generation -- Complete (3/3 plans).
 
 ## Current Position
 
 Phase: 75 (Clifford+T Decomposed Sequence Generation for All Toffoli Addition)
-Plan: 2 of 3 complete
-Status: Plan 02 complete (BK CLA Clifford+T generation). Plan 03 remaining (wiring).
-Last activity: 2026-02-17 -- Completed 75-02 (BK CLA Clifford+T hardcoded sequences)
+Plan: 3 of 3 complete
+Status: Phase 75 complete. All Clifford+T hardcoded sequences generated and wired into dispatch.
+Last activity: 2026-02-18 -- Completed 75-03 (Clifford+T dispatch wiring + test suite)
 
-Progress: [########----------------] 33% (Phase 75 -- 2/3 plans)
+Progress: [########################] 100% (Phase 75 -- 3/3 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 214 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 22, v2.3: 4, v3.0: 32, post-v3.0: 1)
+- Total plans completed: 215 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2 + 2 phase-level docs, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 22, v2.3: 4, v3.0: 32, post-v3.0: 2)
 - Average duration: ~13 min/plan
 - Total execution time: ~34.0 hours
 
@@ -84,6 +84,7 @@ Phase 74-04: CCX->Clifford+T decomposition via emit_ccx_clifford_t() helper (15-
 Phase 74-05: MCX-decomposed hardcoded cQQ sequences for widths 1-8 via AND-ancilla pattern (MCX(3)->3 CCX). Static const arrays with max 2 controls per gate. Generation script: scripts/generate_toffoli_decomp_seq.py. Dispatch wired into toffoli_cQQ_add() in ToffoliAdditionCDKM.c. 94-test suite: purity (zero MCX), CCX presence, T-count=7*CCX, controlled/uncontrolled equivalence, subtraction, CQ purity. Phase 74 complete. v3.0 milestone complete.
 Phase 75-01: CDKM Clifford+T hardcoded sequences for all 4 variants (QQ/cQQ/CQ-inc/cCQ-inc) at widths 1-8. Extended generate_toffoli_seq.py and generate_toffoli_decomp_seq.py with --clifford-t flag. New generate_toffoli_clifft_cq_inc.py for CQ/cCQ increment. 32 per-width C files + 1 unified CDKM dispatch. CliffordTGate dataclass with ccx_to_clifford_t (15-gate expansion matching gate.c). All static const with only H/T/Tdg/CX/X gates.
 Phase 75-02: BK CLA Clifford+T hardcoded sequences for widths 2-8. Python BK prefix tree port matching C bk_compute_merges(). 28 per-width C files (QQ/cQQ/CQ_inc/cCQ_inc x 7 widths) + dispatch file. All static const with only H/T/Tdg/CX/X gates (zero CCX). BK merge counts: width 7=7, width 8=9 (corrected from plan's estimate of 6).
+Phase 75-03: Clifford+T dispatch wired into all 4 hot_path_add_toffoli.c code paths (QQ uncont/cont, CQ uncont/cont) with 8 static pointer-array caches. ~62 new Clifford+T C files integrated into setup.py. 44-test suite: gate purity (zero CCX/MCX), correctness (decomposed vs non-decomposed equivalence), T-count accuracy (4:3 T/Tdg ratio), fallback (width 9 dynamic, CLA width-1). Phase 75 complete.
 
 ### Roadmap Evolution
 
@@ -111,9 +112,9 @@ Phase 75-02: BK CLA Clifford+T hardcoded sequences for widths 2-8. Python BK pre
 
 ## Session Continuity
 
-Last session: 2026-02-17
-Stopped at: Completed 75-02-PLAN.md (BK CLA Clifford+T hardcoded sequence generation). Phase 75 plan 2 of 3 complete.
-Resume action: Execute 75-03-PLAN.md (wiring dispatch into C backend).
+Last session: 2026-02-18
+Stopped at: Completed 75-03-PLAN.md (Clifford+T dispatch wiring + test suite). Phase 75 complete (3/3 plans).
+Resume action: Plan next phase or milestone.
 
 ---
-*State updated: 2026-02-17 -- Phase 75 plan 02 complete (BK CLA Clifford+T hardcoded sequences for widths 2-8). 29 generated C files.*
+*State updated: 2026-02-18 -- Phase 75 complete. Clifford+T hardcoded sequences generated and wired into all Toffoli dispatch paths. 44 new tests pass.*
