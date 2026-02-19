@@ -9,6 +9,7 @@ Not part of public API - users should use branch() method instead.
 
 cimport cython
 from libc.string cimport memset
+from libc.stdlib cimport malloc, free
 
 from ._core cimport (
     circuit_t, circuit_s, gate_t,
@@ -26,6 +27,7 @@ cdef extern from "gate.h":
     void ch(gate_t *g, unsigned int target, unsigned int control)
     void cz(gate_t *g, unsigned int target, unsigned int control)
     void cry(gate_t *g, unsigned int target, unsigned int control, double angle)
+    void mcz(gate_t *g, unsigned int target, unsigned int *controls, int n_controls)
 
 
 cpdef void emit_ry(unsigned int target, double angle):
@@ -81,5 +83,50 @@ cpdef void emit_z(unsigned int target):
         cz(&g, target, (<qint>ctrl).qubits[63])
     else:
         z(&g, target)
+
+    add_gate(circ, &g)
+
+
+cpdef void emit_mcz(unsigned int target, list controls):
+    """Emit multi-controlled Z gate to circuit (internal use only).
+
+    Used by diffusion operator in Phase 78. Applies Z to target when
+    all control qubits are |1>.
+
+    Parameters
+    ----------
+    target : unsigned int
+        Target qubit index for Z gate
+    controls : list
+        List of control qubit indices (unsigned int)
+
+    Notes
+    -----
+    For n_controls > 2 (MAXCONTROLS), uses heap-allocated control array in C.
+    """
+    cdef gate_t g
+    cdef circuit_t *circ = <circuit_t*><unsigned long long>_get_circuit()
+    cdef int n_controls = len(controls)
+    cdef unsigned int* ctrl_array
+    cdef int i
+
+    memset(&g, 0, sizeof(gate_t))
+
+    if n_controls == 0:
+        # No controls - just emit Z
+        z(&g, target)
+    elif n_controls == 1:
+        # Single control - emit CZ
+        cz(&g, target, controls[0])
+    else:
+        # Multi-control - use mcz
+        ctrl_array = <unsigned int*>malloc(n_controls * sizeof(unsigned int))
+        if ctrl_array == NULL:
+            raise MemoryError("Failed to allocate control array for MCZ")
+        for i in range(n_controls):
+            ctrl_array[i] = controls[i]
+        mcz(&g, target, ctrl_array, n_controls)
+        # mcz copies controls into gate_t, so we can free here
+        free(ctrl_array)
 
     add_gate(circ, &g)

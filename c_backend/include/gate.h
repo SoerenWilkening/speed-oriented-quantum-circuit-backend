@@ -38,6 +38,7 @@ void cy(gate_t *g, qubit_t target, qubit_t control);
 void ry(gate_t *g, qubit_t target, double angle);
 void cry(gate_t *g, qubit_t target, qubit_t control, double angle);
 void ch(gate_t *g, qubit_t target, qubit_t control);
+void mcz(gate_t *g, qubit_t target, qubit_t *controls, int n_controls);
 
 void x(gate_t *g, qubit_t target);
 void cx(gate_t *g, qubit_t target, qubit_t control);

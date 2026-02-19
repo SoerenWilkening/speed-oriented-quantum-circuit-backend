@@ -193,6 +193,32 @@ void ch(gate_t *g, qubit_t target, qubit_t control) {
     g->GateValue = 0;
     g->large_control = NULL;
 }
+void mcz(gate_t *g, qubit_t target, qubit_t *controls, int n_controls) {
+    g->Gate = Z;
+    g->Target = target;
+    g->GateValue = 0;
+
+    if (n_controls <= MAXCONTROLS) {
+        // Use inline Control array for small control counts
+        g->NumControls = n_controls;
+        for (int i = 0; i < n_controls; i++) {
+            g->Control[i] = controls[i];
+        }
+        g->large_control = NULL;
+    } else {
+        // Use heap-allocated large_control for n > MAXCONTROLS
+        g->NumControls = n_controls;
+        g->large_control = (qubit_t *)malloc(n_controls * sizeof(qubit_t));
+        for (int i = 0; i < n_controls; i++) {
+            g->large_control[i] = controls[i];
+        }
+        // Also populate Control[0..1] for backward compatibility
+        if (n_controls >= 1)
+            g->Control[0] = controls[0];
+        if (n_controls >= 2)
+            g->Control[1] = controls[1];
+    }
+}
 void z(gate_t *g, qubit_t target) {
     g->Gate = Z;
     g->Target = target;
