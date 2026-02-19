@@ -516,6 +516,87 @@ cdef class qint(circuit):
 				"Create a new qbool or call .keep() to prevent automatic cleanup."
 			)
 
+	cpdef branch(self, double prob=0.5):
+		"""Apply Ry rotation to create superposition.
+
+		Creates quantum superposition by applying Ry(theta) rotation to all
+		qubits in this qint. The angle theta is computed from the desired
+		probability of measuring |1>:
+
+		    theta = 2 * arcsin(sqrt(probability))
+
+		Parameters
+		----------
+		prob : float, optional
+		    Probability of |1> state (default 0.5 for equal superposition).
+		    Must be in range [0, 1].
+
+		Returns
+		-------
+		None
+		    Mutates self; does not return new qint.
+
+		Raises
+		------
+		ValueError
+		    If prob is outside [0, 1] range.
+
+		Examples
+		--------
+		>>> x = qint(0, width=4)
+		>>> x.branch()        # Equal superposition on all 4 qubits
+		>>> x[0].branch(0.3)  # 30% probability on LSB only
+
+		Notes
+		-----
+		- Calling branch() multiple times accumulates rotations
+		- Works inside `with qbool:` blocks (emits CRy gates)
+		- Supports uncomputation via scope exit (inverse is Ry(-theta))
+		"""
+		cdef circuit_t *_circuit
+		cdef bint _circuit_initialized
+		cdef int self_offset
+		cdef int i
+		cdef double theta
+		cdef int start_layer
+
+		import math
+
+		# Validate probability range (per user decision)
+		if not 0.0 <= prob <= 1.0:
+			raise ValueError(f"Probability must be in [0, 1], got {prob}")
+
+		# Check not uncomputed (existing pattern)
+		self._check_not_uncomputed()
+
+		# Convert probability to Ry angle
+		# For Ry(theta) on |0>: P(|1>) = sin^2(theta/2) = prob
+		# Therefore: theta = 2 * arcsin(sqrt(prob))
+		theta = 2.0 * math.asin(math.sqrt(prob))
+
+		# Import emit_ry from _gates module
+		from quantum_language._gates import emit_ry
+
+		# Get circuit for layer tracking
+		_circuit = <circuit_t*><unsigned long long>_get_circuit()
+		_circuit_initialized = _get_circuit_initialized()
+
+		# Capture start layer for uncomputation
+		start_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
+
+		# Apply Ry to each qubit (right-aligned storage)
+		self_offset = 64 - self.bits
+		for i in range(self.bits):
+			emit_ry(self.qubits[self_offset + i], theta)
+
+		# Capture end layer for uncomputation support
+		# (enables scope-based automatic inverse via reverse_circuit_range)
+		self._start_layer = start_layer
+		self._end_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
+
+		# Return None per user decision (mutation, no chaining)
+		return None
+
 	def print_circuit(self):
 		"""Print the current quantum circuit to stdout.
 

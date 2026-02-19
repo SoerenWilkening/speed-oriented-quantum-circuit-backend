@@ -45,8 +45,8 @@ cpdef void emit_ry(unsigned int target, double angle):
         # Inside controlled context - emit CRy
         ctrl = _get_control_bool()
         # qint stores qubits right-aligned, control qubit is at qubits[63]
-        from .qint import qint
-        cry(&g, target, (<qint>ctrl).qubits[63], angle)
+        # Use Python-level attribute access (no C-level cast needed)
+        cry(&g, target, ctrl.qubits[63], angle)
     else:
         ry(&g, target, angle)
 
@@ -62,8 +62,8 @@ cpdef void emit_h(unsigned int target):
 
     if _get_controlled():
         ctrl = _get_control_bool()
-        from .qint import qint
-        ch(&g, target, (<qint>ctrl).qubits[63])
+        # Use Python-level attribute access (no C-level cast needed)
+        ch(&g, target, ctrl.qubits[63])
     else:
         h(&g, target)
 
@@ -79,8 +79,8 @@ cpdef void emit_z(unsigned int target):
 
     if _get_controlled():
         ctrl = _get_control_bool()
-        from .qint import qint
-        cz(&g, target, (<qint>ctrl).qubits[63])
+        # Use Python-level attribute access (no C-level cast needed)
+        cz(&g, target, ctrl.qubits[63])
     else:
         z(&g, target)
 
