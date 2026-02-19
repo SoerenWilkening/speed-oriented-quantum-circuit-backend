@@ -2,19 +2,19 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-18)
+See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v3.0 milestone complete. Planning next milestone.
+**Current focus:** v4.0 Grover's Algorithm — manual building blocks + high-level API + oracle compilation + amplitude estimation.
 
 ## Current Position
 
-Phase: 75 (last phase of v3.0)
-Plan: 3 of 3 complete
-Status: v3.0 Fault-Tolerant Arithmetic milestone shipped.
-Last activity: 2026-02-18 -- v3.0 milestone archived.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-19 — Milestone v4.0 started
 
-Progress: [########################] 100% (v3.0 complete)
+Progress: [░░░░░░░░░░░░░░░░░░░░░░░░] 0% (requirements phase)
 
 ## Performance Metrics
 
@@ -63,9 +63,9 @@ v3.0: Toffoli arithmetic as default (DSP-03), CDKM before CLA, BK compute-copy-u
 
 ## Session Continuity
 
-Last session: 2026-02-18
-Stopped at: v3.0 milestone archived. All planning artifacts updated.
-Resume action: `/gsd:new-milestone` for next milestone planning.
+Last session: 2026-02-19
+Stopped at: Milestone v4.0 started. Defining requirements.
+Resume action: Continue with requirements definition and roadmap creation.
 
 ---
-*State updated: 2026-02-18 -- v3.0 Fault-Tolerant Arithmetic milestone complete and archived.*
+*State updated: 2026-02-19 — Milestone v4.0 Grover's Algorithm started.*

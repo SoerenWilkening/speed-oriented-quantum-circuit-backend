@@ -129,6 +129,17 @@ Write quantum algorithms in natural programming style that compiles to efficient
 
 ### Active
 
+## Current Milestone: v4.0 Grover's Algorithm
+
+**Goal:** Enable users to implement Grover's search and general amplitude amplification using existing quantum primitives, plus provide high-level convenience APIs.
+
+**Target features:**
+- Manual Grover building blocks (S₀ via `with a == 0`, diffusion operator)
+- `ql.grover(oracle, search_space)` high-level API with measurement results
+- Automatic oracle compilation from Python functions (`f(*args) -> qbool`)
+- Amplitude estimation for unknown solution counts
+- Both manual and automatic oracle modes with escape hatch
+
 **Deferred bugs (carry forward):**
 - Fix _reduce_mod result corruption (BUG-MOD-REDUCE) — needs fundamentally different circuit structure
 - Fix controlled multiplication scope uncomputation (BUG-COND-MUL-01) — root-caused in Phase 69-02, workaround active
@@ -294,4 +305,4 @@ Write quantum algorithms in natural programming style that compiles to efficient
 | Division via Python-level composition | Reuse existing restoring division with Toffoli add/sub underneath | ✓ Good — no new C division code needed |
 
 ---
-*Last updated: 2026-02-18 after v3.0 milestone completion*
+*Last updated: 2026-02-19 after v4.0 milestone start*
