@@ -9,9 +9,9 @@ Requirements for Grover's Algorithm milestone. Each maps to roadmap phases.
 
 ### Quantum Primitives
 
-- [ ] **PRIM-01**: User can apply Ry rotation via `qint.branch(theta)` method on all qubits
-- [ ] **PRIM-02**: User can apply Ry rotation via `qbool.branch(theta)` method
-- [ ] **PRIM-03**: `branch(pi/2)` creates equal superposition (Hadamard-equivalent)
+- [x] **PRIM-01**: User can apply Ry rotation via `qint.branch(theta)` method on all qubits
+- [x] **PRIM-02**: User can apply Ry rotation via `qbool.branch(theta)` method
+- [x] **PRIM-03**: `branch(pi/2)` creates equal superposition (Hadamard-equivalent)
 
 ### Oracle Infrastructure
 
@@ -78,9 +78,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PRIM-01 | Phase 76 | Pending |
-| PRIM-02 | Phase 76 | Pending |
-| PRIM-03 | Phase 76 | Pending |
+| PRIM-01 | Phase 76 | Complete |
+| PRIM-02 | Phase 76 | Complete |
+| PRIM-03 | Phase 76 | Complete |
 | ORCL-01 | Phase 77 | Pending |
 | ORCL-02 | Phase 77 | Pending |
 | ORCL-03 | Phase 77 | Pending |
