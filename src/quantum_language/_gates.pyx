@@ -156,6 +156,30 @@ cpdef void emit_mcz(unsigned int target, list controls):
     add_gate(circ, &g)
 
 
+cpdef void emit_p_raw(unsigned int target, double angle):
+    """Emit P(angle) gate to circuit WITHOUT auto-control context.
+
+    Unlike emit_p, this does NOT check _get_controlled() and always
+    emits a plain P gate. Used by _PhaseProxy.__iadd__ which handles
+    the controlled context itself -- calling emit_p from inside a
+    controlled context would double-apply the control, producing
+    cp(q[n], q[n]) instead of p(q[n]).
+
+    Parameters
+    ----------
+    target : unsigned int
+        Target qubit index for P gate
+    angle : double
+        Phase angle in radians
+    """
+    cdef gate_t g
+    cdef circuit_t *circ = <circuit_t*><unsigned long long>_get_circuit()
+
+    memset(&g, 0, sizeof(gate_t))
+    p(&g, target, angle)
+    add_gate(circ, &g)
+
+
 cpdef void emit_p(unsigned int target, double angle):
     """Emit P(angle) gate to circuit (internal use only).
 

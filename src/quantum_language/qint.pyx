@@ -49,7 +49,39 @@ from ._core import (
 
 
 import math
-from ._gates import emit_p
+from ._gates import emit_p, emit_p_raw
+
+
+cpdef void _set_layer_floor_to_used():
+	"""Set circuit layer_floor to used_layer (force next gate into new layer).
+
+	This ensures the next gate added via add_gate() is placed in a new layer
+	at or after used_layer, preventing the optimizer from sharing a layer with
+	preceding gates. Used by _PhaseProxy.__iadd__ to keep the P gate outside
+	the comparison's layer range during phase kickback.
+	"""
+	cdef circuit_t *_circuit
+	cdef bint _circuit_initialized = _get_circuit_initialized()
+	if _circuit_initialized:
+		_circuit = <circuit_t*><unsigned long long>_get_circuit()
+		(<circuit_s*>_circuit).layer_floor = (<circuit_s*>_circuit).used_layer
+
+cpdef void _restore_layer_floor(unsigned int floor):
+	"""Restore layer_floor to a saved value."""
+	cdef circuit_t *_circuit
+	cdef bint _circuit_initialized = _get_circuit_initialized()
+	if _circuit_initialized:
+		_circuit = <circuit_t*><unsigned long long>_get_circuit()
+		(<circuit_s*>_circuit).layer_floor = floor
+
+cpdef unsigned int _get_layer_floor():
+	"""Get current layer_floor value."""
+	cdef circuit_t *_circuit
+	cdef bint _circuit_initialized = _get_circuit_initialized()
+	if _circuit_initialized:
+		_circuit = <circuit_t*><unsigned long long>_get_circuit()
+		return (<circuit_s*>_circuit).layer_floor
+	return 0
 
 
 class _PhaseProxy:
@@ -67,7 +99,24 @@ class _PhaseProxy:
 	def __iadd__(self, theta):
 		if _get_controlled():
 			ctrl = _get_control_bool()
-			emit_p(ctrl.qubits[63], theta)
+			# Use emit_p_raw to avoid double-control: emit_p would check
+			# _get_controlled() again and wrap with CP, producing
+			# cp(ctrl, ctrl) -- a self-controlled gate with no search
+			# register effect. Instead, emit P directly on the control
+			# qubit. P(theta) on a qubit in |1> adds phase e^{i*theta}
+			# to all basis states where that qubit is |1>, which is
+			# exactly the controlled global phase we want.
+			#
+			# Set layer_floor to used_layer before emitting P to force it
+			# into a NEW layer after the comparison gates. Without this,
+			# the optimizer may share a layer with comparison gates,
+			# causing the P gate to be inside the comparison's
+			# [_start_layer, _end_layer) range and incorrectly reversed
+			# during uncomputation.
+			saved_floor = _get_layer_floor()
+			_set_layer_floor_to_used()
+			emit_p_raw(ctrl.qubits[63], theta)
+			_restore_layer_floor(saved_floor)
 		# Uncontrolled: no gate (global phase is unobservable)
 		return self
 
