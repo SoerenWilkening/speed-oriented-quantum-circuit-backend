@@ -95,7 +95,7 @@
 
 **Milestone Goal:** Enable users to implement Grover's search and amplitude amplification using both manual building blocks and high-level convenience APIs.
 
-- [x] **Phase 76: Gate Primitive Exposure** - Expose H, Z, Ry gates at Python level via Cython bindings (3/3 plans complete)
+- [ ] **Phase 76: Gate Primitive Exposure** - Expose H, Z, Ry gates at Python level via Cython bindings (3/6 plans complete, gap closure in progress)
 - [ ] **Phase 77: Oracle Infrastructure** - @ql.grover_oracle decorator with compute-phase-uncompute enforcement
 - [ ] **Phase 78: Diffusion Operator** - X-MCZ-X pattern with zero ancilla and O(n) gates
 - [ ] **Phase 79: Grover Search Integration** - ql.grover() API combining oracle + diffusion with auto iteration count
@@ -113,10 +113,13 @@
   2. User can call `b.branch(theta)` on a qbool to apply Ry(theta) rotation
   3. `branch(pi/2)` creates equal superposition verifiable via Qiskit simulation
   4. H and Z gates are accessible internally for diffusion operator construction
-**Plans**: 3 plans
+**Plans**: 6 plans (3 original + 3 gap closure)
 - [x] 76-01-PLAN.md - C backend Ry gates + _gates.pyx module
 - [x] 76-02-PLAN.md - branch() method on qint/qbool
 - [x] 76-03-PLAN.md - Qiskit verification tests
+- [ ] 76-04-PLAN.md - Fix gates_are_inverse() optimizer bug + branch() layer accumulation
+- [ ] 76-05-PLAN.md - Fix __getitem__ offset bug + fix test bitstring convention
+- [ ] 76-06-PLAN.md - Rebuild package and verify all 10 tests pass
 
 ### Phase 77: Oracle Infrastructure
 **Goal**: Users can create quantum oracles with correct phase-marking semantics that integrate with @ql.compile
@@ -186,7 +189,7 @@
 | 55-61 | v2.2 | 22/22 | Complete | 2026-02-08 |
 | 62-64 | v2.3 | 4/4 | Complete | 2026-02-08 |
 | 65-75 | v3.0 | 35/35 | Complete | 2026-02-18 |
-| 76 | v4.0 | 3/3 | Complete | 2026-02-19 |
+| 76 | v4.0 | 3/6 | Gap closure | - |
 | 77 | v4.0 | 0/TBD | Not started | - |
 | 78 | v4.0 | 0/TBD | Not started | - |
 | 79 | v4.0 | 0/TBD | Not started | - |
