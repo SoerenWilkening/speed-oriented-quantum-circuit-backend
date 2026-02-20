@@ -721,9 +721,11 @@
 		>>> # bit1 is qbool representing |1>
 		"""
 		from quantum_language.qbool import qbool
+		if item < 0 or item >= self.bits:
+			raise IndexError(f"qubit index {item} out of range for qint with width {self.bits}")
 		# Use uint32 dtype to match qint.qubits memory view type
 		bit_list = np.zeros(64, dtype=np.uint32)
-		bit_list[-1] = self.qubits[item]
+		bit_list[-1] = self.qubits[64 - self.bits + item]
 		a = qbool(create_new = False, bit_list = bit_list)
 		return a
 
