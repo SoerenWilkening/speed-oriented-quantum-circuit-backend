@@ -30,6 +30,8 @@ cdef extern from "gate.h":
     void cz(gate_t *g, unsigned int target, unsigned int control)
     void cry(gate_t *g, unsigned int target, unsigned int control, double angle)
     void mcz(gate_t *g, unsigned int target, unsigned int *controls, int n_controls)
+    void p(gate_t *g, unsigned int target, double angle)
+    void cp(gate_t *g, unsigned int target, unsigned int control, double angle)
 
 
 cpdef void emit_ry(unsigned int target, double angle):
@@ -150,5 +152,32 @@ cpdef void emit_mcz(unsigned int target, list controls):
         mcz(&g, target, ctrl_array, n_controls)
         # mcz copies controls into gate_t, so we can free here
         free(ctrl_array)
+
+    add_gate(circ, &g)
+
+
+cpdef void emit_p(unsigned int target, double angle):
+    """Emit P(angle) gate to circuit (internal use only).
+
+    Handles controlled context automatically - if inside a `with qbool:` block,
+    emits CP instead of P.
+
+    Parameters
+    ----------
+    target : unsigned int
+        Target qubit index for P gate
+    angle : double
+        Phase angle in radians
+    """
+    cdef gate_t g
+    cdef circuit_t *circ = <circuit_t*><unsigned long long>_get_circuit()
+
+    memset(&g, 0, sizeof(gate_t))
+
+    if _get_controlled():
+        ctrl = _get_control_bool()
+        cp(&g, target, ctrl.qubits[63], angle)
+    else:
+        p(&g, target, angle)
 
     add_gate(circ, &g)

@@ -48,6 +48,35 @@ from ._core import (
 )
 
 
+import math
+from ._gates import emit_p
+
+
+class _PhaseProxy:
+	"""Proxy object returned by qint.phase / qarray.phase property.
+
+	Supports += theta (phase shift) and *= -1 (phase flip).
+	When uncontrolled: emits no gate (global phase is unobservable).
+	When controlled (inside `with` block): emits CP(theta) on the control qubit.
+	"""
+	__slots__ = ('_owner',)
+
+	def __init__(self, owner):
+		self._owner = owner
+
+	def __iadd__(self, theta):
+		if _get_controlled():
+			ctrl = _get_control_bool()
+			emit_p(ctrl.qubits[63], theta)
+		# Uncontrolled: no gate (global phase is unobservable)
+		return self
+
+	def __imul__(self, factor):
+		if factor == -1:
+			return self.__iadd__(math.pi)
+		raise ValueError("phase *= only supports -1")
+
+
 cdef class qint(circuit):
 	"""Quantum integer with arithmetic, bitwise, and comparison operations.
 
@@ -323,6 +352,36 @@ cdef class qint(circuit):
 		16
 		"""
 		return self.bits
+
+	@property
+	def phase(self):
+		"""Get a phase proxy for controlled global phase operations.
+
+		Returns a proxy object supporting ``x.phase += theta`` and
+		``x.phase *= -1``.
+
+		When uncontrolled: emits no gate (global phase is unobservable).
+		When controlled (inside ``with`` block): emits CP(theta) on the
+		control qubit.
+
+		Returns
+		-------
+		_PhaseProxy
+			Phase proxy object.
+
+		Examples
+		--------
+		>>> with flag:
+		...     x.phase += math.pi  # CP(pi) on control qubit
+		>>> x.phase *= -1  # Equivalent to x.phase += pi
+		"""
+		return _PhaseProxy(self)
+
+	@phase.setter
+	def phase(self, value):
+		# No-op setter: absorbs re-assignment from x.phase += theta
+		# (Python desugars += to x.phase = x.phase.__iadd__(theta))
+		pass
 
 	# ====================================================================
 	# UTILITY AND TRACKING METHODS

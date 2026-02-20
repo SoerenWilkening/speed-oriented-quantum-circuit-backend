@@ -9,6 +9,7 @@ from collections.abc import Sequence
 import warnings
 import numpy as np
 from .qint cimport qint
+from .qint import _PhaseProxy
 from .qbool cimport qbool
 from ._core cimport INTEGERSIZE
 from ._core import _get_qubit_saving_mode
@@ -180,6 +181,29 @@ cdef class qarray:
     def dtype(self):
         """Return the element type (qint or qbool)."""
         return self._dtype
+
+    @property
+    def phase(self):
+        """Get a phase proxy for controlled global phase operations.
+
+        Returns a proxy object supporting ``arr.phase += theta`` and
+        ``arr.phase *= -1``.
+
+        When uncontrolled: emits no gate (global phase is unobservable).
+        When controlled (inside ``with`` block): emits CP(theta) on the
+        control qubit.
+
+        Returns
+        -------
+        _PhaseProxy
+            Phase proxy object.
+        """
+        return _PhaseProxy(self)
+
+    @phase.setter
+    def phase(self, value):
+        # No-op setter: absorbs re-assignment from arr.phase += theta
+        pass
 
     def __len__(self):
         """Return the number of elements in the flattened array."""

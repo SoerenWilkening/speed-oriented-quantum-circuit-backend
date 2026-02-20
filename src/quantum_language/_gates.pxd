@@ -16,3 +16,5 @@ cdef extern from "gate.h":
     void cz(gate_t *g, qubit_t target, qubit_t control)
     void cry(gate_t *g, qubit_t target, qubit_t control, double angle)
     void mcz(gate_t *g, qubit_t target, qubit_t *controls, int n_controls)
+    void p(gate_t *g, qubit_t target, double value)
+    void cp(gate_t *g, qubit_t target, qubit_t control, double value)
