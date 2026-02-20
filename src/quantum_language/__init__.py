@@ -48,6 +48,7 @@ from ._core import (
 )
 from .compile import compile
 from .openqasm import to_openqasm
+from .oracle import grover_oracle
 from .profiler import profile
 from .qarray import qarray
 from .qbool import qbool
@@ -178,6 +179,7 @@ __all__ = [
     "circuit",
     # Utilities
     "compile",
+    "grover_oracle",
     "array",
     "option",
     "profile",
