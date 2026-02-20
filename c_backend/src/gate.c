@@ -542,7 +542,7 @@ bool gates_are_inverse(gate_t *G1, gate_t *G2) {
 
     if (G1->Gate != G2->Gate)
         return false;
-    if (G1->Gate == P) {
+    if (G1->Gate == P || G1->Gate == Ry || G1->Gate == Rx || G1->Gate == Rz) {
         if (G1->GateValue != -G2->GateValue)
             return false;
     } else if (G1->GateValue != G2->GateValue)

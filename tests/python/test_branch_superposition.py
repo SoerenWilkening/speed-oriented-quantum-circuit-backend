@@ -35,6 +35,8 @@ SHOTS = 8192
 def _simulate_qasm(qasm_str: str) -> dict:
     """Run QASM through Qiskit Aer and return counts dict."""
     circuit = qiskit.qasm3.loads(qasm_str)
+    if not circuit.cregs:
+        circuit.measure_all()
     simulator = AerSimulator()
     transpiled = transpile(circuit, simulator)
     result = simulator.run(transpiled, shots=SHOTS).result()
@@ -59,7 +61,7 @@ def _run_branch_circuit(width: int, prob: float = 0.5) -> dict:
     x = ql.qint(0, width=width)
     x.branch(prob)
 
-    qasm = ql.openqasm()
+    qasm = ql.to_openqasm()
 
     # Force cleanup
     del x
@@ -128,7 +130,7 @@ class TestBranchQbool:
         b = ql.qbool(False)
         b.branch()
 
-        qasm = ql.openqasm()
+        qasm = ql.to_openqasm()
         counts = _simulate_qasm(qasm)
         total = sum(counts.values())
 
@@ -150,7 +152,7 @@ class TestBranchIndexed:
         x = ql.qint(0, width=4)
         x[0].branch(0.5)  # Branch only LSB
 
-        qasm = ql.openqasm()
+        qasm = ql.to_openqasm()
         counts = _simulate_qasm(qasm)
 
         # Only LSB should be in superposition
@@ -176,7 +178,7 @@ class TestBranchIndexed:
         x[0].branch(0.5)  # LSB
         x[2].branch(0.5)  # MSB (not middle bit)
 
-        qasm = ql.openqasm()
+        qasm = ql.to_openqasm()
         counts = _simulate_qasm(qasm)
 
         # States 000, 001, 100, 101 should each have ~0.25
@@ -204,7 +206,7 @@ class TestBranchControlled:
         with ctrl:
             target.branch(0.5)
 
-        qasm = ql.openqasm()
+        qasm = ql.to_openqasm()
 
         # Verify CRy gate appears in QASM
         assert "cry" in qasm.lower() or "ry" in qasm.lower(), \
@@ -214,14 +216,15 @@ class TestBranchControlled:
         counts = _simulate_qasm(qasm)
         total = sum(counts.values())
 
-        # Expected: |11> and |10> with equal probability (target in superposition)
-        # ctrl is always 1 (MSB), target can be 0 or 1
-        p_10 = counts.get("10", 0) / total
+        # Qiskit little-endian convention: bitstring "ab" = q[1]=a, q[0]=b
+        # ctrl is q[0] (LSB, rightmost), target is q[1] (MSB, leftmost)
+        # ctrl=|1> states: "01" (target=0, ctrl=1) and "11" (target=1, ctrl=1)
+        p_01 = counts.get("01", 0) / total
         p_11 = counts.get("11", 0) / total
 
-        assert p_10 + p_11 > 0.95, f"Control=|1> so target should be active"
-        assert abs(p_10 - 0.5) < 0.05
-        assert abs(p_11 - 0.5) < 0.05
+        assert p_01 + p_11 > 0.95, f"Control=|1> so target should be active. Got: {counts}"
+        assert abs(p_01 - 0.5) < 0.05, f"Expected p_01~0.5, got {p_01:.4f}"
+        assert abs(p_11 - 0.5) < 0.05, f"Expected p_11~0.5, got {p_11:.4f}"
 
 
 class TestBranchCompile:
@@ -240,7 +243,7 @@ class TestBranchCompile:
         x = ql.qint(0, width=2)
         result = create_superposition(x)
 
-        qasm = ql.openqasm()
+        qasm = ql.to_openqasm()
         counts = _simulate_qasm(qasm)
         probs = _counts_to_probabilities(counts, 2)
 
@@ -289,7 +292,7 @@ class TestBranchAccumulation:
         x.branch(0.5)  # Ry(pi/2)
         x.branch(0.5)  # Another Ry(pi/2) -> total Ry(pi) = X
 
-        qasm = ql.openqasm()
+        qasm = ql.to_openqasm()
         counts = _simulate_qasm(qasm)
         total = sum(counts.values())
 
@@ -312,7 +315,7 @@ class TestInternalGates:
         x = ql.qbool(False)
         emit_h(x.qubits[63])  # Direct access to qubit index
 
-        qasm = ql.openqasm()
+        qasm = ql.to_openqasm()
         assert "h " in qasm.lower(), f"Expected H gate in QASM:\n{qasm}"
 
         # Simulate: H on |0> gives equal superposition
@@ -336,7 +339,7 @@ class TestInternalGates:
         emit_z(x.qubits[63])  # Apply Z -> |->
         emit_h(x.qubits[63])  # Convert back -> |1>
 
-        qasm = ql.openqasm()
+        qasm = ql.to_openqasm()
         assert "z " in qasm.lower(), f"Expected Z gate in QASM:\n{qasm}"
 
         # H-Z-H on |0> = |1>
@@ -358,7 +361,7 @@ class TestInternalGates:
         # Ry(pi/2) = equal superposition
         emit_ry(x.qubits[63], math.pi / 2)
 
-        qasm = ql.openqasm()
+        qasm = ql.to_openqasm()
         assert "ry" in qasm.lower(), f"Expected Ry gate in QASM:\n{qasm}"
 
         counts = _simulate_qasm(qasm)
@@ -403,7 +406,7 @@ class TestInternalGates:
         emit_h(q1.qubits[63])
         emit_h(q2.qubits[63])
 
-        qasm = ql.openqasm()
+        qasm = ql.to_openqasm()
 
         # Simulate and verify interference pattern
         counts = _simulate_qasm(qasm)
@@ -443,7 +446,7 @@ class TestInternalGates:
         # Apply H again: |+> -> Z -> |-> -> H -> |1>
         emit_h(target.qubits[63])
 
-        qasm = ql.openqasm()
+        qasm = ql.to_openqasm()
         counts = _simulate_qasm(qasm)
         total = sum(counts.values())
 
@@ -467,7 +470,7 @@ class TestInternalGates:
         emit_mcz(target.qubits[63], [ctrl.qubits[63]])  # Single control = CZ
         emit_h(target.qubits[63])  # Should give |1>
 
-        qasm = ql.openqasm()
+        qasm = ql.to_openqasm()
         counts = _simulate_qasm(qasm)
         total = sum(counts.values())
 
@@ -488,7 +491,7 @@ class TestInternalGates:
         emit_mcz(target.qubits[63], [])  # No controls = just Z
         emit_h(target.qubits[63])  # Should give |1>
 
-        qasm = ql.openqasm()
+        qasm = ql.to_openqasm()
         counts = _simulate_qasm(qasm)
         total = sum(counts.values())
 
