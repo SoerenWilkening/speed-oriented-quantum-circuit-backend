@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v4.0 Grover's Algorithm -- Phase 77 (Oracle Infrastructure)
+**Current focus:** v4.0 Grover's Algorithm -- Phase 78 (Diffusion Operator)
 
 ## Current Position
 
-Phase: 77 of 81 (Oracle Infrastructure) -- COMPLETE
-Plan: 2 of 2 complete
-Status: Phase Complete
-Last activity: 2026-02-20 -- Completed 77-02-PLAN.md (oracle integration tests)
+Phase: 78 of 81 (Diffusion Operator) -- IN PROGRESS
+Plan: 1 of 2 complete
+Status: Executing
+Last activity: 2026-02-20 -- Completed 78-01-PLAN.md (diffusion operator + phase property)
 
-Progress: [##############░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 2/6 phases (v4.0)
+Progress: [################░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 3/6 phases (v4.0)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 223 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 22, v2.3: 4, v3.0: 35, v4.0: 7)
+- Total plans completed: 224 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 22, v2.3: 4, v3.0: 35, v4.0: 8)
 - Average duration: ~13 min/plan
 - Total execution time: ~34.0 hours
 
@@ -47,6 +47,7 @@ Progress: [##############░░░░░░░░░░░░░░░░░░�
 | Phase 76 P06 | 2min | 2 tasks | 0 files |
 | Phase 77 P01 | 34min | 2 tasks | 3 files |
 | Phase 77 P02 | 14min | 2 tasks | 1 files |
+| Phase 78 P01 | 17min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -66,6 +67,9 @@ v4.0: `branch(theta)` = Ry rotation (not Hadamard), IQAE preferred for amplitude
 - [Phase 77]: Phase gate detection: only Z-type gates targeting param qubits count as phase marking
 - [Phase 77]: Direct (non-compiled) oracle tests for QASM-visible phase verification; compiled oracles tested via allocator stats
 - [Phase 77]: bit_flip=True mismatch is expected for standard comparison oracles (ancilla independence)
+- [Phase 78]: _PhaseProxy class for x.phase += theta syntax (plain Python class in qint.pyx, no-op setter for += desugaring)
+- [Phase 78]: emit_p targets control qubit in controlled context (register-agnostic global phase)
+- [Phase 78]: Width-based compile cache key for diffusion (variable-arity register support)
 
 ### Research Flags
 
@@ -86,8 +90,8 @@ v4.0: `branch(theta)` = Ry rotation (not Hadamard), IQAE preferred for amplitude
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 77-02-PLAN.md (oracle integration tests -- 37 tests, all 5 ORCL requirements)
-Resume action: Begin Phase 78 (diffusion operator)
+Stopped at: Completed 78-01-PLAN.md (diffusion operator + phase property)
+Resume action: Execute Phase 78 Plan 02 (diffusion operator tests)
 
 ---
-*State updated: 2026-02-20 -- Phase 77 complete (oracle.py + 37 integration tests, all ORCL requirements verified)*
+*State updated: 2026-02-20 -- Phase 78 Plan 01 complete (ql.diffusion + _PhaseProxy + emit_p, GROV-03/GROV-05)*
