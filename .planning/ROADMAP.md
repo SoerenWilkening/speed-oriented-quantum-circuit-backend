@@ -198,7 +198,7 @@ Plans:
 | 65-75 | v3.0 | 35/35 | Complete | 2026-02-18 |
 | 76 | v4.0 | Complete    | 2026-02-20 | 2026-02-20 |
 | 77 | 2/2 | Complete    | 2026-02-20 | - |
-| 78 | 2/2 | Complete   | 2026-02-20 | - |
+| 78 | 3/3 | Complete   | 2026-02-20 | - |
 | 79 | v4.0 | 0/TBD | Not started | - |
 | 80 | v4.0 | 0/TBD | Not started | - |
 | 81 | v4.0 | 0/TBD | Not started | - |

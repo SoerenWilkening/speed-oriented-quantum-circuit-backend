@@ -10,16 +10,16 @@ See: .planning/PROJECT.md (updated 2026-02-19)
 ## Current Position
 
 Phase: 78 of 81 (Diffusion Operator) -- COMPLETE
-Plan: 2 of 2 complete
+Plan: 3 of 3 complete (gap closure plan 03 added and completed)
 Status: Phase Complete
-Last activity: 2026-02-20 - Completed quick task 16: Limit qiskit simulation to 4 threads in all simulation scripts
+Last activity: 2026-02-20 - Completed 78-03-PLAN.md (gap closure: manual S_0 path fix)
 
 Progress: [################░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 3/6 phases (v4.0)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 225 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 22, v2.3: 4, v3.0: 35, v4.0: 9)
+- Total plans completed: 226 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 22, v2.3: 4, v3.0: 35, v4.0: 10)
 - Average duration: ~13 min/plan
 - Total execution time: ~34.0 hours
 
@@ -49,6 +49,7 @@ Progress: [################░░░░░░░░░░░░░░░░░�
 | Phase 77 P02 | 14min | 2 tasks | 1 files |
 | Phase 78 P01 | 17min | 2 tasks | 6 files |
 | Phase 78 P02 | 18min | 1 tasks | 1 files |
+| Phase 78 P03 | 10min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -74,6 +75,9 @@ v4.0: `branch(theta)` = Ry rotation (not Hadamard), IQAE preferred for amplitude
 - [Phase 78]: Statevector sign verification for S_0 reflection (|0...0> opposite sign from others)
 - [Phase 78]: Manual S_0 gates invisible in QASM due to auto-uncomputation -- verified via equivalence to X-MCZ-X
 - [Phase 78]: CP duplicate-qubit QASM (cp q[n], q[n]) valid quantum semantics but Qiskit rejects
+- [Phase 78-03]: emit_p_raw bypasses _get_controlled() to prevent double-control bug in _PhaseProxy.__iadd__
+- [Phase 78-03]: Layer floor save/restore in __iadd__ keeps P gate outside comparison layer range during compute-P-uncompute
+- [Phase 78-03]: Manual S_0 path now produces observable P gate in QASM and correct statevector reflection
 
 ### Research Flags
 
@@ -100,8 +104,8 @@ v4.0: `branch(theta)` = Ry rotation (not Hadamard), IQAE preferred for amplitude
 ## Session Continuity
 
 Last session: 2026-02-20
-Stopped at: Completed 78-02-PLAN.md (diffusion operator tests)
+Stopped at: Completed 78-03-PLAN.md (gap closure: manual S_0 path fix)
 Resume action: Begin Phase 79 (Grover iteration)
 
 ---
-*State updated: 2026-02-20 -- Phase 78 complete (ql.diffusion + _PhaseProxy + tests, GROV-03/GROV-05 verified)*
+*State updated: 2026-02-20 -- Phase 78 gap closure complete (emit_p_raw fix for manual S_0 path, GROV-05 fully verified with direct statevector tests)*
