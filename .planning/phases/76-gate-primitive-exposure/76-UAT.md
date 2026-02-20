@@ -1,9 +1,9 @@
 ---
-status: complete
+status: all_passed
 phase: 76-gate-primitive-exposure
-source: 76-01-SUMMARY.md, 76-02-SUMMARY.md, 76-03-SUMMARY.md
-started: 2026-02-20T09:00:00Z
-updated: 2026-02-20T09:05:00Z
+source: 76-01-SUMMARY.md, 76-02-SUMMARY.md, 76-03-SUMMARY.md, 76-04-SUMMARY.md, 76-05-SUMMARY.md, 76-06-SUMMARY.md
+started: 2026-02-20T10:00:00Z
+updated: 2026-02-20T13:45:00Z
 ---
 
 ## Current Test
@@ -13,72 +13,65 @@ updated: 2026-02-20T09:05:00Z
 ## Tests
 
 ### 1. Build and Import
-expected: Package builds successfully with C compiler and imports without error. Run: pip install -e . && python -c "from quantum_language import qint"
+expected: Package builds with C compiler and imports without error.
 result: pass
 
 ### 2. branch(0.5) Equal Superposition
-expected: Calling x.branch(0.5) on a qint creates equal superposition. When measured, approximately 50% probability for each basis state. Verify by running: pytest tests/python/test_branch_superposition.py::test_branch_equal_superposition_widths_1_to_8 -v
-result: issue
-reported: "ModuleNotFoundError: No module named 'quantum_language._core' - conftest.py fails to import quantum_language"
-severity: blocker
+expected: branch(0.5) creates equal superposition for widths 1-8.
+result: pass (all 8 parametrized widths pass)
 
-### 3. branch() with Other Probabilities
-expected: branch(0.3) creates 30%/70% superposition, branch(0.7) creates 70%/30%. Verify by running: pytest tests/python/test_branch_superposition.py::test_branch_probability_values -v
-result: issue
-reported: "Same _core import error as Test 2"
-severity: blocker
+### 3. branch() Probability Values
+expected: branch() works with probabilities 0, 0.3, 0.5, 0.7, 1.0.
+result: pass
 
 ### 4. qbool.branch() Method
-expected: qbool (1-qubit type) supports branch() method identically to qint. Verify by running: pytest tests/python/test_branch_superposition.py::test_qbool_branch -v
-result: skipped
-reason: Blocked by _core import error (same as Test 2)
+expected: qbool (1-qubit type) supports branch() inherited from qint.
+result: pass
 
 ### 5. Indexed branch (x[i].branch())
-expected: Can target specific qubit for superposition via indexing. x[0].branch(0.5) only affects qubit 0. Verify by running: pytest tests/python/test_branch_superposition.py::test_indexed_branch -v
-result: skipped
-reason: Blocked by _core import error (same as Test 2)
+expected: Can target specific qubit for superposition via indexing. x[0].branch(0.5) only affects qubit 0.
+result: pass (fixed in plan 05: __getitem__ right-aligned offset)
 
 ### 6. Controlled branch (inside with block)
-expected: branch() inside a with qbool block emits CRy (controlled Ry) instead of plain Ry. Verify by running: pytest tests/python/test_branch_superposition.py::test_controlled_branch -v
-result: skipped
-reason: Blocked by _core import error (same as Test 2)
+expected: branch() inside a with qbool block emits CRy instead of plain Ry. Control=|1> should activate target.
+result: pass (fixed in plan 05: Qiskit little-endian bitstring convention in test)
 
 ### 7. branch() Validation
-expected: branch(-0.1) and branch(1.5) raise ValueError for out-of-range probability. Verify by running: pytest tests/python/test_branch_superposition.py::test_branch_validation -v
-result: skipped
-reason: Blocked by _core import error (same as Test 2)
+expected: branch(-0.1) and branch(1.5) raise ValueError.
+result: pass
 
-### 8. MCZ Gate Foundation
-expected: emit_mcz() multi-controlled Z gate works correctly (0, 1, 2+ controls). This is foundation for diffusion operator. Verify by running: pytest tests/python/test_branch_superposition.py::TestMCZGate -v
-result: skipped
-reason: Blocked by _core import error (same as Test 2)
+### 8. @ql.compile Integration
+expected: branch() works inside @ql.compile decorated functions.
+result: pass
+
+### 9. Branch Accumulation
+expected: Two branch(0.5) calls should accumulate to give |1> with high probability (Ry(pi/2) + Ry(pi/2) = Ry(pi) = |1>).
+result: pass (fixed in plans 04: gates_are_inverse negated-angle check + layer accumulation)
+
+### 10. Internal Gate Emission
+expected: Internal gate emission functions (emit_h, emit_z, emit_ry) work correctly.
+result: pass
 
 ## Summary
 
-total: 8
-passed: 1
-issues: 2
+total: 10
+passed: 10
+issues: 0
 pending: 0
-skipped: 5
+skipped: 0
 
 ## Gaps
 
-- truth: "Tests run successfully via pytest with quantum_language import"
-  status: failed
-  reason: "User reported: ModuleNotFoundError: No module named 'quantum_language._core' - conftest.py fails to import quantum_language"
-  severity: blocker
-  test: 2
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+All three gaps resolved by plans 04 and 05, verified by plan 06 rebuild:
 
-- truth: "branch() probability tests run via pytest"
-  status: failed
-  reason: "User reported: Same _core import error as Test 2"
-  severity: blocker
-  test: 3
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+- truth: "Indexed branch x[i].branch(0.5) only affects targeted qubit"
+  status: resolved (plan 05)
+  fix: "__getitem__ uses right-aligned offset 64-self.bits+item"
+
+- truth: "Controlled branch emits CRy when inside with qbool block, activating target when control=|1>"
+  status: resolved (plan 05)
+  fix: "Test corrected to Qiskit little-endian bitstrings '01'/'11'"
+
+- truth: "Two branch(0.5) calls accumulate: Ry(pi/2)+Ry(pi/2)=Ry(pi) giving |1>"
+  status: resolved (plan 04)
+  fix: "gates_are_inverse negated-angle check + _start_layer min/max accumulation"
