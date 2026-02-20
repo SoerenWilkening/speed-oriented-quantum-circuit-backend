@@ -24,6 +24,8 @@ cdef extern from "gate.h":
     void h(gate_t *g, unsigned int target)
     void z(gate_t *g, unsigned int target)
     void ry(gate_t *g, unsigned int target, double angle)
+    void x(gate_t *g, unsigned int target)
+    void cx(gate_t *g, unsigned int target, unsigned int control)
     void ch(gate_t *g, unsigned int target, unsigned int control)
     void cz(gate_t *g, unsigned int target, unsigned int control)
     void cry(gate_t *g, unsigned int target, unsigned int control, double angle)
@@ -49,6 +51,26 @@ cpdef void emit_ry(unsigned int target, double angle):
         cry(&g, target, ctrl.qubits[63], angle)
     else:
         ry(&g, target, angle)
+
+    add_gate(circ, &g)
+
+
+cpdef void emit_x(unsigned int target):
+    """Emit X gate to circuit (internal use only).
+
+    Handles controlled context automatically - if inside a `with qbool:` block,
+    emits CX instead of X.
+    """
+    cdef gate_t g
+    cdef circuit_t *circ = <circuit_t*><unsigned long long>_get_circuit()
+
+    memset(&g, 0, sizeof(gate_t))
+
+    if _get_controlled():
+        ctrl = _get_control_bool()
+        cx(&g, target, ctrl.qubits[63])
+    else:
+        x(&g, target)
 
     add_gate(circ, &g)
 
