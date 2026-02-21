@@ -160,7 +160,10 @@ Plans:
   2. Iteration count auto-calculated from N and M using floor(pi/4 * sqrt(N/M) - 0.5)
   3. Multiple solutions (M > 1) produce correct iteration count and find any valid solution
   4. End-to-end test with known-solution oracle achieves peak probability at calculated iteration count
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 79-01-PLAN.md -- Implement grover.py module with ql.grover() API and export
+- [ ] 79-02-PLAN.md -- End-to-end Grover search tests with Qiskit simulation
 
 ### Phase 80: Oracle Auto-Synthesis & Adaptive Search
 **Goal**: Users can specify oracles as Python lambdas and search without knowing solution count
@@ -199,7 +202,7 @@ Plans:
 | 76 | v4.0 | Complete    | 2026-02-20 | 2026-02-20 |
 | 77 | 2/2 | Complete    | 2026-02-20 | - |
 | 78 | 3/3 | Complete    | 2026-02-20 | - |
-| 79 | v4.0 | 0/TBD | Not started | - |
+| 79 | v4.0 | 0/2 | Planning complete | - |
 | 80 | v4.0 | 0/TBD | Not started | - |
 | 81 | v4.0 | 0/TBD | Not started | - |
 
