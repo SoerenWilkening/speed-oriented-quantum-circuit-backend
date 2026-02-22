@@ -100,7 +100,7 @@
 - [x] **Phase 78: Diffusion Operator** - X-MCZ-X pattern with zero ancilla and O(n) gates (completed 2026-02-20)
 - [x] **Phase 79: Grover Search Integration** - ql.grover() API combining oracle + diffusion with auto iteration count (completed 2026-02-22)
 - [x] **Phase 80: Oracle Auto-Synthesis & Adaptive Search** - Lambda predicate oracles and exponential backoff for unknown M (completed 2026-02-22)
-- [ ] **Phase 81: Amplitude Estimation (IQAE)** - ql.amplitude_estimate() with configurable precision and confidence
+- [x] **Phase 81: Amplitude Estimation (IQAE)** - ql.amplitude_estimate() with configurable precision and confidence (completed 2026-02-22)
 
 ## Phase Details
 
@@ -211,7 +211,7 @@ Plans:
 | 78 | 3/3 | Complete    | 2026-02-20 | - |
 | 79 | 2/2 | Complete    | 2026-02-22 | - |
 | 80 | 3/3 | Complete    | 2026-02-22 | - |
-| 81 | 1/2 | In Progress|  | - |
+| 81 | 2/2 | Complete   | 2026-02-22 | - |
 
 ---
 *Roadmap created: 2026-02-02*

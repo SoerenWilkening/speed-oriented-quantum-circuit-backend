@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v4.0 Grover's Algorithm -- Phase 81 IN PROGRESS (1/2 plans complete)
+**Current focus:** v4.0 Grover's Algorithm -- Phase 81 COMPLETE (2/2 plans complete)
 
 ## Current Position
 
 Phase: 81 of 81 (Amplitude Estimation - IQAE)
-Plan: 1 of 2 complete
-Status: In Progress
-Last activity: 2026-02-22 - Completed 81-01-PLAN.md (IQAE algorithm + AmplitudeEstimationResult)
+Plan: 2 of 2 complete
+Status: Complete
+Last activity: 2026-02-22 - Completed 81-02-PLAN.md (IQAE test suite)
 
-Progress: [#########################░░░░░░░░░░░░░░░░░░░░░░░░░] 5/6 phases (v4.0)
+Progress: [##################################################] 6/6 phases (v4.0)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 232 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 22, v2.3: 4, v3.0: 35, v4.0: 16)
+- Total plans completed: 233 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 22, v2.3: 4, v3.0: 35, v4.0: 17)
 - Average duration: ~13 min/plan
 - Total execution time: ~34.0 hours
 
@@ -56,6 +56,7 @@ Progress: [#########################░░░░░░░░░░░░░░�
 | Phase 80 P02 | 19min | 2 tasks | 2 files |
 | Phase 80 P03 | 25min | 2 tasks | 2 files |
 | Phase 81 P01 | 4min | 2 tasks | 2 files |
+| Phase 81 P02 | 11min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -107,6 +108,7 @@ v4.0: `branch(theta)` = Ry rotation (not Hadamard), IQAE preferred for amplitude
 - [Phase 81]: Decorated oracles require explicit predicate= kwarg for IQAE (raises ValueError otherwise)
 - [Phase 81]: max_iterations caps num_oracle_queries (shots * k per round), not IQAE round count
 - [Phase 81]: Bonferroni correction: alpha / max_rounds per confidence interval computation
+- [Phase 81-02]: Generous tolerance (0.15) for IQAE probability estimate tests due to theta-to-probability nonlinear sin^2 mapping
 
 ### Research Flags
 
@@ -134,8 +136,8 @@ v4.0: `branch(theta)` = Ry rotation (not Hadamard), IQAE preferred for amplitude
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 81-01-PLAN.md (IQAE algorithm + AmplitudeEstimationResult)
-Resume action: Execute 81-02-PLAN.md (IQAE tests)
+Stopped at: Completed 81-02-PLAN.md (IQAE test suite -- phase 81 complete)
+Resume action: Phase 81 complete. v4.0 milestone done (all 6 phases).
 
 ---
-*State updated: 2026-02-22 -- Phase 81 plan 01 complete (IQAE algorithm + AmplitudeEstimationResult, 1/2 plans done)*
+*State updated: 2026-02-22 -- Phase 81 plan 02 complete (IQAE test suite, 2/2 plans done, phase complete)*
