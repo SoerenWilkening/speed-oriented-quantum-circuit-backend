@@ -298,7 +298,7 @@
 			# Subtract: temp_self -= temp_other
 			temp_self -= temp_other
 			# MSB of widened result is the true sign bit
-			msb = temp_self[63]
+			msb = temp_self[comp_width - 1]
 			result = qbool()
 			result ^= msb
 			# Track dependencies on original operands
@@ -418,7 +418,7 @@
 			# Subtract: temp_other -= temp_self
 			temp_other -= temp_self
 			# MSB of widened result is the true sign bit
-			msb = temp_other[63]
+			msb = temp_other[comp_width - 1]
 			result = qbool()
 			result ^= msb
 			# Track dependencies on original operands
