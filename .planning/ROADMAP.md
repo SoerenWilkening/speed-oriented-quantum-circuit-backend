@@ -103,7 +103,115 @@
 
 </details>
 
+### v4.1 Quality & Efficiency (In Progress)
+
+**Milestone Goal:** Fix all carry-forward bugs, address tech debt and security vulnerabilities, improve optimizer and binary size, close test coverage gaps.
+
+- [ ] **Phase 82: Infrastructure & Dependency Fixes** - Add coverage tooling, declare qiskit-aer dependency, establish measurement baseline
+- [ ] **Phase 83: Tech Debt Cleanup** - Remove dead code, automate preprocessor sync, document sequence generation
+- [ ] **Phase 84: Security Hardening** - Add pointer validation, bounds checking, and C static analysis across backend boundaries
+- [ ] **Phase 85: Optimizer Fix & Improvement** - Fix latent loop direction bug and upgrade gate placement from O(L) to O(log L)
+- [ ] **Phase 86: QFT Bug Fixes** - Fix root-cause QFT arithmetic bugs in dependency order (WIDTH-ADD, CQQ-QFT, DIV-02, QFT-DIV)
+- [ ] **Phase 87: Scope & Segfault Fixes** - Fix controlled multiplication corruption, 32-bit segfault, qarray crash, and resolve MOD-REDUCE
+- [ ] **Phase 88: Binary Size Reduction** - Apply compiler flags and strip symbols to reduce .so file sizes by 30-50%
+- [ ] **Phase 89: Test Coverage** - Add missing test scenarios, integrate C tests, convert xfail markers for fixed bugs
+
+## Phase Details
+
+### Phase 82: Infrastructure & Dependency Fixes
+**Goal**: Measurement tooling and dependency declarations are in place before any code changes begin
+**Depends on**: Nothing (first phase of v4.1)
+**Requirements**: BUG-03, TEST-01, TEST-02
+**Success Criteria** (what must be TRUE):
+  1. `pytest --cov` runs successfully and produces an HTML coverage report for Python and Cython code
+  2. `pip install quantum_language[verification]` installs qiskit-aer without manual intervention
+  3. Importing `ql.grover` or `ql.amplitude_estimate` without qiskit-aer installed produces a friendly ImportError message (not a bare ModuleNotFoundError)
+  4. Baseline coverage percentage is measured and recorded for future comparison
+**Plans**: TBD
+
+### Phase 83: Tech Debt Cleanup
+**Goal**: Dead code is removed, preprocessor automation prevents drift, and sequence generation is documented
+**Depends on**: Phase 82
+**Requirements**: DEBT-01, DEBT-02, DEBT-03, DEBT-04
+**Success Criteria** (what must be TRUE):
+  1. QPU.c and QPU.h no longer exist in the repository; all files that previously included them compile and pass tests
+  2. Editing a .pxi file and running the pre-commit hook detects qint_preprocessed.pyx drift and fails the check
+  3. `vulture` scan has been run and all confirmed dead code (confidence >= 80%) has been removed without breaking any tests
+  4. A developer can regenerate all hardcoded sequence C files by following documented instructions in the codebase
+**Plans**: TBD
+
+### Phase 84: Security Hardening
+**Goal**: Unsafe C pointer operations and buffer accesses at the Cython boundary are guarded with validation that converts crashes into clear Python exceptions
+**Depends on**: Phase 83
+**Requirements**: SEC-01, SEC-02, SEC-03
+**Success Criteria** (what must be TRUE):
+  1. Passing a NULL or invalid circuit pointer from Python raises a clear ValueError instead of segfaulting
+  2. Attempting to write beyond the qubit_array scratch buffer (384 elements) raises an OverflowError with a message indicating the slot count exceeded
+  3. `cppcheck` runs on all C backend source files with zero HIGH severity findings remaining
+  4. The full test suite passes with no performance regression beyond 15% on the existing benchmark suite
+**Plans**: TBD
+
+### Phase 85: Optimizer Fix & Improvement
+**Goal**: The circuit optimizer places gates correctly with O(log L) performance and no latent loop bugs
+**Depends on**: Phase 84
+**Requirements**: PERF-01, PERF-02, PERF-03
+**Success Criteria** (what must be TRUE):
+  1. The `smallest_layer_below_comp` function scans in the correct direction (decrementing, not incrementing) and produces identical results to a reference implementation on all existing test circuits
+  2. Gate placement in the optimizer uses binary search (O(log L)) instead of linear scan, verified by profiling a 10,000+ gate circuit showing measurable speedup
+  3. `@ql.compile` replay overhead is reduced (profiled before/after), with dict iteration or gate injection optimized based on profiling data
+  4. Golden-master circuit snapshots taken before any optimizer change match exactly after all changes are complete (zero semantic regression)
+**Plans**: TBD
+
+### Phase 86: QFT Bug Fixes
+**Goal**: QFT-based arithmetic produces correct results for all tested widths, with root-cause fixes applied in dependency order
+**Depends on**: Phase 85
+**Requirements**: BUG-04, BUG-05, BUG-06, BUG-08
+**Success Criteria** (what must be TRUE):
+  1. Mixed-width QFT addition (e.g., 3-bit + 5-bit) produces correct results verified by Qiskit simulation for all width combinations up to 8 bits (BUG-WIDTH-ADD fixed)
+  2. QFT controlled QQ addition (`cQQ_add`) produces correct results at width 2, 3, and 4 verified by Qiskit simulation (BUG-CQQ-QFT fixed)
+  3. QFT division and modulo operations pass exhaustive tests at widths 2-6 with zero xfail markers remaining for QFT-DIV failures (BUG-QFT-DIV resolved)
+  4. Division loop MSB comparison ancilla is properly cleaned up between iterations, with all 9 previously-failing cases per test file now passing (BUG-DIV-02 fixed)
+  5. All previously-passing tests continue to pass (zero regressions across add, sub, mul, div, mod, compare, bitwise)
+**Plans**: TBD
+
+### Phase 87: Scope & Segfault Fixes
+**Goal**: No crashes at valid operation widths and controlled multiplication produces correct results
+**Depends on**: Phase 86
+**Requirements**: BUG-01, BUG-02, BUG-07, BUG-09
+**Success Criteria** (what must be TRUE):
+  1. 32-bit multiplication completes without segfault and produces a correct circuit (BUG-01 fixed via MAXLAYERINSEQUENCE adjustment)
+  2. `qarray *= scalar` executes without crashing for arrays of qint at widths 1-8 (BUG-02 fixed)
+  3. Controlled multiplication inside a `with` block produces correct results verified by Qiskit simulation, with no result register corruption from scope uncomputation (BUG-07 fixed)
+  4. BUG-MOD-REDUCE is either fixed with correct results for modular reduction at all tested moduli, OR explicitly deferred with documented rationale explaining the Beauregard-style redesign required
+**Plans**: TBD
+
+### Phase 88: Binary Size Reduction
+**Goal**: Compiled .so files are significantly smaller without breaking any functionality or causing performance regression
+**Depends on**: Phase 87
+**Requirements**: SIZE-01, SIZE-02, SIZE-03
+**Success Criteria** (what must be TRUE):
+  1. All .so extension modules are compiled with `-ffunction-sections` and `-fdata-sections`, and linked with `--gc-sections`, resulting in measurable size reduction
+  2. Release builds have symbols stripped (via `-s` or post-build `strip`), with total .so size reduced by at least 20% from the pre-Phase-88 baseline
+  3. `-Os` vs `-O3` has been evaluated for sequence files with benchmark results documented; whichever is chosen shows no performance regression beyond 15%
+  4. `import quantum_language` succeeds and the full test suite passes after all size optimization changes
+**Plans**: TBD
+
+### Phase 89: Test Coverage
+**Goal**: All bugs fixed in this milestone have regression tests, coverage gaps are identified and addressed, and C tests run in CI
+**Depends on**: Phase 88
+**Requirements**: TEST-03, TEST-04, TEST-05, TEST-06
+**Success Criteria** (what must be TRUE):
+  1. Nested `with`-blocks (quantum conditionals inside quantum conditionals) have dedicated tests that verify correct circuit generation via Qiskit simulation
+  2. Circuit reset behavior is tested: after `reset_circuit()`, new operations build a fresh circuit with no state leakage from prior operations
+  3. C backend tests (`test_allocator_block`, `test_reverse_circuit`) run as part of `pytest` via subprocess wrappers and their pass/fail status is reported in pytest output
+  4. Every xfail marker corresponding to a bug fixed in Phases 82-88 has been converted to a passing test (no xfails remain for fixed bugs)
+  5. Coverage report shows improvement over the Phase 82 baseline measurement
+**Plans**: TBD
+
 ## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 82 -> 83 -> 84 -> 85 -> 86 -> 87 -> 88 -> 89
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -115,6 +223,14 @@
 | 62-64 | v2.3 | 4/4 | Complete | 2026-02-08 |
 | 65-75 | v3.0 | 35/35 | Complete | 2026-02-18 |
 | 76-81 | v4.0 | 18/18 | Complete | 2026-02-22 |
+| 82. Infrastructure & Dependency Fixes | v4.1 | 0/? | Not started | - |
+| 83. Tech Debt Cleanup | v4.1 | 0/? | Not started | - |
+| 84. Security Hardening | v4.1 | 0/? | Not started | - |
+| 85. Optimizer Fix & Improvement | v4.1 | 0/? | Not started | - |
+| 86. QFT Bug Fixes | v4.1 | 0/? | Not started | - |
+| 87. Scope & Segfault Fixes | v4.1 | 0/? | Not started | - |
+| 88. Binary Size Reduction | v4.1 | 0/? | Not started | - |
+| 89. Test Coverage | v4.1 | 0/? | Not started | - |
 
 ---
 *Roadmap created: 2026-02-02*
@@ -126,3 +242,4 @@
 *Milestone v2.3 shipped: 2026-02-08*
 *Milestone v3.0 shipped: 2026-02-18*
 *Milestone v4.0 shipped: 2026-02-22*
+*Milestone v4.1 roadmap created: 2026-02-22*

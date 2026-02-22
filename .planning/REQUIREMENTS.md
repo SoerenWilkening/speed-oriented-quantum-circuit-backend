@@ -102,40 +102,40 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BUG-01 | — | Pending |
-| BUG-02 | — | Pending |
-| BUG-03 | — | Pending |
-| BUG-04 | — | Pending |
-| BUG-05 | — | Pending |
-| BUG-06 | — | Pending |
-| BUG-07 | — | Pending |
-| BUG-08 | — | Pending |
-| BUG-09 | — | Pending |
-| DEBT-01 | — | Pending |
-| DEBT-02 | — | Pending |
-| DEBT-03 | — | Pending |
-| DEBT-04 | — | Pending |
-| SEC-01 | — | Pending |
-| SEC-02 | — | Pending |
-| SEC-03 | — | Pending |
-| PERF-01 | — | Pending |
-| PERF-02 | — | Pending |
-| PERF-03 | — | Pending |
-| SIZE-01 | — | Pending |
-| SIZE-02 | — | Pending |
-| SIZE-03 | — | Pending |
-| TEST-01 | — | Pending |
-| TEST-02 | — | Pending |
-| TEST-03 | — | Pending |
-| TEST-04 | — | Pending |
-| TEST-05 | — | Pending |
-| TEST-06 | — | Pending |
+| BUG-01 | Phase 87 | Pending |
+| BUG-02 | Phase 87 | Pending |
+| BUG-03 | Phase 82 | Pending |
+| BUG-04 | Phase 86 | Pending |
+| BUG-05 | Phase 86 | Pending |
+| BUG-06 | Phase 86 | Pending |
+| BUG-07 | Phase 87 | Pending |
+| BUG-08 | Phase 86 | Pending |
+| BUG-09 | Phase 87 | Pending |
+| DEBT-01 | Phase 83 | Pending |
+| DEBT-02 | Phase 83 | Pending |
+| DEBT-03 | Phase 83 | Pending |
+| DEBT-04 | Phase 83 | Pending |
+| SEC-01 | Phase 84 | Pending |
+| SEC-02 | Phase 84 | Pending |
+| SEC-03 | Phase 84 | Pending |
+| PERF-01 | Phase 85 | Pending |
+| PERF-02 | Phase 85 | Pending |
+| PERF-03 | Phase 85 | Pending |
+| SIZE-01 | Phase 88 | Pending |
+| SIZE-02 | Phase 88 | Pending |
+| SIZE-03 | Phase 88 | Pending |
+| TEST-01 | Phase 82 | Pending |
+| TEST-02 | Phase 82 | Pending |
+| TEST-03 | Phase 89 | Pending |
+| TEST-04 | Phase 89 | Pending |
+| TEST-05 | Phase 89 | Pending |
+| TEST-06 | Phase 89 | Pending |
 
 **Coverage:**
 - v4.1 requirements: 28 total
-- Mapped to phases: 0
-- Unmapped: 28 ⚠️
+- Mapped to phases: 28
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-22*
-*Last updated: 2026-02-22 after initial definition*
+*Last updated: 2026-02-22 after roadmap creation*
