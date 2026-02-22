@@ -46,6 +46,7 @@ from ._core import (
     option,
     reverse_instruction_range,
 )
+from .amplitude_estimation import amplitude_estimate
 from .compile import compile
 from .diffusion import diffusion
 from .grover import grover
@@ -182,6 +183,7 @@ __all__ = [
     # Utilities
     "compile",
     "diffusion",
+    "amplitude_estimate",
     "grover",
     "grover_oracle",
     "array",
