@@ -21,6 +21,7 @@ HAS_CC := $(shell command -v gcc 2>/dev/null || command -v clang 2>/dev/null || 
 HAS_VALGRIND := $(shell command -v valgrind 2>/dev/null)
 HAS_PYSPY := $(shell command -v py-spy 2>/dev/null)
 HAS_MEMRAY := $(shell command -v memray 2>/dev/null)
+HAS_LCOV := $(shell command -v lcov 2>/dev/null)
 
 # === Test Targets ===
 
@@ -28,6 +29,37 @@ HAS_MEMRAY := $(shell command -v memray 2>/dev/null)
 test:
 	@echo "Running Python characterization tests..."
 	. $(VENV) && $(PYTEST) tests/python -v --tb=short
+
+# === Coverage ===
+
+.PHONY: coverage
+coverage:
+	@echo "=== Coverage Pipeline ==="
+	@mkdir -p reports/coverage
+	@echo "1. Building with coverage instrumentation..."
+	. $(VENV) && QUANTUM_COVERAGE=1 $(PYTHON) setup.py build_ext --inplace --force
+	@echo "2. Running tests with coverage..."
+ifdef HAS_LCOV
+	. $(VENV) && $(PYTEST) tests/python -v --cov=quantum_language --cov-report=json:reports/coverage/coverage.json --cov-report=lcov:reports/coverage/python.lcov --cov-report=html:reports/coverage/html
+	@echo "3. Capturing C coverage with lcov..."
+	lcov --capture --directory . --output-file reports/coverage/c.lcov --no-external
+	@echo "4. Merging Python and C coverage..."
+	lcov -a reports/coverage/python.lcov -a reports/coverage/c.lcov -o reports/coverage/combined.lcov
+	@echo "5. Generating unified HTML report..."
+	genhtml reports/coverage/combined.lcov --output-directory reports/coverage/html
+else
+	@echo "WARNING: lcov not found -- C coverage will not be included."
+	@echo "         Install lcov for unified Python+C coverage reports."
+	. $(VENV) && $(PYTEST) tests/python -v --cov=quantum_language --cov-report=json:reports/coverage/coverage.json --cov-report=html:reports/coverage/html
+endif
+	@echo ""
+	@echo "Coverage report: reports/coverage/html/index.html"
+
+.PHONY: coverage-clean
+coverage-clean:
+	rm -rf reports/
+	find . -name '*.gcda' -delete 2>/dev/null || true
+	find . -name '*.gcno' -delete 2>/dev/null || true
 
 .PHONY: memtest
 memtest: test
@@ -78,6 +110,9 @@ clean:
 	rm -rf build/test_runner_asan
 	rm -f valgrind-output.log
 	rm -f profile.svg memray.bin memory.html
+	rm -rf reports/
+	find . -name '*.gcda' -delete 2>/dev/null || true
+	find . -name '*.gcno' -delete 2>/dev/null || true
 
 # === Profiling Targets ===
 
@@ -189,6 +224,10 @@ help:
 	@echo "  check            - Run pre-commit hooks on all files"
 	@echo "  clean            - Remove test artifacts"
 	@echo ""
+	@echo "Coverage targets:"
+	@echo "  coverage         - Build with instrumentation, run tests with coverage, generate HTML report"
+	@echo "  coverage-clean   - Remove coverage reports and gcov artifacts"
+	@echo ""
 	@echo "Profiling targets:"
 	@echo "  profile-cython      - Generate Cython annotation HTML (run after optimizations)"
 	@echo "  profile-native      - Run py-spy with native frames (requires py-spy)"
@@ -204,3 +243,4 @@ help:
 	@echo "  Valgrind:   $(if $(HAS_VALGRIND),found,NOT FOUND)"
 	@echo "  py-spy:     $(if $(HAS_PYSPY),found,NOT FOUND)"
 	@echo "  memray:     $(if $(HAS_MEMRAY),found,NOT FOUND)"
+	@echo "  lcov:       $(if $(HAS_LCOV),found,NOT FOUND (C coverage unavailable))"
