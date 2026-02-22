@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 ## Current Position
 
 Phase: 82 of 89 (Infrastructure & Dependency Fixes)
-Plan: 0 of ? in current phase
-Status: Ready to plan
-Last activity: 2026-02-22 -- v4.1 roadmap created (8 phases, 28 requirements)
+Plan: 1 of 2 in current phase
+Status: Executing phase 82
+Last activity: 2026-02-22 -- Completed 82-01 (infrastructure, dependency metadata, coverage config)
 
 Progress: [                                                  ] 0/8 phases (v4.1)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 250 (v1.0-v4.0)
+- Total plans completed: 251 (v1.0-v4.1)
 - Average duration: ~13 min/plan
-- Total execution time: ~35.0 hours
+- Total execution time: ~35.4 hours
 
 **By Milestone:**
 
@@ -30,13 +30,24 @@ Progress: [                                                  ] 0/8 phases (v4.1)
 | v1.0-v2.3 | 1-64 | 166 | Complete |
 | v3.0 Fault-Tolerant | 65-75 | 35 | Complete (2026-02-18) |
 | v4.0 Grover's Algorithm | 76-81 | 18 | Complete (2026-02-22) |
-| v4.1 Quality & Efficiency | 82-89 | ? | In progress |
+| v4.1 Quality & Efficiency | 82-89 | 1 | In progress |
+
+**v4.1 Plan Details:**
+
+| Phase | Plan | Duration | Tasks | Files |
+|-------|------|----------|-------|-------|
+| 82 | 01 | 21min | 3 | 7 |
 
 ## Accumulated Context
 
 ### Decisions
 
 See PROJECT.md Key Decisions table for full history.
+
+**Phase 82-01:**
+- pyproject.toml is single source of truth for dependencies (removed install_requires/extras_require from setup.py)
+- pytest-cov in dev extras; sim_backend.py with lazy cached import guards
+- QUANTUM_COVERAGE env var separate from QUANTUM_PROFILE
 
 ### Blockers/Concerns
 
@@ -58,8 +69,8 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: v4.1 roadmap created
-Resume action: `/gsd:plan-phase 82`
+Stopped at: Completed 82-01-PLAN.md
+Resume action: `/gsd:execute-phase 82` (plan 02 next)
 
 ---
-*State updated: 2026-02-22 -- v4.1 roadmap created*
+*State updated: 2026-02-22 -- Completed 82-01 (infrastructure & dependency fixes)*

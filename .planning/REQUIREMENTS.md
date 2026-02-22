@@ -11,7 +11,7 @@ Requirements for v4.1 Quality & Efficiency milestone. Each maps to roadmap phase
 
 - [ ] **BUG-01**: Fix 32-bit multiplication segfault (buffer overflow in C backend)
 - [ ] **BUG-02**: Fix qarray `*=` in-place multiplication segfault
-- [ ] **BUG-03**: Fix qiskit_aer undeclared dependency (add to pyproject.toml verification group, add friendly ImportError message)
+- [x] **BUG-03**: Fix qiskit_aer undeclared dependency (add to pyproject.toml verification group, add friendly ImportError message)
 - [ ] **BUG-04**: Fix mixed-width QFT addition off-by-one (BUG-WIDTH-ADD)
 - [ ] **BUG-05**: Fix QFT controlled QQ addition CCP rotation errors at width 2+ (BUG-CQQ-QFT)
 - [ ] **BUG-06**: Fix MSB comparison leak in division (BUG-DIV-02, 9 cases per div/mod test file)
@@ -46,7 +46,7 @@ Requirements for v4.1 Quality & Efficiency milestone. Each maps to roadmap phase
 
 ### Test Coverage
 
-- [ ] **TEST-01**: Add pytest-cov infrastructure with Cython coverage plugin and coverage config in pyproject.toml
+- [x] **TEST-01**: Add pytest-cov infrastructure with Cython coverage plugin and coverage config in pyproject.toml
 - [ ] **TEST-02**: Measure baseline coverage and identify critical untested paths
 - [ ] **TEST-03**: Add tests for nested with-blocks (quantum conditionals within quantum conditionals)
 - [ ] **TEST-04**: Add tests for circuit reset behavior (circuit state after reset_circuit)
@@ -104,7 +104,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | BUG-01 | Phase 87 | Pending |
 | BUG-02 | Phase 87 | Pending |
-| BUG-03 | Phase 82 | Pending |
+| BUG-03 | Phase 82 | Complete |
 | BUG-04 | Phase 86 | Pending |
 | BUG-05 | Phase 86 | Pending |
 | BUG-06 | Phase 86 | Pending |
@@ -124,7 +124,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SIZE-01 | Phase 88 | Pending |
 | SIZE-02 | Phase 88 | Pending |
 | SIZE-03 | Phase 88 | Pending |
-| TEST-01 | Phase 82 | Pending |
+| TEST-01 | Phase 82 | Complete |
 | TEST-02 | Phase 82 | Pending |
 | TEST-03 | Phase 89 | Pending |
 | TEST-04 | Phase 89 | Pending |
