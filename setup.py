@@ -7,105 +7,71 @@ Each .pyx becomes a separate compiled extension module.
 
 import glob
 import os
+import sys
 from pathlib import Path
 
-from Cython.Build import cythonize
-from setuptools import Extension, find_packages, setup
-
-from build_preprocessor import preprocess_all
-
-# Shared C sources from c_backend
-# Project root is the current directory
+# Ensure project root is in path for build_preprocessor import
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
+from Cython.Build import cythonize  # noqa: E402
+from setuptools import Extension, find_packages, setup  # noqa: E402
+
+from build_preprocessor import preprocess_all  # noqa: E402
+
+# Shared C sources from c_backend (relative paths for setuptools compatibility)
+C_BACKEND = "c_backend/src"
+C_SEQ = "c_backend/src/sequences"
 
 c_sources = [
-    os.path.join(PROJECT_ROOT, "c_backend", "src", "QPU.c"),
-    os.path.join(PROJECT_ROOT, "c_backend", "src", "optimizer.c"),
-    os.path.join(PROJECT_ROOT, "c_backend", "src", "qubit_allocator.c"),
-    os.path.join(PROJECT_ROOT, "c_backend", "src", "circuit_allocations.c"),
-    os.path.join(PROJECT_ROOT, "c_backend", "src", "circuit_output.c"),
-    os.path.join(PROJECT_ROOT, "c_backend", "src", "circuit_stats.c"),
-    os.path.join(PROJECT_ROOT, "c_backend", "src", "circuit_optimizer.c"),
-    os.path.join(PROJECT_ROOT, "c_backend", "src", "gate.c"),
-    os.path.join(PROJECT_ROOT, "c_backend", "src", "Integer.c"),
-    os.path.join(PROJECT_ROOT, "c_backend", "src", "IntegerAddition.c"),
-    os.path.join(PROJECT_ROOT, "c_backend", "src", "IntegerComparison.c"),
-    os.path.join(PROJECT_ROOT, "c_backend", "src", "IntegerMultiplication.c"),
-    os.path.join(PROJECT_ROOT, "c_backend", "src", "LogicOperations.c"),
-    os.path.join(PROJECT_ROOT, "c_backend", "src", "execution.c"),
+    f"{C_BACKEND}/QPU.c",
+    f"{C_BACKEND}/optimizer.c",
+    f"{C_BACKEND}/qubit_allocator.c",
+    f"{C_BACKEND}/circuit_allocations.c",
+    f"{C_BACKEND}/circuit_output.c",
+    f"{C_BACKEND}/circuit_stats.c",
+    f"{C_BACKEND}/circuit_optimizer.c",
+    f"{C_BACKEND}/gate.c",
+    f"{C_BACKEND}/Integer.c",
+    f"{C_BACKEND}/IntegerAddition.c",
+    f"{C_BACKEND}/IntegerComparison.c",
+    f"{C_BACKEND}/IntegerMultiplication.c",
+    f"{C_BACKEND}/LogicOperations.c",
+    f"{C_BACKEND}/execution.c",
     # Hot path migrations (Phase 60, 74 split)
-    os.path.join(PROJECT_ROOT, "c_backend", "src", "hot_path_mul.c"),
-    os.path.join(PROJECT_ROOT, "c_backend", "src", "hot_path_add.c"),
-    os.path.join(PROJECT_ROOT, "c_backend", "src", "hot_path_add_toffoli.c"),
-    os.path.join(PROJECT_ROOT, "c_backend", "src", "hot_path_xor.c"),
+    f"{C_BACKEND}/hot_path_mul.c",
+    f"{C_BACKEND}/hot_path_add.c",
+    f"{C_BACKEND}/hot_path_add_toffoli.c",
+    f"{C_BACKEND}/hot_path_xor.c",
     # Toffoli arithmetic (Phase 66, 68, 74 split)
-    os.path.join(PROJECT_ROOT, "c_backend", "src", "ToffoliAdditionHelpers.c"),
-    os.path.join(PROJECT_ROOT, "c_backend", "src", "ToffoliAdditionCDKM.c"),
-    os.path.join(PROJECT_ROOT, "c_backend", "src", "ToffoliAdditionCLA.c"),
-    os.path.join(PROJECT_ROOT, "c_backend", "src", "ToffoliMultiplication.c"),
+    f"{C_BACKEND}/ToffoliAdditionHelpers.c",
+    f"{C_BACKEND}/ToffoliAdditionCDKM.c",
+    f"{C_BACKEND}/ToffoliAdditionCLA.c",
+    f"{C_BACKEND}/ToffoliMultiplication.c",
     # Hardcoded Toffoli addition sequences: 8 per-width files + dispatch
-    *[
-        os.path.join(PROJECT_ROOT, "c_backend", "src", "sequences", f"toffoli_add_seq_{i}.c")
-        for i in range(1, 9)
-    ],
-    os.path.join(PROJECT_ROOT, "c_backend", "src", "sequences", "toffoli_add_seq_dispatch.c"),
+    *[f"{C_SEQ}/toffoli_add_seq_{i}.c" for i in range(1, 9)],
+    f"{C_SEQ}/toffoli_add_seq_dispatch.c",
     # Hardcoded MCX-decomposed Toffoli cQQ sequences: 8 per-width files + dispatch
-    *[
-        os.path.join(PROJECT_ROOT, "c_backend", "src", "sequences", f"toffoli_decomp_seq_{i}.c")
-        for i in range(1, 9)
-    ],
-    os.path.join(PROJECT_ROOT, "c_backend", "src", "sequences", "toffoli_decomp_seq_dispatch.c"),
+    *[f"{C_SEQ}/toffoli_decomp_seq_{i}.c" for i in range(1, 9)],
+    f"{C_SEQ}/toffoli_decomp_seq_dispatch.c",
     # Hardcoded Toffoli CQ increment sequences: 8 per-width files
-    *[
-        os.path.join(PROJECT_ROOT, "c_backend", "src", "sequences", f"toffoli_cq_inc_seq_{i}.c")
-        for i in range(1, 9)
-    ],
+    *[f"{C_SEQ}/toffoli_cq_inc_seq_{i}.c" for i in range(1, 9)],
     # Hardcoded Clifford+T CDKM sequences: 32 per-width files + dispatch (Phase 75)
-    *[
-        os.path.join(PROJECT_ROOT, "c_backend", "src", "sequences", f"toffoli_clifft_qq_{i}.c")
-        for i in range(1, 9)
-    ],
-    *[
-        os.path.join(PROJECT_ROOT, "c_backend", "src", "sequences", f"toffoli_clifft_cqq_{i}.c")
-        for i in range(1, 9)
-    ],
-    *[
-        os.path.join(PROJECT_ROOT, "c_backend", "src", "sequences", f"toffoli_clifft_cq_inc_{i}.c")
-        for i in range(1, 9)
-    ],
-    *[
-        os.path.join(PROJECT_ROOT, "c_backend", "src", "sequences", f"toffoli_clifft_ccq_inc_{i}.c")
-        for i in range(1, 9)
-    ],
-    os.path.join(PROJECT_ROOT, "c_backend", "src", "sequences", "toffoli_clifft_cdkm_dispatch.c"),
+    *[f"{C_SEQ}/toffoli_clifft_qq_{i}.c" for i in range(1, 9)],
+    *[f"{C_SEQ}/toffoli_clifft_cqq_{i}.c" for i in range(1, 9)],
+    *[f"{C_SEQ}/toffoli_clifft_cq_inc_{i}.c" for i in range(1, 9)],
+    *[f"{C_SEQ}/toffoli_clifft_ccq_inc_{i}.c" for i in range(1, 9)],
+    f"{C_SEQ}/toffoli_clifft_cdkm_dispatch.c",
     # Hardcoded Clifford+T BK CLA sequences: 28 per-width files + dispatch (Phase 75)
-    *[
-        os.path.join(PROJECT_ROOT, "c_backend", "src", "sequences", f"toffoli_clifft_cla_qq_{i}.c")
-        for i in range(2, 9)
-    ],
-    *[
-        os.path.join(PROJECT_ROOT, "c_backend", "src", "sequences", f"toffoli_clifft_cla_cqq_{i}.c")
-        for i in range(2, 9)
-    ],
-    *[
-        os.path.join(
-            PROJECT_ROOT, "c_backend", "src", "sequences", f"toffoli_clifft_cla_cq_inc_{i}.c"
-        )
-        for i in range(2, 9)
-    ],
-    *[
-        os.path.join(
-            PROJECT_ROOT, "c_backend", "src", "sequences", f"toffoli_clifft_cla_ccq_inc_{i}.c"
-        )
-        for i in range(2, 9)
-    ],
-    os.path.join(PROJECT_ROOT, "c_backend", "src", "sequences", "toffoli_clifft_cla_dispatch.c"),
+    *[f"{C_SEQ}/toffoli_clifft_cla_qq_{i}.c" for i in range(2, 9)],
+    *[f"{C_SEQ}/toffoli_clifft_cla_cqq_{i}.c" for i in range(2, 9)],
+    *[f"{C_SEQ}/toffoli_clifft_cla_cq_inc_{i}.c" for i in range(2, 9)],
+    *[f"{C_SEQ}/toffoli_clifft_cla_ccq_inc_{i}.c" for i in range(2, 9)],
+    f"{C_SEQ}/toffoli_clifft_cla_dispatch.c",
     # Hardcoded QFT addition sequences: 16 per-width files + unified dispatch
-    *[
-        os.path.join(PROJECT_ROOT, "c_backend", "src", "sequences", f"add_seq_{i}.c")
-        for i in range(1, 17)
-    ],
-    os.path.join(PROJECT_ROOT, "c_backend", "src", "sequences", "add_seq_dispatch.c"),
+    *[f"{C_SEQ}/add_seq_{i}.c" for i in range(1, 17)],
+    f"{C_SEQ}/add_seq_dispatch.c",
 ]
 
 compiler_args = ["-O3", "-pthread"]  # Removed -flto due to GCC LTO bug
@@ -119,6 +85,15 @@ if os.environ.get("QUANTUM_PROFILE"):
     }
     compiler_args.append("-DCYTHON_TRACE=1")
 
+# Coverage build mode - enables Cython linetrace and C gcov instrumentation
+coverage_directives = {}
+if os.environ.get("QUANTUM_COVERAGE"):
+    coverage_directives = {
+        "linetrace": True,
+    }
+    compiler_args.append("-DCYTHON_TRACE=1")
+    compiler_args.append("--coverage")
+
 # Debug build mode - re-enables all safety checks for debugging
 debug_directives = {}
 if os.environ.get("CYTHON_DEBUG"):
@@ -129,10 +104,10 @@ if os.environ.get("CYTHON_DEBUG"):
     }
 
 # src/ directory is at project root, not in python-backend
-SRC_DIR = os.path.join(PROJECT_ROOT, "src")
+SRC_DIR = "src"
 
 include_dirs = [
-    os.path.join(PROJECT_ROOT, "c_backend", "include"),
+    "c_backend/include",
     SRC_DIR,  # CRITICAL: Allows cimport to find .pxd files in package
 ]
 
@@ -182,16 +157,17 @@ if not extensions:
     ]
 
 setup(
-    name="quantum-assembly",
+    name="quantum_language",
     version="0.1.0",
-    packages=find_packages(where=SRC_DIR),
-    package_dir={"": SRC_DIR},
+    packages=find_packages(where="src"),
+    package_dir={"": "src"},
     ext_modules=cythonize(
         extensions,
         language_level="3",
         compiler_directives={
             "embedsignature": True,  # Preserves docstrings in compiled modules
             **profiling_directives,
+            **coverage_directives,
             **debug_directives,
         },
     ),
@@ -199,17 +175,6 @@ setup(
     package_data={
         "quantum_language": ["*.pxd", "*.py"],
         "quantum_language.state": ["*.pxd", "*.py"],
-    },
-    install_requires=[
-        "Pillow>=9.0",
-    ],
-    extras_require={
-        "verification": ["qiskit>=1.0"],
-        "profiling": [
-            "line-profiler>=5.0.0",
-            "snakeviz>=2.2.2",
-            "pytest-benchmark>=5.2.3",
-        ],
     },
     python_requires=">=3.11",
 )

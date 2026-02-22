@@ -8,6 +8,7 @@ benchmark/CQ_inprov_qtf.csv
 assembly*.pqsm
 circuit.qasm
 .venv
+venv
 old_stuff
 circ.pqsm
 circuit-gen-results/cq/CQ_backend_improved
@@ -15,6 +16,9 @@ circuit-gen-results/qsharp/*
 !circuit-gen-results/qsharp/MyQFT.qs
 !circuit-gen-results/qsharp/Program.cs
 !circuit-gen-results/qsharp/QuantumProject.csproj
+# Coverage reports
+reports/
+
 # Build artifacts
 build/
 *.egg-info/
