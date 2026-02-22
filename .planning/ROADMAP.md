@@ -99,7 +99,7 @@
 - [x] **Phase 77: Oracle Infrastructure** - @ql.grover_oracle decorator with compute-phase-uncompute enforcement (2 plans) (completed 2026-02-20)
 - [x] **Phase 78: Diffusion Operator** - X-MCZ-X pattern with zero ancilla and O(n) gates (completed 2026-02-20)
 - [x] **Phase 79: Grover Search Integration** - ql.grover() API combining oracle + diffusion with auto iteration count (completed 2026-02-22)
-- [ ] **Phase 80: Oracle Auto-Synthesis & Adaptive Search** - Lambda predicate oracles and exponential backoff for unknown M
+- [x] **Phase 80: Oracle Auto-Synthesis & Adaptive Search** - Lambda predicate oracles and exponential backoff for unknown M (completed 2026-02-22)
 - [ ] **Phase 81: Amplitude Estimation (IQAE)** - ql.amplitude_estimate() with configurable precision and confidence
 
 ## Phase Details
@@ -206,7 +206,7 @@ Plans:
 | 77 | 2/2 | Complete    | 2026-02-20 | - |
 | 78 | 3/3 | Complete    | 2026-02-20 | - |
 | 79 | 2/2 | Complete    | 2026-02-22 | - |
-| 80 | 1/2 | In Progress|  | - |
+| 80 | 2/2 | Complete   | 2026-02-22 | - |
 | 81 | v4.0 | 0/TBD | Not started | - |
 
 ---

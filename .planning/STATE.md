@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-02-19)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v4.0 Grover's Algorithm -- Phase 80 Plan 01 COMPLETE, continuing to Plan 02
+**Current focus:** v4.0 Grover's Algorithm -- Phase 80 COMPLETE (2/2 plans), ready for Phase 81
 
 ## Current Position
 
 Phase: 80 of 81 (Oracle Auto-Synthesis & Adaptive Search)
-Plan: 1 of 2 complete
-Status: In Progress
-Last activity: 2026-02-22 - Completed 80-01-PLAN.md (Predicate-to-oracle synthesis)
+Plan: 2 of 2 complete
+Status: Phase Complete
+Last activity: 2026-02-22 - Completed 80-02-PLAN.md (BBHT adaptive search + predicate tests)
 
-Progress: [####################░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 4/6 phases (v4.0)
+Progress: [#########################░░░░░░░░░░░░░░░░░░░░░░░░░] 5/6 phases (v4.0)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 229 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 22, v2.3: 4, v3.0: 35, v4.0: 13)
+- Total plans completed: 230 (v1.0: 41, v1.1: 13, v1.2: 10, v1.3: 16, v1.4: 6, v1.5: 33, v1.6: 5, v1.7: 2, v1.8: 7, v1.9: 7, v2.0: 8, v2.1: 6, v2.2: 22, v2.3: 4, v3.0: 35, v4.0: 14)
 - Average duration: ~13 min/plan
 - Total execution time: ~34.0 hours
 
@@ -53,6 +53,7 @@ Progress: [####################░░░░░░░░░░░░░░░░�
 | Phase 79 P01 | 12min | 2 tasks | 2 files |
 | Phase 79 P02 | 33min | 2 tasks | 3 files |
 | Phase 80 P01 | 31min | 2 tasks | 2 files |
+| Phase 80 P02 | 19min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -92,6 +93,10 @@ v4.0: `branch(theta)` = Ry rotation (not Hadamard), IQAE preferred for amplitude
 - [Phase 80]: validate=False on synthesized predicate oracles (P gate targets comparison ancilla)
 - [Phase 80]: m=None defaults to m=1 in Plan 01 (backwards-compatible placeholder for Plan 02 BBHT)
 - [Phase 80]: Closure variable values in lambda cache key to distinguish closures with different captured values
+- [Phase 80]: Decorated oracles without predicate fall back to m=1 when m=None (BBHT needs classical verification)
+- [Phase 80]: BBHT growth factor LAMBDA=6/5, default max_attempts=ceil(2*log2(N))
+- [Phase 80]: _run_grover_attempt refactors circuit building for reuse in adaptive and exact paths
+- [Phase 80]: BUG-CMP-MSB discovered: inequality operators (<,>,<=,>=) access qubit 63 for MSB (pre-existing)
 
 ### Research Flags
 
@@ -108,6 +113,7 @@ v4.0: `branch(theta)` = Ry rotation (not Hadamard), IQAE preferred for amplitude
 - BUG-QFT-DIV: QFT division/modulo pervasively broken at all tested widths
 - BUG-WIDTH-ADD: Mixed-width QFT addition off-by-one
 - 32-bit multiplication segfault (buffer overflow in C backend)
+- BUG-CMP-MSB: Inequality comparison operators (<,>,<=,>=) access qubit index 63 for MSB, fails for small-width qints in fault-tolerant mode
 
 ### Quick Tasks Completed
 
@@ -118,8 +124,8 @@ v4.0: `branch(theta)` = Ry rotation (not Hadamard), IQAE preferred for amplitude
 ## Session Continuity
 
 Last session: 2026-02-22
-Stopped at: Completed 80-01-PLAN.md (Predicate-to-oracle synthesis)
-Resume action: Execute 80-02-PLAN.md (BBHT adaptive search and end-to-end testing)
+Stopped at: Completed 80-02-PLAN.md (BBHT adaptive search + predicate tests)
+Resume action: Plan Phase 81 or next milestone task
 
 ---
-*State updated: 2026-02-22 -- Phase 80 plan 01 complete (1/2 plans: predicate-to-oracle synthesis via tracing, grover() *registers + predicate detection)*
+*State updated: 2026-02-22 -- Phase 80 complete (2/2 plans: BBHT adaptive search, 17 new tests, predicate synthesis end-to-end)*

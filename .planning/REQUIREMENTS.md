@@ -37,8 +37,8 @@ Requirements for Grover's Algorithm milestone. Each maps to roadmap phases.
 
 ### Adaptive Search
 
-- [ ] **ADAPT-01**: When M is unknown, Grover uses exponential backoff strategy
-- [ ] **ADAPT-02**: Adaptive search terminates when solution found or search space exhausted
+- [x] **ADAPT-01**: When M is unknown, Grover uses exponential backoff strategy
+- [x] **ADAPT-02**: Adaptive search terminates when solution found or search space exhausted
 
 ### Amplitude Estimation
 
@@ -94,8 +94,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SYNTH-01 | Phase 80 | Complete |
 | SYNTH-02 | Phase 80 | Complete |
 | SYNTH-03 | Phase 80 | Complete |
-| ADAPT-01 | Phase 80 | Pending |
-| ADAPT-02 | Phase 80 | Pending |
+| ADAPT-01 | Phase 80 | Complete |
+| ADAPT-02 | Phase 80 | Complete |
 | AMP-01 | Phase 81 | Pending |
 | AMP-02 | Phase 81 | Pending |
 | AMP-03 | Phase 81 | Pending |
