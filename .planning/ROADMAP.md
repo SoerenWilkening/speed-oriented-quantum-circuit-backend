@@ -127,7 +127,10 @@
   2. `pip install quantum_language[verification]` installs qiskit-aer without manual intervention
   3. Importing `ql.grover` or `ql.amplitude_estimate` without qiskit-aer installed produces a friendly ImportError message (not a bare ModuleNotFoundError)
   4. Baseline coverage percentage is measured and recorded for future comparison
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 82-01-PLAN.md — Dependency declarations, sim_backend wrapper, coverage infrastructure
+- [ ] 82-02-PLAN.md — Baseline coverage measurement and gap identification
 
 ### Phase 83: Tech Debt Cleanup
 **Goal**: Dead code is removed, preprocessor automation prevents drift, and sequence generation is documented
