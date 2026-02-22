@@ -31,6 +31,7 @@ import collections
 import functools
 import hashlib
 import inspect
+import math
 
 from ._core import (
     _allocate_qubit,
@@ -96,6 +97,119 @@ def _oracle_cache_key(func, register_width):
     src_hash = _compute_source_hash(func)
     arithmetic_mode = 1 if option("fault_tolerant") else 0
     return (src_hash, arithmetic_mode, register_width)
+
+
+# ---------------------------------------------------------------------------
+# Lambda/predicate oracle cache key construction
+# ---------------------------------------------------------------------------
+_predicate_oracle_cache = {}
+
+
+def _lambda_cache_key(predicate, register_widths):
+    """Build cache key for lambda/predicate oracles including closure variable values.
+
+    Unlike ``_oracle_cache_key``, this includes closure variable values in the
+    key.  Two closures with identical source but different captured values
+    (e.g. ``threshold = 5; lambda x: x > threshold`` vs ``threshold = 10; ...``)
+    must map to distinct cache entries because they produce different oracle
+    circuits.
+
+    Parameters
+    ----------
+    predicate : callable
+        The predicate function (lambda, named function, or closure).
+    register_widths : list[int]
+        Width of each search register in qubits.
+
+    Returns
+    -------
+    tuple
+        ``(source_hash, closure_values, arithmetic_mode_int, register_widths_tuple)``
+    """
+    src_hash = _compute_source_hash(predicate)
+
+    # Extract closure variable values (only hashable primitive types)
+    closure_values = ()
+    if hasattr(predicate, "__closure__") and predicate.__closure__:
+        vals = []
+        for cell in predicate.__closure__:
+            try:
+                contents = cell.cell_contents
+            except ValueError:
+                continue
+            if isinstance(contents, int | float | str | bool):
+                vals.append(contents)
+        closure_values = tuple(vals)
+
+    arithmetic_mode = 1 if option("fault_tolerant") else 0
+    return (src_hash, closure_values, arithmetic_mode, tuple(register_widths))
+
+
+# ---------------------------------------------------------------------------
+# Predicate-to-oracle auto-synthesis
+# ---------------------------------------------------------------------------
+def _predicate_to_oracle(predicate, register_widths):
+    """Convert a Python callable predicate into a GroverOracle via tracing.
+
+    The predicate is called with real ``qint`` objects.  Existing ``qint``
+    comparison and arithmetic operators capture gates into the circuit
+    automatically.  The predicate's return value (a ``qbool``) provides the
+    phase-marking target via ``with result: args[0].phase += math.pi``.
+
+    Uses ``_lambda_cache_key`` to cache traced oracles so repeated calls
+    with the same predicate/widths/closure values skip retracing.
+
+    Parameters
+    ----------
+    predicate : callable
+        A Python callable accepting one or more arguments and returning a
+        ``qbool`` (via qint comparison operators).  Examples:
+        ``lambda x: x > 5``, ``lambda x, y: x + y == 10``.
+    register_widths : list[int]
+        Width of each search register in qubits.
+
+    Returns
+    -------
+    GroverOracle
+        An oracle instance ready for use in Grover iterations.
+
+    Raises
+    ------
+    TypeError
+        If the predicate returns a non-quantum type (plain bool or None).
+    """
+    from .qint import qint
+
+    cache_key = _lambda_cache_key(predicate, register_widths)
+    if cache_key in _predicate_oracle_cache:
+        return _predicate_oracle_cache[cache_key]
+
+    # Determine parameter count from predicate signature
+    param_count = len(inspect.signature(predicate).parameters)
+
+    # Build a wrapper function that traces the predicate with qint args
+    def _traced_oracle_wrapper(*args):
+        qint_args = args[:param_count]
+        result = predicate(*qint_args)
+        # Validate that result is a quantum type (qbool/qint), not a plain bool
+        if not isinstance(result, qint):
+            raise TypeError(
+                f"Predicate must return a quantum type (qbool/qint from comparison "
+                f"operators), but got {type(result).__name__}. Ensure the predicate "
+                f"uses qint comparison operators (==, !=, <, >, <=, >=) and bitwise "
+                f"operators (&, |, ~) for composition."
+            )
+        # Phase-mark: apply pi phase shift controlled on the result qbool
+        with result:
+            args[0].phase += math.pi
+
+    # Wrap with @ql.compile, then with GroverOracle
+    compiled_wrapper = compile(_traced_oracle_wrapper)
+    oracle = GroverOracle(compiled_wrapper, validate=False)
+
+    # Cache for future use
+    _predicate_oracle_cache[cache_key] = oracle
+    return oracle
 
 
 # ---------------------------------------------------------------------------
