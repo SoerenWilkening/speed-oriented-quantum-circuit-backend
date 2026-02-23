@@ -18,6 +18,8 @@ circuit-gen-results/qsharp/*
 !circuit-gen-results/qsharp/QuantumProject.csproj
 # Coverage reports
 reports/
+.coverage
+htmlcov/
 
 # Build artifacts
 build/
