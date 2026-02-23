@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v4.1 Quality & Efficiency -- Phase 82 (Infrastructure & Dependency Fixes)
+**Current focus:** v4.1 Quality & Efficiency -- Phase 83 (Tech Debt Cleanup)
 
 ## Current Position
 
-Phase: 82 of 89 (Infrastructure & Dependency Fixes) -- COMPLETE
-Plan: 2 of 2 in current phase (all plans complete)
-Status: Phase 82 complete, ready for Phase 83
-Last activity: 2026-02-23 -- Completed 82-02 (baseline coverage recording)
+Phase: 83 of 89 (Tech Debt Cleanup) -- IN PROGRESS
+Plan: 2 of 2 in current phase (83-02 complete)
+Status: Phase 83 plan 02 complete
+Last activity: 2026-02-23 -- Completed 83-02 (dead code removal & sequence generation docs)
 
 Progress: [======                                            ] 1/8 phases (v4.1)
 
@@ -30,7 +30,7 @@ Progress: [======                                            ] 1/8 phases (v4.1)
 | v1.0-v2.3 | 1-64 | 166 | Complete |
 | v3.0 Fault-Tolerant | 65-75 | 35 | Complete (2026-02-18) |
 | v4.0 Grover's Algorithm | 76-81 | 18 | Complete (2026-02-22) |
-| v4.1 Quality & Efficiency | 82-89 | 2 | In progress |
+| v4.1 Quality & Efficiency | 82-89 | 3 | In progress |
 
 **v4.1 Plan Details:**
 
@@ -38,6 +38,7 @@ Progress: [======                                            ] 1/8 phases (v4.1)
 |-------|------|----------|-------|-------|
 | 82 | 01 | 21min | 3 | 7 |
 | 82 | 02 | 324min | 1 | 2 |
+| 83 | 02 | 39min | 2 | 3 |
 
 ## Accumulated Context
 
@@ -55,6 +56,11 @@ See PROJECT.md Key Decisions table for full history.
 - Segfault-causing array/qarray tests excluded from coverage runs (known Phase 87 bug)
 - Incremental batch coverage collection to avoid segfault data loss
 - Baseline: 48.2% coverage, top priorities: compile.py (314 missing), draw.py (200 missing, 0%)
+
+**Phase 83-02:**
+- Vulture found zero dead code at >=80% confidence; all 60% findings confirmed false positives (used from .pyx files, tests, or public API)
+- Active generator scripts already had comprehensive docstrings and argparse; no changes needed
+- Deprecation pattern: docstring notice + warnings.warn() after imports
 
 ### Blockers/Concerns
 
@@ -76,8 +82,8 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 82-02-PLAN.md (Phase 82 complete)
-Resume action: `/gsd:execute-phase 83` (next phase)
+Stopped at: Completed 83-02-PLAN.md
+Resume action: Continue Phase 83 (next plan: 83-01 if not yet done, or next phase)
 
 ---
-*State updated: 2026-02-23 -- Completed Phase 82 (infrastructure & dependency fixes) -- 2 plans complete*
+*State updated: 2026-02-23 -- Completed 83-02 (dead code removal & sequence generation docs)*
