@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v4.1 Quality & Efficiency -- Phase 85 (Optimizer Fix & Improvement) IN PROGRESS
+**Current focus:** v4.1 Quality & Efficiency -- Phase 85 (Optimizer Fix & Improvement) COMPLETE
 
 ## Current Position
 
-Phase: 85 of 89 (Optimizer Fix & Improvement) -- IN PROGRESS
-Plan: 2 of 3 in current phase (85-01, 85-02 complete)
-Status: 85-02 complete (binary search). Starting 85-03 (compile replay optimization).
-Last activity: 2026-02-23 -- Completed 85-02 (binary search + benchmarks)
+Phase: 85 of 89 (Optimizer Fix & Improvement) -- COMPLETE
+Plan: 3 of 3 in current phase (all plans complete)
+Status: Phase 85 complete. PERF-01 (loop fix), PERF-02 (binary search), PERF-03 (replay optimization) all done.
+Last activity: 2026-02-23 -- Completed 85-03 (compile replay optimization)
 
 Progress: [===================                               ] 4/8 phases (v4.1)
 
@@ -30,7 +30,7 @@ Progress: [===================                               ] 4/8 phases (v4.1)
 | v1.0-v2.3 | 1-64 | 166 | Complete |
 | v3.0 Fault-Tolerant | 65-75 | 35 | Complete (2026-02-18) |
 | v4.0 Grover's Algorithm | 76-81 | 18 | Complete (2026-02-22) |
-| v4.1 Quality & Efficiency | 82-89 | 6 | In progress |
+| v4.1 Quality & Efficiency | 82-89 | 9 | In progress |
 
 **v4.1 Plan Details:**
 
@@ -44,6 +44,7 @@ Progress: [===================                               ] 4/8 phases (v4.1)
 | 84 | 02 | 60min | 2 | 12 |
 | 85 | 01 | 12min | 2 | 23 |
 | 85 | 02 | 10min | 2 | 3 |
+| 85 | 03 | 8min | 2 | 3 |
 
 ## Accumulated Context
 
@@ -89,6 +90,17 @@ See PROJECT.md Key Decisions table for full history.
 - Golden-master pattern: 20 circuit snapshots as JSON, parametrized verification tests
 - Verified zero regressions: all pre-existing failures remain, no new failures introduced
 
+**Phase 85-02:**
+- Binary search in smallest_layer_below_comp: O(log L) replaces O(L) linear scan
+- Debug fallback verified correctness, then removed (zero runtime cost)
+- Benchmarks at 100-10K operations documented in docs/optimizer_benchmark_results.md
+
+**Phase 85-03:**
+- Stack-allocated gate_t in inject_remapped_gates eliminates per-gate malloc/free
+- 36% overall compile replay speedup (before: 342.9us, after: 218.6us for medium workload)
+- Profiling shows 93% of replay time is Python overhead; C inject is only 7%
+- Further optimization would require Cython-level _replay (larger scope)
+
 ### Blockers/Concerns
 
 **Carry forward (all addressed in v4.1 phases):**
@@ -109,8 +121,8 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Phase 85 in progress. Plans 85-01, 85-02 complete. Starting Plan 85-03.
-Resume action: Execute Plan 85-03
+Stopped at: Phase 85 complete. Ready for Phase 86 (QFT Bug Fixes).
+Resume action: Plan and execute Phase 86
 
 ---
-*State updated: 2026-02-23 -- Phase 85 in progress -- Plans 85-01, 85-02 complete (2/3)*
+*State updated: 2026-02-23 -- Completed Phase 85 (optimizer fix & improvement) -- 3 plans complete*

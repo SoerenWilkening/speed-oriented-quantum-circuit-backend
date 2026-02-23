@@ -110,7 +110,7 @@
 - [x] **Phase 82: Infrastructure & Dependency Fixes** - Add coverage tooling, declare qiskit-aer dependency, establish measurement baseline (completed 2026-02-23)
 - [x] **Phase 83: Tech Debt Cleanup** - Remove dead code, automate preprocessor sync, document sequence generation (completed 2026-02-23)
 - [x] **Phase 84: Security Hardening** - Add pointer validation, bounds checking, and C static analysis across backend boundaries (completed 2026-02-23)
-- [ ] **Phase 85: Optimizer Fix & Improvement** - Fix latent loop direction bug and upgrade gate placement from O(L) to O(log L)
+- [x] **Phase 85: Optimizer Fix & Improvement** (3/3 plans) -- completed 2026-02-23
 - [ ] **Phase 86: QFT Bug Fixes** - Fix root-cause QFT arithmetic bugs in dependency order (WIDTH-ADD, CQQ-QFT, DIV-02, QFT-DIV)
 - [ ] **Phase 87: Scope & Segfault Fixes** - Fix controlled multiplication corruption, 32-bit segfault, qarray crash, and resolve MOD-REDUCE
 - [ ] **Phase 88: Binary Size Reduction** - Apply compiler flags and strip symbols to reduce .so file sizes by 30-50%
@@ -174,7 +174,7 @@ Plans:
 Plans:
 - [x] 85-01-PLAN.md — Fix loop direction bug, create golden-master snapshot infrastructure
 - [x] 85-02-PLAN.md — Replace linear scan with O(log L) binary search, create benchmarks
-- [ ] 85-03-PLAN.md — Profile and optimize @ql.compile replay overhead
+- [x] 85-03-PLAN.md — Profile and optimize @ql.compile replay overhead
 
 ### Phase 86: QFT Bug Fixes
 **Goal**: QFT-based arithmetic produces correct results for all tested widths, with root-cause fixes applied in dependency order
@@ -240,7 +240,7 @@ Phases execute in numeric order: 82 -> 83 -> 84 -> 85 -> 86 -> 87 -> 88 -> 89
 | 82. Infrastructure & Dependency Fixes | 2/2 | Complete    | 2026-02-23 | - |
 | 83. Tech Debt Cleanup | 2/2 | Complete   | 2026-02-23 | - |
 | 84. Security Hardening | 2/2 | Complete | 2026-02-23 | - |
-| 85. Optimizer Fix & Improvement | v4.1 | 2/3 | In Progress | - |
+| 85. Optimizer Fix & Improvement | v4.1 | 3/3 | Complete | - |
 | 86. QFT Bug Fixes | v4.1 | 0/? | Not started | - |
 | 87. Scope & Segfault Fixes | v4.1 | 0/? | Not started | - |
 | 88. Binary Size Reduction | v4.1 | 0/? | Not started | - |
