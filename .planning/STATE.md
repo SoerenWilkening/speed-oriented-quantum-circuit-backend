@@ -5,21 +5,21 @@
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v4.1 Quality & Efficiency -- Phase 83 (Tech Debt Cleanup)
+**Current focus:** v4.1 Quality & Efficiency -- Phase 84 (Security Hardening) COMPLETE
 
 ## Current Position
 
-Phase: 84 of 89 (Security Hardening) -- IN PROGRESS
-Plan: 1 of 2 in current phase (84-01 complete, 84-02 pending)
-Status: Plan 84-01 (pointer validation + buffer bounds) complete, executing 84-02 (static analysis)
-Last activity: 2026-02-23 -- Completed 84-01 (Cython/C boundary validation and security tests)
+Phase: 84 of 89 (Security Hardening) -- COMPLETE
+Plan: 2 of 2 in current phase (all plans complete)
+Status: Phase 84 complete. SEC-01 (NULL pointer), SEC-02 (buffer bounds), SEC-03 (static analysis) all done.
+Last activity: 2026-02-23 -- Completed 84-02 (cppcheck/clang-tidy static analysis)
 
-Progress: [==============                                    ] 2.5/8 phases (v4.1)
+Progress: [=================                                 ] 3/8 phases (v4.1)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 253 (v1.0-v4.1)
+- Total plans completed: 255 (v1.0-v4.1)
 - Average duration: ~13 min/plan
 - Total execution time: ~40.8 hours
 
@@ -30,7 +30,7 @@ Progress: [==============                                    ] 2.5/8 phases (v4.
 | v1.0-v2.3 | 1-64 | 166 | Complete |
 | v3.0 Fault-Tolerant | 65-75 | 35 | Complete (2026-02-18) |
 | v4.0 Grover's Algorithm | 76-81 | 18 | Complete (2026-02-22) |
-| v4.1 Quality & Efficiency | 82-89 | 4 | In progress |
+| v4.1 Quality & Efficiency | 82-89 | 6 | In progress |
 
 **v4.1 Plan Details:**
 
@@ -40,6 +40,8 @@ Progress: [==============                                    ] 2.5/8 phases (v4.
 | 82 | 02 | 324min | 1 | 2 |
 | 83 | 01 | 49min | 2 | 28 |
 | 83 | 02 | 39min | 2 | 3 |
+| 84 | 01 | 45min | 2 | 9 |
+| 84 | 02 | 60min | 2 | 12 |
 
 ## Accumulated Context
 
@@ -68,6 +70,17 @@ See PROJECT.md Key Decisions table for full history.
 - Active generator scripts already had comprehensive docstrings and argparse; no changes needed
 - Deprecation pattern: docstring notice + warnings.warn() after imports
 
+**Phase 84-01:**
+- Only entry-point functions (called from Python) get validated wrappers; internal C-to-C calls remain unwrapped for zero overhead
+- Buffer limit set at 384 matching qubit_array allocation size (4*64 + 2*64 = QV_MAX_QUBIT_SLOTS)
+- Arithmetic operations use C hot-path functions with stack arrays, no qubit_array bounds checks needed
+
+**Phase 84-02:**
+- unusedFunction/staticFunction cppcheck findings are false positives due to Cython cross-language calls -- suppressed
+- Printf format specifiers changed %d -> %u for qubit_t/num_t (unsigned int typedefs)
+- const-correctness applied to circuit_stats.c but NOT circuit_output.h to avoid cascading Cython changes
+- clang-tidy: misc-include-cleaner and bugprone-narrowing-conversions excluded (noisy, no actionable fixes)
+
 ### Blockers/Concerns
 
 **Carry forward (all addressed in v4.1 phases):**
@@ -88,8 +101,8 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 84-01-PLAN.md (Wave 1), proceeding to 84-02-PLAN.md (Wave 2)
-Resume action: Continue executing 84-02 (static analysis with cppcheck and clang-tidy)
+Stopped at: Phase 84 complete. Ready for Phase 85 (Optimizer Improvements).
+Resume action: Plan and execute Phase 85
 
 ---
-*State updated: 2026-02-23 -- Completed Phase 83 (tech debt cleanup) -- 2 plans complete*
+*State updated: 2026-02-23 -- Completed Phase 84 (security hardening) -- 2 plans complete*
