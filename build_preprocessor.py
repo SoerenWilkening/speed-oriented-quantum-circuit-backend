@@ -127,8 +127,10 @@ def sync_and_stage(src_dir: Path = SRC_DIR) -> int:
     writes the new content and stages it with git add.
 
     Returns:
-        0 always (auto-fix hook should not block commits after fixing).
+        0 if all preprocessed files are current (no drift).
+        1 if drift was detected and auto-fixed (commit should be retried).
     """
+    drift_found = False
     for pyx_file in sorted(src_dir.rglob("*.pyx")):
         if pyx_file.stem.endswith("_preprocessed"):
             continue
@@ -144,12 +146,13 @@ def sync_and_stage(src_dir: Path = SRC_DIR) -> int:
         # Compare with existing preprocessed file
         old_content = output.read_text() if output.exists() else ""
         if old_content != new_content:
+            drift_found = True
             output.write_text(new_content)
             print(f"Drift detected: {output.name} -- regenerated and staging")
             subprocess.run(["git", "add", "-f", str(output)], check=True)
         # If same: no action needed
 
-    return 0
+    return 1 if drift_found else 0
 
 
 def check_mode(src_dir: Path = SRC_DIR) -> int:
