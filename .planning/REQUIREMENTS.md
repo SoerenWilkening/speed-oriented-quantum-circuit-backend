@@ -47,7 +47,7 @@ Requirements for v4.1 Quality & Efficiency milestone. Each maps to roadmap phase
 ### Test Coverage
 
 - [x] **TEST-01**: Add pytest-cov infrastructure with Cython coverage plugin and coverage config in pyproject.toml
-- [ ] **TEST-02**: Measure baseline coverage and identify critical untested paths
+- [x] **TEST-02**: Measure baseline coverage and identify critical untested paths
 - [ ] **TEST-03**: Add tests for nested with-blocks (quantum conditionals within quantum conditionals)
 - [ ] **TEST-04**: Add tests for circuit reset behavior (circuit state after reset_circuit)
 - [ ] **TEST-05**: Integrate C backend tests (test_allocator_block, test_reverse_circuit) into pytest via subprocess wrapper
@@ -125,7 +125,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SIZE-02 | Phase 88 | Pending |
 | SIZE-03 | Phase 88 | Pending |
 | TEST-01 | Phase 82 | Complete |
-| TEST-02 | Phase 82 | Pending |
+| TEST-02 | Phase 82 | Complete |
 | TEST-03 | Phase 89 | Pending |
 | TEST-04 | Phase 89 | Pending |
 | TEST-05 | Phase 89 | Pending |

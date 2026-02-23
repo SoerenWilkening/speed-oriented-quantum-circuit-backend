@@ -107,7 +107,7 @@
 
 **Milestone Goal:** Fix all carry-forward bugs, address tech debt and security vulnerabilities, improve optimizer and binary size, close test coverage gaps.
 
-- [ ] **Phase 82: Infrastructure & Dependency Fixes** - Add coverage tooling, declare qiskit-aer dependency, establish measurement baseline
+- [x] **Phase 82: Infrastructure & Dependency Fixes** - Add coverage tooling, declare qiskit-aer dependency, establish measurement baseline (completed 2026-02-23)
 - [ ] **Phase 83: Tech Debt Cleanup** - Remove dead code, automate preprocessor sync, document sequence generation
 - [ ] **Phase 84: Security Hardening** - Add pointer validation, bounds checking, and C static analysis across backend boundaries
 - [ ] **Phase 85: Optimizer Fix & Improvement** - Fix latent loop direction bug and upgrade gate placement from O(L) to O(log L)
@@ -226,7 +226,7 @@ Phases execute in numeric order: 82 -> 83 -> 84 -> 85 -> 86 -> 87 -> 88 -> 89
 | 62-64 | v2.3 | 4/4 | Complete | 2026-02-08 |
 | 65-75 | v3.0 | 35/35 | Complete | 2026-02-18 |
 | 76-81 | v4.0 | 18/18 | Complete | 2026-02-22 |
-| 82. Infrastructure & Dependency Fixes | 1/2 | In Progress|  | - |
+| 82. Infrastructure & Dependency Fixes | 2/2 | Complete   | 2026-02-23 | - |
 | 83. Tech Debt Cleanup | v4.1 | 0/? | Not started | - |
 | 84. Security Hardening | v4.1 | 0/? | Not started | - |
 | 85. Optimizer Fix & Improvement | v4.1 | 0/? | Not started | - |
