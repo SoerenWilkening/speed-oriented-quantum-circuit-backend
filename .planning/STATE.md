@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-22)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v4.1 Quality & Efficiency -- Phase 84 (Security Hardening) COMPLETE
+**Current focus:** v4.1 Quality & Efficiency -- Phase 85 (Optimizer Fix & Improvement) IN PROGRESS
 
 ## Current Position
 
-Phase: 84 of 89 (Security Hardening) -- COMPLETE
-Plan: 2 of 2 in current phase (all plans complete)
-Status: Phase 84 complete. SEC-01 (NULL pointer), SEC-02 (buffer bounds), SEC-03 (static analysis) all done.
-Last activity: 2026-02-23 -- Completed 84-02 (cppcheck/clang-tidy static analysis)
+Phase: 85 of 89 (Optimizer Fix & Improvement) -- IN PROGRESS
+Plan: 1 of 3 in current phase (85-01 complete)
+Status: 85-01 complete (bug fix + golden-master). Starting 85-02 (binary search).
+Last activity: 2026-02-23 -- Completed 85-01 (loop direction fix + golden-master infrastructure)
 
-Progress: [=================                                 ] 3/8 phases (v4.1)
+Progress: [===================                               ] 4/8 phases (v4.1)
 
 ## Performance Metrics
 
@@ -42,6 +42,7 @@ Progress: [=================                                 ] 3/8 phases (v4.1)
 | 83 | 02 | 39min | 2 | 3 |
 | 84 | 01 | 45min | 2 | 9 |
 | 84 | 02 | 60min | 2 | 12 |
+| 85 | 01 | 12min | 2 | 23 |
 
 ## Accumulated Context
 
@@ -81,6 +82,12 @@ See PROJECT.md Key Decisions table for full history.
 - const-correctness applied to circuit_stats.c but NOT circuit_output.h to avoid cascading Cython changes
 - clang-tidy: misc-include-cleaner and bugprone-narrowing-conversions excluded (noisy, no actionable fixes)
 
+**Phase 85-01:**
+- Fixed ++i to --i in smallest_layer_below_comp (PERF-01); also fixed boundary condition (< 0 to <= 0)
+- Used ql.option('fault_tolerant', True/False) for arithmetic mode switching (not set_arithmetic_mode)
+- Golden-master pattern: 20 circuit snapshots as JSON, parametrized verification tests
+- Verified zero regressions: all pre-existing failures remain, no new failures introduced
+
 ### Blockers/Concerns
 
 **Carry forward (all addressed in v4.1 phases):**
@@ -101,8 +108,8 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Phase 84 complete. Ready for Phase 85 (Optimizer Improvements).
-Resume action: Plan and execute Phase 85
+Stopped at: Phase 85 in progress. Plan 85-01 complete. Starting Plan 85-02 (binary search).
+Resume action: Execute Plan 85-02, then 85-03
 
 ---
-*State updated: 2026-02-23 -- Completed Phase 84 (security hardening) -- 2 plans complete*
+*State updated: 2026-02-23 -- Phase 85 in progress -- Plan 85-01 complete (1/3)*
