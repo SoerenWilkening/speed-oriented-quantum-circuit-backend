@@ -809,8 +809,10 @@ def reverse_instruction_range(int start_layer, int end_layer):
 def inject_remapped_gates(list gates, dict qubit_map):
 	"""Inject gates into circuit with qubit index remapping.
 
-	For each gate dict, creates a new gate_t, remaps qubit indices through
-	qubit_map, and calls add_gate() to insert into the circuit.
+	For each gate dict, creates a gate_t on the stack, remaps qubit indices
+	through qubit_map, and calls add_gate() to insert into the circuit.
+	Stack allocation is safe because add_gate() copies via memcpy in
+	append_gate().
 
 	Parameters
 	----------
@@ -829,15 +831,12 @@ def inject_remapped_gates(list gates, dict qubit_map):
 	>>> inject_remapped_gates(gates, identity_map)
 	"""
 	cdef circuit_t *circ
-	cdef gate_t *g
+	cdef gate_t g  # Stack-allocated, reused per gate (add_gate copies via memcpy)
 	cdef int i
 	_validate_circuit()
 	circ = <circuit_t*>_circuit
 	for gate_dict in gates:
-		g = <gate_t*>malloc(sizeof(gate_t))
-		if g == NULL:
-			raise MemoryError("Failed to allocate gate_t")
-		memset(g, 0, sizeof(gate_t))
+		memset(&g, 0, sizeof(gate_t))
 		g.Gate = <Standardgate_t>gate_dict['type']
 		g.Target = <qubit_t>qubit_map[gate_dict['target']]
 		g.GateValue = gate_dict['angle']
@@ -849,13 +848,12 @@ def inject_remapped_gates(list gates, dict qubit_map):
 		else:
 			g.large_control = <qubit_t*>malloc(g.NumControls * sizeof(qubit_t))
 			if g.large_control == NULL:
-				free(g)
 				raise MemoryError("Failed to allocate large_control array")
 			for i in range(<int>g.NumControls):
 				g.large_control[i] = <qubit_t>qubit_map[controls[i]]
 			g.Control[0] = g.large_control[0]
 			g.Control[1] = g.large_control[1]
-		add_gate(circ, g)
+		add_gate(circ, &g)
 
 
 def _get_layer_floor():
