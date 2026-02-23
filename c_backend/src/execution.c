@@ -7,6 +7,7 @@
 //
 
 #include "execution.h"
+#include "validation.h"
 #include <assert.h>
 
 // apply the sequences to the desired qubits
@@ -128,4 +129,24 @@ void reverse_circuit_range(circuit_t *circ, int start_layer, int end_layer) {
             // free_circuit handles cleanup of all large_control arrays.
         }
     }
+}
+
+// Phase 84: Validated entry points for Cython boundary.
+// These wrap the originals with NULL checks and return error codes.
+// Internal C-to-C calls continue to use the originals directly.
+
+int validated_run_instruction(sequence_t *res, const qubit_t qubit_array[], int invert,
+                              circuit_t *circ) {
+    if (circ == NULL)
+        return QV_NULL_CIRC;
+    // NULL res is already handled (no-op) by run_instruction, so no error
+    run_instruction(res, qubit_array, invert, circ);
+    return QV_OK;
+}
+
+int validated_reverse_circuit_range(circuit_t *circ, int start_layer, int end_layer) {
+    if (circ == NULL)
+        return QV_NULL_CIRC;
+    reverse_circuit_range(circ, start_layer, end_layer);
+    return QV_OK;
 }

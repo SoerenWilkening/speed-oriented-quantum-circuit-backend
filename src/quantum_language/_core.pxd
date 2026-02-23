@@ -117,10 +117,20 @@ cdef extern from "circuit_output.h":
 	draw_data_t *circuit_to_draw_data(circuit_t *circ)
 	void free_draw_data(draw_data_t *data);
 
+cdef extern from "validation.h":
+	int QV_OK
+	int QV_NULL_CIRC
+	int QV_NULL_SEQ
+	int QV_NULL_ARG
+	int QV_MAX_QUBIT_SLOTS
+
 cdef extern from "execution.h":
 	void qubit_mapping(unsigned int qubit_arrray[], circuit_t *circ);
 	void run_instruction(sequence_t *res, const unsigned int qubit_array[], int invert, circuit_t *circ);
 	void reverse_circuit_range(circuit_t *circ, int start_layer, int end_layer);
+	# Validated entry points for Cython boundary (Phase 84)
+	int validated_run_instruction(sequence_t *res, const unsigned int qubit_array[], int invert, circuit_t *circ);
+	int validated_reverse_circuit_range(circuit_t *circ, int start_layer, int end_layer);
 
 cdef extern from "qubit_allocator.h":
 	# Forward declaration to match C header
