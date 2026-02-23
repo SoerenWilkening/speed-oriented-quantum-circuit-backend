@@ -139,7 +139,6 @@ int bk_compute_merges(int n_carries, bk_merge_t *merges, int max_merges) {
                     merges[count].level = 0;
                     merges[count].is_down = 1;
                     count++;
-                    leftmost[i] = 0;
                     covered[i] = 1;
                     break;
                 }

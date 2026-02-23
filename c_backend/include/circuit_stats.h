@@ -28,7 +28,7 @@ typedef struct circuit_s circuit_t;
  * @param circ Circuit to query
  * @return Total gate count, or 0 if circ is NULL
  */
-size_t circuit_gate_count(circuit_t *circ);
+size_t circuit_gate_count(const circuit_t *circ);
 
 /**
  * @brief Get circuit depth (number of layers used).
@@ -36,7 +36,7 @@ size_t circuit_gate_count(circuit_t *circ);
  * @param circ Circuit to query
  * @return Circuit depth, or 0 if circ is NULL
  */
-num_t circuit_depth(circuit_t *circ);
+num_t circuit_depth(const circuit_t *circ);
 
 /**
  * @brief Get number of qubits used in circuit.
@@ -44,7 +44,7 @@ num_t circuit_depth(circuit_t *circ);
  * @param circ Circuit to query
  * @return Qubit count, or 0 if circ is NULL
  */
-num_t circuit_qubit_count(circuit_t *circ);
+num_t circuit_qubit_count(const circuit_t *circ);
 
 /**
  * @brief Gate type counts structure.
@@ -78,6 +78,6 @@ typedef struct {
  * @param circ Circuit to query
  * @return Gate counts structure (all zeros if circ is NULL)
  */
-gate_counts_t circuit_gate_counts(circuit_t *circ);
+gate_counts_t circuit_gate_counts(const circuit_t *circ);
 
 #endif // QUANTUM_CIRCUIT_STATS_H

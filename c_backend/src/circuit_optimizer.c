@@ -44,7 +44,6 @@ static int apply_cancel_inverse(circuit_t *circ) {
     // For each qubit, scan for consecutive inverse pairs
     for (int qubit = 0; qubit <= circ->used_qubits; qubit++) {
         // Track last gate on this qubit
-        layer_t last_layer = 0;
         gate_t *last_gate = NULL;
 
         for (num_t layer = 0; layer < circ->used_layer; layer++) {
@@ -57,7 +56,6 @@ static int apply_cancel_inverse(circuit_t *circ) {
             // Only check single-qubit gates
             if (g->NumControls > 0) {
                 last_gate = g;
-                last_layer = layer;
                 continue;
             }
 
@@ -72,7 +70,6 @@ static int apply_cancel_inverse(circuit_t *circ) {
             }
 
             last_gate = g;
-            last_layer = layer;
         }
     }
 
@@ -116,8 +113,6 @@ int circuit_can_optimize(circuit_t *circ) {
     if (circ == NULL || circ->used == 0)
         return 0;
 
-    // Simple heuristic: check if any optimization possible
-    // For now, always return 1 if circuit has gates
-    // (Real check would scan for cancellable pairs)
-    return circ->used > 0 ? 1 : 0;
+    // Simple heuristic: circuit has gates (NULL/empty already returned 0)
+    return 1;
 }

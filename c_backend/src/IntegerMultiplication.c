@@ -133,16 +133,17 @@ sequence_t *CQ_mul(int bits, int64_t value) {
         for (int i = 0; i < bits - rounds; ++i) {
             num_t target = rounds + i;
 
-            double value = 0;
+            double phase_angle = 0;
             for (int bit_int2 = 0; bit_int2 < bits; ++bit_int2) {
                 // Phase for Draper QFT multiplication: encode v * 2^(bit_weight) in Fourier domain
                 // With target = rounds + i and rounds tracking the control bit's position,
                 // the positional weight is already accounted for by the target offset.
                 // No additional pow(2, bits-1-bit) factor needed.
-                value += bin[bits - 1 - bit_int2] * 2 * M_PI / (pow(2, i + 1)) * pow(2, bit_int2);
+                phase_angle +=
+                    bin[bits - 1 - bit_int2] * 2 * M_PI / (pow(2, i + 1)) * pow(2, bit_int2);
             }
             gate_t *g = &mul->seq[layer][mul->gates_per_layer[layer]++];
-            cp(g, target, control, value);
+            cp(g, target, control, phase_angle);
             layer++;
         }
         rounds++;
@@ -362,12 +363,12 @@ sequence_t *cCQ_mul(int bits, int64_t value) {
     int rounds;
     int layer = 2 * bits - 1;
     for (int bit = (int)bits - 1; bit >= 0; --bit) {
-        double value = 0;
+        double phase_angle = 0;
         for (int i = 0; i < bits - bit; ++i) {
-            value += values[i] / 2;
+            phase_angle += values[i] / 2;
         }
         gate_t *g = &mul->seq[layer][mul->gates_per_layer[layer]++];
-        cp(g, bit, control, value);
+        cp(g, bit, control, phase_angle);
         layer++;
     }
 
@@ -508,9 +509,9 @@ sequence_t *cQQ_mul(int bits) {
         layer++;
 
         for (int i = 0; i < bits; ++i) {
-            gate_t *g = &mul->seq[layer][mul->gates_per_layer[layer]++];
-            double value = -pow(2, -i - 1) * M_PI * (pow(2, i + 1) - 1) * pow(2, bit_int2) / 2;
-            cp(g, bits - i - 1, 3 * bits - bit_int2 - 1, value);
+            gate_t *gi = &mul->seq[layer][mul->gates_per_layer[layer]++];
+            double val = -pow(2, -i - 1) * M_PI * (pow(2, i + 1) - 1) * pow(2, bit_int2) / 2;
+            cp(gi, bits - i - 1, 3 * bits - bit_int2 - 1, val);
             layer++;
         }
         g = &mul->seq[layer][mul->gates_per_layer[layer]++];
@@ -518,9 +519,9 @@ sequence_t *cQQ_mul(int bits) {
         layer++;
 
         for (int i = 0; i < bits; ++i) {
-            gate_t *g = &mul->seq[layer][mul->gates_per_layer[layer]++];
-            double value = pow(2, -i - 1) * M_PI * (pow(2, i + 1) - 1) * pow(2, bit_int2) / 2;
-            cp(g, bits - i - 1, 4 * bits - 1, value);
+            gate_t *gi = &mul->seq[layer][mul->gates_per_layer[layer]++];
+            double val = pow(2, -i - 1) * M_PI * (pow(2, i + 1) - 1) * pow(2, bit_int2) / 2;
+            cp(gi, bits - i - 1, 4 * bits - 1, val);
             layer++;
         }
     }

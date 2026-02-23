@@ -1,0 +1,92 @@
+// cppcheck suppressions for Quantum Assembly C backend
+// Phase 84: Security hardening static analysis
+// Each suppression has a justification explaining why it is acceptable.
+
+// ============================================================================
+// unusedFunction: Functions called from Cython/Python, invisible to cppcheck
+// ============================================================================
+// Justification: These functions are called from Cython (_core.pyx, qint.pyx)
+// via the extern declarations in _core.pxd. cppcheck cannot see cross-language
+// calls. All listed functions are part of the public C API used by Python.
+unusedFunction:c_backend/src/Integer.c
+unusedFunction:c_backend/src/IntegerAddition.c
+unusedFunction:c_backend/src/IntegerComparison.c
+unusedFunction:c_backend/src/IntegerMultiplication.c
+unusedFunction:c_backend/src/LogicOperations.c
+unusedFunction:c_backend/src/ToffoliAdditionCLA.c
+unusedFunction:c_backend/src/circuit_allocations.c
+unusedFunction:c_backend/src/circuit_optimizer.c
+unusedFunction:c_backend/src/circuit_output.c
+unusedFunction:c_backend/src/circuit_stats.c
+unusedFunction:c_backend/src/execution.c
+unusedFunction:c_backend/src/gate.c
+unusedFunction:c_backend/src/hot_path_add.c
+unusedFunction:c_backend/src/hot_path_mul.c
+unusedFunction:c_backend/src/hot_path_xor.c
+unusedFunction:c_backend/src/qubit_allocator.c
+unusedFunction:c_backend/src/sequences/toffoli_add_seq_dispatch.c
+
+// ============================================================================
+// staticFunction: Functions used from other translation units via Cython
+// ============================================================================
+// Justification: Same as unusedFunction -- these functions are called from
+// Cython or from other C files via headers. Marking them static would break
+// the build. Auto-generated sequence files also use this pattern.
+staticFunction:c_backend/src/Integer.c
+staticFunction:c_backend/src/IntegerMultiplication.c
+staticFunction:c_backend/src/ToffoliAdditionCLA.c
+staticFunction:c_backend/src/circuit_output.c
+staticFunction:c_backend/src/execution.c
+staticFunction:c_backend/src/gate.c
+staticFunction:c_backend/src/optimizer.c
+// Auto-generated sequence files: init_ functions called from dispatch files
+staticFunction:c_backend/src/sequences/*
+
+// ============================================================================
+// constParameterPointer / constVariablePointer: Non-critical const-correctness
+// ============================================================================
+// Justification: These parameters could technically be const but changing them
+// would require updating headers, Cython declarations, and potentially break
+// ABI compatibility. The const-critical ones (circuit_stats.c, circuit_output.c)
+// have been fixed. Remaining ones are lower priority.
+constParameterPointer:c_backend/src/IntegerMultiplication.c:70
+constParameterPointer:c_backend/src/ToffoliAdditionCDKM.c:261
+constParameterPointer:c_backend/src/ToffoliAdditionCDKM.c:364
+constParameterPointer:c_backend/src/circuit_optimizer.c
+constParameterPointer:c_backend/src/circuit_output.c:291
+constParameterPointer:c_backend/src/gate.c
+constParameterPointer:c_backend/src/hot_path_add_toffoli.c:63
+constParameterPointer:c_backend/src/qubit_allocator.c:343
+constVariablePointer:c_backend/src/ToffoliAdditionCLA.c
+constVariablePointer:c_backend/src/circuit_output.c:229
+constVariablePointer:c_backend/src/circuit_output.c:667
+constVariablePointer:c_backend/src/qubit_allocator.c
+
+// ============================================================================
+// knownConditionTrueFalse: Defensive guards that are always true/false
+// ============================================================================
+// Justification: These are defensive bounds checks that prevent width < 1
+// from reaching unsafe code. Although the loop bounds make them always false,
+// they serve as safety nets if loop logic changes in the future.
+knownConditionTrueFalse:c_backend/src/ToffoliMultiplication.c:244
+knownConditionTrueFalse:c_backend/src/ToffoliMultiplication.c:422
+
+// ============================================================================
+// uninitvar: False positive -- array initialized for all used indices
+// ============================================================================
+// Justification: controls[128] is filled for indices 0..bits-1 in the for loop
+// before being passed to emit_mcx_decomp_seq with count=bits. cppcheck sees
+// the partial initialization but all accessed indices are initialized.
+uninitvar:c_backend/src/IntegerComparison.c:244
+
+// ============================================================================
+// normalCheckLevelMaxBranches: Informational -- not a real finding
+// ============================================================================
+// Justification: cppcheck informational message about analysis depth, not a
+// code issue. Would require --check-level=exhaustive which is too slow.
+normalCheckLevelMaxBranches
+
+// ============================================================================
+// checkersReport: Informational meta-report, not a code finding
+// ============================================================================
+checkersReport

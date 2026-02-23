@@ -51,7 +51,7 @@ void print_sequence(sequence_t *seq) {
     for (int layer = 0; layer < seq->used_layer; ++layer) {
         count += seq->gates_per_layer[layer];
     }
-    printf("cycles = %d\n", seq->used_layer);
+    printf("cycles = %u\n", seq->used_layer);
     printf("gates = %d\n", count);
     if (seq->used_layer > 300)
         return;
@@ -152,9 +152,9 @@ void print_gate(gate_t *g) {
         printf("Tdg->");
         break;
     }
-    printf("(%d,", g->Target);
+    printf("(%u,", g->Target);
     for (int i = 0; i < g->NumControls; ++i) {
-        printf("%d,", g->Control[i]);
+        printf("%u,", g->Control[i]);
     }
     printf(")\n");
 }
@@ -213,10 +213,9 @@ void mcz(gate_t *g, qubit_t target, qubit_t *controls, int n_controls) {
             g->large_control[i] = controls[i];
         }
         // Also populate Control[0..1] for backward compatibility
-        if (n_controls >= 1)
-            g->Control[0] = controls[0];
-        if (n_controls >= 2)
-            g->Control[1] = controls[1];
+        // (n_controls > MAXCONTROLS here, so always >= 2)
+        g->Control[0] = controls[0];
+        g->Control[1] = controls[1];
     }
 }
 void z(gate_t *g, qubit_t target) {

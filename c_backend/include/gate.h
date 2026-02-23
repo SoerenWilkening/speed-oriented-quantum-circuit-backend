@@ -21,8 +21,8 @@ void print_empty(int k);
 void print_sequence(sequence_t *seq);
 void print_gate(gate_t *g);
 
-sequence_t *QFT(sequence_t *seq, int num_qubits);
-sequence_t *QFT_inverse(sequence_t *seq, int num_qubits);
+sequence_t *QFT(sequence_t *qft, int num_qubits);
+sequence_t *QFT_inverse(sequence_t *qft, int num_qubits);
 
 void p(gate_t *g, qubit_t target, double value);
 void h(gate_t *g, qubit_t target);

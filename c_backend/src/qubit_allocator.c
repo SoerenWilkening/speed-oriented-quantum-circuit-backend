@@ -202,38 +202,38 @@ qubit_t allocator_alloc(qubit_allocator_t *alloc, num_t count, bool is_ancilla) 
         alloc->stats.peak_allocated = alloc->stats.current_in_use;
     }
 
-    // Track ancilla allocations
+    // Track ancilla allocations and debug map
     if (is_ancilla) {
         alloc->stats.ancilla_allocations += count;
-    }
 
 #ifdef DEBUG
-    if (is_ancilla) {
-        // Expand ancilla map if needed
-        if (start_qubit + count > alloc->ancilla_map_capacity) {
-            num_t new_cap = alloc->ancilla_map_capacity;
-            while (new_cap < start_qubit + count) {
-                new_cap *= 2;
+        {
+            // Expand ancilla map if needed
+            if (start_qubit + count > alloc->ancilla_map_capacity) {
+                num_t new_cap = alloc->ancilla_map_capacity;
+                while (new_cap < start_qubit + count) {
+                    new_cap *= 2;
+                }
+                if (new_cap > ALLOCATOR_MAX_QUBITS)
+                    new_cap = ALLOCATOR_MAX_QUBITS;
+                bool *new_map = realloc(alloc->is_ancilla_map, new_cap * sizeof(bool));
+                if (new_map != NULL) {
+                    memset(new_map + alloc->ancilla_map_capacity, 0,
+                           (new_cap - alloc->ancilla_map_capacity) * sizeof(bool));
+                    alloc->is_ancilla_map = new_map;
+                    alloc->ancilla_map_capacity = new_cap;
+                }
             }
-            if (new_cap > ALLOCATOR_MAX_QUBITS)
-                new_cap = ALLOCATOR_MAX_QUBITS;
-            bool *new_map = realloc(alloc->is_ancilla_map, new_cap * sizeof(bool));
-            if (new_map != NULL) {
-                memset(new_map + alloc->ancilla_map_capacity, 0,
-                       (new_cap - alloc->ancilla_map_capacity) * sizeof(bool));
-                alloc->is_ancilla_map = new_map;
-                alloc->ancilla_map_capacity = new_cap;
+            // Mark qubits as ancilla
+            for (num_t i = 0; i < count; i++) {
+                if (start_qubit + i < alloc->ancilla_map_capacity) {
+                    alloc->is_ancilla_map[start_qubit + i] = true;
+                }
             }
+            alloc->ancilla_outstanding += count;
         }
-        // Mark qubits as ancilla
-        for (num_t i = 0; i < count; i++) {
-            if (start_qubit + i < alloc->ancilla_map_capacity) {
-                alloc->is_ancilla_map[start_qubit + i] = true;
-            }
-        }
-        alloc->ancilla_outstanding += count;
-    }
 #endif
+    }
 
     return start_qubit;
 }

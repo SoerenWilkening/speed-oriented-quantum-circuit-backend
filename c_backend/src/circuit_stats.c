@@ -6,25 +6,25 @@
 #include "circuit_stats.h"
 #include "circuit.h"
 
-size_t circuit_gate_count(circuit_t *circ) {
+size_t circuit_gate_count(const circuit_t *circ) {
     if (circ == NULL)
         return 0;
     return circ->used; // Already tracked in circuit structure
 }
 
-num_t circuit_depth(circuit_t *circ) {
+num_t circuit_depth(const circuit_t *circ) {
     if (circ == NULL)
         return 0;
     return circ->used_layer; // Already tracked
 }
 
-num_t circuit_qubit_count(circuit_t *circ) {
+num_t circuit_qubit_count(const circuit_t *circ) {
     if (circ == NULL)
         return 0;
     return circ->used_qubits + 1; // +1 because 0-indexed
 }
 
-gate_counts_t circuit_gate_counts(circuit_t *circ) {
+gate_counts_t circuit_gate_counts(const circuit_t *circ) {
     gate_counts_t counts = {0};
 
     if (circ == NULL)
@@ -33,7 +33,7 @@ gate_counts_t circuit_gate_counts(circuit_t *circ) {
     // Iterate through all layers and gates
     for (num_t layer = 0; layer < circ->used_layer; layer++) {
         for (num_t gate_idx = 0; gate_idx < circ->used_gates_per_layer[layer]; gate_idx++) {
-            gate_t *g = &circ->sequence[layer][gate_idx];
+            const gate_t *g = &circ->sequence[layer][gate_idx];
 
             // Count by gate type and control count
             switch (g->Gate) {

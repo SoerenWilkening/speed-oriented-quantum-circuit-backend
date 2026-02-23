@@ -1,0 +1,19 @@
+---
+# clang-tidy configuration for Quantum Assembly C backend
+# Phase 84: Security hardening static analysis
+#
+# Only C-relevant checks enabled (C++ checks excluded)
+Checks: >
+  bugprone-*,
+  cert-*,
+  clang-analyzer-*,
+  misc-*,
+  -misc-unused-parameters,
+  -misc-include-cleaner,
+  -cert-dcl37-c,
+  -cert-dcl51-cpp,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-narrowing-conversions,
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling
+HeaderFilterRegex: 'c_backend/include/.*'
+WarningsAsErrors: ''

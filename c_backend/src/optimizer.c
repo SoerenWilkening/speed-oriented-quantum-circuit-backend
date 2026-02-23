@@ -179,27 +179,18 @@ void add_gate(circuit_t *circ, gate_t *g) {
         gate_t *coll[3]; // Stack allocated -- no malloc/free per gate (Phase 61)
         colliding_gates(circ, g, min_possible_layer, gate_index, coll);
         //        printf("\n");
-        int delta = prev - min_possible_layer;
-
-        //        int commute = 1;
-        int total_inverse = 1;
+        (void)(prev); // delta = prev - min_possible_layer was unused
 
         for (int j = 0; j < 1; ++j) {
             // compare with all the colliding gates
             gate_t *g2 = coll[j];
 
             if (g2 != NULL) {
-                //                commute &= gates_commute(g, g2);
-                int inverse = gates_are_inverse(g, g2);
-                //                printf("%d\n", inverse);
-                //                fflush(stdout);
-
                 // if inverse, gate is removed
                 if (gates_are_inverse(g, g2)) {
                     merge_gates(circ, g, min_possible_layer, gate_index[j]);
                     return;
                 }
-                total_inverse &= inverse;
             }
         }
         // only previous layer and dont merge: undo swap

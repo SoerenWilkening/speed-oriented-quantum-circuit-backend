@@ -406,9 +406,9 @@ sequence_t *q_and_seq(int bits, int classical_value) {
         seq->gates_per_layer[i] = 0;
 
     for (int i = number - 1; i < INTEGERSIZE; ++i) {
-        int control = INTEGERSIZE + i;
-        int target = i;
         if (bin[i] == 1) {
+            int control = INTEGERSIZE + i;
+            int target = i;
             gate_t *g = &seq->seq[0][seq->gates_per_layer[0]++];
             cx(g, target, control);
         }
