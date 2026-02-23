@@ -1,6 +1,6 @@
 from libc.stdlib cimport free
 
-cdef extern from "QPU.h":
+cdef extern from "circuit.h":
     ctypedef struct circuit_t:
         pass
 

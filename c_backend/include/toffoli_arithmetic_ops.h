@@ -8,13 +8,13 @@
  * Phase 66: Core CDKM adder implementation (QQ, CQ).
  * Phase 67: Controlled variants (cQQ, cCQ) using CCX + MCX gates.
  *
- * Dependencies: types.h, QPU.h (for circuit_t in multiplication functions)
+ * Dependencies: types.h, circuit.h (for circuit_t in multiplication functions)
  */
 
 #ifndef TOFFOLI_ARITHMETIC_OPS_H
 #define TOFFOLI_ARITHMETIC_OPS_H
 
-#include "QPU.h"
+#include "circuit.h"
 #include "types.h"
 #include <stdint.h>
 

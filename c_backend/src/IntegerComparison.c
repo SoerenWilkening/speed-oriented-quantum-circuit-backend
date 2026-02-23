@@ -4,7 +4,7 @@
 // Phase 74-03: MCX gates decomposed via AND-ancilla in equality comparisons.
 
 #include "Integer.h"
-#include "QPU.h"
+#include "circuit.h"
 #include "comparison_ops.h"
 #include "definition.h"
 #include "gate.h"
@@ -415,8 +415,8 @@ sequence_t *CQ_less_than(int bits, int64_t value) {
 
 // CC_equal removed (Phase 11) - purely classical, no quantum gate generation
 
-// CQ_equal() removed (Phase 11-04) - used QPU_state->R0 for classical value
+// CQ_equal() removed (Phase 11-04) - used global state for classical value
 // Use CQ_equal_width(bits, value) instead with explicit parameters
 
-// cCQ_equal() removed (Phase 11-04) - used QPU_state->R0 for classical value
+// cCQ_equal() removed (Phase 11-04) - used global state for classical value
 // Use controlled version of CQ_equal_width() when available

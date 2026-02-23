@@ -6,7 +6,7 @@
 #define CQ_BACKEND_IMPROVED_EXECUTION_H
 
 // #include "AssemblyOperations.h"
-#include "QPU.h"
+#include "circuit.h"
 
 // functionality for C
 // void init_instruction(instruction_t *instr);

@@ -524,7 +524,7 @@ sequence_t *P_add_param(double phase_value) {
     return seq;
 }
 
-// P_add() removed (Phase 11-04) - deprecated wrapper that used QPU_state->R0
+// P_add() removed (Phase 11-04) - deprecated wrapper that used global state
 // Use P_add_param(phase_value) instead
 
 sequence_t *cP_add_param(double phase_value) {
@@ -563,5 +563,5 @@ sequence_t *cP_add_param(double phase_value) {
     return seq;
 }
 
-// cP_add() removed (Phase 11-04) - deprecated wrapper that used QPU_state->R0
+// cP_add() removed (Phase 11-04) - deprecated wrapper that used global state
 // Use cP_add_param(phase_value) instead

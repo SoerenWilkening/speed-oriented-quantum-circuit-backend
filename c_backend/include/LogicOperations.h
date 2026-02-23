@@ -1,6 +1,6 @@
 //
 // LogicOperations.h - Logic and control flow operations
-// Dependencies: bitwise_ops.h, Integer.h, QPU.h, gate.h
+// Dependencies: bitwise_ops.h, Integer.h, circuit.h, gate.h
 //
 // This header provides:
 // - Width-parameterized bitwise ops (via bitwise_ops.h)
@@ -12,8 +12,8 @@
 #define CQ_BACKEND_IMPROVED_LOGICOPERATIONS_H
 
 #include "Integer.h"
-#include "QPU.h"
 #include "bitwise_ops.h"
+#include "circuit.h"
 #include "definition.h"
 #include "gate.h"
 
@@ -21,7 +21,7 @@
 // Control flow operations
 // ======================================================
 sequence_t *void_seq();
-// jmp_seq removed (Phase 11) - manipulated QPU_state pointer for control flow that's no longer used
+// jmp_seq removed (Phase 11) - manipulated global state for control flow that's no longer used
 sequence_t *branch_seq();
 sequence_t *cbranch_seq();
 

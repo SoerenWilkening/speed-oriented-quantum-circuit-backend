@@ -1,10 +1,10 @@
 //
 // circuit_output.c - Circuit visualization and export implementation
-// Dependencies: circuit_output.h, QPU.h (for circuit_t definition), gate.h
+// Dependencies: circuit_output.h, circuit.h (for circuit_t definition), gate.h
 //
 
 #include "circuit_output.h"
-#include "QPU.h"
+#include "circuit.h"
 #include "gate.h"
 #include <math.h>
 

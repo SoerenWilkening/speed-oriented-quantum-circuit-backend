@@ -2,7 +2,7 @@
 // Created by Sören Wilkening on 27.09.25.
 //
 
-#include "QPU.h"
+#include "circuit.h"
 
 circuit_t *init_circuit() {
     // OWNERSHIP: Caller owns returned circuit_t*, must call free_circuit() when done.

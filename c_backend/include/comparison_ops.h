@@ -21,7 +21,7 @@
 
 // CC_equal removed (Phase 11) - purely classical, no quantum gate generation
 
-// CQ_equal() and cCQ_equal() removed (Phase 11-04) - used QPU_state->R0 for classical value
+// CQ_equal() and cCQ_equal() removed (Phase 11-04) - used global state for classical value
 // Use CQ_equal_width(bits, value) instead with explicit parameters
 
 // ======================================================

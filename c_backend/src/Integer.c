@@ -1,7 +1,7 @@
 //
 // Created by Sören Wilkening on 26.10.24.
 //
-#include "QPU.h"
+#include "circuit.h"
 #include "qubit_allocator.h"
 #include <stdint.h>
 
@@ -146,6 +146,5 @@ void free_element(circuit_t *circ, quantum_int_t *el1) {
 }
 
 // TODO(Phase 4): setting_seq() removed during global state cleanup
-// This function used QPU_state global which was eliminated in 04-02
 // Function was not called from Python bindings (verified via grep)
 // If needed in future, should be refactored to accept circuit_t* parameter

@@ -7,7 +7,6 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
 
 add_executable(CQ_backend_improved main.c
         c_backend/src/Integer.c
-        c_backend/src/QPU.c
         c_backend/src/gate.c
         c_backend/include/definition.h
         c_backend/src/IntegerAddition.c

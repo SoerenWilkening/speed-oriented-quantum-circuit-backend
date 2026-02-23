@@ -85,15 +85,14 @@ cdef extern from "LogicOperations.h":
 	sequence_t *qq_or_seq();
 
 
-cdef extern from "QPU.h":
+cdef extern from "circuit.h":
 	ctypedef struct circuit_t:
 		pass
 
 	ctypedef struct quantum_int_t:
 		pass
 
-	# instruction_t and QPU_state removed in Phase 11
-	# Backend is now stateless - all functions take explicit parameters
+	# Backend is stateless - all functions take explicit parameters
 
 	circuit_t *init_circuit();
 	void print_circuit(circuit_t *circ);

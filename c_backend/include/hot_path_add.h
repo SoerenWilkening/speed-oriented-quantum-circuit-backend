@@ -14,14 +14,14 @@
  * call the sequence generator (QQ_add / cQQ_add / CQ_add / cCQ_add),
  * and execute the instruction on the circuit -- all without returning to Python.
  *
- * Dependencies: QPU.h (circuit_t), types.h (qubit_t, sequence_t),
+ * Dependencies: circuit.h (circuit_t), types.h (qubit_t, sequence_t),
  *               arithmetic_ops.h (add generators), execution.h (run_instruction)
  */
 
 #ifndef HOT_PATH_ADD_H
 #define HOT_PATH_ADD_H
 
-#include "QPU.h"
+#include "circuit.h"
 #include "types.h"
 #include <stdint.h>
 

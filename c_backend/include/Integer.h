@@ -10,8 +10,8 @@
 #ifndef CQ_BACKEND_IMPROVED_INTEGER_H
 #define CQ_BACKEND_IMPROVED_INTEGER_H
 
-#include "QPU.h"
 #include "arithmetic_ops.h"
+#include "circuit.h"
 #include "definition.h"
 #include "gate.h"
 

@@ -9,7 +9,7 @@ sequence_t *void_seq() {
     return NULL;
 }
 
-// jmp_seq removed (Phase 11) - manipulated QPU_state pointer for control flow that's no longer used
+// jmp_seq removed (Phase 11) - manipulated global state for control flow that's no longer used
 
 sequence_t *branch_seq() {
     // OWNERSHIP: Caller owns returned sequence_t*, must free gates_per_layer, seq arrays, and seq
@@ -85,7 +85,7 @@ sequence_t *ctrl_branch_seq() {
 
 sequence_t *q_not_seq() {
     // OWNERSHIP: Caller owns returned sequence_t*, must free gates_per_layer, seq arrays, and seq
-    //	int number = QPU_state->Q0->MSB + 1;
+    //	int number = INTEGERSIZE;
 
     sequence_t *seq = malloc(sizeof(sequence_t));
     if (seq == NULL) {
@@ -121,7 +121,7 @@ sequence_t *q_not_seq() {
     return seq;
 }
 sequence_t *cq_not_seq() {
-    //	int number = QPU_state->Q0->MSB + 1;
+    //	int number = INTEGERSIZE;
 
     sequence_t *seq = malloc(sizeof(sequence_t));
     if (seq == NULL) {
@@ -423,7 +423,7 @@ sequence_t *qq_and_seq() {
         return NULL;
     }
 
-    //	int number = QPU_state->Q0->MSB + 1;
+    //	int number = INTEGERSIZE;
     //	printf("%d\n", number);
 
     seq->used_layer = 1;
@@ -822,7 +822,7 @@ sequence_t *q_or_seq(int bits, int classical_value) {
 sequence_t *qq_or_seq() {
     // pure quantum
 
-    //	int number = QPU_state->Q0->MSB + 1;
+    //	int number = INTEGERSIZE;
 
     sequence_t *seq = malloc(sizeof(sequence_t));
     if (seq == NULL) {

@@ -16,7 +16,6 @@ BACKEND_SRC = ../../c_backend/src
 # Minimal sources for comparison tests
 BACKEND_SRCS = $(BACKEND_SRC)/Integer.c \
                $(BACKEND_SRC)/IntegerComparison.c \
-               $(BACKEND_SRC)/QPU.c \
                $(BACKEND_SRC)/gate.c \
                $(BACKEND_SRC)/qubit_allocator.c
 
@@ -27,7 +26,6 @@ SEQ_SRCS = $(wildcard $(BACKEND_SRC)/sequences/add_seq_*.c)
 MUL_SRCS = $(BACKEND_SRC)/Integer.c \
            $(BACKEND_SRC)/IntegerAddition.c \
            $(BACKEND_SRC)/IntegerMultiplication.c \
-           $(BACKEND_SRC)/QPU.c \
            $(BACKEND_SRC)/gate.c \
            $(BACKEND_SRC)/qubit_allocator.c \
            $(BACKEND_SRC)/execution.c \
@@ -42,7 +40,6 @@ MUL_SRCS = $(BACKEND_SRC)/Integer.c \
 # Sources for hot_path_add tests (addition only, no multiplication)
 ADD_SRCS = $(BACKEND_SRC)/Integer.c \
            $(BACKEND_SRC)/IntegerAddition.c \
-           $(BACKEND_SRC)/QPU.c \
            $(BACKEND_SRC)/gate.c \
            $(BACKEND_SRC)/qubit_allocator.c \
            $(BACKEND_SRC)/execution.c \
@@ -57,7 +54,6 @@ ADD_SRCS = $(BACKEND_SRC)/Integer.c \
 # Sources for hot_path_xor tests (bitwise only, no arithmetic sequences needed)
 XOR_SRCS = $(BACKEND_SRC)/Integer.c \
            $(BACKEND_SRC)/LogicOperations.c \
-           $(BACKEND_SRC)/QPU.c \
            $(BACKEND_SRC)/gate.c \
            $(BACKEND_SRC)/qubit_allocator.c \
            $(BACKEND_SRC)/execution.c \

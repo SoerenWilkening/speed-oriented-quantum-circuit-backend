@@ -1,6 +1,6 @@
 //
 // optimizer.c - Gate optimization implementation
-// Dependencies: optimizer.h, QPU.h (for circuit_t), gate.h
+// Dependencies: optimizer.h, circuit.h (for circuit_t), gate.h
 //
 // Implements intelligent gate placement:
 // - Layer assignment for minimal circuit depth
@@ -9,7 +9,7 @@
 //
 
 #include "optimizer.h"
-#include "QPU.h"
+#include "circuit.h"
 #include "gate.h"
 #include <stdint.h>
 #include <stdlib.h>

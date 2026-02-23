@@ -14,14 +14,14 @@
  * call the sequence generator (Q_xor / Q_not), and execute the instruction
  * on the circuit -- all without returning to Python.
  *
- * Dependencies: QPU.h (circuit_t), types.h (qubit_t, sequence_t),
+ * Dependencies: circuit.h (circuit_t), types.h (qubit_t, sequence_t),
  *               bitwise_ops.h (Q_xor, Q_not), execution.h (run_instruction)
  */
 
 #ifndef HOT_PATH_XOR_H
 #define HOT_PATH_XOR_H
 
-#include "QPU.h"
+#include "circuit.h"
 #include "types.h"
 #include <stdint.h>
 

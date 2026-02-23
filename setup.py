@@ -25,7 +25,6 @@ C_BACKEND = "c_backend/src"
 C_SEQ = "c_backend/src/sequences"
 
 c_sources = [
-    f"{C_BACKEND}/QPU.c",
     f"{C_BACKEND}/optimizer.c",
     f"{C_BACKEND}/qubit_allocator.c",
     f"{C_BACKEND}/circuit_allocations.c",
@@ -75,6 +74,7 @@ c_sources = [
 ]
 
 compiler_args = ["-O3", "-pthread"]  # Removed -flto due to GCC LTO bug
+linker_args = []
 
 # Profiling build mode - enables Cython function-level profiling
 profiling_directives = {}
@@ -92,7 +92,12 @@ if os.environ.get("QUANTUM_COVERAGE"):
         "linetrace": True,
     }
     compiler_args.append("-DCYTHON_TRACE=1")
+    # Disable sys.monitoring path: Cython 3.2.x generates an undeclared
+    # __Pyx_MonitoringEventTypes_CyGen_count in coroutine-bearing modules on
+    # Python 3.13+.  The older cProfile-based trace mechanism still works.
+    compiler_args.append("-DCYTHON_USE_SYS_MONITORING=0")
     compiler_args.append("--coverage")
+    linker_args.append("--coverage")  # Link gcov runtime for coverage symbols
 
 # Debug build mode - re-enables all safety checks for debugging
 debug_directives = {}
@@ -138,6 +143,7 @@ for pyx_file in glob.glob(os.path.join(SRC_DIR, "quantum_language", "**", "*.pyx
             sources=[source] + c_sources,
             language="c",
             extra_compile_args=compiler_args,
+            extra_link_args=linker_args,
             include_dirs=include_dirs,
         )
     )

@@ -18,10 +18,10 @@ int main(int argc, char *argv[]) {
     clock_t t2 = clock();
 
     if (run) {
-        // Generate sequence (qq_or_seq doesn't use QPU_state)
+        // Generate sequence
         seq = qq_or_seq();
 
-        // Initialize circuit and qubit array directly (no QPU_state)
+        // Initialize circuit and qubit array
         circuit_t *circ = init_circuit();
         qubit_t qubit_array[6 * INTEGERSIZE];
         for (int i = 0; i < 6 * INTEGERSIZE; i++) {

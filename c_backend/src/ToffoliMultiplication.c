@@ -30,7 +30,7 @@
  */
 
 #include "Integer.h"
-#include "QPU.h"
+#include "circuit.h"
 #include "execution.h"
 #include "gate.h"
 #include "optimizer.h"

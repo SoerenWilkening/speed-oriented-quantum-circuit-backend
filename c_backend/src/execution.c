@@ -2,7 +2,6 @@
 // Created by Sören Wilkening on 21.11.24.
 //
 // qubit_mapping() and execute() removed (Phase 11)
-// These functions depended on QPU_state global state.
 // Python layer passes qubit arrays directly to run_instruction().
 // Test code in main.c now uses explicit qubit array initialization.
 //

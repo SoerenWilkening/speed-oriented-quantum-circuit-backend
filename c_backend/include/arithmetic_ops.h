@@ -116,7 +116,7 @@ sequence_t *P_add_param(double phase_value);
  */
 sequence_t *cP_add_param(double phase_value);
 
-// P_add() and cP_add() removed (Phase 11-04) - deprecated wrappers that used QPU_state->R0
+// P_add() and cP_add() removed (Phase 11-04) - deprecated wrappers that used global state
 // Use P_add_param(phase_value) and cP_add_param(phase_value) instead
 
 // Legacy globals for backward compatibility (point to INTEGERSIZE versions)

@@ -3,7 +3,7 @@
 //
 
 #include "qubit_allocator.h"
-#include "QPU.h"
+#include "circuit.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
