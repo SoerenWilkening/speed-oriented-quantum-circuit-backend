@@ -24,16 +24,27 @@ static inline qubit_t get_control(gate_t *g, int i) {
 }
 
 layer_t smallest_layer_below_comp(circuit_t *circ, qubit_t qubit, layer_t compar) {
-    // Scan backward through occupied layers to find the largest layer < compar
-    int last_index = (int)circ->used_occupation_indices_per_qubit[qubit];
-    if (last_index <= 0)
+    // Binary search: find the largest occupied layer < compar
+    // occupied_layers_of_qubit is sorted in monotonically increasing order
+    int count = (int)circ->used_occupation_indices_per_qubit[qubit];
+    if (count <= 0)
         return 0;
-    for (int i = last_index; i > 0; --i) {
-        if (circ->occupied_layers_of_qubit[qubit][i - 1] < compar) {
-            return circ->occupied_layers_of_qubit[qubit][i - 1];
-        }
+
+    layer_t *arr = circ->occupied_layers_of_qubit[qubit];
+
+    // Find lower_bound: index of first element >= compar
+    int lo = 0, hi = count;
+    while (lo < hi) {
+        int mid = lo + (hi - lo) / 2;
+        if (arr[mid] < compar)
+            lo = mid + 1;
+        else
+            hi = mid;
     }
-    return 0;
+
+    // lo is the first index where arr[lo] >= compar
+    // The largest element < compar is at arr[lo - 1]
+    return (lo > 0) ? arr[lo - 1] : 0;
 }
 
 layer_t minimum_layer(circuit_t *circ, gate_t *g, layer_t compared_layer) {
