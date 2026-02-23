@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-02-22)
 
 ## Current Position
 
-Phase: 83 of 89 (Tech Debt Cleanup) -- COMPLETE
-Plan: 2 of 2 in current phase (all plans complete)
-Status: Phase 83 complete, ready for Phase 84
-Last activity: 2026-02-23 -- Completed 83-01 (QPU removal & preprocessor drift hook)
+Phase: 84 of 89 (Security Hardening) -- IN PROGRESS
+Plan: 1 of 2 in current phase (84-01 complete, 84-02 pending)
+Status: Plan 84-01 (pointer validation + buffer bounds) complete, executing 84-02 (static analysis)
+Last activity: 2026-02-23 -- Completed 84-01 (Cython/C boundary validation and security tests)
 
-Progress: [============                                      ] 2/8 phases (v4.1)
+Progress: [==============                                    ] 2.5/8 phases (v4.1)
 
 ## Performance Metrics
 
@@ -88,8 +88,8 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-23
-Stopped at: Completed 83-01-PLAN.md (Phase 83 complete)
-Resume action: `/gsd:execute-phase 84` (next phase)
+Stopped at: Completed 84-01-PLAN.md (Wave 1), proceeding to 84-02-PLAN.md (Wave 2)
+Resume action: Continue executing 84-02 (static analysis with cppcheck and clang-tidy)
 
 ---
 *State updated: 2026-02-23 -- Completed Phase 83 (tech debt cleanup) -- 2 plans complete*

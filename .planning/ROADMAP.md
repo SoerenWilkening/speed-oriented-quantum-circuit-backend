@@ -235,7 +235,7 @@ Phases execute in numeric order: 82 -> 83 -> 84 -> 85 -> 86 -> 87 -> 88 -> 89
 | 76-81 | v4.0 | 18/18 | Complete | 2026-02-22 |
 | 82. Infrastructure & Dependency Fixes | 2/2 | Complete    | 2026-02-23 | - |
 | 83. Tech Debt Cleanup | 2/2 | Complete   | 2026-02-23 | - |
-| 84. Security Hardening | v4.1 | 0/? | Not started | - |
+| 84. Security Hardening | 1/2 | In Progress|  | - |
 | 85. Optimizer Fix & Improvement | v4.1 | 0/? | Not started | - |
 | 86. QFT Bug Fixes | v4.1 | 0/? | Not started | - |
 | 87. Scope & Segfault Fixes | v4.1 | 0/? | Not started | - |
