@@ -61,6 +61,23 @@ coverage-clean:
 	find . -name '*.gcda' -delete 2>/dev/null || true
 	find . -name '*.gcno' -delete 2>/dev/null || true
 
+# === Code Generation ===
+
+.PHONY: generate-sequences
+generate-sequences:
+	@echo "Regenerating all hardcoded sequence C files..."
+	@echo "1/5: QFT addition sequences (widths 1-16)..."
+	$(PYTHON) scripts/generate_seq_all.py
+	@echo "2/5: Toffoli CDKM sequences (widths 1-8)..."
+	$(PYTHON) scripts/generate_toffoli_seq.py
+	@echo "3/5: Toffoli MCX-decomposed sequences (widths 1-8)..."
+	$(PYTHON) scripts/generate_toffoli_decomp_seq.py
+	@echo "4/5: Clifford+T CQ/CCQ increment sequences (widths 1-8)..."
+	$(PYTHON) scripts/generate_toffoli_clifft_cq_inc.py
+	@echo "5/5: Clifford+T BK CLA sequences (widths 2-8)..."
+	$(PYTHON) scripts/generate_toffoli_clifft_cla.py
+	@echo "All sequences regenerated successfully."
+
 .PHONY: memtest
 memtest: test
 ifndef HAS_VALGRIND
@@ -227,6 +244,9 @@ help:
 	@echo "Coverage targets:"
 	@echo "  coverage         - Build with instrumentation, run tests with coverage, generate HTML report"
 	@echo "  coverage-clean   - Remove coverage reports and gcov artifacts"
+	@echo ""
+	@echo "Code generation targets:"
+	@echo "  generate-sequences - Regenerate all hardcoded sequence C files (QFT, Toffoli, Clifford+T)"
 	@echo ""
 	@echo "Profiling targets:"
 	@echo "  profile-cython      - Generate Cython annotation HTML (run after optimizations)"

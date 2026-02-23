@@ -1,10 +1,22 @@
 #!/usr/bin/env python3
-# DEPRECATED: Use scripts/generate_seq_all.py instead.
-# This script is kept as reference only. Do not use for generation.
-"""Generate add_seq_1_4.c with hardcoded QQ_add and cQQ_add sequences for widths 1-4."""
+"""DEPRECATED: Use generate_seq_all.py instead.
+
+This script is superseded by generate_seq_all.py which handles all widths (1-16).
+Kept for reference only.
+
+Original purpose: Generate add_seq_1_4.c with hardcoded QQ_add and cQQ_add
+sequences for widths 1-4.
+"""
 
 import math
+import warnings
 from dataclasses import dataclass
+
+warnings.warn(
+    "generate_seq_1_4.py is deprecated. Use generate_seq_all.py instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 
 @dataclass
