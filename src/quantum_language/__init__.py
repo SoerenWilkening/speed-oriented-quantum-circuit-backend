@@ -57,6 +57,7 @@ from .qarray import qarray
 from .qbool import qbool
 from .qint import qint
 from .qint_mod import qint_mod
+from .quantum_counting import count_solutions
 
 
 def array(data=None, *, width=None, dtype=None, dim=None):
@@ -184,6 +185,7 @@ __all__ = [
     "compile",
     "diffusion",
     "amplitude_estimate",
+    "count_solutions",
     "grover",
     "grover_oracle",
     "array",
