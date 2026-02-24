@@ -251,15 +251,11 @@ def test_sub_preserves_operands(width):
 # ====================================================================
 
 
-@pytest.mark.xfail(reason="Pre-existing bug: mixed-width QFT addition off-by-one", strict=True)
 def test_add_width_mismatch(verify_circuit):
     """Test that adding qints of different widths produces correct result.
 
     When a (3-bit) + b (5-bit), result should be 5-bit wide and hold
-    the correct sum value.
-
-    NOTE: Currently xfail due to pre-existing QFT addition bug with
-    mixed-width operands (off-by-one). Not caused by copy-aware changes.
+    the correct sum value. Uses QFT mode where the mixed-width fix applies.
     """
     val_a = 5  # 3-bit
     val_b = 10  # 5-bit
@@ -267,6 +263,7 @@ def test_add_width_mismatch(verify_circuit):
     expected_val = (val_a + val_b) % (2**result_width)
 
     def circuit_builder():
+        ql.option("fault_tolerant", False)  # QFT mode for mixed-width test
         a = ql.qint(val_a, width=3)
         b = ql.qint(val_b, width=5)
         c = a + b
@@ -278,12 +275,10 @@ def test_add_width_mismatch(verify_circuit):
     )
 
 
-@pytest.mark.xfail(reason="Pre-existing bug: mixed-width QFT subtraction off-by-one", strict=True)
 def test_sub_width_mismatch(verify_circuit):
     """Test that subtracting qints of different widths produces correct result.
 
-    NOTE: Currently xfail due to pre-existing QFT subtraction bug with
-    mixed-width operands (off-by-one). Not caused by copy-aware changes.
+    Uses QFT mode where the mixed-width fix applies.
     """
     val_a = 5  # 3-bit
     val_b = 10  # 5-bit
@@ -291,6 +286,7 @@ def test_sub_width_mismatch(verify_circuit):
     expected_val = (val_a - val_b) % (2**result_width)
 
     def circuit_builder():
+        ql.option("fault_tolerant", False)  # QFT mode for mixed-width test
         a = ql.qint(val_a, width=3)
         b = ql.qint(val_b, width=5)
         c = a - b

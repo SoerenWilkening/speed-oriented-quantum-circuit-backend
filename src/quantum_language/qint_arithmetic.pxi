@@ -105,7 +105,14 @@
 			result_width = self.bits
 		a = qint(width=result_width)
 		a ^= self
-		a += other
+		# BUG-04 fix: zero-extend narrower operand so QQ_add gets result_width
+		# qubits for both registers
+		if type(other) == qint and (<qint>other).bits < result_width:
+			padded_other = qint(width=result_width)
+			padded_other ^= other
+			a += padded_other
+		else:
+			a += other
 
 		# Phase 41: Layer tracking for uncomputation
 		a._start_layer = start_layer
@@ -158,7 +165,14 @@
 			result_width = self.bits
 		a = qint(width=result_width)
 		a ^= self
-		a += other
+		# BUG-04 fix: zero-extend narrower operand so QQ_add gets result_width
+		# qubits for both registers
+		if type(other) == qint and (<qint>other).bits < result_width:
+			padded_other = qint(width=result_width)
+			padded_other ^= other
+			a += padded_other
+		else:
+			a += other
 
 		# Phase 41: Layer tracking for uncomputation
 		a._start_layer = start_layer
@@ -236,7 +250,14 @@
 			result_width = self.bits
 		a = qint(width=result_width)
 		a ^= self
-		a -= other
+		# BUG-04 fix: zero-extend narrower operand so QQ_add gets result_width
+		# qubits for both registers
+		if type(other) == qint and (<qint>other).bits < result_width:
+			padded_other = qint(width=result_width)
+			padded_other ^= other
+			a -= padded_other
+		else:
+			a -= other
 
 		# Phase 41: Layer tracking for uncomputation
 		a._start_layer = start_layer

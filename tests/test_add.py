@@ -138,3 +138,57 @@ def test_cq_add_sampled(verify_circuit, width, a, b):
 
     actual, expected = verify_circuit(circuit_builder, width)
     assert actual == expected, format_failure_message("cq_add", [a, b], width, expected, actual)
+
+
+# --- Mixed-Width QQ Addition Tests (BUG-04 regression) ---
+
+
+def _mixed_width_cases():
+    """Generate (wa, wb, a, b) for mixed-width QQ addition testing.
+
+    Covers representative width combinations:
+    - Off-by-one: (2,3), (3,4), (4,5), (5,6)
+    - Max asymmetry: (1,4), (1,8), (2,8), (3,8)
+
+    For each combination, tests boundary and a few random values.
+    """
+    import random as _rng
+
+    _rng.seed(86_04)  # Deterministic seed for reproducibility
+    combos = [(2, 3), (3, 4), (4, 5), (5, 6), (1, 4), (1, 8), (2, 8), (3, 8)]
+    cases = []
+    for wa, wb in combos:
+        max_a = (1 << wa) - 1
+        max_b = (1 << wb) - 1
+        # Boundary pairs
+        boundary = [(0, 0), (0, max_b), (max_a, 0), (max_a, max_b), (1, 1)]
+        # Random pairs
+        rand_pairs = [(_rng.randint(0, max_a), _rng.randint(0, max_b)) for _ in range(3)]
+        for a, b in sorted(set(boundary + rand_pairs)):
+            cases.append((wa, wb, a, b))
+    return cases
+
+
+MIXED_WIDTH_QQ_ADD = _mixed_width_cases()
+
+
+@pytest.mark.parametrize("wa,wb,a,b", MIXED_WIDTH_QQ_ADD)
+def test_qq_add_mixed_width(verify_circuit, wa, wb, a, b):
+    """Mixed-width QQ addition: qint(a, width=wa) + qint(b, width=wb).
+
+    Verifies BUG-04 fix: when operand widths differ, the narrower operand
+    is zero-extended so QQ_add receives result_width qubits for both registers.
+    """
+    result_width = max(wa, wb)
+
+    def circuit_builder(a=a, b=b, wa=wa, wb=wb, rw=result_width):
+        ql.option("fault_tolerant", False)  # QFT mode
+        qa = ql.qint(a, width=wa)
+        qb = ql.qint(b, width=wb)
+        _r = qa + qb
+        return (a + b) % (1 << rw)
+
+    actual, expected = verify_circuit(circuit_builder, result_width)
+    assert actual == expected, format_failure_message(
+        "qq_add_mixed", [f"({wa}){a}", f"({wb}){b}"], result_width, expected, actual
+    )
