@@ -725,5 +725,12 @@
 		self.allocated_start, result_qint.allocated_start = result_qint.allocated_start, self.allocated_start
 		self.bits = result_qint.bits
 
+		# BUG-02 defensive fix: prevent GC from uncomputing/freeing the swapped-out
+		# qubits when result_qint goes out of scope. The multiplication gates now
+		# belong to self; result_qint holds self's old (input) qubits which should
+		# not be reversed or freed by result_qint's destructor.
+		result_qint._is_uncomputed = True
+		result_qint.allocated_qubits = False
+
 		return self
 

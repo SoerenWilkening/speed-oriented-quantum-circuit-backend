@@ -139,7 +139,6 @@ class TestQintAPI:
         b = a * 4
         assert isinstance(b, ql.qint)
 
-    @pytest.mark.skip(reason="Segfault in QQ_mul - known issue, needs C-layer fix")
     def test_qint_mul_qint(self):
         """qint * qint returns qint."""
         a = ql.qint(3, width=8)

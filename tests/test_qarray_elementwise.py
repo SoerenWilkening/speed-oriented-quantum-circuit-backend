@@ -34,7 +34,6 @@ class TestElementwiseArithmetic:
 
     def test_mul_arrays(self):
         """C = A * B returns qarray with correct shape."""
-        pytest.skip("Multiplication inherits C backend segfault issue")
         _c = ql.circuit()
         a = ql.array([1, 2, 3])
         b = ql.array([4, 5, 6])
@@ -81,7 +80,6 @@ class TestElementwiseArithmetic:
 
     def test_mul_scalar(self):
         """C = A * 5 broadcasts scalar."""
-        pytest.skip("Multiplication inherits C backend segfault issue")
         _c = ql.circuit()
         a = ql.array([1, 2, 3])
         c = a * 5
@@ -91,7 +89,6 @@ class TestElementwiseArithmetic:
 
     def test_mul_scalar_reverse(self):
         """C = 5 * A works via __rmul__."""
-        pytest.skip("Multiplication inherits C backend segfault issue")
         _c = ql.circuit()
         a = ql.array([1, 2, 3])
         c = 5 * a
@@ -371,7 +368,6 @@ class TestInplaceOperations:
 
     def test_imul_array(self):
         """A *= B modifies A in-place."""
-        pytest.skip("Multiplication inherits C backend segfault issue")
         _c = ql.circuit()
         a = ql.array([1, 2, 3])
         b = ql.array([4, 5, 6])

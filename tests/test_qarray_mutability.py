@@ -112,7 +112,6 @@ class TestAllAugmentedOperators:
 
     def test_imul(self):
         """arr[i] *= x works and preserves array structure."""
-        pytest.skip("Multiplication inherits C backend segfault issue")
         _c = ql.circuit()
         arr = ql.array([10, 20, 30], width=8)
         arr[0] *= 2
