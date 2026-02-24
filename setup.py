@@ -84,9 +84,9 @@ if os.environ.get("QUANTUM_PROFILE") or os.environ.get("QUANTUM_COVERAGE"):
 
 if is_release:
     # SIZE-01: -ffunction-sections + -fdata-sections enable per-function/data section GC
-    # SIZE-03: -O3 for now (Plan 02 evaluates -Os vs -O3)
+    # SIZE-03: -Os for size optimization (benchmarked: within 15% of -O3)
     # Removed -flto due to GCC LTO bug
-    compiler_args = ["-O3", "-ffunction-sections", "-fdata-sections", "-pthread"]
+    compiler_args = ["-Os", "-ffunction-sections", "-fdata-sections", "-pthread"]
     if sys.platform == "darwin":
         # macOS linker uses -dead_strip instead of --gc-sections
         # SIZE-02: -Wl,-x strips local symbols (macOS equivalent of -s)
