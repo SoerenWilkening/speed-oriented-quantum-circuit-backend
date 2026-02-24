@@ -57,6 +57,10 @@ Requirements for v4.1 Quality & Efficiency milestone. Each maps to roadmap phase
 
 Deferred to future milestones. Tracked but not in current roadmap.
 
+### Uncomputation Architecture Redesign
+- **BUG-06**: Fix MSB comparison leak in division (BUG-DIV-02) — requires `__lt__`/`__gt__` to explicitly uncompute widened comparison temporaries, or redesigning comparison to avoid them entirely
+- **BUG-08**: Fix QFT division/modulo pervasive failures (BUG-QFT-DIV) — likely resolves once BUG-06 ancilla leak is fixed; root cause: `>=` creates widened temps with `operation_type=None` and `creation_scope=0`, invisible to cascade uncomputation and lazy GC
+
 ### Parametric Compilation
 - **PAR-01**: Compile once for all classical values
 - **PAR-02**: Parametric gate sequences
@@ -105,11 +109,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BUG-01 | Phase 87 | Pending |
 | BUG-02 | Phase 87 | Pending |
 | BUG-03 | Phase 82 | Complete |
-| BUG-04 | Phase 86 | Pending |
-| BUG-05 | Phase 86 | Pending |
-| BUG-06 | Phase 86 | Pending |
+| BUG-04 | Phase 86 | Complete |
+| BUG-05 | Phase 86 | Complete |
+| BUG-06 | Future (uncomputation redesign) | Deferred |
 | BUG-07 | Phase 87 | Pending |
-| BUG-08 | Phase 86 | Pending |
+| BUG-08 | Future (uncomputation redesign) | Deferred |
 | BUG-09 | Phase 87 | Pending |
 | DEBT-01 | Phase 83 | Complete |
 | DEBT-02 | Phase 83 | Complete |
