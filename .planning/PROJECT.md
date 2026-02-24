@@ -150,24 +150,39 @@ Write quantum algorithms in natural programming style that compiles to efficient
 - ✓ Test coverage improved 48.2% → 56% with pytest-cov infrastructure — v4.1
 - ✓ Nested with-block tests, circuit reset tests, C test integration via pytest — v4.1
 
+## Current Milestone: v5.0 Advanced Arithmetic & Compilation
+
+**Goal:** Fix all deferred arithmetic bugs and add modular Toffoli arithmetic, parametric compilation, automatic depth/ancilla tradeoff, and quantum counting.
+
+**Target features:**
+- Fix BUG-DIV-02 (MSB comparison leak in division)
+- Fix BUG-QFT-DIV (QFT division/modulo failures)
+- Fix BUG-MOD-REDUCE (_reduce_mod result corruption)
+- Modular Toffoli arithmetic (add/sub/mul mod N) for Shor's algorithm
+- Parametric compilation (compile once for all classical values)
+- Automatic depth/ancilla tradeoff (RCA vs CLA selection)
+- Quantum counting (`ql.count_solutions`) for exact M estimation
+
 ### Active
 
-**Deferred bugs (carry forward):**
-- Fix _reduce_mod result corruption (BUG-MOD-REDUCE) — needs Beauregard-style algorithm redesign
+**Bug fixes (v5.0):**
 - Fix MSB comparison leak in division (BUG-DIV-02) — requires uncomputation architecture redesign
 - Fix QFT division/modulo pervasive failures (BUG-QFT-DIV) — depends on BUG-DIV-02
+- Fix _reduce_mod result corruption (BUG-MOD-REDUCE) — needs Beauregard-style algorithm redesign
+
+**New features (v5.0):**
+- Modular arithmetic via Toffoli gates (for Shor's algorithm) — FTE-02
+- Parametric compilation (compile once for all classical values) — PAR-01, PAR-02
+- Automatic depth/ancilla tradeoff (RCA vs CLA selection) — OPT-01
+- Quantum counting (`ql.count_solutions`) for exact M estimation — GADV-01
 
 **Deferred features (carry forward):**
-- Parametric compilation (compile once for all classical values) — PAR-01, PAR-02
 - Resource estimation for compiled functions — ADV-01
 - Serialization of compiled functions to disk — ADV-02
 - Compiled function composition — ADV-03
 - Hardcoded sequences for multiplication — ADV-OPT-01 (EVAL-01 recommends "investigate")
 - SIMD vectorization for bulk gate operations — ADV-OPT-03
 - Multi-threaded circuit building — ADV-OPT-04
-- Automatic depth/ancilla tradeoff (RCA vs CLA selection) — OPT-01
-- Modular arithmetic via Toffoli gates (for Shor's algorithm) — FTE-02
-- Quantum counting (`ql.count_solutions`) for exact M estimation — GADV-01
 - Fixed-point amplitude amplification — GADV-02
 - Custom state preparation (non-uniform initial superposition) — GADV-03
 - SAT/3-SAT oracle auto-generation from CNF formulas — GSPEC-01
@@ -328,4 +343,4 @@ Write quantum algorithms in natural programming style that compiles to efficient
 | BUG-CMP-MSB fix: comp_width-1 MSB indexing | Pre-existing bug — hardcoded qubit 63 for all widths | ✓ Good — inequality operators work for all widths |
 
 ---
-*Last updated: 2026-02-24 after v4.1 milestone completion*
+*Last updated: 2026-02-24 after v5.0 milestone start*
