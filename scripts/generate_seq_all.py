@@ -178,30 +178,32 @@ def generate_cqq_add(bits: int) -> list[list[Gate]]:
         layers.append([Gate("P", target_q, control, value)])
 
     # Block 2: CNOT + negative half-rotations + CNOT
-    # CRITICAL (quick-015 fix): negative half-rotations use bits+bit (b-register qubit)
-    # as control, NOT the external control qubit
+    # BUG-05 fix: use same source qubit mapping as QQ_add: bits + (bits-1-bit)
     rounds = 0
     for bit in range(bits - 1, -1, -1):
+        source_q = bits + (bits - 1 - bit)
         # CNOT
-        layers.append([Gate("X", bits + bit, control, 1)])
+        layers.append([Gate("X", source_q, control, 1)])
         # Negative half-rotations
         for i in range(bits - rounds):
             value = 2 * math.pi / (2 ** (i + 1)) / 2
             target_q = rounds + i
-            layers.append([Gate("P", target_q, bits + bit, -value)])
+            layers.append([Gate("P", target_q, source_q, -value)])
         # CNOT
-        layers.append([Gate("X", bits + bit, control, 1)])
+        layers.append([Gate("X", source_q, control, 1)])
         rounds += 1
 
     # Block 3: controlled rotations from b register
+    # BUG-05 fix: use same source qubit mapping as QQ_add: bits + (bits-1-bit)
     # These can be parallelized
     rounds = 0
     for bit in range(bits - 1, -1, -1):
+        source_q = bits + (bits - 1 - bit)
         parallel_gates = []
         for i in range(bits - rounds):
             value = 2 * math.pi / (2 ** (i + 1)) / 2
             target_q = rounds + i
-            parallel_gates.append(Gate("P", target_q, bits + bit, value))
+            parallel_gates.append(Gate("P", target_q, source_q, value))
         layers.append(parallel_gates)
         rounds += 1
 
@@ -438,24 +440,28 @@ def generate_cqq_add_middle(bits: int) -> tuple[str, list[list[Gate]]]:
         layers.append([Gate("P", target_q, control, value)])
 
     # Block 2: CNOT + negative half-rotations + CNOT
+    # BUG-05 fix: use same source qubit mapping as QQ_add: bits + (bits-1-bit)
     rounds = 0
     for bit in range(bits - 1, -1, -1):
-        layers.append([Gate("X", bits + bit, control, 1)])
+        source_q = bits + (bits - 1 - bit)
+        layers.append([Gate("X", source_q, control, 1)])
         for i in range(bits - rounds):
             value = 2 * math.pi / (2 ** (i + 1)) / 2
             target_q = rounds + i
-            layers.append([Gate("P", target_q, bits + bit, -value)])
-        layers.append([Gate("X", bits + bit, control, 1)])
+            layers.append([Gate("P", target_q, source_q, -value)])
+        layers.append([Gate("X", source_q, control, 1)])
         rounds += 1
 
     # Block 3: controlled rotations from b register
+    # BUG-05 fix: use same source qubit mapping as QQ_add: bits + (bits-1-bit)
     rounds = 0
     for bit in range(bits - 1, -1, -1):
+        source_q = bits + (bits - 1 - bit)
         parallel_gates = []
         for i in range(bits - rounds):
             value = 2 * math.pi / (2 ** (i + 1)) / 2
             target_q = rounds + i
-            parallel_gates.append(Gate("P", target_q, bits + bit, value))
+            parallel_gates.append(Gate("P", target_q, source_q, value))
         layers.append(parallel_gates)
         rounds += 1
 

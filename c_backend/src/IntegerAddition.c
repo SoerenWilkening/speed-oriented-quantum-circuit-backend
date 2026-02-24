@@ -443,32 +443,36 @@ sequence_t *cQQ_add(int bits) {
     }
 
     // block 2: CNOT + negative half-rotations + CNOT
+    // BUG-05 fix: use same source qubit mapping as QQ_add: bits + (bits-1-bit)
     rounds = 0;
     for (int bit = (int)bits - 1; bit >= 0; --bit) {
+        int source_q = bits + (bits - 1 - bit);
         gate_t *g = &add->seq[layer][add->gates_per_layer[layer]++];
-        cx(g, control, bits + bit);
+        cx(g, control, source_q);
         layer++;
         for (int i = 0; i < bits - rounds; ++i) {
             double value = 2 * M_PI / (pow(2, i + 1)) / 2;
-            int target_q = rounds + i; // reversed for textbook QFT
+            int target_q = rounds + i;
             g = &add->seq[layer][add->gates_per_layer[layer]++];
-            cp(g, target_q, bits + bit, -value);
+            cp(g, target_q, source_q, -value);
             layer++;
         }
         g = &add->seq[layer][add->gates_per_layer[layer]++];
-        cx(g, control, bits + bit);
+        cx(g, control, source_q);
         layer++;
         rounds++;
     }
 
     // block 3: controlled rotations from b register
+    // BUG-05 fix: use same source qubit mapping as QQ_add: bits + (bits-1-bit)
     rounds = 0;
     for (int bit = (int)bits - 1; bit >= 0; --bit) {
+        int source_q = bits + (bits - 1 - bit);
         for (int i = 0; i < bits - rounds; ++i) {
             double value = 2 * M_PI / (pow(2, i + 1)) / 2;
-            int target_q = rounds + i; // reversed for textbook QFT
+            int target_q = rounds + i;
             gate_t *g = &add->seq[layer][add->gates_per_layer[layer]++];
-            cp(g, target_q, bits + bit, value);
+            cp(g, target_q, source_q, value);
             layer++;
         }
         layer -= bits - rounds;

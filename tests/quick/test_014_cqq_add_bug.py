@@ -7,10 +7,8 @@ Quick-014: Fixed qubit layout mismatch between Python and C sides.
 **Fix:** Updated Python (qint_arithmetic.pxi) to place control at 3*bits-1 to match
 the C algorithm's expectation.
 
-**NOTE:** The cQQ_add algorithm produces incorrect arithmetic results. This is a
-pre-existing bug (BUG-CQQ-ARITH) that requires deeper investigation of the
-Beauregard-style controlled addition algorithm. These tests verify that circuits
-build without crashing, not arithmetic correctness.
+Arithmetic correctness of cQQ_add is verified in tests/test_cqq_add.py (BUG-05 fix).
+These tests focus on circuit construction (no simulation).
 """
 
 import warnings
@@ -207,11 +205,6 @@ class TestEdgeCases:
         assert circ.depth > 0, "Sequential controlled adds with different controls should work"
 
 
-# NOTE: Simulation-based arithmetic correctness tests removed.
-# The cQQ_add algorithm produces incorrect results (BUG-CQQ-ARITH).
-# These tests would fail not due to qubit layout issues (which we fixed)
-# but due to the underlying algorithm being incorrect.
-#
-# The fix in this quick task addressed the qubit layout mismatch, which
-# prevented circuits from building. Arithmetic correctness requires
-# fixing the Beauregard-style controlled addition algorithm itself.
+# Simulation-based arithmetic correctness tests are in tests/test_cqq_add.py.
+# BUG-05 (Phase 86-02) fixed the source qubit mapping in the Beauregard CCP
+# decomposition, making cQQ_add produce correct results for all widths.
