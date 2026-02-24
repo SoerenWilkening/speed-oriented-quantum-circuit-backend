@@ -136,29 +136,26 @@ Write quantum algorithms in natural programming style that compiles to efficient
 - ✓ BBHT adaptive search for unknown solution count — v4.0
 - ✓ `ql.amplitude_estimate()` with IQAE, configurable epsilon and confidence — v4.0
 
-## Current Milestone: v4.1 Quality & Efficiency
-
-**Goal:** Fix all carry-forward bugs, address codebase concerns (tech debt, security, fragility), improve binary size and efficiency, and close test coverage gaps.
-
-**Target features:**
-- Fix all 7 carry-forward bugs (BUG-MOD-REDUCE, BUG-COND-MUL-01, BUG-DIV-02, BUG-WIDTH-ADD, 32-bit segfault, BUG-CQQ-QFT, BUG-QFT-DIV)
-- Fix additional bugs from codebase mapping (qarray `*=` segfault, qiskit_aer dependency)
-- Address tech debt (duplicate qint_preprocessed.pyx, dead QPU stubs, optimizer linear scan, nested with-blocks, sequence docs)
-- Security/fragility hardening (circuit pointer validation, qubit_array bounds checking)
-- Performance improvements (optimizer binary search, compile replay overhead)
-- Binary size reduction (right-size hardcoded sequences, reduce .so size)
-- Close test coverage gaps (nested with-blocks, circuit reset, qiskit-aer import, C tests in pytest)
+- ✓ Fix 32-bit multiplication segfault (MAXLAYERINSEQUENCE 10K → 300K) — v4.1
+- ✓ Fix qarray `*=` in-place multiplication segfault — v4.1
+- ✓ Fix qiskit_aer undeclared dependency (lazy import guards in sim_backend.py) — v4.1
+- ✓ Fix mixed-width QFT addition off-by-one (zero-extend narrower operand) — v4.1
+- ✓ Fix QFT controlled QQ addition CCP rotation errors (cQQ_add source qubit mapping) — v4.1
+- ✓ Fix controlled multiplication scope uncomputation (current_scope_depth bypass) — v4.1
+- ✓ Remove dead QPU.c/QPU.h stubs, automate preprocessor drift detection — v4.1
+- ✓ Security hardening: NULL pointer validation, buffer bounds checking, static analysis (45+ fixes) — v4.1
+- ✓ Optimizer bug fix (loop direction) and binary search replacement (O(L) → O(log L)) — v4.1
+- ✓ Compile replay overhead reduced 36% via stack-allocated gate injection — v4.1
+- ✓ Binary size reduced 56.6% (64.4MB → 27.9MB) via section GC, stripping, -Os — v4.1
+- ✓ Test coverage improved 48.2% → 56% with pytest-cov infrastructure — v4.1
+- ✓ Nested with-block tests, circuit reset tests, C test integration via pytest — v4.1
 
 ### Active
 
 **Deferred bugs (carry forward):**
-- Fix _reduce_mod result corruption (BUG-MOD-REDUCE) — needs fundamentally different circuit structure
-- Fix controlled multiplication scope uncomputation (BUG-COND-MUL-01) — root-caused in Phase 69-02, workaround active
-- Fix MSB comparison leak in division (BUG-DIV-02) — 9 cases per div/mod test file
-- Fix mixed-width QFT addition off-by-one (BUG-WIDTH-ADD) — discovered in Phase 43
-- Fix 32-bit multiplication segfault (buffer overflow in C backend) — discovered in Phase 61
-- Fix QFT controlled QQ addition CCP rotation errors (BUG-CQQ-QFT) — discovered in Phase 70-01
-- Fix QFT division/modulo pervasive failures (BUG-QFT-DIV) — discovered in Phase 70-02
+- Fix _reduce_mod result corruption (BUG-MOD-REDUCE) — needs Beauregard-style algorithm redesign
+- Fix MSB comparison leak in division (BUG-DIV-02) — requires uncomputation architecture redesign
+- Fix QFT division/modulo pervasive failures (BUG-QFT-DIV) — depends on BUG-DIV-02
 
 **Deferred features (carry forward):**
 - Parametric compilation (compile once for all classical values) — PAR-01, PAR-02
@@ -170,11 +167,11 @@ Write quantum algorithms in natural programming style that compiles to efficient
 - Multi-threaded circuit building — ADV-OPT-04
 - Automatic depth/ancilla tradeoff (RCA vs CLA selection) — OPT-01
 - Modular arithmetic via Toffoli gates (for Shor's algorithm) — FTE-02
-- Quantum counting (`ql.count_solutions`) for exact M estimation — ADV-01
-- Fixed-point amplitude amplification — ADV-02
-- Custom state preparation (non-uniform initial superposition) — ADV-03
-- SAT/3-SAT oracle auto-generation from CNF formulas — SPEC-01
-- Database search oracle from classical data structure — SPEC-02
+- Quantum counting (`ql.count_solutions`) for exact M estimation — GADV-01
+- Fixed-point amplitude amplification — GADV-02
+- Custom state preparation (non-uniform initial superposition) — GADV-03
+- SAT/3-SAT oracle auto-generation from CNF formulas — GSPEC-01
+- Database search oracle from classical data structure — GSPEC-02
 
 ### Out of Scope
 
@@ -190,7 +187,7 @@ Write quantum algorithms in natural programming style that compiles to efficient
 
 **Architecture:** Three-layer stateless design — C backend (gate primitives, circuit management, integer operations) -> Cython bindings -> Python frontend (qint/qbool classes, operator overloading). All functions take explicit parameters; no global state.
 
-**Current state:** v4.0 shipped — Grover's algorithm and amplitude estimation complete. Dual arithmetic backends: QFT (phase rotations) and Toffoli (CCX/CX/X only), with Toffoli as default. CDKM ripple-carry adder and Brent-Kung carry look-ahead adder for all 4 variants (QQ/CQ/cQQ/cCQ). Schoolbook multiplication and restoring division via Toffoli add/sub. MCX gates auto-decomposed via AND-ancilla pattern. CCX->Clifford+T decomposition with ~120 hardcoded sequence C files. T-count reporting (exact when Clifford+T active, 7*CCX estimate otherwise). Cross-backend verification suite proves Toffoli/QFT equivalence. `@ql.compile` supports ancilla tracking, inverse/adjoint generation, auto-uncompute, and `ql.qarray` arguments. `ql.grover()` with lambda predicate auto-synthesis, BBHT adaptive search, and `@ql.grover_oracle` decorator. `ql.amplitude_estimate()` with IQAE variant (no QFT). Pixel-art circuit visualization scaling to 200+ qubits. 157 new Grover/AE tests on top of exhaustive verification suite (8,365+ tests). Variable-width quantum integers (1-64 bits). Automatic uncomputation with dependency tracking. CNOT-based quantum copy. Memory-safe Python-to-C bridge.
+**Current state:** v4.1 shipped — Quality & efficiency improvements on top of v4.0. Key fixes: 32-bit multiplication segfault resolved (MAXLAYERINSEQUENCE 10K → 300K), mixed-width QFT addition and controlled QQ addition bugs fixed, qarray `*=` segfault fixed, controlled multiplication scope corruption fixed. C backend hardened with NULL validation, bounds checking, and static analysis. Binary size reduced 56.6%. Optimizer improved with binary search (O(log L)) and compile replay 36% faster. Test coverage 48.2% → 56%. Dead QPU stubs removed, preprocessor drift detection automated. Dual arithmetic backends: QFT (phase rotations) and Toffoli (CCX/CX/X only), with Toffoli as default. Full feature set from v4.0 intact: `@ql.compile`, `ql.grover()`, `ql.amplitude_estimate()`, pixel-art visualization, cross-backend verification.
 
 **Codebase:**
 - ~1,059,000 lines of code (604K C, 395K Python, 60K Cython)
@@ -211,17 +208,15 @@ Write quantum algorithms in natural programming style that compiles to efficient
 - qint_mod * qint_mod raises NotImplementedError (by design)
 - apply_merge() placeholder for future phase rotation merging
 - Nested quantum conditionals require quantum-quantum AND implementation (future work)
-- _reduce_mod result corruption (BUG-MOD-REDUCE) — needs different circuit structure for larger moduli
-- Controlled multiplication corrupts result register (BUG-COND-MUL-01) — not yet investigated
-- MSB comparison leak in division (BUG-DIV-02) — 9 cases per div/mod test file
+- _reduce_mod result corruption (BUG-MOD-REDUCE) — needs Beauregard-style algorithm redesign
+- MSB comparison leak in division (BUG-DIV-02) — requires uncomputation architecture redesign for orphan temporaries
+- QFT division/modulo pervasively broken at all tested widths (BUG-QFT-DIV) — depends on BUG-DIV-02
 - Dirty ancilla from widened comparisons (gt/le) — known limitation, not a correctness bug
-- Mixed-width QFT addition off-by-one (BUG-WIDTH-ADD) — discovered in v1.8
 - Layer-based uncomputation tracking unreliable when optimizer parallelizes gates — future: use instruction counter
-- QFT controlled QQ addition CCP rotation errors at width 2+ (BUG-CQQ-QFT) — discovered in v3.0
-- QFT division/modulo pervasively broken at all tested widths (BUG-QFT-DIV) — discovered in v3.0
 - BK CLA subtraction falls back to RCA (carry-copy ancilla not uncomputed in reverse)
 - Kogge-Stone CLA stubs return NULL (Brent-Kung only implementation)
-- 32-bit multiplication segfault (buffer overflow in C backend) — discovered in v2.2
+- qarray `ql.array(n)` segfaults in some cases (Cython extension crash)
+- `ql.array((rows, cols))` 2D shape fails with TypeError in `_infer_width`
 
 ## Constraints
 
@@ -333,4 +328,4 @@ Write quantum algorithms in natural programming style that compiles to efficient
 | BUG-CMP-MSB fix: comp_width-1 MSB indexing | Pre-existing bug — hardcoded qubit 63 for all widths | ✓ Good — inequality operators work for all widths |
 
 ---
-*Last updated: 2026-02-22 after v4.1 milestone start*
+*Last updated: 2026-02-24 after v4.1 milestone completion*

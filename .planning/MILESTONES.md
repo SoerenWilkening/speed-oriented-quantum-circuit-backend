@@ -1,5 +1,37 @@
 # Project Milestones: Quantum Assembly
 
+## v4.1 Quality & Efficiency (Shipped: 2026-02-24)
+
+**Delivered:** Comprehensive quality and efficiency improvements — fixed critical 32-bit multiplication segfault and QFT arithmetic bugs, hardened C backend security with pointer validation and static analysis, optimized binary size by 56.6%, improved test coverage from 48.2% to 56%, and eliminated dead code and tech debt.
+
+**Phases completed:** 82-89 (22 plans total)
+
+**Key accomplishments:**
+
+- Fixed 32-bit multiplication segfault by increasing MAXLAYERINSEQUENCE from 10K to 300K
+- Resolved mixed-width QFT addition and controlled QQ addition rotation bugs (BUG-WIDTH-ADD, BUG-CQQ-QFT)
+- Security hardening: NULL pointer validation at Cython boundary, buffer bounds checking, cppcheck/clang-tidy with 45+ real fixes
+- Binary size reduced 56.6% (64.4MB to 27.9MB) via section GC, symbol stripping, and -Os optimization
+- Test coverage improved 48.2% to 56% (+7.8%); compile.py coverage from 18% to 63%
+- Eliminated tech debt: dead QPU stubs removed, automated preprocessor drift detection, vulture scan clean
+
+**Stats:**
+
+- 24 commits, 181 files changed (+22,198 / -2,512 lines)
+- 8 phases, 22 plans, ~34 tasks
+- 3 days (2026-02-22 → 2026-02-24)
+
+**Known gaps (deferred):**
+- BUG-06 (MSB comparison leak in division) — requires uncomputation architecture redesign
+- BUG-08 (QFT division/modulo failures) — depends on BUG-06
+- BUG-09 (_reduce_mod corruption) — requires Beauregard-style algorithm redesign
+
+**Git range:** `5ec5a39` → `18c2cdb`
+
+**What's next:** TBD — next milestone planning via `/gsd:new-milestone`
+
+---
+
 ## v4.0 Grover's Algorithm (Shipped: 2026-02-22)
 
 **Delivered:** Complete Grover's search implementation — gate primitives (Ry rotation, MCZ), oracle infrastructure with compute-phase-uncompute validation, zero-ancilla diffusion operator, end-to-end `ql.grover()` API, lambda predicate oracle auto-synthesis with BBHT adaptive search, and Iterative Quantum Amplitude Estimation with configurable precision.
@@ -441,4 +473,6 @@
 **What's next:** v1.1 — QPU State Removal
 
 ---
+
+
 
