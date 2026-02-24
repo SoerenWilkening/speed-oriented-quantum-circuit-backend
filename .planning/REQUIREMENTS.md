@@ -91,32 +91,32 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FIX-01 | — | Pending |
-| FIX-02 | — | Pending |
-| FIX-03 | — | Pending |
-| FIX-04 | — | Pending |
-| MOD-01 | — | Pending |
-| MOD-02 | — | Pending |
-| MOD-03 | — | Pending |
-| MOD-04 | — | Pending |
-| MOD-05 | — | Pending |
-| CNT-01 | — | Pending |
-| CNT-02 | — | Pending |
-| CNT-03 | — | Pending |
-| TRD-01 | — | Pending |
-| TRD-02 | — | Pending |
-| TRD-03 | — | Pending |
-| TRD-04 | — | Pending |
-| PAR-01 | — | Pending |
-| PAR-02 | — | Pending |
-| PAR-03 | — | Pending |
-| PAR-04 | — | Pending |
+| FIX-01 | Phase 91 | Pending |
+| FIX-02 | Phase 91 | Pending |
+| FIX-03 | Phase 91 | Pending |
+| FIX-04 | Phase 94 | Pending |
+| MOD-01 | Phase 92 | Pending |
+| MOD-02 | Phase 92 | Pending |
+| MOD-03 | Phase 92 | Pending |
+| MOD-04 | Phase 92 | Pending |
+| MOD-05 | Phase 92 | Pending |
+| CNT-01 | Phase 90 | Pending |
+| CNT-02 | Phase 90 | Pending |
+| CNT-03 | Phase 90 | Pending |
+| TRD-01 | Phase 93 | Pending |
+| TRD-02 | Phase 93 | Pending |
+| TRD-03 | Phase 93 | Pending |
+| TRD-04 | Phase 93 | Pending |
+| PAR-01 | Phase 94 | Pending |
+| PAR-02 | Phase 94 | Pending |
+| PAR-03 | Phase 94 | Pending |
+| PAR-04 | Phase 94 | Pending |
 
 **Coverage:**
 - v5.0 requirements: 20 total
-- Mapped to phases: 0
-- Unmapped: 20
+- Mapped to phases: 20
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-24*
-*Last updated: 2026-02-24 after initial definition*
+*Last updated: 2026-02-24 after roadmap creation*

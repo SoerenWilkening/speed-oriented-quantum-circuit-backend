@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** Planning next milestone
+**Current focus:** Phase 90 — Quantum Counting
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-24 — Milestone v5.0 started
+Phase: 90 of 94 (Quantum Counting) — first phase of v5.0
+Plan: 0 of ? in current phase
+Status: Ready to plan
+Last activity: 2026-02-24 — v5.0 roadmap created
 
-Progress: [==================================================] 258 plans total (v1.0-v4.1)
+Progress: [░░░░░░░░░░] 0% (0/? v5.0 plans)
 
 ## Performance Metrics
 
@@ -30,7 +30,8 @@ Progress: [==================================================] 258 plans total (
 | v1.0-v2.3 | 1-64 | 166 | Complete |
 | v3.0 Fault-Tolerant | 65-75 | 35 | Complete (2026-02-18) |
 | v4.0 Grover's Algorithm | 76-81 | 18 | Complete (2026-02-22) |
-| v4.1 Quality & Efficiency | 82-89 | 22 | Complete (2026-02-24) |
+| v4.1 Quality & Efficiency | 82-89 | 21 | Complete (2026-02-24) |
+| v5.0 Advanced Arithmetic | 90-94 | ? | In progress |
 
 ## Accumulated Context
 
@@ -41,14 +42,16 @@ See PROJECT.md Key Decisions table for full history.
 ### Blockers/Concerns
 
 **Carry forward (architectural):**
-- BUG-DIV-02/BUG-QFT-DIV — Requires uncomputation architecture redesign for orphan temporaries
-- BUG-MOD-REDUCE — Requires Beauregard-style algorithm redesign
+- BUG-DIV-02/BUG-QFT-DIV — Phase 91 targets these; orphan-temporary pattern must be resolved before Phase 92
+- BUG-MOD-REDUCE — Phase 91 targets this; Beauregard C-level implementation needed
+- Parametric Toffoli CQ limitation — value-dependent gate topology requires per-value fallback (Phase 94)
+- Research flags: Phase 92 (HIGH risk — Beauregard ancilla layout) and Phase 94 (MEDIUM-HIGH — DeferredCQOp design)
 
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Defining v5.0 requirements
-Resume action: Continue requirements definition
+Stopped at: v5.0 roadmap created, ready to plan Phase 90
+Resume action: `/gsd:plan-phase 90`
 
 ---
-*State updated: 2026-02-24 — v5.0 milestone started*
+*State updated: 2026-02-24 — v5.0 roadmap created*
