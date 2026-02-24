@@ -40,8 +40,8 @@ Requirements for v4.1 Quality & Efficiency milestone. Each maps to roadmap phase
 
 ### Binary Size
 
-- [ ] **SIZE-01**: Apply section garbage collection compiler flags (-ffunction-sections, -fdata-sections, --gc-sections)
-- [ ] **SIZE-02**: Strip symbols from release builds (-s link flag or post-build strip)
+- [x] **SIZE-01**: Apply section garbage collection compiler flags (-ffunction-sections, -fdata-sections, --gc-sections)
+- [x] **SIZE-02**: Strip symbols from release builds (-s link flag or post-build strip)
 - [ ] **SIZE-03**: Evaluate -Os vs -O3 for sequence files with benchmark verification (no performance regression)
 
 ### Test Coverage
@@ -126,8 +126,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PERF-01 | Phase 85 | Pending |
 | PERF-02 | Phase 85 | Pending |
 | PERF-03 | Phase 85 | Pending |
-| SIZE-01 | Phase 88 | Pending |
-| SIZE-02 | Phase 88 | Pending |
+| SIZE-01 | Phase 88 | Complete |
+| SIZE-02 | Phase 88 | Complete |
 | SIZE-03 | Phase 88 | Pending |
 | TEST-01 | Phase 82 | Complete |
 | TEST-02 | Phase 82 | Complete |
