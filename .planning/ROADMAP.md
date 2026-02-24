@@ -231,7 +231,11 @@ Plans:
   3. C backend tests (`test_allocator_block`, `test_reverse_circuit`) run as part of `pytest` via subprocess wrappers and their pass/fail status is reported in pytest output
   4. Every xfail marker corresponding to a bug fixed in Phases 82-88 has been converted to a passing test (no xfails remain for fixed bugs)
   5. Coverage report shows improvement over the Phase 82 baseline measurement
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 89-01-PLAN.md — Convert xfail markers for fixed bugs, integrate C backend tests into pytest
+- [ ] 89-02-PLAN.md — Add nested with-block tests and circuit reset behavior tests
+- [ ] 89-03-PLAN.md — Measure coverage improvement over Phase 82 baseline
 
 ## Progress
 
