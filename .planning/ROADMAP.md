@@ -154,12 +154,12 @@ Plans:
   2. QFT division and modulo produce correct results for widths 2-4 verified by Qiskit simulation (BUG-QFT-DIV fixed)
   3. Modular reduction `(a+b) mod N` produces correct results without orphan qubits -- implemented at C level or via correct Beauregard sequence replacing the broken `_reduce_mod` (BUG-MOD-REDUCE fixed)
   4. All previously-passing tests continue to pass with zero regressions
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 91-01: TBD
-- [ ] 91-02: TBD
-- [ ] 91-03: TBD
+- [ ] 91-01-PLAN.md -- C-level restoring divmod + Python wiring (FIX-01, FIX-02)
+- [ ] 91-02-PLAN.md -- C-level modular reduction + qint_mod wiring (FIX-03)
+- [ ] 91-03-PLAN.md -- Verification, benchmarking, regression testing (FIX-01, FIX-02, FIX-03)
 
 ### Phase 92: Modular Toffoli Arithmetic
 **Goal**: Users can perform fault-tolerant modular arithmetic (add, sub, multiply mod N) for Shor's algorithm building blocks
