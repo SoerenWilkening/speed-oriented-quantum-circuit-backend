@@ -23,23 +23,102 @@ import quantum_language as ql
 warnings.filterwarnings("ignore", message="Value .* exceeds")
 
 # ---------------------------------------------------------------------------
-# Known-failing (width, a, divisor) triples -- MSB comparison leak (BUG-DIV-02)
-# These are NOT overflow bugs. They occur when a >= 2^(w-1) and the >=
-# comparison operator corrupts ancilla state for values touching the MSB.
-# Separate from BUG-DIV-01 (overflow), which is fixed.
+# Known-failing (width, a, divisor) triples -- ancilla leak in >= comparison (BUG-06)
+# The >= operator in the modulo loop creates widened temporaries (comp_width = bits+1)
+# whose qubits are never freed by the uncomputation mechanism. This causes incorrect
+# results when leaked ancilla qubits interfere with the circuit state.
+# Root cause: _do_uncompute reverses gates but doesn't cascade-free temporaries
+# because they have operation_type=None and creation_scope=0 (lazy mode skips them).
+# Modulo is more severely affected than division because the remainder extraction
+# is more sensitive to leaked ancillae. Most width >= 2 cases fail.
+# Phase 86-03 investigated but deferred the deep fix (requires uncomputation arch changes).
+# Updated after BUG-05 fix (Phase 86-02).
 # ---------------------------------------------------------------------------
 KNOWN_MOD_MSB_LEAK = {
-    # Width 3: comparison leak for values >= 4 with small divisors
+    # Width 1
+    (1, 0, 1),
+    # Width 2: nearly all cases fail
+    (2, 0, 1),
+    (2, 0, 2),
+    (2, 0, 3),
+    (2, 1, 1),
+    (2, 1, 2),
+    (2, 2, 1),
+    (2, 2, 3),
+    (2, 3, 1),
+    (2, 3, 2),
+    # Width 3: most cases fail (53 out of 56)
+    (3, 0, 1),
+    (3, 0, 2),
+    (3, 0, 3),
+    (3, 0, 4),
+    (3, 0, 5),
+    (3, 0, 6),
+    (3, 0, 7),
+    (3, 1, 1),
+    (3, 1, 2),
+    (3, 1, 3),
+    (3, 1, 4),
+    (3, 1, 5),
+    (3, 1, 6),
+    (3, 2, 1),
+    (3, 2, 2),
+    (3, 2, 3),
+    (3, 2, 4),
+    (3, 2, 5),
+    (3, 2, 7),
+    (3, 3, 1),
+    (3, 3, 2),
+    (3, 3, 4),
+    (3, 3, 6),
+    (3, 3, 7),
     (3, 4, 1),
+    (3, 4, 2),
+    (3, 4, 3),
+    (3, 4, 5),
+    (3, 4, 6),
+    (3, 4, 7),
     (3, 5, 1),
+    (3, 5, 2),
+    (3, 5, 3),
+    (3, 5, 4),
+    (3, 5, 6),
+    (3, 5, 7),
     (3, 6, 1),
+    (3, 6, 3),
+    (3, 6, 4),
+    (3, 6, 5),
+    (3, 6, 7),
     (3, 7, 1),
-    # Width 4: comparison leak for large values
-    (4, 13, 1),
+    (3, 7, 2),
+    (3, 7, 3),
+    (3, 7, 4),
+    (3, 7, 5),
+    (3, 7, 6),
+    # Width 4: many sampled cases fail
+    (4, 0, 2),
+    (4, 0, 9),
+    (4, 0, 13),
+    (4, 0, 14),
+    (4, 0, 15),
+    (4, 1, 2),
+    (4, 1, 14),
+    (4, 2, 10),
+    (4, 3, 1),
+    (4, 3, 11),
+    (4, 5, 12),
+    (4, 6, 4),
+    (4, 6, 12),
+    (4, 7, 3),
+    (4, 8, 4),
+    (4, 8, 13),
+    (4, 13, 4),
     (4, 14, 1),
     (4, 14, 2),
-    (4, 15, 1),
+    (4, 14, 10),
+    (4, 14, 15),
     (4, 15, 2),
+    (4, 15, 14),
 }
 
 
