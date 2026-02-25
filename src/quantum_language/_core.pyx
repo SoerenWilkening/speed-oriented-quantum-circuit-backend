@@ -45,6 +45,10 @@ _scope_stack = []  # List[List[qint]]
 # Phase 20: Global uncomputation mode flag
 _qubit_saving_mode = False  # Default: lazy mode
 
+# Phase 93: Tradeoff policy state
+_tradeoff_policy = 'auto'
+_arithmetic_ops_performed = False
+
 
 # Accessor functions for global state - other modules use these
 def _get_circuit():
@@ -129,6 +133,11 @@ def _set_qubit_saving_mode(bint value):
 	global _qubit_saving_mode
 	_qubit_saving_mode = value
 
+def _mark_arithmetic_performed():
+	"""Mark that arithmetic operations have been performed (freezes tradeoff)."""
+	global _arithmetic_ops_performed
+	_arithmetic_ops_performed = True
+
 def _get_global_creation_counter():
 	"""Get global creation counter."""
 	return _global_creation_counter
@@ -171,7 +180,13 @@ def option(key: str, value=None):
 		- 'fault_tolerant': Enable Toffoli-based arithmetic (bool)
 		- 'cla': Enable carry look-ahead adder dispatch (bool)
 		- 'toffoli_decompose': Decompose CCX gates to Clifford+T (bool)
-	value : bool, optional
+		- 'tradeoff': Adder selection policy (str: 'auto', 'min_depth', 'min_qubits')
+		    Controls whether CLA (depth-optimized) or CDKM/RCA (qubit-optimized) adder is used.
+		    'auto' (default): CLA for widths >= threshold, CDKM otherwise.
+		    'min_depth': Always use CLA for minimum circuit depth.
+		    'min_qubits': Always use CDKM for minimum qubit count.
+		    Must be set before any arithmetic operations; cannot be changed after.
+	value : bool or str, optional
 		New value for option. If None, returns current value.
 
 	Returns
@@ -240,6 +255,33 @@ def option(key: str, value=None):
 		if not isinstance(value, bool):
 			raise ValueError("toffoli_decompose option requires bool value")
 		(<circuit_s*><circuit_t*><unsigned long long>_get_circuit()).toffoli_decompose = 1 if value else 0
+	elif key == 'tradeoff':
+		global _tradeoff_policy, _arithmetic_ops_performed
+		if value is None:
+			return _tradeoff_policy
+		if value not in ('auto', 'min_depth', 'min_qubits'):
+			raise ValueError(
+				f"Invalid tradeoff value: {value!r}. "
+				f"Must be 'auto', 'min_depth', or 'min_qubits'"
+			)
+		if _arithmetic_ops_performed:
+			raise RuntimeError(
+				"Cannot change tradeoff policy after arithmetic operations have been "
+				"performed. Set ql.option('tradeoff', ...) before any +, -, * operations."
+			)
+		_tradeoff_policy = value
+		_validate_circuit()
+		if value == 'min_qubits':
+			(<circuit_s*><circuit_t*><unsigned long long>_get_circuit()).cla_override = 1          # Force RCA everywhere
+			(<circuit_s*><circuit_t*><unsigned long long>_get_circuit()).tradeoff_min_depth = 0
+		elif value == 'min_depth':
+			(<circuit_s*><circuit_t*><unsigned long long>_get_circuit()).cla_override = 0          # Allow CLA dispatch
+			(<circuit_s*><circuit_t*><unsigned long long>_get_circuit()).tradeoff_auto_threshold = 2  # CLA for all widths >= 2
+			(<circuit_s*><circuit_t*><unsigned long long>_get_circuit()).tradeoff_min_depth = 1    # Enable CLA subtraction (Plan 02)
+		else:  # 'auto'
+			(<circuit_s*><circuit_t*><unsigned long long>_get_circuit()).cla_override = 0          # Allow CLA dispatch
+			(<circuit_s*><circuit_t*><unsigned long long>_get_circuit()).tradeoff_auto_threshold = 4  # Empirical threshold
+			(<circuit_s*><circuit_t*><unsigned long long>_get_circuit()).tradeoff_min_depth = 0
 	else:
 		raise ValueError(f"Unknown option: {key}")
 
@@ -326,7 +368,7 @@ cdef class circuit:
 		>>> b = qint(3)
 		>>> result = a + b
 		"""
-		global _circuit_initialized, _circuit, _num_qubits, _int_counter, _smallest_allocated_qubit, _controlled, _control_bool, _list_of_controls, _global_creation_counter, _scope_stack
+		global _circuit_initialized, _circuit, _num_qubits, _int_counter, _smallest_allocated_qubit, _controlled, _control_bool, _list_of_controls, _global_creation_counter, _scope_stack, _tradeoff_policy, _arithmetic_ops_performed
 		# Only reset circuit when called directly as circuit(), not from subclass super().__init__()
 		if type(self) is circuit:
 			if _circuit_initialized:
@@ -343,6 +385,9 @@ cdef class circuit:
 			_list_of_controls = []
 			_global_creation_counter = 0
 			_scope_stack = []
+			# Phase 93: Reset tradeoff state
+			_tradeoff_policy = 'auto'
+			_arithmetic_ops_performed = False
 			# Reset legacy ancilla tracking
 			for i in range(NUMANCILLY):
 				ancilla[i] = i

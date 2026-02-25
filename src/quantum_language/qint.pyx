@@ -48,6 +48,7 @@ from ._core import (
     qubit_array,
     current_scope_depth,
     validate_circuit, validate_qubit_slots,
+    _mark_arithmetic_performed,
 )
 
 

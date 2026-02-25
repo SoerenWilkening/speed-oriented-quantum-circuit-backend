@@ -8,6 +8,8 @@
 		# Phase 60-03: Thin Cython wrapper -- all hot-path logic moved to C
 		# (hot_path_add.c). We only extract qubit indices from Python objects
 		# here, then call the C function with nogil.
+		# Phase 93: Mark that arithmetic has been performed (freezes tradeoff option)
+		_mark_arithmetic_performed()
 		cdef circuit_t *_circuit = <circuit_t*><unsigned long long>_get_circuit()
 		cdef bint _controlled = _get_controlled()
 		cdef object _control_bool = _get_control_bool()
