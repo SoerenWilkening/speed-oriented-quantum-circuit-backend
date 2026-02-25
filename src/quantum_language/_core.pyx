@@ -222,6 +222,22 @@ def option(key: str, value=None):
 	True (default), Toffoli additions at width >= 4 automatically use
 	the Brent-Kung CLA adder for O(log n) depth. When False, all
 	additions use the CDKM ripple-carry adder regardless of width.
+
+	The 'tradeoff' option controls adder selection for Toffoli arithmetic:
+	- 'auto' (default): Uses CLA (carry look-ahead) for widths >= 4, CDKM
+	  (ripple-carry) for smaller widths. Balances depth and qubit count.
+	- 'min_depth': Always uses CLA for minimum circuit depth. Subtraction
+	  uses two's complement approach (X-gate negation + CLA addition +
+	  increment) since the Brent-Kung CLA cannot run in reverse.
+	- 'min_qubits': Always uses CDKM for minimum qubit count (1 ancilla).
+
+	Modular arithmetic (qint_mod operations) always uses CDKM/RCA regardless
+	of the tradeoff setting, as the Beauregard modular adder requires
+	subtraction comparisons that are not compatible with CLA.
+
+	The tradeoff option must be set before any arithmetic operations (+, -, *).
+	Once arithmetic has been performed, changing the tradeoff raises RuntimeError
+	to prevent inconsistent circuits.
 	"""
 	global _qubit_saving_mode
 

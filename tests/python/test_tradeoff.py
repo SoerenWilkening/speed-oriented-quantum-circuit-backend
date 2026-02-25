@@ -374,3 +374,124 @@ class TestModularForceRCA:
             f"Modular qubit count differs: auto={qubit_counts['auto']}, "
             f"min_qubits={qubit_counts['min_qubits']}"
         )
+
+
+# ============================================================================
+# TRD-04: CLA Subtraction via Two's Complement Tests
+# ============================================================================
+
+
+class TestCLASubtraction:
+    """Test CLA subtraction via two's complement in min_depth mode."""
+
+    def test_min_depth_qq_subtraction_correct(self):
+        """Verify QQ a -= b correctness in min_depth mode via simulation."""
+        for width in range(2, 7):
+            mask = (1 << width) - 1
+            test_pairs = [(3, 1), (5, 2), (0, 1), (1, 3)]
+            for a_val, b_val in test_pairs:
+                a_val = a_val & mask
+                b_val = b_val & mask
+                expected = (a_val - b_val) & mask
+                result = _simulate_addition(a_val, b_val, width, tradeoff="min_depth", invert=True)
+                assert result == expected, (
+                    f"min_depth QQ sub: {a_val} - {b_val} (width={width}) = {result}, "
+                    f"expected {expected}"
+                )
+
+    def test_min_depth_cq_subtraction_correct(self):
+        """Verify CQ a -= classical_value correctness in min_depth mode."""
+        for width in range(2, 7):
+            mask = (1 << width) - 1
+            test_pairs = [(7, 3), (10, 5), (1, 3), (0, 1)]
+            for a_val, sub_val in test_pairs:
+                a_val = a_val & mask
+                sub_val = sub_val & mask
+                expected = (a_val - sub_val) & mask
+
+                ql.circuit()
+                ql.option("fault_tolerant", True)
+                ql.option("tradeoff", "min_depth")
+                a = ql.qint(a_val, width=width)
+                a -= sub_val
+
+                qasm_str = ql.to_openqasm()
+                num_qubits = _get_num_qubits_from_qasm(qasm_str)
+                if num_qubits > MAX_SIM_QUBITS:
+                    continue
+                result = _simulate_and_extract(qasm_str, num_qubits, 0, width)
+                assert result == expected, (
+                    f"min_depth CQ sub: {a_val} - {sub_val} (width={width}) = {result}, "
+                    f"expected {expected}"
+                )
+
+    def test_all_modes_subtraction_same_result(self):
+        """All modes should produce identical numerical results for subtraction."""
+        for width in range(2, 5):
+            mask = (1 << width) - 1
+            test_pairs = [(3, 1), (1, 3)]
+            for a_val, b_val in test_pairs:
+                a_val = a_val & mask
+                b_val = b_val & mask
+                expected = (a_val - b_val) & mask
+                results = {}
+                for mode in ("auto", "min_depth", "min_qubits"):
+                    results[mode] = _simulate_addition(
+                        a_val, b_val, width, tradeoff=mode, invert=True
+                    )
+                for mode, result in results.items():
+                    assert result == expected, (
+                        f"{mode}: {a_val} - {b_val} (width={width}) = {result}, expected {expected}"
+                    )
+
+
+class TestTradeoffRegression:
+    """Comprehensive regression tests for all tradeoff modes."""
+
+    def test_addition_all_modes_width_2_to_6(self):
+        """Verify a + b correctness across all modes and widths 2-6."""
+        for mode in ("auto", "min_depth", "min_qubits"):
+            for width in range(2, 7):
+                mask = (1 << width) - 1
+                test_pairs = [(1, 1), (0, 1), (mask, 1)]
+                for a_val, b_val in test_pairs:
+                    expected = (a_val + b_val) & mask
+                    result = _simulate_addition(a_val, b_val, width, tradeoff=mode)
+                    assert result == expected, (
+                        f"{mode} add: {a_val} + {b_val} (width={width}) = {result}, "
+                        f"expected {expected}"
+                    )
+
+    def test_subtraction_all_modes_width_2_to_6(self):
+        """Verify a - b correctness across all modes and widths 2-6."""
+        for mode in ("auto", "min_depth", "min_qubits"):
+            for width in range(2, 7):
+                mask = (1 << width) - 1
+                test_pairs = [(3, 1), (0, 1)]
+                for a_val, b_val in test_pairs:
+                    a_val = a_val & mask
+                    b_val = b_val & mask
+                    expected = (a_val - b_val) & mask
+                    result = _simulate_addition(a_val, b_val, width, tradeoff=mode, invert=True)
+                    assert result == expected, (
+                        f"{mode} sub: {a_val} - {b_val} (width={width}) = {result}, "
+                        f"expected {expected}"
+                    )
+
+    def test_mixed_operations(self):
+        """Test addition followed by subtraction in each mode."""
+        for mode in ("auto", "min_depth", "min_qubits"):
+            ql.circuit()
+            ql.option("fault_tolerant", True)
+            ql.option("tradeoff", mode)
+            a = ql.qint(5, width=4)
+            b = ql.qint(3, width=4)
+            a += b  # a = 8
+            a -= b  # a = 5
+
+            qasm_str = ql.to_openqasm()
+            num_qubits = _get_num_qubits_from_qasm(qasm_str)
+            if num_qubits > MAX_SIM_QUBITS:
+                continue
+            result = _simulate_and_extract(qasm_str, num_qubits, 0, 4)
+            assert result == 5, f"{mode} mixed: 5 + 3 - 3 = {result}, expected 5"
