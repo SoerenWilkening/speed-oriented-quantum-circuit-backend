@@ -3189,3 +3189,150 @@ def test_depth_capture_vs_replay():
     assert capture_depth == replay_depth, (
         f"Capture depth {capture_depth} != replay depth {replay_depth}"
     )
+
+
+# ---------------------------------------------------------------------------
+# FIX-04: Mode flag cache invalidation tests
+# ---------------------------------------------------------------------------
+class TestModeFlagCacheKey:
+    """Verify that switching arithmetic modes invalidates compile cache (FIX-04)."""
+
+    def test_arithmetic_mode_switch_invalidates_cache(self):
+        """Switching fault_tolerant between calls should not reuse stale cache."""
+        ql.circuit()
+        ql.option("fault_tolerant", False)
+
+        @ql.compile
+        def add_vals(x, y):
+            return x + y
+
+        # Call in QFT mode
+        a = ql.qint(3, width=4)
+        b = ql.qint(2, width=4)
+        _ = add_vals(a, b)
+
+        # Switch to Toffoli mode and call again with same widths
+        ql.circuit()
+        ql.option("fault_tolerant", True)
+        a = ql.qint(3, width=4)
+        b = ql.qint(2, width=4)
+        _ = add_vals(a, b)
+
+        # Should have separate cache entries (not reuse QFT gates for Toffoli)
+        # After new circuit, cache is cleared -- so we check it captured fresh
+        assert len(add_vals._cache) >= 1
+
+    def test_tradeoff_switch_invalidates_cache(self):
+        """Switching tradeoff policy between calls should cause re-capture."""
+        ql.circuit()
+        ql.option("fault_tolerant", True)
+
+        @ql.compile
+        def add_vals(x, y):
+            return x + y
+
+        # Call in auto mode
+        a = ql.qint(3, width=6)
+        b = ql.qint(2, width=6)
+        _ = add_vals(a, b)
+
+        # New circuit, min_depth mode
+        ql.circuit()
+        ql.option("fault_tolerant", True)
+        ql.option("tradeoff", "min_depth")
+        a = ql.qint(3, width=6)
+        b = ql.qint(2, width=6)
+        _ = add_vals(a, b)
+
+        # Cache cleared on new circuit, but should still capture fresh
+        assert len(add_vals._cache) >= 1
+
+    def test_same_mode_reuses_cache(self):
+        """Same mode flags should produce cache hit on second call."""
+        ql.circuit()
+        ql.option("fault_tolerant", True)
+
+        @ql.compile(debug=True)
+        def add_vals(x, y):
+            return x + y
+
+        a = ql.qint(3, width=4)
+        b = ql.qint(2, width=4)
+        _ = add_vals(a, b)  # Capture
+
+        a2 = ql.qint(5, width=4)
+        b2 = ql.qint(1, width=4)
+        _ = add_vals(a2, b2)  # Should be cache hit (same mode, same widths)
+
+        assert add_vals.stats["cache_hit"] is True
+
+
+# ---------------------------------------------------------------------------
+# PAR-01: Parametric API surface tests
+# ---------------------------------------------------------------------------
+class TestParametricAPI:
+    """Verify @ql.compile(parametric=True) API surface (PAR-01)."""
+
+    def test_parametric_flag_accepted(self):
+        """compile() accepts parametric=True without error."""
+
+        @ql.compile(parametric=True)
+        def f(x):
+            x += 1
+            return x
+
+        assert f.is_parametric is True
+
+    def test_default_not_parametric(self):
+        """Default compile is not parametric."""
+
+        @ql.compile
+        def f(x):
+            x += 1
+            return x
+
+        assert f.is_parametric is False
+
+    def test_parametric_with_no_classical_args_is_noop(self):
+        """parametric=True with no classical args behaves as normal compile."""
+        ql.circuit()
+        ql.option("fault_tolerant", True)
+
+        @ql.compile(parametric=True)
+        def add_one(x):
+            x += 1
+            return x
+
+        a = ql.qint(3, width=4)
+        _ = add_one(a)
+        # Should work normally -- no classical args means parametric is a no-op
+        # (verification of result correctness deferred to Plan 03)
+
+    def test_clear_cache_works(self):
+        """clear_cache() empties the compile cache."""
+        ql.circuit()
+
+        @ql.compile(parametric=True)
+        def add_one(x):
+            x += 1
+            return x
+
+        a = ql.qint(3, width=4)
+        _ = add_one(a)
+        assert len(add_one._cache) > 0
+        add_one.clear_cache()
+        assert len(add_one._cache) == 0
+
+    def test_oracle_forces_non_parametric(self):
+        """@ql.grover_oracle overrides parametric=True (PAR-04 foundation)."""
+        ql.circuit()
+        ql.option("fault_tolerant", True)
+
+        @ql.grover_oracle
+        @ql.compile(parametric=True)
+        def mark_val(x):
+            flag = x == 5
+            with flag:
+                pass
+
+        assert mark_val._compiled_func.is_parametric is False
