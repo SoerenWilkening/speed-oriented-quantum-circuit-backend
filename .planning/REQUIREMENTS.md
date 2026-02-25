@@ -108,8 +108,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TRD-03 | Phase 93 | Complete |
 | TRD-04 | Phase 93 | Complete |
 | PAR-01 | Phase 94 | Complete |
-| PAR-02 | Phase 94 | Pending |
-| PAR-03 | Phase 94 | Pending |
+| PAR-02 | Phase 94 | Complete |
+| PAR-03 | Phase 94 | Complete |
 | PAR-04 | Phase 94 | Pending |
 
 **Coverage:**

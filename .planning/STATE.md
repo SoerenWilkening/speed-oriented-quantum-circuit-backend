@@ -1,3 +1,16 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: Advanced Arithmetic & Compilation
+status: unknown
+last_updated: "2026-02-25T23:18:32.140Z"
+progress:
+  total_phases: 13
+  completed_phases: 12
+  total_plans: 35
+  completed_plans: 34
+---
+
 # Project State
 
 ## Project Reference
@@ -10,11 +23,11 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 94 of 94 (Parametric Compilation) — fifth phase of v5.0
-Plan: 2 of 3 in current phase
-Status: Plan 01 complete, Plan 02 next
-Last activity: 2026-02-25 — Plan 01 complete (mode-aware cache keys and parametric API)
+Plan: 3 of 3 in current phase
+Status: Plan 02 complete, Plan 03 next
+Last activity: 2026-02-25 — Plan 02 complete (parametric probe/replay lifecycle)
 
-Progress: [███-------] 33% (1/3 Phase 94 plans)
+Progress: [██████----] 67% (2/3 Phase 94 plans)
 
 ## Performance Metrics
 
@@ -51,12 +64,15 @@ See PROJECT.md Key Decisions table for full history.
 
 - Cache key includes (arithmetic_mode, cla_override, tradeoff_policy) tuple appended to all 4 key construction sites
 - Oracle decorator forces parametric=False since oracle parameters are structural by nature
+- Parametric-safe fast path captures per-value on cache miss (simplest correct approach) rather than reconstructing from template
+- Defensive topology check on every new classical value guards against runtime divergence
+- _reset_for_circuit preserves parametric probe state across circuit resets; clear_cache does full reset
 
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 94-01-PLAN.md
-Resume action: Execute 94-02-PLAN.md (parametric probe/replay lifecycle)
+Stopped at: Completed 94-02-PLAN.md
+Resume action: Execute 94-03-PLAN.md (parametric compilation verification tests)
 
 ---
-*State updated: 2026-02-25 — Plan 94-01 complete*
+*State updated: 2026-02-25 — Plan 94-02 complete*
