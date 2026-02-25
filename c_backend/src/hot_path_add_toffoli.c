@@ -1,6 +1,6 @@
 /**
  * @file hot_path_add_toffoli.c
- * @brief Toffoli-specific CLA/RCA dispatch logic for addition.
+ * @brief Toffoli-specific CLA/RCA dispatch logic for addition and subtraction.
  *
  * Extracted from hot_path_add.c (Phase 74) to separate Toffoli dispatch
  * (CLA threshold, BK/KS variant selection, RCA fallback) from the
@@ -9,6 +9,16 @@
  * Two dispatch functions:
  *   toffoli_dispatch_qq  -- Toffoli QQ addition (CLA + RCA, controlled + uncontrolled)
  *   toffoli_dispatch_cq  -- Toffoli CQ addition (CLA + RCA, controlled + uncontrolled)
+ *
+ * CLA subtraction limitation (Phase 93):
+ *   The Brent-Kung CLA adder's carry-copy ancilla are not properly uncomputed
+ *   when the sequence runs in reverse (invert=1). Therefore, direct CLA
+ *   subtraction is not supported. In min_depth mode (tradeoff_min_depth=1),
+ *   subtraction is implemented via two's complement:
+ *     QQ: a -= b  ===  X(b) + CLA(a += b) + CQ(a += 1) + X(b)
+ *     CQ: a -= v  ===  CLA(a += (2^width - v))
+ *   This achieves O(log n) depth for subtraction at the cost of additional
+ *   gates for the X-gate negation and +1 increment.
  *
  * Phase 74: Extracted during hot_path_add.c refactoring.
  */
@@ -148,6 +158,74 @@ static void toffoli_qq_uncont(circuit_t *circ, const unsigned int *self_qubits, 
         /* Clifford+T dispatch returned NULL -- fall through to non-decomposed */
     }
 
+    /* Phase 93: Two's complement CLA subtraction for min_depth mode.
+     * a -= b  ===  X(b) + CLA(a += b) + CQ(a += 1) + X(b)
+     * This enables O(log n) depth subtraction using CLA instead of O(n) RCA. */
+    if (invert && circ->tradeoff_min_depth && circ->cla_override == 0 &&
+        result_bits >= circ->tradeoff_auto_threshold) {
+        int cla_ancilla_count = compute_cla_ancilla_count(circ, result_bits);
+        qubit_t cla_ancilla = allocator_alloc(circ->allocator, cla_ancilla_count, true);
+        if (cla_ancilla != (qubit_t)-1) {
+            /* Step 1: X-gate each bit of other (one's complement negation) */
+            for (i = 0; i < other_bits; i++) {
+                gate_t xg;
+                memset(&xg, 0, sizeof(gate_t));
+                x(&xg, other_qubits[i]);
+                add_gate(circ, &xg);
+            }
+
+            /* Step 2: CLA forward addition a += ~b */
+            for (i = 0; i < cla_ancilla_count; i++) {
+                tqa[2 * result_bits + i] = cla_ancilla + i;
+            }
+            if (circ->qubit_saving) {
+                toff_seq = toffoli_QQ_add_bk(result_bits);
+            } else {
+                toff_seq = toffoli_QQ_add_ks(result_bits);
+            }
+            if (toff_seq != NULL) {
+                run_instruction(toff_seq, tqa, 0, circ); /* invert=0: forward */
+                allocator_free(circ->allocator, cla_ancilla, cla_ancilla_count);
+
+                /* Step 3: CQ increment a += 1 (two's complement correction) */
+                qubit_t inc_ancilla = allocator_alloc(circ->allocator, self_bits + 1, true);
+                if (inc_ancilla != (qubit_t)-1) {
+                    unsigned int inc_qa[256];
+                    for (i = 0; i < self_bits; i++) {
+                        inc_qa[i] = inc_ancilla + i;
+                    }
+                    for (i = 0; i < self_bits; i++) {
+                        inc_qa[self_bits + i] = self_qubits[i];
+                    }
+                    inc_qa[2 * self_bits] = inc_ancilla + self_bits;
+                    sequence_t *inc_seq = toffoli_CQ_add(self_bits, 1);
+                    if (inc_seq != NULL) {
+                        run_instruction(inc_seq, inc_qa, 0, circ);
+                        toffoli_sequence_free(inc_seq);
+                    }
+                    allocator_free(circ->allocator, inc_ancilla, self_bits + 1);
+                }
+
+                /* Step 4: Restore other register via X gates */
+                for (i = 0; i < other_bits; i++) {
+                    gate_t xg;
+                    memset(&xg, 0, sizeof(gate_t));
+                    x(&xg, other_qubits[i]);
+                    add_gate(circ, &xg);
+                }
+                return;
+            }
+            /* CLA failed -- undo X gates and fall through to RCA */
+            allocator_free(circ->allocator, cla_ancilla, cla_ancilla_count);
+            for (i = 0; i < other_bits; i++) {
+                gate_t xg;
+                memset(&xg, 0, sizeof(gate_t));
+                x(&xg, other_qubits[i]);
+                add_gate(circ, &xg);
+            }
+        }
+    }
+
     /* CLA dispatch: forward only (BK CLA carry-copy not fully uncomputed).
      * Subtraction (invert=1) falls through to RCA. */
     if (!invert && circ->cla_override == 0 && result_bits >= circ->tradeoff_auto_threshold) {
@@ -281,6 +359,78 @@ static void toffoli_qq_cont(circuit_t *circ, const unsigned int *self_qubits, in
             allocator_free(circ->allocator, ct_ancilla, 2);
         }
         /* Clifford+T dispatch returned NULL -- fall through to non-decomposed */
+    }
+
+    /* Phase 93: Controlled two's complement CLA subtraction for min_depth mode.
+     * ctrl: a -= b  ===  CX(ctrl,b) + cCLA(ctrl: a += b) + cCQ(ctrl: a += 1) + CX(ctrl,b) */
+    if (invert && circ->tradeoff_min_depth && circ->cla_override == 0 &&
+        result_bits >= circ->tradeoff_auto_threshold) {
+        int cla_ancilla_count = compute_cla_ancilla_count(circ, result_bits);
+        qubit_t cla_ancilla = allocator_alloc(circ->allocator, cla_ancilla_count + 1, true);
+        if (cla_ancilla != (qubit_t)-1) {
+            /* Step 1: Controlled X-gate each bit of other */
+            for (i = 0; i < other_bits; i++) {
+                gate_t cxg;
+                memset(&cxg, 0, sizeof(gate_t));
+                cx(&cxg, other_qubits[i], control_qubit);
+                add_gate(circ, &cxg);
+            }
+
+            /* Step 2: Controlled CLA forward addition ctrl: a += ~b */
+            for (i = 0; i < cla_ancilla_count; i++) {
+                tqa[2 * result_bits + i] = cla_ancilla + i;
+            }
+            tqa[2 * result_bits + cla_ancilla_count] = control_qubit;
+            tqa[2 * result_bits + cla_ancilla_count + 1] = cla_ancilla + cla_ancilla_count;
+
+            if (circ->qubit_saving) {
+                toff_seq = toffoli_cQQ_add_bk(result_bits);
+            } else {
+                toff_seq = toffoli_cQQ_add_ks(result_bits);
+            }
+            if (toff_seq != NULL) {
+                run_instruction(toff_seq, tqa, 0, circ); /* invert=0: forward */
+                allocator_free(circ->allocator, cla_ancilla, cla_ancilla_count + 1);
+
+                /* Step 3: Controlled CQ increment ctrl: a += 1 */
+                qubit_t inc_ancilla = allocator_alloc(circ->allocator, self_bits + 2, true);
+                if (inc_ancilla != (qubit_t)-1) {
+                    unsigned int inc_qa[256];
+                    for (i = 0; i < self_bits; i++) {
+                        inc_qa[i] = inc_ancilla + i;
+                    }
+                    for (i = 0; i < self_bits; i++) {
+                        inc_qa[self_bits + i] = self_qubits[i];
+                    }
+                    inc_qa[2 * self_bits] = inc_ancilla + self_bits;
+                    inc_qa[2 * self_bits + 1] = control_qubit;
+                    inc_qa[2 * self_bits + 2] = inc_ancilla + self_bits + 1;
+                    sequence_t *inc_seq = toffoli_cCQ_add(self_bits, 1);
+                    if (inc_seq != NULL) {
+                        run_instruction(inc_seq, inc_qa, 0, circ);
+                        toffoli_sequence_free(inc_seq);
+                    }
+                    allocator_free(circ->allocator, inc_ancilla, self_bits + 2);
+                }
+
+                /* Step 4: Restore other register via controlled X gates */
+                for (i = 0; i < other_bits; i++) {
+                    gate_t cxg;
+                    memset(&cxg, 0, sizeof(gate_t));
+                    cx(&cxg, other_qubits[i], control_qubit);
+                    add_gate(circ, &cxg);
+                }
+                return;
+            }
+            /* CLA failed -- undo CX gates and fall through */
+            allocator_free(circ->allocator, cla_ancilla, cla_ancilla_count + 1);
+            for (i = 0; i < other_bits; i++) {
+                gate_t cxg;
+                memset(&cxg, 0, sizeof(gate_t));
+                cx(&cxg, other_qubits[i], control_qubit);
+                add_gate(circ, &cxg);
+            }
+        }
     }
 
     /* Controlled CLA dispatch: forward only.
@@ -449,6 +599,40 @@ static void toffoli_cq_uncont(circuit_t *circ, const unsigned int *self_qubits, 
         /* Clifford+T dispatch returned NULL -- fall through to non-decomposed */
     }
 
+    /* Phase 93: CQ two's complement CLA subtraction for min_depth mode.
+     * a -= v  ===  a += (2^width - v)  (classical negation, then forward CLA add) */
+    if (invert && circ->tradeoff_min_depth && circ->cla_override == 0 &&
+        self_bits >= circ->tradeoff_auto_threshold) {
+        int64_t negated = ((int64_t)1 << self_bits) - classical_value;
+        int cla_ancilla_count = compute_cla_ancilla_count(circ, self_bits);
+        int total_ancilla = self_bits + cla_ancilla_count;
+        qubit_t cq_cla_ancilla = allocator_alloc(circ->allocator, total_ancilla, true);
+        if (cq_cla_ancilla != (qubit_t)-1) {
+            unsigned int tqa[256];
+            for (i = 0; i < self_bits; i++) {
+                tqa[i] = cq_cla_ancilla + i;
+            }
+            for (i = 0; i < self_bits; i++) {
+                tqa[self_bits + i] = self_qubits[i];
+            }
+            for (i = 0; i < cla_ancilla_count; i++) {
+                tqa[2 * self_bits + i] = cq_cla_ancilla + self_bits + i;
+            }
+            if (circ->qubit_saving) {
+                toff_seq = toffoli_CQ_add_bk(self_bits, negated);
+            } else {
+                toff_seq = toffoli_CQ_add_ks(self_bits, negated);
+            }
+            if (toff_seq != NULL) {
+                run_instruction(toff_seq, tqa, 0, circ); /* invert=0: forward */
+                toffoli_sequence_free(toff_seq);
+                allocator_free(circ->allocator, cq_cla_ancilla, total_ancilla);
+                return;
+            }
+            allocator_free(circ->allocator, cq_cla_ancilla, total_ancilla);
+        }
+    }
+
     /* CQ CLA dispatch: forward only */
     if (!invert && circ->cla_override == 0 && self_bits >= circ->tradeoff_auto_threshold) {
         int cla_ancilla_count = compute_cla_ancilla_count(circ, self_bits);
@@ -598,6 +782,44 @@ static void toffoli_cq_cont(circuit_t *circ, const unsigned int *self_qubits, in
             allocator_free(circ->allocator, ct_temp, self_bits + 2);
         }
         /* Clifford+T dispatch returned NULL -- fall through to non-decomposed */
+    }
+
+    /* Phase 93: Controlled CQ two's complement CLA subtraction for min_depth mode.
+     * ctrl: a -= v  ===  ctrl: a += (2^width - v) */
+    if (invert && circ->tradeoff_min_depth && circ->cla_override == 0 &&
+        self_bits >= circ->tradeoff_auto_threshold) {
+        int64_t negated = ((int64_t)1 << self_bits) - classical_value;
+        int cla_ancilla_count = compute_cla_ancilla_count(circ, self_bits);
+        int total_cla_ancilla = self_bits + cla_ancilla_count + 1;
+        qubit_t cla_start = allocator_alloc(circ->allocator, total_cla_ancilla, true);
+        if (cla_start != (qubit_t)-1) {
+            unsigned int cla_qa[256];
+            for (i = 0; i < self_bits; i++) {
+                cla_qa[i] = cla_start + i;
+            }
+            for (i = 0; i < self_bits; i++) {
+                cla_qa[self_bits + i] = self_qubits[i];
+            }
+            for (i = 0; i < cla_ancilla_count; i++) {
+                cla_qa[2 * self_bits + i] = cla_start + self_bits + i;
+            }
+            cla_qa[2 * self_bits + cla_ancilla_count] = control_qubit;
+            cla_qa[2 * self_bits + cla_ancilla_count + 1] =
+                cla_start + self_bits + cla_ancilla_count;
+
+            if (circ->qubit_saving) {
+                toff_seq = toffoli_cCQ_add_bk(self_bits, negated);
+            } else {
+                toff_seq = toffoli_cCQ_add_ks(self_bits, negated);
+            }
+            if (toff_seq != NULL) {
+                run_instruction(toff_seq, cla_qa, 0, circ); /* invert=0: forward */
+                toffoli_sequence_free(toff_seq);
+                allocator_free(circ->allocator, cla_start, total_cla_ancilla);
+                return;
+            }
+            allocator_free(circ->allocator, cla_start, total_cla_ancilla);
+        }
     }
 
     /* Controlled CQ CLA dispatch: forward only.
