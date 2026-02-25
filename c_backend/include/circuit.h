@@ -82,6 +82,10 @@ typedef struct circuit_s {
 
     int toffoli_decompose; // 0 = off (CCX gates in output), 1 = on (decompose CCX to Clifford+T)
 
+    int tradeoff_auto_threshold; // Width threshold for auto CLA dispatch (set from Python)
+    int tradeoff_min_depth;      // 1 = min_depth mode active (enables CLA subtraction via two's
+                                 // complement)
+
     // Legacy fields (deprecated, kept for backward compatibility)
     qubit_t qubit_indices[MAXQUBITS];
     qubit_t used_qubit_indices;

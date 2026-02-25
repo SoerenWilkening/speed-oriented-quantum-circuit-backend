@@ -214,6 +214,8 @@ cdef extern from "qubit_allocator.h":
 		int cla_override               # 0=auto CLA, 1=force RCA
 		int qubit_saving               # 0=off (KS), 1=on (BK)
 		int toffoli_decompose          # 0=off (CCX in output), 1=on (decompose to Clifford+T)
+		int tradeoff_auto_threshold    # Width threshold for auto CLA
+		int tradeoff_min_depth         # 1 = min_depth mode (CLA subtraction enabled)
 
 	ctypedef struct allocator_stats_t:
 		unsigned int peak_allocated

@@ -109,7 +109,7 @@ static void toffoli_qq_uncont(circuit_t *circ, const unsigned int *self_qubits, 
      * Same qubit layout as non-decomposed -- CCX expansion only adds gates, not qubits. */
     if (circ->toffoli_decompose && result_bits <= TOFFOLI_HARDCODED_MAX_WIDTH) {
         /* CLA Clifford+T path (forward only) */
-        if (!invert && circ->cla_override == 0 && result_bits >= CLA_THRESHOLD) {
+        if (!invert && circ->cla_override == 0 && result_bits >= circ->tradeoff_auto_threshold) {
             int cla_ancilla_count = compute_cla_ancilla_count(circ, result_bits);
             qubit_t cla_ancilla = allocator_alloc(circ->allocator, cla_ancilla_count, true);
             if (cla_ancilla != (qubit_t)-1) {
@@ -150,7 +150,7 @@ static void toffoli_qq_uncont(circuit_t *circ, const unsigned int *self_qubits, 
 
     /* CLA dispatch: forward only (BK CLA carry-copy not fully uncomputed).
      * Subtraction (invert=1) falls through to RCA. */
-    if (!invert && circ->cla_override == 0 && result_bits >= CLA_THRESHOLD) {
+    if (!invert && circ->cla_override == 0 && result_bits >= circ->tradeoff_auto_threshold) {
         int cla_ancilla_count = compute_cla_ancilla_count(circ, result_bits);
         qubit_t cla_ancilla = allocator_alloc(circ->allocator, cla_ancilla_count, true);
         if (cla_ancilla != (qubit_t)-1) {
@@ -237,7 +237,7 @@ static void toffoli_qq_cont(circuit_t *circ, const unsigned int *self_qubits, in
      * Same qubit layout as non-decomposed (CCX expansion only adds gates, not qubits). */
     if (circ->toffoli_decompose && result_bits <= TOFFOLI_HARDCODED_MAX_WIDTH) {
         /* Controlled CLA Clifford+T path (forward only) */
-        if (!invert && circ->cla_override == 0 && result_bits >= CLA_THRESHOLD) {
+        if (!invert && circ->cla_override == 0 && result_bits >= circ->tradeoff_auto_threshold) {
             int cla_ancilla_count = compute_cla_ancilla_count(circ, result_bits);
             /* CLA ancilla + 1 AND-ancilla (same layout as non-decomposed controlled CLA) */
             qubit_t cla_ancilla = allocator_alloc(circ->allocator, cla_ancilla_count + 1, true);
@@ -285,7 +285,7 @@ static void toffoli_qq_cont(circuit_t *circ, const unsigned int *self_qubits, in
 
     /* Controlled CLA dispatch: forward only.
      * Phase 74-03: +1 AND-ancilla for MCX decomposition in controlled CLA. */
-    if (!invert && circ->cla_override == 0 && result_bits >= CLA_THRESHOLD) {
+    if (!invert && circ->cla_override == 0 && result_bits >= circ->tradeoff_auto_threshold) {
         int cla_ancilla_count = compute_cla_ancilla_count(circ, result_bits);
         /* Allocate CLA ancilla + 1 AND-ancilla */
         qubit_t cla_ancilla = allocator_alloc(circ->allocator, cla_ancilla_count + 1, true);
@@ -386,7 +386,7 @@ static void toffoli_cq_uncont(circuit_t *circ, const unsigned int *self_qubits, 
     if (circ->toffoli_decompose && classical_value == 1 &&
         self_bits <= TOFFOLI_HARDCODED_MAX_WIDTH) {
         /* CLA Clifford+T CQ increment (forward only) */
-        if (!invert && circ->cla_override == 0 && self_bits >= CLA_THRESHOLD) {
+        if (!invert && circ->cla_override == 0 && self_bits >= circ->tradeoff_auto_threshold) {
             int cla_ancilla_count = compute_cla_ancilla_count(circ, self_bits);
             int total_ancilla = self_bits + cla_ancilla_count;
             qubit_t cq_cla_ancilla = allocator_alloc(circ->allocator, total_ancilla, true);
@@ -450,7 +450,7 @@ static void toffoli_cq_uncont(circuit_t *circ, const unsigned int *self_qubits, 
     }
 
     /* CQ CLA dispatch: forward only */
-    if (!invert && circ->cla_override == 0 && self_bits >= CLA_THRESHOLD) {
+    if (!invert && circ->cla_override == 0 && self_bits >= circ->tradeoff_auto_threshold) {
         int cla_ancilla_count = compute_cla_ancilla_count(circ, self_bits);
         int total_ancilla = self_bits + cla_ancilla_count;
         qubit_t cq_cla_ancilla = allocator_alloc(circ->allocator, total_ancilla, true);
@@ -531,7 +531,7 @@ static void toffoli_cq_cont(circuit_t *circ, const unsigned int *self_qubits, in
     if (circ->toffoli_decompose && classical_value == 1 &&
         self_bits <= TOFFOLI_HARDCODED_MAX_WIDTH) {
         /* Controlled CLA Clifford+T cCQ increment (forward only) */
-        if (!invert && circ->cla_override == 0 && self_bits >= CLA_THRESHOLD) {
+        if (!invert && circ->cla_override == 0 && self_bits >= circ->tradeoff_auto_threshold) {
             int cla_ancilla_count = compute_cla_ancilla_count(circ, self_bits);
             int total_cla_ancilla = self_bits + cla_ancilla_count + 1;
             qubit_t cla_start = allocator_alloc(circ->allocator, total_cla_ancilla, true);
@@ -606,7 +606,7 @@ static void toffoli_cq_cont(circuit_t *circ, const unsigned int *self_qubits, in
      * classical-bit simplification eliminates them. Only phases B-D (copied from
      * cQQ BK) contain decomposed gates, and the AND-ancilla qubit position
      * is ext_ctrl + 1 = 2*bits + cla_ancilla + 1. We need to allocate it. */
-    if (!invert && circ->cla_override == 0 && self_bits >= CLA_THRESHOLD) {
+    if (!invert && circ->cla_override == 0 && self_bits >= circ->tradeoff_auto_threshold) {
         int cla_ancilla_count = compute_cla_ancilla_count(circ, self_bits);
         /* +1 AND-ancilla for MCX decomposition in cQQ BK phases B-D */
         int total_cla_ancilla = self_bits + cla_ancilla_count + 1;

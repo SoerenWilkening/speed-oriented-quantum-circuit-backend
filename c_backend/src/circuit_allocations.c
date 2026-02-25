@@ -16,9 +16,11 @@ circuit_t *init_circuit() {
     circ->layer_floor = 0;
     circ->toff_decomp = DONTDECOMPOSETOFFOLI;
     circ->arithmetic_mode = ARITH_TOFFOLI;
-    circ->cla_override = 0;      // Auto: use CLA when width >= threshold
-    circ->qubit_saving = 0;      // Off: use Kogge-Stone (depth-optimized)
-    circ->toffoli_decompose = 0; // Off: CCX gates in output (not decomposed to Clifford+T)
+    circ->cla_override = 0;            // Auto: use CLA when width >= threshold
+    circ->qubit_saving = 0;            // Off: use Kogge-Stone (depth-optimized)
+    circ->toffoli_decompose = 0;       // Off: CCX gates in output (not decomposed to Clifford+T)
+    circ->tradeoff_auto_threshold = 4; // Default: CLA for width >= 4 in auto mode
+    circ->tradeoff_min_depth = 0;      // Default: auto mode (not min_depth)
 
     // Create allocator for qubit management
     circ->allocator = allocator_create(QUBIT_BLOCK);
