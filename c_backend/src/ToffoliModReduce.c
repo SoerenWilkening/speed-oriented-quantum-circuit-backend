@@ -227,18 +227,20 @@ static int mod_qq_add(circuit_t *circ, const unsigned int *target_qubits, int ta
     }
 
     /* CDKM QQ layout: [a[0..bits-1], b[0..bits-1], carry]
-     * a = target (modified: target += source)
-     * b = source (preserved) */
+     * a = source (preserved)
+     * b = target (modified: b += a, i.e. target += source) */
     unsigned int tqa[256];
-    for (int i = 0; i < bits; i++) {
-        tqa[i] = target_qubits[i];
-    }
+    /* a-register: source (preserved) */
     for (int i = 0; i < source_bits; i++) {
-        tqa[bits + i] = source_qubits[i];
+        tqa[i] = source_qubits[i];
     }
-    /* Pad remaining source positions with zero ancillae */
+    /* Pad remaining a-positions with zero ancillae */
     for (int i = source_bits; i < bits; i++) {
-        tqa[bits + i] = pad_start + (i - source_bits);
+        tqa[i] = pad_start + (i - source_bits);
+    }
+    /* b-register: target (modified) */
+    for (int i = 0; i < bits; i++) {
+        tqa[bits + i] = target_qubits[i];
     }
     tqa[2 * bits] = carry;
 
@@ -306,16 +308,19 @@ static int mod_cqq_add(circuit_t *circ, const unsigned int *target_qubits, int t
         return -1;
     }
 
-    /* cQQ layout: [a[0..bits-1], b[0..bits-1], carry, ext_ctrl, and_anc] */
+    /* cQQ layout: [a[0..bits-1], b[0..bits-1], carry, ext_ctrl, and_anc]
+     * a = source (preserved), b = target (modified: b += a) */
     unsigned int tqa[256];
-    for (int i = 0; i < bits; i++) {
-        tqa[i] = target_qubits[i];
-    }
+    /* a-register: source (preserved) */
     for (int i = 0; i < source_bits; i++) {
-        tqa[bits + i] = source_qubits[i];
+        tqa[i] = source_qubits[i];
     }
     for (int i = source_bits; i < bits; i++) {
-        tqa[bits + i] = pad_start + (i - source_bits);
+        tqa[i] = pad_start + (i - source_bits);
+    }
+    /* b-register: target (modified) */
+    for (int i = 0; i < bits; i++) {
+        tqa[bits + i] = target_qubits[i];
     }
     tqa[2 * bits] = carry;
     tqa[2 * bits + 1] = ctrl;
