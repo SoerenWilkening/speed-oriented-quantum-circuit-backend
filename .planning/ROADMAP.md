@@ -187,11 +187,11 @@ Plans:
   2. In auto mode, CLA is selected for width >= threshold and CDKM otherwise, verified by inspecting circuit depth for small vs large widths
   3. Modular arithmetic primitives always use RCA regardless of tradeoff policy setting
   4. BK CLA subtraction limitation is documented clearly in both code docstrings and user-facing documentation
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 93-01: TBD
-- [ ] 93-02: TBD
+- [ ] 93-01-PLAN.md — Tradeoff option API + C-level dispatch changes + auto threshold + modular RCA verification (TRD-01, TRD-02, TRD-03)
+- [ ] 93-02-PLAN.md — CLA subtraction via two's complement + documentation + comprehensive verification (TRD-04, TRD-01, TRD-02)
 
 ### Phase 94: Parametric Compilation
 **Goal**: Users can compile functions once and replay them with different classical values without re-capturing the gate sequence
