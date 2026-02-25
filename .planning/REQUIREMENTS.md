@@ -30,10 +30,10 @@ Requirements for v5.0 Advanced Arithmetic & Compilation. Each maps to roadmap ph
 
 ### Depth/Ancilla Tradeoff
 
-- [ ] **TRD-01**: User can set ql.option('tradeoff', 'auto'|'min_depth'|'min_qubits') to control adder selection
-- [ ] **TRD-02**: Auto mode selects CLA for width >= threshold, CDKM otherwise
-- [ ] **TRD-03**: Modular arithmetic primitives force RCA regardless of tradeoff policy
-- [ ] **TRD-04**: CLA subtraction limitation documented clearly
+- [x] **TRD-01**: User can set ql.option('tradeoff', 'auto'|'min_depth'|'min_qubits') to control adder selection
+- [x] **TRD-02**: Auto mode selects CLA for width >= threshold, CDKM otherwise
+- [x] **TRD-03**: Modular arithmetic primitives force RCA regardless of tradeoff policy
+- [x] **TRD-04**: CLA subtraction limitation documented clearly
 
 ### Parametric Compilation
 
@@ -103,10 +103,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CNT-01 | Phase 90 | Complete |
 | CNT-02 | Phase 90 | Complete |
 | CNT-03 | Phase 90 | Complete |
-| TRD-01 | Phase 93 | Pending |
-| TRD-02 | Phase 93 | Pending |
-| TRD-03 | Phase 93 | Pending |
-| TRD-04 | Phase 93 | Pending |
+| TRD-01 | Phase 93 | Complete |
+| TRD-02 | Phase 93 | Complete |
+| TRD-03 | Phase 93 | Complete |
+| TRD-04 | Phase 93 | Complete |
 | PAR-01 | Phase 94 | Pending |
 | PAR-02 | Phase 94 | Pending |
 | PAR-03 | Phase 94 | Pending |
