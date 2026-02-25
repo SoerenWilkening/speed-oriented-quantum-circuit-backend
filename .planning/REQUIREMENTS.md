@@ -110,7 +110,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PAR-01 | Phase 94 | Complete |
 | PAR-02 | Phase 94 | Complete |
 | PAR-03 | Phase 94 | Complete |
-| PAR-04 | Phase 94 | Pending |
+| PAR-04 | Phase 94 | Complete |
 
 **Coverage:**
 - v5.0 requirements: 20 total
