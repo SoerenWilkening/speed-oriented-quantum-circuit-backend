@@ -80,7 +80,7 @@ def _compute_source_hash(func):
 # Oracle cache key construction
 # ---------------------------------------------------------------------------
 def _oracle_cache_key(func, register_width):
-    """Build an oracle cache key including source hash and arithmetic mode.
+    """Build an oracle cache key including source hash and all mode flags.
 
     Parameters
     ----------
@@ -92,11 +92,13 @@ def _oracle_cache_key(func, register_width):
     Returns
     -------
     tuple
-        (source_hash, arithmetic_mode_int, register_width)
+        (source_hash, arithmetic_mode_int, cla_override, tradeoff_policy, register_width)
     """
     src_hash = _compute_source_hash(func)
     arithmetic_mode = 1 if option("fault_tolerant") else 0
-    return (src_hash, arithmetic_mode, register_width)
+    cla_override = 0 if option("cla") else 1
+    tradeoff_policy = option("tradeoff")
+    return (src_hash, arithmetic_mode, cla_override, tradeoff_policy, register_width)
 
 
 # ---------------------------------------------------------------------------
@@ -124,7 +126,7 @@ def _lambda_cache_key(predicate, register_widths):
     Returns
     -------
     tuple
-        ``(source_hash, closure_values, arithmetic_mode_int, register_widths_tuple)``
+        ``(source_hash, closure_values, arithmetic_mode_int, cla_override, tradeoff_policy, register_widths_tuple)``
     """
     src_hash = _compute_source_hash(predicate)
 
@@ -142,7 +144,16 @@ def _lambda_cache_key(predicate, register_widths):
         closure_values = tuple(vals)
 
     arithmetic_mode = 1 if option("fault_tolerant") else 0
-    return (src_hash, closure_values, arithmetic_mode, tuple(register_widths))
+    cla_override = 0 if option("cla") else 1
+    tradeoff_policy = option("tradeoff")
+    return (
+        src_hash,
+        closure_values,
+        arithmetic_mode,
+        cla_override,
+        tradeoff_policy,
+        tuple(register_widths),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -580,10 +591,15 @@ def grover_oracle(func=None, *, bit_flip=False, validate=True):
     def decorator(fn):
         if not isinstance(fn, CompiledFunc):
             fn = compile(fn)
+        # Force non-parametric: oracle parameters are structural by nature (PAR-04)
+        fn._parametric = False
         return GroverOracle(fn, bit_flip=bit_flip, validate=validate)
 
     if func is not None:
         if isinstance(func, CompiledFunc):
+            func._parametric = False
             return GroverOracle(func, bit_flip=bit_flip, validate=validate)
-        return GroverOracle(compile(func), bit_flip=bit_flip, validate=validate)
+        compiled = compile(func)
+        compiled._parametric = False
+        return GroverOracle(compiled, bit_flip=bit_flip, validate=validate)
     return decorator

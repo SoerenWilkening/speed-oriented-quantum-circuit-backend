@@ -42,6 +42,7 @@ from ._core import (
     extract_gate_range,
     get_current_layer,
     inject_remapped_gates,
+    option,
 )
 from .qint import qint
 
@@ -52,6 +53,23 @@ _X, _Y, _Z, _R, _H, _Rx, _Ry, _Rz, _P, _M = range(10)
 _SELF_ADJOINT = frozenset({_X, _Y, _Z, _H})
 _ROTATION_GATES = frozenset({_P, _Rx, _Ry, _Rz, _R})
 _NON_REVERSIBLE = frozenset({_M})
+
+
+# ---------------------------------------------------------------------------
+# Mode flag helpers (FIX-04)
+# ---------------------------------------------------------------------------
+def _get_mode_flags():
+    """Return current arithmetic mode flags for cache key inclusion.
+
+    Returns a tuple of (arithmetic_mode, cla_override, tradeoff_policy)
+    that uniquely identifies the arithmetic configuration.  Including these
+    in the cache key ensures that switching modes between calls causes a
+    clean cache miss rather than replaying stale gates (FIX-04).
+    """
+    arithmetic_mode = 1 if option("fault_tolerant") else 0
+    cla_override = 0 if option("cla") else 1
+    tradeoff_policy = option("tradeoff")
+    return (arithmetic_mode, cla_override, tradeoff_policy)
 
 
 # ---------------------------------------------------------------------------
@@ -567,7 +585,15 @@ class CompiledFunc:
     """
 
     def __init__(
-        self, func, max_cache=128, key=None, verify=False, optimize=True, inverse=False, debug=False
+        self,
+        func,
+        max_cache=128,
+        key=None,
+        verify=False,
+        optimize=True,
+        inverse=False,
+        debug=False,
+        parametric=False,
     ):
         functools.update_wrapper(self, func)
         self._func = func
@@ -579,12 +605,19 @@ class CompiledFunc:
         self._inverse_eager = inverse
         self._inverse_func = None
         self._debug = debug
+        self._parametric = parametric
         self._forward_calls = {}
         self._inverse_proxy = None
         self._adjoint_func = None
         self._stats = None
         self._total_hits = 0
         self._total_misses = 0
+        # Parametric compilation state
+        self._parametric_topology = None  # Cached topology signature (from probe)
+        self._parametric_block = None  # Reference CompiledBlock for replay
+        self._parametric_probed = False  # True after first capture (waiting for probe)
+        self._parametric_safe = None  # True=safe, False=structural, None=unknown
+        self._parametric_first_classical = None  # Classical args from first capture
         # Register for cache invalidation on circuit reset
         _compiled_funcs.append(weakref.ref(self))
         # Eagerly create inverse wrapper when inverse=True
@@ -600,12 +633,18 @@ class CompiledFunc:
         is_controlled = _get_controlled()
         control_count = 1 if is_controlled else 0
 
-        # Build cache key (always includes control_count and qubit_saving mode)
+        # Build cache key (includes control_count, qubit_saving, and mode flags)
         qubit_saving = _get_qubit_saving_mode()
+        mode_flags = _get_mode_flags()
         if self._key_func:
-            cache_key = (self._key_func(*args, **kwargs), control_count, qubit_saving)
+            cache_key = (self._key_func(*args, **kwargs), control_count, qubit_saving) + mode_flags
         else:
-            cache_key = (tuple(classical_args), tuple(widths), control_count, qubit_saving)
+            cache_key = (
+                tuple(classical_args),
+                tuple(widths),
+                control_count,
+                qubit_saving,
+            ) + mode_flags
 
         is_hit = cache_key in self._cache
 
@@ -880,10 +919,11 @@ class CompiledFunc:
 
         # Cache uncontrolled variant
         qubit_saving = _get_qubit_saving_mode()
+        mode_flags = _get_mode_flags()
         if self._key_func:
-            unctrl_key = (self._key_func(*args, **kwargs), 0, qubit_saving)
+            unctrl_key = (self._key_func(*args, **kwargs), 0, qubit_saving) + mode_flags
         else:
-            unctrl_key = (tuple(classical_args), tuple(widths), 0, qubit_saving)
+            unctrl_key = (tuple(classical_args), tuple(widths), 0, qubit_saving) + mode_flags
         self._cache[unctrl_key] = block
 
         # Derive and cache controlled variant
@@ -894,9 +934,9 @@ class CompiledFunc:
             # current gate set, but guards against future gate types)
             controlled_block = self._capture(args, kwargs, quantum_args)
         if self._key_func:
-            ctrl_key = (self._key_func(*args, **kwargs), 1, qubit_saving)
+            ctrl_key = (self._key_func(*args, **kwargs), 1, qubit_saving) + mode_flags
         else:
-            ctrl_key = (tuple(classical_args), tuple(widths), 1, qubit_saving)
+            ctrl_key = (tuple(classical_args), tuple(widths), 1, qubit_saving) + mode_flags
         self._cache[ctrl_key] = controlled_block
 
         # Evict oldest if over capacity (we added 2 entries)
@@ -1115,6 +1155,14 @@ class CompiledFunc:
             self._forward_calls.pop(input_key, None)
 
     # ------------------------------------------------------------------
+    # Parametric introspection
+    # ------------------------------------------------------------------
+    @property
+    def is_parametric(self):
+        """Whether this compiled function uses parametric mode."""
+        return self._parametric
+
+    # ------------------------------------------------------------------
     # Debug introspection
     # ------------------------------------------------------------------
     @property
@@ -1167,9 +1215,15 @@ class CompiledFunc:
         return self._adjoint_func
 
     def clear_cache(self):
-        """Clear this function's compilation cache."""
+        """Clear this function's compilation cache and parametric state."""
         self._cache.clear()
         self._forward_calls.clear()
+        # Reset parametric probe state
+        self._parametric_topology = None
+        self._parametric_block = None
+        self._parametric_probed = False
+        self._parametric_safe = None
+        self._parametric_first_classical = None
         if self._inverse_func is not None:
             self._inverse_func.clear_cache()
         if self._adjoint_func is not None:
@@ -1203,12 +1257,22 @@ class _InverseCompiledFunc:
         is_controlled = _get_controlled()
         control_count = 1 if is_controlled else 0
 
-        # Build cache key (same logic as CompiledFunc.__call__)
+        # Build cache key (same logic as CompiledFunc.__call__, includes mode flags)
         qubit_saving = _get_qubit_saving_mode()
+        mode_flags = _get_mode_flags()
         if self._original._key_func:
-            cache_key = (self._original._key_func(*args, **kwargs), control_count, qubit_saving)
+            cache_key = (
+                self._original._key_func(*args, **kwargs),
+                control_count,
+                qubit_saving,
+            ) + mode_flags
         else:
-            cache_key = (tuple(classical_args), tuple(widths), control_count, qubit_saving)
+            cache_key = (
+                tuple(classical_args),
+                tuple(widths),
+                control_count,
+                qubit_saving,
+            ) + mode_flags
 
         # Check inverse cache
         if cache_key not in self._inv_cache:
@@ -1326,14 +1390,22 @@ class _AncillaInverseProxy:
 # Public decorator API
 # ---------------------------------------------------------------------------
 def compile(
-    func=None, *, max_cache=128, key=None, verify=False, optimize=True, inverse=False, debug=False
+    func=None,
+    *,
+    max_cache=128,
+    key=None,
+    verify=False,
+    optimize=True,
+    inverse=False,
+    debug=False,
+    parametric=False,
 ):
     """Decorator that compiles a quantum function for cached gate replay.
 
     Supports three forms:
       @ql.compile
       @ql.compile()
-      @ql.compile(max_cache=N, key=..., verify=..., optimize=...)
+      @ql.compile(max_cache=N, key=..., verify=..., optimize=..., parametric=...)
 
     Parameters
     ----------
@@ -1349,6 +1421,21 @@ def compile(
         If True (default), optimise the captured gate list by cancelling
         adjacent inverse gates and merging consecutive rotations before
         caching.  Set to False to store the raw captured sequence.
+    parametric : bool
+        If True, enable parametric compilation mode.  The function is
+        captured once and replayed with different classical argument
+        values without re-capturing the gate sequence.  Falls back to
+        per-value caching when classical arguments affect gate topology
+        (e.g. Toffoli CQ operations where the value determines which
+        qubits receive X gates).  If the function has no classical
+        arguments, ``parametric=True`` is a silent no-op.
+
+        Toffoli CQ note: operations like ``x += classical_val`` produce
+        value-dependent gate topology because CQ encoding maps each set
+        bit of the classical value to an X gate.  Parametric mode
+        detects this automatically on the second call with a different
+        classical value and falls back to per-value caching for
+        correctness.  No user action is required.
 
     Returns
     -------
@@ -1366,9 +1453,9 @@ def compile(
     ... def multiply(x, y):
     ...     return x * y
 
-    >>> @ql.compile(optimize=False)
-    ... def raw_capture(x):
-    ...     x += 1
+    >>> @ql.compile(parametric=True)
+    ... def add_val(x, val):
+    ...     x += val
     ...     return x
     """
 
@@ -1381,6 +1468,7 @@ def compile(
             optimize=optimize,
             inverse=inverse,
             debug=debug,
+            parametric=parametric,
         )
 
     if func is not None:
@@ -1393,6 +1481,7 @@ def compile(
             optimize=optimize,
             inverse=inverse,
             debug=debug,
+            parametric=parametric,
         )
     # Called as @ql.compile() or @ql.compile(max_cache=N)
     return decorator
