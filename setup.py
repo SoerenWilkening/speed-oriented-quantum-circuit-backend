@@ -48,6 +48,8 @@ c_sources = [
     f"{C_BACKEND}/ToffoliAdditionCDKM.c",
     f"{C_BACKEND}/ToffoliAdditionCLA.c",
     f"{C_BACKEND}/ToffoliMultiplication.c",
+    f"{C_BACKEND}/ToffoliDivision.c",
+    f"{C_BACKEND}/ToffoliModReduce.c",
     # Hardcoded Toffoli addition sequences: 8 per-width files + dispatch
     *[f"{C_SEQ}/toffoli_add_seq_{i}.c" for i in range(1, 9)],
     f"{C_SEQ}/toffoli_add_seq_dispatch.c",

@@ -28,6 +28,8 @@ from ._core cimport (
     hot_path_mul_qq, hot_path_mul_cq,
     hot_path_add_qq, hot_path_add_cq,
     hot_path_ixor_qq, hot_path_ixor_cq,
+    toffoli_divmod_cq, toffoli_divmod_qq,
+    toffoli_cdivmod_cq, toffoli_cdivmod_qq,
 )
 
 # Python-level imports for global state access via accessor functions

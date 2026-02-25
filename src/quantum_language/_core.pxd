@@ -51,6 +51,37 @@ cdef extern from "toffoli_arithmetic_ops.h":
 	sequence_t *toffoli_cCQ_add_ks(int bits, int64_t value)
 	void toffoli_sequence_free(sequence_t *seq)
 
+	# Toffoli Division (Phase 91)
+	void toffoli_divmod_cq(circuit_t *circ, const unsigned int *dividend_qubits,
+	                       int dividend_bits, int64_t divisor,
+	                       const unsigned int *quotient_qubits,
+	                       const unsigned int *remainder_qubits)
+	void toffoli_divmod_qq(circuit_t *circ, const unsigned int *dividend_qubits,
+	                       int dividend_bits, const unsigned int *divisor_qubits,
+	                       int divisor_bits, const unsigned int *quotient_qubits,
+	                       const unsigned int *remainder_qubits)
+	void toffoli_cdivmod_cq(circuit_t *circ, const unsigned int *dividend_qubits,
+	                        int dividend_bits, int64_t divisor,
+	                        const unsigned int *quotient_qubits,
+	                        const unsigned int *remainder_qubits,
+	                        unsigned int ext_ctrl)
+	void toffoli_cdivmod_qq(circuit_t *circ, const unsigned int *dividend_qubits,
+	                        int dividend_bits, const unsigned int *divisor_qubits,
+	                        int divisor_bits, const unsigned int *quotient_qubits,
+	                        const unsigned int *remainder_qubits,
+	                        unsigned int ext_ctrl)
+
+	# Toffoli Modular Reduction (Phase 91)
+	void toffoli_mod_reduce(circuit_t *circ, const unsigned int *value_qubits,
+	                        int value_bits, int64_t modulus)
+	void toffoli_cmod_reduce(circuit_t *circ, const unsigned int *value_qubits,
+	                         int value_bits, int64_t modulus, unsigned int ext_ctrl)
+	void toffoli_mod_add_cq(circuit_t *circ, const unsigned int *value_qubits,
+	                        int value_bits, int64_t addend, int64_t modulus)
+	void toffoli_cmod_add_cq(circuit_t *circ, const unsigned int *value_qubits,
+	                         int value_bits, int64_t addend, int64_t modulus,
+	                         unsigned int ext_ctrl)
+
 cdef extern from "Integer.h":
 	# Type creation and manipulation (non-arithmetic functions only)
 	pass  # Arithmetic functions moved to arithmetic_ops.h block

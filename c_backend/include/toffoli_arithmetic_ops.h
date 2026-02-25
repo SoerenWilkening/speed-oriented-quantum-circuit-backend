@@ -341,4 +341,136 @@ void toffoli_cmul_cq(circuit_t *circ, const unsigned int *ret_qubits, int ret_bi
  */
 void toffoli_sequence_free(sequence_t *seq);
 
+// ============================================================================
+// Toffoli Division (Phase 91)
+// ============================================================================
+
+/**
+ * @brief Restoring divmod with classical divisor.
+ *
+ * Computes quotient = dividend / divisor, remainder = dividend % divisor.
+ * Uses Bennett's trick for reversible comparison at each bit position.
+ * All ancillae allocated internally and freed after use.
+ *
+ * @param circ             Active circuit
+ * @param dividend_qubits  Dividend register (preserved), LSB-first
+ * @param dividend_bits    Width of dividend (n)
+ * @param divisor          Classical divisor value (> 0; 0 = sentinel)
+ * @param quotient_qubits  Quotient output register (starts at |0>), LSB-first
+ * @param remainder_qubits Remainder output register (starts at |0>), LSB-first
+ */
+void toffoli_divmod_cq(circuit_t *circ, const unsigned int *dividend_qubits, int dividend_bits,
+                       int64_t divisor, const unsigned int *quotient_qubits,
+                       const unsigned int *remainder_qubits);
+
+/**
+ * @brief Restoring divmod with quantum divisor.
+ *
+ * Computes quotient = dividend / divisor, remainder = dividend % divisor
+ * using repeated subtraction (2^n iterations).
+ *
+ * @param circ             Active circuit
+ * @param dividend_qubits  Dividend register (preserved), LSB-first
+ * @param dividend_bits    Width of dividend (n)
+ * @param divisor_qubits   Divisor register (preserved), LSB-first
+ * @param divisor_bits     Width of divisor
+ * @param quotient_qubits  Quotient output register (starts at |0>), LSB-first
+ * @param remainder_qubits Remainder output register (starts at |0>), LSB-first
+ */
+void toffoli_divmod_qq(circuit_t *circ, const unsigned int *dividend_qubits, int dividend_bits,
+                       const unsigned int *divisor_qubits, int divisor_bits,
+                       const unsigned int *quotient_qubits, const unsigned int *remainder_qubits);
+
+/**
+ * @brief Controlled restoring divmod with classical divisor.
+ *
+ * Same as toffoli_divmod_cq but all operations controlled by ext_ctrl.
+ *
+ * @param circ             Active circuit
+ * @param dividend_qubits  Dividend register (preserved), LSB-first
+ * @param dividend_bits    Width of dividend (n)
+ * @param divisor          Classical divisor value
+ * @param quotient_qubits  Quotient output register (starts at |0>), LSB-first
+ * @param remainder_qubits Remainder output register (starts at |0>), LSB-first
+ * @param ext_ctrl         External control qubit
+ */
+void toffoli_cdivmod_cq(circuit_t *circ, const unsigned int *dividend_qubits, int dividend_bits,
+                        int64_t divisor, const unsigned int *quotient_qubits,
+                        const unsigned int *remainder_qubits, unsigned int ext_ctrl);
+
+/**
+ * @brief Controlled restoring divmod with quantum divisor.
+ *
+ * Same as toffoli_divmod_qq but all operations controlled by ext_ctrl.
+ *
+ * @param circ             Active circuit
+ * @param dividend_qubits  Dividend register (preserved), LSB-first
+ * @param dividend_bits    Width of dividend (n)
+ * @param divisor_qubits   Divisor register (preserved), LSB-first
+ * @param divisor_bits     Width of divisor
+ * @param quotient_qubits  Quotient output register (starts at |0>), LSB-first
+ * @param remainder_qubits Remainder output register (starts at |0>), LSB-first
+ * @param ext_ctrl         External control qubit
+ */
+void toffoli_cdivmod_qq(circuit_t *circ, const unsigned int *dividend_qubits, int dividend_bits,
+                        const unsigned int *divisor_qubits, int divisor_bits,
+                        const unsigned int *quotient_qubits, const unsigned int *remainder_qubits,
+                        unsigned int ext_ctrl);
+
+// ============================================================================
+// Toffoli Modular Reduction (Phase 91)
+// ============================================================================
+
+/**
+ * @brief Modular reduction: value = value mod modulus.
+ *
+ * Reduces a quantum register in-place modulo a classical N.
+ * Input assumed to be in range [0, 2N-2] (valid for modular addition results).
+ * Uses single conditional subtraction of N.
+ *
+ * @param circ         Active circuit
+ * @param value_qubits Register to reduce (modified in-place), LSB-first
+ * @param value_bits   Width of register
+ * @param modulus      Classical modulus N (> 0)
+ */
+void toffoli_mod_reduce(circuit_t *circ, const unsigned int *value_qubits, int value_bits,
+                        int64_t modulus);
+
+/**
+ * @brief Controlled modular reduction.
+ *
+ * @param circ         Active circuit
+ * @param value_qubits Register to reduce (modified in-place), LSB-first
+ * @param value_bits   Width of register
+ * @param modulus      Classical modulus N (> 0)
+ * @param ext_ctrl     External control qubit
+ */
+void toffoli_cmod_reduce(circuit_t *circ, const unsigned int *value_qubits, int value_bits,
+                         int64_t modulus, unsigned int ext_ctrl);
+
+/**
+ * @brief Modular CQ addition: value = (value + addend) mod modulus.
+ *
+ * @param circ         Active circuit
+ * @param value_qubits Register (modified in-place), LSB-first
+ * @param value_bits   Width of register
+ * @param addend       Classical value to add
+ * @param modulus      Classical modulus N (> 0)
+ */
+void toffoli_mod_add_cq(circuit_t *circ, const unsigned int *value_qubits, int value_bits,
+                        int64_t addend, int64_t modulus);
+
+/**
+ * @brief Controlled modular CQ addition.
+ *
+ * @param circ         Active circuit
+ * @param value_qubits Register (modified in-place), LSB-first
+ * @param value_bits   Width of register
+ * @param addend       Classical value to add
+ * @param modulus      Classical modulus N (> 0)
+ * @param ext_ctrl     External control qubit
+ */
+void toffoli_cmod_add_cq(circuit_t *circ, const unsigned int *value_qubits, int value_bits,
+                         int64_t addend, int64_t modulus, unsigned int ext_ctrl);
+
 #endif // TOFFOLI_ARITHMETIC_OPS_H

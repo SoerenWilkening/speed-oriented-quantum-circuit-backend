@@ -1,12 +1,30 @@
-"""Quantum integer with modular arithmetic."""
+"""Quantum integer with modular arithmetic.
+
+Phase 91: Rewired to C-level modular reduction (fixes BUG-MOD-REDUCE).
+All modular operations now use toffoli_mod_reduce from ToffoliModReduce.c
+instead of the broken Python _reduce_mod which leaked orphan qubits.
+"""
+
+from libc.stdint cimport int64_t
 
 from quantum_language.qint cimport qint
 
-# Import accessor functions for global state if needed
-from quantum_language._core import (
-    _get_controlled,
-    _get_list_of_controls,
+# C-level imports
+from quantum_language._core cimport (
+	circuit_t, circuit_s,
+	toffoli_mod_reduce,
+	toffoli_cmod_reduce,
+	toffoli_mod_add_cq,
+	toffoli_cmod_add_cq,
 )
+
+# Python-level imports for global state access
+from quantum_language._core import (
+	_get_controlled,
+	_get_list_of_controls,
+	_get_circuit, _get_circuit_initialized,
+)
+
 
 cdef class qint_mod(qint):
 	"""Quantum integer with modular arithmetic.
@@ -42,6 +60,10 @@ cdef class qint_mod(qint):
 	-----
 	Used for modular exponentiation in Shor's algorithm and other
 	number-theoretic quantum algorithms.
+
+	Phase 91: All modular reduction now uses C-level toffoli_mod_reduce
+	from ToffoliModReduce.c, eliminating orphan qubit leaks from the
+	old Python-level _reduce_mod (BUG-MOD-REDUCE).
 	"""
 	# Attribute declarations are in qint_mod.pxd
 
@@ -104,29 +126,47 @@ cdef class qint_mod(qint):
 	def __repr__(self):
 		return f"qint_mod(modulus={self._modulus}, width={self.bits})"
 
-	cdef _reduce_mod(self, qint value):
-		"""Reduce value mod N via conditional subtraction.
+	cdef _reduce_mod_c(self, qint value):
+		"""Reduce value mod N using C-level toffoli_mod_reduce.
 
-		Uses quantum comparison and conditional subtraction.
-		Classical N enables computing max iterations needed.
+		Phase 91: Replaces the old Python _reduce_mod which leaked qubits.
+
+		For values in [0, 2N-2] (e.g., from addition of two values < N),
+		a single call to toffoli_mod_reduce suffices.
+
+		For larger values (e.g., from multiplication), multiple reduction
+		passes are needed: ceil(log2(max_val / N)) iterations.
+
+		Parameters
+		----------
+		value : qint
+			Quantum register to reduce in-place.
+
+		Returns
+		-------
+		qint
+			The same register, now containing value mod N.
 		"""
-		# Max possible value before reduction
-		max_val = 1 << value.bits
+		cdef circuit_t *_circ = <circuit_t*><unsigned long long>_get_circuit()
+		cdef int n = value.bits
+		cdef int offset = 64 - n
+		cdef unsigned int value_qa[64]
+		cdef int i
 
-		# Max times we might need to subtract N
-		max_subtractions = (max_val // self._modulus) + 1
+		# Extract physical qubits (LSB-first for C convention)
+		# qubits[64-bits] = LSB (bit 0), qubits[63] = MSB
+		for i in range(n):
+			value_qa[i] = value.qubits[offset + i]
 
-		# Iteratively subtract N while value >= N
-		# Number of iterations is log2(max_subtractions)
-		iterations = max_subtractions.bit_length()
+		# Determine how many reduction passes are needed
+		# For addition: input < 2N, so 1 pass suffices
+		# For multiplication by c: input < c*N, need ceil(log2(c)) passes
+		cdef int max_val = 1 << n
+		cdef int max_subtractions = (max_val // self._modulus) + 1
+		cdef int iterations = max_subtractions.bit_length()
 
-		for _ in range(iterations):
-			# Compare: is value >= N?
-			cmp = value >= self._modulus
-
-			# Conditional subtraction
-			with cmp:
-				value -= self._modulus
+		for i in range(iterations):
+			toffoli_mod_reduce(_circ, value_qa, n, <int64_t>self._modulus)
 
 		return value
 
@@ -171,6 +211,10 @@ cdef class qint_mod(qint):
 		>>> x = qint_mod(15, N=17)
 		>>> y = qint_mod(5, N=17)
 		>>> z = x + y  # (15 + 5) mod 17 = 3
+
+		Notes
+		-----
+		Phase 91: Uses C-level toffoli_mod_reduce instead of Python _reduce_mod.
 		"""
 		# Check modulus compatibility
 		if isinstance(other, qint_mod):
@@ -182,8 +226,8 @@ cdef class qint_mod(qint):
 		# Perform regular addition (using parent class)
 		sum_val = qint.__add__(self, other)
 
-		# Reduce mod N
-		reduced = self._reduce_mod(sum_val)
+		# Reduce mod N using C-level function
+		reduced = self._reduce_mod_c(sum_val)
 
 		# Wrap result
 		return self._wrap_result(reduced)
@@ -213,6 +257,15 @@ cdef class qint_mod(qint):
 		>>> x = qint_mod(5, N=17)
 		>>> y = qint_mod(10, N=17)
 		>>> z = x - y  # (5 - 10) mod 17 = 12
+
+		Notes
+		-----
+		Phase 91: Uses C-level toffoli_mod_reduce instead of Python _reduce_mod.
+		The subtraction result is an n-bit unsigned value that wraps around.
+		For inputs < N, (self - other) mod 2^n is equivalent to
+		(self - other + 2^n) mod N when the result is negative in signed
+		interpretation. The C-level mod_reduce handles this by doing
+		multiple passes of conditional subtraction of N.
 		"""
 		if isinstance(other, qint_mod):
 			if (<qint_mod>other)._modulus != self._modulus:
@@ -221,16 +274,21 @@ cdef class qint_mod(qint):
 				)
 
 		# Perform regular subtraction
+		# In unsigned n-bit arithmetic: if self < other, result wraps to 2^n + (self - other)
+		# which is > N. The reduce_mod_c will subtract N enough times to get to [0, N).
 		diff = qint.__sub__(self, other)
 
-		# If negative (MSB set), add N to make positive
-		# Check sign via comparison or MSB
-		is_negative = diff < 0
-		with is_negative:
-			diff += self._modulus
+		# For subtraction: if self >= other, diff is in [0, N) already (both < N).
+		# If self < other, diff wraps to [2^n - N + 1, 2^n - 1].
+		# We need to add N to get the correct modular result.
+		# Instead of Python-level comparison (which leaks qbools), we add N
+		# unconditionally and then reduce. Since the input is in [0, 2^n),
+		# after adding N the max value is 2^n + N - 1, and the C-level
+		# reduce_mod_c handles multiple passes.
+		diff += self._modulus
 
-		# Reduce to ensure in range [0, N)
-		reduced = self._reduce_mod(diff)
+		# Reduce mod N using C-level function
+		reduced = self._reduce_mod_c(diff)
 
 		return self._wrap_result(reduced)
 
@@ -258,6 +316,10 @@ cdef class qint_mod(qint):
 		--------
 		>>> x = qint_mod(5, N=17)
 		>>> z = x * 7  # (5 * 7) mod 17 = 1
+
+		Notes
+		-----
+		Phase 91: Uses C-level toffoli_mod_reduce instead of Python _reduce_mod.
 		"""
 		# Check for qint_mod * qint_mod (not supported - causes C-layer segfault)
 		if isinstance(other, qint_mod):
@@ -270,7 +332,7 @@ cdef class qint_mod(qint):
 		product = qint.__mul__(self, other)
 
 		# Reduce mod N (product may be much larger than N)
-		reduced = self._reduce_mod(product)
+		reduced = self._reduce_mod_c(product)
 
 		return self._wrap_result(reduced)
 

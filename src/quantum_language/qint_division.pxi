@@ -1,12 +1,84 @@
 	# ====================================================================
 	# DIVISION OPERATIONS
 	# Phase 41: Added layer tracking for uncomputation support
+	# Phase 91: Rewired to C-level restoring divmod (fixes BUG-DIV-02, BUG-QFT-DIV)
 	# ====================================================================
+
+	@cython.boundscheck(False)
+	@cython.wraparound(False)
+	cdef _divmod_c(self, divisor, bint need_quotient, bint need_remainder):
+		"""Internal: call C-level divmod and return (quotient, remainder).
+
+		Dispatches to toffoli_divmod_cq (classical divisor) or
+		toffoli_divmod_qq (quantum divisor). All ancillae are managed
+		internally by the C functions.
+
+		Parameters
+		----------
+		divisor : int or qint
+		    Divisor value.
+		need_quotient : bool
+		    If True, return quotient; if False, quotient register is unused.
+		need_remainder : bool
+		    If True, return remainder; if False, remainder register is unused.
+
+		Returns
+		-------
+		tuple of (qint or None, qint or None)
+		    (quotient, remainder), either may be None if not needed.
+		"""
+		cdef circuit_t *_circ = <circuit_t*><unsigned long long>_get_circuit()
+		cdef int i
+		cdef int n = self.bits
+		cdef int self_offset = 64 - n
+		cdef unsigned int dividend_qa[64]
+		cdef unsigned int quotient_qa[64]
+		cdef unsigned int remainder_qa[64]
+		cdef unsigned int divisor_qa[64]
+		cdef int div_bits = 0
+		cdef int d_offset = 0
+
+		# Extract dividend qubits (LSB-first for C convention)
+		# Python qint right-aligned layout: qubits[64-bits] = LSB (bit 0), qubits[63] = MSB
+		# C expects LSB-first: index 0 = LSB, index n-1 = MSB
+		# So qa[i] = qubits[self_offset + i] gives qa[0]=LSB, qa[n-1]=MSB
+		for i in range(n):
+			dividend_qa[i] = self.qubits[self_offset + i]
+
+		# Allocate output registers
+		quotient = qint(0, width=n)
+		remainder = qint(0, width=n)
+
+		cdef int q_offset = 64 - (<qint>quotient).bits
+		cdef int r_offset = 64 - (<qint>remainder).bits
+
+		# Extract output qubits (LSB-first)
+		for i in range(n):
+			quotient_qa[i] = (<qint>quotient).qubits[q_offset + i]
+			remainder_qa[i] = (<qint>remainder).qubits[r_offset + i]
+
+		if type(divisor) == int:
+			toffoli_divmod_cq(_circ, dividend_qa, n,
+			                  <int64_t>divisor,
+			                  quotient_qa, remainder_qa)
+		elif type(divisor) == qint:
+			div_bits = (<qint>divisor).bits
+			d_offset = 64 - div_bits
+			for i in range(div_bits):
+				divisor_qa[i] = (<qint>divisor).qubits[d_offset + i]
+
+			toffoli_divmod_qq(_circ, dividend_qa, n,
+			                  divisor_qa, div_bits,
+			                  quotient_qa, remainder_qa)
+		else:
+			raise TypeError("Divisor must be int or qint")
+
+		return (quotient, remainder)
 
 	def __floordiv__(self, divisor):
 		"""Floor division: self // divisor
 
-		Uses restoring division algorithm (repeated subtraction).
+		Uses C-level restoring division algorithm (Phase 91).
 
 		Parameters
 		----------
@@ -33,8 +105,9 @@
 
 		Notes
 		-----
-		Classical divisor: O(width) circuit via bit-level algorithm.
-		Quantum divisor: O(quotient) circuit via repeated subtraction.
+		Phase 91: Rewired to C-level toffoli_divmod_cq/qq.
+		Classical divisor: O(width) circuit via bit-level restoring division.
+		Quantum divisor: O(2^width) circuit via repeated subtraction.
 		"""
 		from quantum_language.qbool import qbool
 		cdef int start_layer
@@ -49,7 +122,7 @@
 		if _circ_init:
 			(<circuit_s*>_circ).layer_floor = start_layer
 
-		# Classical divisor case
+		# Validation
 		if type(divisor) == int:
 			if divisor == 0:
 				if _circ_init:
@@ -59,54 +132,25 @@
 				if _circ_init:
 					(<circuit_s*>_circ).layer_floor = _saved_floor_div
 				raise NotImplementedError("Negative divisor not yet supported")
-
-			# Allocate quotient and remainder
-			quotient = qint(0, width=self.bits)
-			remainder = qint(0, width=self.bits)
-
-			# Copy self to remainder via XOR (remainder starts at 0)
-			remainder ^= self
-
-			# Restoring division: try subtracting divisor * 2^bit for each bit position
-			for bit_pos in range(self.bits - 1, -1, -1):
-				# Try subtracting divisor << bit_pos
-				trial_value = divisor << bit_pos
-
-				# Check if remainder >= trial_value
-				can_subtract = remainder >= trial_value
-
-				# Conditional subtraction and quotient bit set
-				with can_subtract:
-					remainder -= trial_value
-					quotient += (1 << bit_pos)
-
-			# Phase 41: Layer tracking for uncomputation
-			quotient._start_layer = start_layer
-			quotient._end_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
-			quotient.operation_type = 'DIV'
-			quotient.add_dependency(self)
-
-			if _circ_init:
-				(<circuit_s*>_circ).layer_floor = _saved_floor_div
-			return quotient
-
-		elif type(divisor) == qint:
-			# Quantum divisor - delegate to quantum division method
-			result = self._floordiv_quantum(divisor)
-			# Phase 41: Layer tracking for uncomputation
-			result._start_layer = start_layer
-			result._end_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
-			result.operation_type = 'DIV'
-			result.add_dependency(self)
-			result.add_dependency(divisor)
-
-			if _circ_init:
-				(<circuit_s*>_circ).layer_floor = _saved_floor_div
-			return result
-		else:
+		elif type(divisor) != qint:
 			if _circ_init:
 				(<circuit_s*>_circ).layer_floor = _saved_floor_div
 			raise TypeError("Divisor must be int or qint")
+
+		# Call C-level divmod
+		quotient, remainder = self._divmod_c(divisor, True, False)
+
+		# Phase 41: Layer tracking for uncomputation
+		quotient._start_layer = start_layer
+		quotient._end_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
+		quotient.operation_type = 'DIV'
+		quotient.add_dependency(self)
+		if type(divisor) == qint:
+			quotient.add_dependency(divisor)
+
+		if _circ_init:
+			(<circuit_s*>_circ).layer_floor = _saved_floor_div
+		return quotient
 
 	def __ifloordiv__(self, other):
 		"""In-place floor division: self //= other"""
@@ -117,28 +161,10 @@
 		self.bits = result_qint.bits
 		return self
 
-	def _floordiv_quantum(self, divisor: qint):
-		"""Floor division with quantum divisor: self // divisor"""
-		cdef int comp_bits = max(self.bits, (<qint>divisor).bits)
-
-		quotient = qint(0, width=comp_bits)
-		remainder = qint(0, width=comp_bits)
-		remainder ^= self
-
-		max_iterations = (1 << comp_bits)
-
-		for _ in range(max_iterations):
-			can_subtract = remainder >= divisor
-			with can_subtract:
-				remainder -= divisor
-				quotient += 1
-
-		return quotient
-
 	def __mod__(self, divisor):
 		"""Modulo operation: self % divisor
 
-		Computes remainder via restoring division.
+		Computes remainder via C-level restoring division (Phase 91).
 
 		Parameters
 		----------
@@ -175,7 +201,7 @@
 		if _circ_init:
 			(<circuit_s*>_circ).layer_floor = start_layer
 
-		# Classical divisor case
+		# Validation
 		if type(divisor) == int:
 			if divisor == 0:
 				if _circ_init:
@@ -185,63 +211,31 @@
 				if _circ_init:
 					(<circuit_s*>_circ).layer_floor = _saved_floor_mod
 				raise NotImplementedError("Negative divisor not yet supported")
-
-			remainder = qint(0, width=self.bits)
-			remainder ^= self
-
-			for bit_pos in range(self.bits - 1, -1, -1):
-				trial_value = divisor << bit_pos
-				can_subtract = remainder >= trial_value
-				with can_subtract:
-					remainder -= trial_value
-
-			# Phase 41: Layer tracking for uncomputation
-			remainder._start_layer = start_layer
-			remainder._end_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
-			remainder.operation_type = 'MOD'
-			remainder.add_dependency(self)
-
-			if _circ_init:
-				(<circuit_s*>_circ).layer_floor = _saved_floor_mod
-			return remainder
-
-		elif type(divisor) == qint:
-			result = self._mod_quantum(divisor)
-			# Phase 41: Layer tracking for uncomputation
-			result._start_layer = start_layer
-			result._end_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
-			result.operation_type = 'MOD'
-			result.add_dependency(self)
-			result.add_dependency(divisor)
-
-			if _circ_init:
-				(<circuit_s*>_circ).layer_floor = _saved_floor_mod
-			return result
-		else:
+		elif type(divisor) != qint:
 			if _circ_init:
 				(<circuit_s*>_circ).layer_floor = _saved_floor_mod
 			raise TypeError("Divisor must be int or qint")
 
-	def _mod_quantum(self, divisor: qint):
-		"""Modulo with quantum divisor: self % divisor"""
-		cdef int comp_bits = max(self.bits, (<qint>divisor).bits)
+		# Call C-level divmod
+		quotient, remainder = self._divmod_c(divisor, False, True)
 
-		remainder = qint(0, width=comp_bits)
-		remainder ^= self
+		# Phase 41: Layer tracking for uncomputation
+		remainder._start_layer = start_layer
+		remainder._end_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
+		remainder.operation_type = 'MOD'
+		remainder.add_dependency(self)
+		if type(divisor) == qint:
+			remainder.add_dependency(divisor)
 
-		max_iterations = (1 << comp_bits)
-
-		for _ in range(max_iterations):
-			can_subtract = remainder >= divisor
-			with can_subtract:
-				remainder -= divisor
-
+		if _circ_init:
+			(<circuit_s*>_circ).layer_floor = _saved_floor_mod
 		return remainder
 
 	def __divmod__(self, divisor):
 		"""Divmod operation: divmod(self, divisor)
 
-		Computes both quotient and remainder in single pass.
+		Computes both quotient and remainder in single pass via C-level
+		restoring division (Phase 91).
 
 		Parameters
 		----------
@@ -278,7 +272,7 @@
 		if _circ_init:
 			(<circuit_s*>_circ).layer_floor = start_layer
 
-		# Classical divisor case
+		# Validation
 		if type(divisor) == int:
 			if divisor == 0:
 				if _circ_init:
@@ -288,72 +282,30 @@
 				if _circ_init:
 					(<circuit_s*>_circ).layer_floor = _saved_floor_dm
 				raise NotImplementedError("Negative divisor not yet supported")
-
-			quotient = qint(0, width=self.bits)
-			remainder = qint(0, width=self.bits)
-			remainder ^= self
-
-			for bit_pos in range(self.bits - 1, -1, -1):
-				trial_value = divisor << bit_pos
-				can_subtract = remainder >= trial_value
-				with can_subtract:
-					remainder -= trial_value
-					quotient += (1 << bit_pos)
-
-			# Phase 41: Layer tracking for uncomputation
-			end_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
-			quotient._start_layer = start_layer
-			quotient._end_layer = end_layer
-			quotient.operation_type = 'DIVMOD'
-			quotient.add_dependency(self)
-			remainder._start_layer = start_layer
-			remainder._end_layer = end_layer
-			remainder.operation_type = 'DIVMOD'
-			remainder.add_dependency(self)
-
-			if _circ_init:
-				(<circuit_s*>_circ).layer_floor = _saved_floor_dm
-			return (quotient, remainder)
-
-		elif type(divisor) == qint:
-			q, r = self._divmod_quantum(divisor)
-			# Phase 41: Layer tracking for uncomputation
-			end_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
-			q._start_layer = start_layer
-			q._end_layer = end_layer
-			q.operation_type = 'DIVMOD'
-			q.add_dependency(self)
-			q.add_dependency(divisor)
-			r._start_layer = start_layer
-			r._end_layer = end_layer
-			r.operation_type = 'DIVMOD'
-			r.add_dependency(self)
-			r.add_dependency(divisor)
-
-			if _circ_init:
-				(<circuit_s*>_circ).layer_floor = _saved_floor_dm
-			return (q, r)
-		else:
+		elif type(divisor) != qint:
 			if _circ_init:
 				(<circuit_s*>_circ).layer_floor = _saved_floor_dm
 			raise TypeError("Divisor must be int or qint")
 
-	def _divmod_quantum(self, divisor: qint):
-		"""Divmod with quantum divisor: divmod(self, divisor)"""
-		cdef int comp_bits = max(self.bits, (<qint>divisor).bits)
+		# Call C-level divmod
+		quotient, remainder = self._divmod_c(divisor, True, True)
 
-		quotient = qint(0, width=comp_bits)
-		remainder = qint(0, width=comp_bits)
-		remainder ^= self
+		# Phase 41: Layer tracking for uncomputation
+		end_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
+		quotient._start_layer = start_layer
+		quotient._end_layer = end_layer
+		quotient.operation_type = 'DIVMOD'
+		quotient.add_dependency(self)
+		remainder._start_layer = start_layer
+		remainder._end_layer = end_layer
+		remainder.operation_type = 'DIVMOD'
+		remainder.add_dependency(self)
+		if type(divisor) == qint:
+			quotient.add_dependency(divisor)
+			remainder.add_dependency(divisor)
 
-		max_iterations = (1 << comp_bits)
-
-		for _ in range(max_iterations):
-			can_subtract = remainder >= divisor
-			with can_subtract:
-				remainder -= divisor
-				quotient += 1
-
+		if _circ_init:
+			(<circuit_s*>_circ).layer_floor = _saved_floor_dm
 		return (quotient, remainder)
 
 	def __rfloordiv__(self, other):

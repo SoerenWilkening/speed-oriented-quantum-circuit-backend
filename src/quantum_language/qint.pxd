@@ -22,6 +22,7 @@ cdef class qint(circuit):
 	# cdef method declarations
 	cdef addition_inplace(self, other, int invert=*)
 	cdef multiplication_inplace(self, other, qint ret)
+	cdef _divmod_c(self, divisor, bint need_quotient, bint need_remainder)
 
 	# cpdef method declarations (must be declared in .pxd)
 	cpdef branch(self, double prob=*)
