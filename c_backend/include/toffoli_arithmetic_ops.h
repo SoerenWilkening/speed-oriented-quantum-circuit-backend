@@ -473,4 +473,133 @@ void toffoli_mod_add_cq(circuit_t *circ, const unsigned int *value_qubits, int v
 void toffoli_cmod_add_cq(circuit_t *circ, const unsigned int *value_qubits, int value_bits,
                          int64_t addend, int64_t modulus, unsigned int ext_ctrl);
 
+// ============================================================================
+// Toffoli Modular Subtraction (Phase 92)
+// ============================================================================
+
+/**
+ * @brief Modular CQ subtraction: value = (value - subtrahend) mod modulus.
+ *
+ * Implemented as mod_add_cq(value, N - subtrahend, N).
+ *
+ * @param circ         Active circuit
+ * @param value_qubits Register (modified in-place), LSB-first
+ * @param value_bits   Width of register
+ * @param subtrahend   Classical value to subtract
+ * @param modulus      Classical modulus N (> 0)
+ */
+void toffoli_mod_sub_cq(circuit_t *circ, const unsigned int *value_qubits, int value_bits,
+                        int64_t subtrahend, int64_t modulus);
+
+/**
+ * @brief Controlled modular CQ subtraction.
+ */
+void toffoli_cmod_sub_cq(circuit_t *circ, const unsigned int *value_qubits, int value_bits,
+                         int64_t subtrahend, int64_t modulus, unsigned int ext_ctrl);
+
+// ============================================================================
+// Toffoli Modular QQ Addition/Subtraction (Phase 92)
+// ============================================================================
+
+/**
+ * @brief Modular QQ addition: value = (value + other) mod modulus.
+ *
+ * Beauregard 8-step sequence with QQ adders. Source register (other) is preserved.
+ *
+ * @param circ          Active circuit
+ * @param value_qubits  Register (modified in-place), LSB-first
+ * @param value_bits    Width of value register
+ * @param other_qubits  Source register (preserved), LSB-first
+ * @param other_bits    Width of source register
+ * @param modulus       Classical modulus N (> 0)
+ */
+void toffoli_mod_add_qq(circuit_t *circ, const unsigned int *value_qubits, int value_bits,
+                        const unsigned int *other_qubits, int other_bits, int64_t modulus);
+
+/**
+ * @brief Controlled modular QQ addition.
+ */
+void toffoli_cmod_add_qq(circuit_t *circ, const unsigned int *value_qubits, int value_bits,
+                         const unsigned int *other_qubits, int other_bits, int64_t modulus,
+                         unsigned int ext_ctrl);
+
+/**
+ * @brief Modular QQ subtraction: value = (value - other) mod modulus.
+ *
+ * Computes (N - other) into temp register, does modular QQ add, then
+ * uncomputes temp.
+ *
+ * @param circ          Active circuit
+ * @param value_qubits  Register (modified in-place), LSB-first
+ * @param value_bits    Width of value register
+ * @param other_qubits  Source register (preserved), LSB-first
+ * @param other_bits    Width of source register
+ * @param modulus       Classical modulus N (> 0)
+ */
+void toffoli_mod_sub_qq(circuit_t *circ, const unsigned int *value_qubits, int value_bits,
+                        const unsigned int *other_qubits, int other_bits, int64_t modulus);
+
+/**
+ * @brief Controlled modular QQ subtraction.
+ */
+void toffoli_cmod_sub_qq(circuit_t *circ, const unsigned int *value_qubits, int value_bits,
+                         const unsigned int *other_qubits, int other_bits, int64_t modulus,
+                         unsigned int ext_ctrl);
+
+// ============================================================================
+// Toffoli Modular Multiplication (Phase 92)
+// ============================================================================
+
+/**
+ * @brief Modular CQ multiplication: result = value * multiplier mod modulus.
+ *
+ * Schoolbook approach: for each bit j of value (quantum), performs controlled
+ * modular addition of (multiplier * 2^j mod N) to result, controlled by value[j].
+ *
+ * @param circ           Active circuit
+ * @param value_qubits   Multiplicand register (preserved), LSB-first
+ * @param value_bits     Width of multiplicand
+ * @param result_qubits  Result register (starts at |0>), LSB-first
+ * @param result_bits    Width of result register
+ * @param multiplier     Classical multiplier
+ * @param modulus        Classical modulus N (> 0)
+ */
+void toffoli_mod_mul_cq(circuit_t *circ, const unsigned int *value_qubits, int value_bits,
+                        const unsigned int *result_qubits, int result_bits, int64_t multiplier,
+                        int64_t modulus);
+
+/**
+ * @brief Controlled modular CQ multiplication.
+ */
+void toffoli_cmod_mul_cq(circuit_t *circ, const unsigned int *value_qubits, int value_bits,
+                         const unsigned int *result_qubits, int result_bits, int64_t multiplier,
+                         int64_t modulus, unsigned int ext_ctrl);
+
+/**
+ * @brief Modular QQ multiplication: result = a * b mod modulus.
+ *
+ * Computes non-modular product, then reduces via bit-decomposition with
+ * controlled modular additions of (2^k mod N).
+ *
+ * @param circ           Active circuit
+ * @param a_qubits       First operand (preserved), LSB-first
+ * @param a_bits         Width of first operand
+ * @param b_qubits       Second operand (preserved), LSB-first
+ * @param b_bits         Width of second operand
+ * @param result_qubits  Result register (starts at |0>), LSB-first
+ * @param result_bits    Width of result register
+ * @param modulus        Classical modulus N (> 0)
+ */
+void toffoli_mod_mul_qq(circuit_t *circ, const unsigned int *a_qubits, int a_bits,
+                        const unsigned int *b_qubits, int b_bits, const unsigned int *result_qubits,
+                        int result_bits, int64_t modulus);
+
+/**
+ * @brief Controlled modular QQ multiplication.
+ */
+void toffoli_cmod_mul_qq(circuit_t *circ, const unsigned int *a_qubits, int a_bits,
+                         const unsigned int *b_qubits, int b_bits,
+                         const unsigned int *result_qubits, int result_bits, int64_t modulus,
+                         unsigned int ext_ctrl);
+
 #endif // TOFFOLI_ARITHMETIC_OPS_H
