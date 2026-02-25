@@ -73,6 +73,74 @@ def _get_mode_flags():
 
 
 # ---------------------------------------------------------------------------
+# Parametric topology helpers
+# ---------------------------------------------------------------------------
+def _extract_topology(gates):
+    """Extract the structural topology of a gate sequence.
+
+    Returns a tuple of (gate_type, target, controls_tuple, num_controls)
+    for each gate, which captures the circuit structure without angle
+    values. Two gate sequences with identical topology differ only in
+    rotation angles -- safe for parametric replay.
+
+    Parameters
+    ----------
+    gates : list[dict]
+        Virtual gate dicts from a CompiledBlock.
+
+    Returns
+    -------
+    tuple[tuple]
+        Hashable topology signature.
+    """
+    return tuple((g["type"], g["target"], tuple(g["controls"]), g["num_controls"]) for g in gates)
+
+
+def _extract_angles(gates):
+    """Extract rotation angles from a gate sequence.
+
+    Returns a list of angles (float or None for non-rotation gates)
+    preserving gate order. Used to build the parametric replay template.
+
+    Parameters
+    ----------
+    gates : list[dict]
+        Virtual gate dicts from a CompiledBlock.
+
+    Returns
+    -------
+    list[float | None]
+        Angle per gate (None for non-rotation gates).
+    """
+    return [g.get("angle") for g in gates]
+
+
+def _apply_angles(template_gates, new_angles):
+    """Create fresh gate list by applying new angles to a topology template.
+
+    Parameters
+    ----------
+    template_gates : list[dict]
+        Gate dicts from the cached parametric block (used as template).
+    new_angles : list[float | None]
+        New angle values from a fresh capture.
+
+    Returns
+    -------
+    list[dict]
+        New gate dicts with updated angles. Non-rotation gates are
+        unchanged. Each gate dict is a fresh copy (no mutation).
+    """
+    result = []
+    for g, angle in zip(template_gates, new_angles, strict=False):
+        ng = dict(g)
+        if angle is not None:
+            ng["angle"] = angle
+        result.append(ng)
+    return result
+
+
+# ---------------------------------------------------------------------------
 # Inverse (adjoint) helpers
 # ---------------------------------------------------------------------------
 def _adjoint_gate(gate):
@@ -646,6 +714,32 @@ class CompiledFunc:
                 qubit_saving,
             ) + mode_flags
 
+        # Parametric routing (PAR-02): if parametric and has classical args,
+        # use the parametric probe/replay lifecycle instead of normal caching.
+        if self._parametric and classical_args:
+            result = self._parametric_call(
+                args,
+                kwargs,
+                quantum_args,
+                classical_args,
+                widths,
+                is_controlled,
+                control_count,
+                qubit_saving,
+                mode_flags,
+                cache_key,
+            )
+            # Auto-uncompute (same as normal path)
+            if qubit_saving:
+                cached_block = self._cache.get(cache_key)
+                if cached_block is not None and cached_block.internal_qubit_count > 0:
+                    if not _function_modifies_inputs(cached_block):
+                        input_key = _input_qubit_key(quantum_args)
+                        record = self._forward_calls.get(input_key)
+                        if record is not None:
+                            self._auto_uncompute(record, quantum_args, is_controlled)
+            return result
+
         is_hit = cache_key in self._cache
 
         if is_hit:
@@ -989,6 +1083,158 @@ class CompiledFunc:
         )
         return controlled_block
 
+    # ------------------------------------------------------------------
+    # Parametric compilation lifecycle (PAR-02 / PAR-03)
+    # ------------------------------------------------------------------
+    def _parametric_call(
+        self,
+        args,
+        kwargs,
+        quantum_args,
+        classical_args,
+        widths,
+        is_controlled,
+        control_count,
+        qubit_saving,
+        mode_flags,
+        cache_key,
+    ):
+        """Handle parametric compilation: probe, detect, replay or fallback.
+
+        Lifecycle:
+        1. First call: capture normally, store topology, wait for probe
+        2. Second call (different classical args): capture again, compare
+           topology
+           - If topology matches: mark as parametric-safe, future calls
+             use per-value cache (populated on demand)
+           - If topology differs: mark as structural, fall back to normal
+             per-value caching
+        3. Subsequent calls:
+           - Parametric-safe: per-value cache hit or capture-and-cache
+             (topology verified defensively on new values)
+           - Structural: standard per-value caching (same as non-parametric)
+
+        Parameters
+        ----------
+        All parameters forwarded from __call__.
+        """
+        # --- State: Unknown (first call ever) ---
+        if self._parametric_safe is None and not self._parametric_probed:
+            # First capture -- store topology for later probe
+            result = self._capture_and_cache_both(
+                args,
+                kwargs,
+                quantum_args,
+                classical_args,
+                widths,
+                is_controlled,
+                cache_key,
+            )
+            block = self._cache.get(cache_key)
+            if block is not None:
+                self._parametric_topology = _extract_topology(block.gates)
+                self._parametric_block = block
+                self._parametric_probed = True
+                self._parametric_first_classical = tuple(classical_args)
+            return result
+
+        # --- State: Probed (waiting for second call with different args) ---
+        if self._parametric_safe is None and self._parametric_probed:
+            # Same classical args as first call? Normal cache hit
+            if tuple(classical_args) == self._parametric_first_classical:
+                is_hit = cache_key in self._cache
+                if is_hit:
+                    self._cache.move_to_end(cache_key)
+                    return self._replay(self._cache[cache_key], quantum_args)
+                else:
+                    # Mode flags changed -- re-probe from scratch
+                    self._parametric_probed = False
+                    self._parametric_topology = None
+                    self._parametric_block = None
+                    self._parametric_first_classical = None
+                    return self._parametric_call(
+                        args,
+                        kwargs,
+                        quantum_args,
+                        classical_args,
+                        widths,
+                        is_controlled,
+                        control_count,
+                        qubit_saving,
+                        mode_flags,
+                        cache_key,
+                    )
+
+            # Different classical args -- run the structural probe
+            result = self._capture_and_cache_both(
+                args,
+                kwargs,
+                quantum_args,
+                classical_args,
+                widths,
+                is_controlled,
+                cache_key,
+            )
+            block = self._cache.get(cache_key)
+            if block is not None:
+                probe_topology = _extract_topology(block.gates)
+                if probe_topology == self._parametric_topology:
+                    # Topology matches! Function is parametric-safe
+                    self._parametric_safe = True
+                else:
+                    # Topology differs -- structural parameter detected
+                    self._parametric_safe = False
+                    self._parametric_topology = None
+                    self._parametric_block = None
+            return result
+
+        # --- State: Structural (fallback to per-value caching) ---
+        if self._parametric_safe is False:
+            # Standard per-value behavior (same as non-parametric)
+            is_hit = cache_key in self._cache
+            if is_hit:
+                self._cache.move_to_end(cache_key)
+                return self._replay(self._cache[cache_key], quantum_args)
+            return self._capture_and_cache_both(
+                args,
+                kwargs,
+                quantum_args,
+                classical_args,
+                widths,
+                is_controlled,
+                cache_key,
+            )
+
+        # --- State: Parametric-safe (PAR-02 fast path) ---
+        # Check for per-value cache hit first
+        if cache_key in self._cache:
+            self._cache.move_to_end(cache_key)
+            return self._replay(self._cache[cache_key], quantum_args)
+
+        # New classical value: capture to get correct gates and cache per-value
+        result = self._capture_and_cache_both(
+            args,
+            kwargs,
+            quantum_args,
+            classical_args,
+            widths,
+            is_controlled,
+            cache_key,
+        )
+
+        # Verify topology still matches (defensive guard against edge cases
+        # where topology changes due to runtime state)
+        block = self._cache.get(cache_key)
+        if block is not None:
+            new_topology = _extract_topology(block.gates)
+            if new_topology != self._parametric_topology:
+                # Topology diverged! Revert to per-value caching
+                self._parametric_safe = False
+                self._parametric_topology = None
+                self._parametric_block = None
+
+        return result
+
     def _replay(self, block, quantum_args, track_forward=True):
         """Replay cached gates with qubit remapping."""
         # Build virtual-to-real mapping from caller's qints/qarrays
@@ -1215,15 +1461,20 @@ class CompiledFunc:
         return self._adjoint_func
 
     def clear_cache(self):
-        """Clear this function's compilation cache and parametric state."""
+        """Clear this function's compilation cache.
+
+        Preserves parametric detection state (topology signature, probed
+        flag, and safe/structural verdict) across circuit resets so that
+        the parametric probe can span multiple circuits.  The topology
+        is a function-intrinsic property that does not depend on circuit
+        state.
+        """
         self._cache.clear()
         self._forward_calls.clear()
-        # Reset parametric probe state
-        self._parametric_topology = None
+        # Preserve parametric state: topology, probed, safe, first_classical
+        # are all function-intrinsic and valid across circuits.
+        # Only clear the block reference since cache entries are gone.
         self._parametric_block = None
-        self._parametric_probed = False
-        self._parametric_safe = None
-        self._parametric_first_classical = None
         if self._inverse_func is not None:
             self._inverse_func.clear_cache()
         if self._adjoint_func is not None:
