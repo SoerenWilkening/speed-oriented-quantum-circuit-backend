@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** Phase 90 — Quantum Counting
+**Current focus:** Phase 91 — Arithmetic Bug Fixes
 
 ## Current Position
 
-Phase: 90 of 94 (Quantum Counting) — first phase of v5.0
-Plan: 2 of 2 in current phase
-Status: Phase complete, pending verification
-Last activity: 2026-02-24 — Plan 90-02 complete (quantum counting tests, all 30 pass)
+Phase: 91 of 94 (Arithmetic Bug Fixes) — second phase of v5.0
+Plan: 3 of 3 in current phase
+Status: Phase complete
+Last activity: 2026-02-24 — Phase 91 complete (CQ divmod fixed, mod_reduce improved, tests updated)
 
-Progress: [██████████] 100% (2/2 Phase 90 plans)
+Progress: [██████████] 100% (3/3 Phase 91 plans)
 
 ## Performance Metrics
 
@@ -42,16 +42,16 @@ See PROJECT.md Key Decisions table for full history.
 ### Blockers/Concerns
 
 **Carry forward (architectural):**
-- BUG-DIV-02/BUG-QFT-DIV — Phase 91 targets these; orphan-temporary pattern must be resolved before Phase 92
-- BUG-MOD-REDUCE — Phase 91 targets this; Beauregard C-level implementation needed
+- BUG-DIV-02/BUG-QFT-DIV — FIXED in Phase 91 (C-level restoring divmod)
+- BUG-MOD-REDUCE — PARTIALLY FIXED in Phase 91 (leak reduced from n+1 to 1 qubit per mod_reduce call; QQ division and mod_reduce still have persistent ancilla when reduction triggers)
 - Parametric Toffoli CQ limitation — value-dependent gate topology requires per-value fallback (Phase 94)
 - Research flags: Phase 92 (HIGH risk — Beauregard ancilla layout) and Phase 94 (MEDIUM-HIGH — DeferredCQOp design)
 
 ## Session Continuity
 
 Last session: 2026-02-24
-Stopped at: Phase 90 complete, all plans executed
-Resume action: `/gsd:verify-work 90` or `/gsd:plan-phase 91`
+Stopped at: Phase 91 complete, all 3 plans executed
+Resume action: `/gsd:plan-phase 92` or `/gsd:progress`
 
 ---
-*State updated: 2026-02-24 — Phase 90 complete*
+*State updated: 2026-02-24 — Phase 91 complete*
