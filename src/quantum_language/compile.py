@@ -306,7 +306,7 @@ def _clear_all_caches():
     for ref in _compiled_funcs:
         obj = ref()
         if obj is not None:
-            obj.clear_cache()
+            obj._reset_for_circuit()
             alive.append(ref)
     _compiled_funcs[:] = alive
 
@@ -1460,21 +1460,39 @@ class CompiledFunc:
             self._adjoint_func = _InverseCompiledFunc(self)
         return self._adjoint_func
 
-    def clear_cache(self):
-        """Clear this function's compilation cache.
+    def _reset_for_circuit(self):
+        """Reset cache for a new circuit while preserving parametric state.
 
-        Preserves parametric detection state (topology signature, probed
-        flag, and safe/structural verdict) across circuit resets so that
-        the parametric probe can span multiple circuits.  The topology
-        is a function-intrinsic property that does not depend on circuit
-        state.
+        Called by the circuit-reset hook (``ql.circuit()``).  Preserves
+        parametric detection state (topology, probed, safe) so that the
+        two-capture probe can span multiple circuits.  The topology
+        signature is a function-intrinsic property that does not depend
+        on circuit state.
         """
         self._cache.clear()
         self._forward_calls.clear()
-        # Preserve parametric state: topology, probed, safe, first_classical
-        # are all function-intrinsic and valid across circuits.
-        # Only clear the block reference since cache entries are gone.
+        # Preserve parametric state across circuits; only clear the block
+        # reference since its cache entry is gone.
         self._parametric_block = None
+        if self._inverse_func is not None:
+            self._inverse_func._reset_for_circuit()
+        if self._adjoint_func is not None:
+            self._adjoint_func._reset_for_circuit()
+
+    def clear_cache(self):
+        """Clear this function's compilation cache and parametric state.
+
+        Fully resets all state, including parametric probe detection.
+        Use this for explicit cache invalidation.
+        """
+        self._cache.clear()
+        self._forward_calls.clear()
+        # Full reset of parametric state
+        self._parametric_topology = None
+        self._parametric_block = None
+        self._parametric_probed = False
+        self._parametric_safe = None
+        self._parametric_first_classical = None
         if self._inverse_func is not None:
             self._inverse_func.clear_cache()
         if self._adjoint_func is not None:
@@ -1558,6 +1576,10 @@ class _InverseCompiledFunc:
     def inverse(self):
         """Return the original ``CompiledFunc`` (round-trip)."""
         return self._original
+
+    def _reset_for_circuit(self):
+        """Reset for circuit change (same as clear_cache for inverse)."""
+        self._inv_cache.clear()
 
     def clear_cache(self):
         """Clear the inverse cache."""
