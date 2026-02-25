@@ -76,11 +76,49 @@ cdef extern from "toffoli_arithmetic_ops.h":
 	                        int value_bits, int64_t modulus)
 	void toffoli_cmod_reduce(circuit_t *circ, const unsigned int *value_qubits,
 	                         int value_bits, int64_t modulus, unsigned int ext_ctrl)
+
+	# Toffoli Modular CQ Addition/Subtraction (Phase 92)
 	void toffoli_mod_add_cq(circuit_t *circ, const unsigned int *value_qubits,
 	                        int value_bits, int64_t addend, int64_t modulus)
 	void toffoli_cmod_add_cq(circuit_t *circ, const unsigned int *value_qubits,
 	                         int value_bits, int64_t addend, int64_t modulus,
 	                         unsigned int ext_ctrl)
+	void toffoli_mod_sub_cq(circuit_t *circ, const unsigned int *value_qubits,
+	                        int value_bits, int64_t subtrahend, int64_t modulus)
+	void toffoli_cmod_sub_cq(circuit_t *circ, const unsigned int *value_qubits,
+	                         int value_bits, int64_t subtrahend, int64_t modulus,
+	                         unsigned int ext_ctrl)
+
+	# Toffoli Modular QQ Addition/Subtraction (Phase 92)
+	void toffoli_mod_add_qq(circuit_t *circ, const unsigned int *value_qubits,
+	                        int value_bits, const unsigned int *other_qubits,
+	                        int other_bits, int64_t modulus)
+	void toffoli_cmod_add_qq(circuit_t *circ, const unsigned int *value_qubits,
+	                         int value_bits, const unsigned int *other_qubits,
+	                         int other_bits, int64_t modulus, unsigned int ext_ctrl)
+	void toffoli_mod_sub_qq(circuit_t *circ, const unsigned int *value_qubits,
+	                        int value_bits, const unsigned int *other_qubits,
+	                        int other_bits, int64_t modulus)
+	void toffoli_cmod_sub_qq(circuit_t *circ, const unsigned int *value_qubits,
+	                         int value_bits, const unsigned int *other_qubits,
+	                         int other_bits, int64_t modulus, unsigned int ext_ctrl)
+
+	# Toffoli Modular Multiplication (Phase 92)
+	void toffoli_mod_mul_cq(circuit_t *circ, const unsigned int *value_qubits,
+	                        int value_bits, const unsigned int *result_qubits,
+	                        int result_bits, int64_t multiplier, int64_t modulus)
+	void toffoli_cmod_mul_cq(circuit_t *circ, const unsigned int *value_qubits,
+	                         int value_bits, const unsigned int *result_qubits,
+	                         int result_bits, int64_t multiplier, int64_t modulus,
+	                         unsigned int ext_ctrl)
+	void toffoli_mod_mul_qq(circuit_t *circ, const unsigned int *a_qubits,
+	                        int a_bits, const unsigned int *b_qubits, int b_bits,
+	                        const unsigned int *result_qubits, int result_bits,
+	                        int64_t modulus)
+	void toffoli_cmod_mul_qq(circuit_t *circ, const unsigned int *a_qubits,
+	                         int a_bits, const unsigned int *b_qubits, int b_bits,
+	                         const unsigned int *result_qubits, int result_bits,
+	                         int64_t modulus, unsigned int ext_ctrl)
 
 cdef extern from "Integer.h":
 	# Type creation and manipulation (non-arithmetic functions only)

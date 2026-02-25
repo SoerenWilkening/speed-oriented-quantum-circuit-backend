@@ -1,8 +1,20 @@
 """Quantum integer with modular arithmetic.
 
-Phase 91: Rewired to C-level modular reduction (fixes BUG-MOD-REDUCE).
-All modular operations now use toffoli_mod_reduce from ToffoliModReduce.c
-instead of the broken Python _reduce_mod which leaked orphan qubits.
+Phase 92: All modular operations dispatch directly to C-level Beauregard
+modular primitives (toffoli_mod_add_cq, toffoli_mod_sub_cq, etc.),
+eliminating the broken add+reduce pattern from Phase 91 that leaked
+persistent comparison ancillae.
+
+Supported operations:
+  - Addition: qint_mod + int (CQ), qint_mod + qint_mod (QQ)
+  - Subtraction: qint_mod - int (CQ), qint_mod - qint_mod (QQ)
+  - Multiplication: qint_mod * int (CQ), qint_mod * qint_mod (QQ)
+  - Negation: -qint_mod
+  - Controlled: all operations work inside with-block controlled context
+  - Type infection: qint_mod op qint returns qint_mod
+
+References:
+  Beauregard (2003) "Circuit for Shor's algorithm using 2n+3 qubits"
 """
 
 from libc.stdint cimport int64_t
@@ -12,15 +24,24 @@ from quantum_language.qint cimport qint
 # C-level imports
 from quantum_language._core cimport (
 	circuit_t, circuit_s,
-	toffoli_mod_reduce,
-	toffoli_cmod_reduce,
 	toffoli_mod_add_cq,
 	toffoli_cmod_add_cq,
+	toffoli_mod_sub_cq,
+	toffoli_cmod_sub_cq,
+	toffoli_mod_add_qq,
+	toffoli_cmod_add_qq,
+	toffoli_mod_sub_qq,
+	toffoli_cmod_sub_qq,
+	toffoli_mod_mul_cq,
+	toffoli_cmod_mul_cq,
+	toffoli_mod_mul_qq,
+	toffoli_cmod_mul_qq,
 )
 
 # Python-level imports for global state access
 from quantum_language._core import (
 	_get_controlled,
+	_get_control_bool,
 	_get_list_of_controls,
 	_get_circuit, _get_circuit_initialized,
 )
@@ -30,14 +51,15 @@ cdef class qint_mod(qint):
 	"""Quantum integer with modular arithmetic.
 
 	Modulus N is classical (Python int), known at circuit generation time.
-	All operations automatically reduce result mod N.
+	All operations automatically produce results mod N via Beauregard
+	8-step modular addition sequences (Phase 92).
 
 	Parameters
 	----------
 	value : int, optional
 		Initial value (reduced mod N classically before encoding).
 	N : int
-		Modulus (required, must be positive).
+		Modulus (required, must be >= 2).
 	width : int, optional
 		Bit width (default: N.bit_length()).
 
@@ -58,12 +80,8 @@ cdef class qint_mod(qint):
 
 	Notes
 	-----
-	Used for modular exponentiation in Shor's algorithm and other
-	number-theoretic quantum algorithms.
-
-	Phase 91: All modular reduction now uses C-level toffoli_mod_reduce
-	from ToffoliModReduce.c, eliminating orphan qubit leaks from the
-	old Python-level _reduce_mod (BUG-MOD-REDUCE).
+	Phase 92: All modular operations dispatch to C-level Beauregard
+	primitives. Clean ancilla uncomputation -- no persistent ancilla leaks.
 	"""
 	# Attribute declarations are in qint_mod.pxd
 
@@ -75,14 +93,14 @@ cdef class qint_mod(qint):
 		value : int, optional
 			Initial value (reduced mod N before encoding, default 0).
 		N : int
-			Modulus (required, must be positive).
+			Modulus (required, must be >= 2).
 		width : int, optional
 			Bit width (default: N.bit_length()).
 
 		Raises
 		------
 		ValueError
-			If N is None, non-positive, or not an integer.
+			If N is None, < 2, or not an integer.
 
 		Examples
 		--------
@@ -90,8 +108,8 @@ cdef class qint_mod(qint):
 		>>> x.modulus
 		17
 		"""
-		if N is None or not isinstance(N, int) or N <= 0:
-			raise ValueError("Modulus N must be positive integer")
+		if N is None or not isinstance(N, int) or N < 2:
+			raise ValueError("Modulus N must be an integer >= 2")
 
 		# Default width: enough bits to represent N
 		if width is None:
@@ -126,56 +144,10 @@ cdef class qint_mod(qint):
 	def __repr__(self):
 		return f"qint_mod(modulus={self._modulus}, width={self.bits})"
 
-	cdef _reduce_mod_c(self, qint value):
-		"""Reduce value mod N using C-level toffoli_mod_reduce.
-
-		Phase 91: Replaces the old Python _reduce_mod which leaked qubits.
-
-		For values in [0, 2N-2] (e.g., from addition of two values < N),
-		a single call to toffoli_mod_reduce suffices.
-
-		For larger values (e.g., from multiplication), multiple reduction
-		passes are needed: ceil(log2(max_val / N)) iterations.
-
-		Parameters
-		----------
-		value : qint
-			Quantum register to reduce in-place.
-
-		Returns
-		-------
-		qint
-			The same register, now containing value mod N.
-		"""
-		cdef circuit_t *_circ = <circuit_t*><unsigned long long>_get_circuit()
-		cdef int n = value.bits
-		cdef int offset = 64 - n
-		cdef unsigned int value_qa[64]
-		cdef int i
-
-		# Extract physical qubits (LSB-first for C convention)
-		# qubits[64-bits] = LSB (bit 0), qubits[63] = MSB
-		for i in range(n):
-			value_qa[i] = value.qubits[offset + i]
-
-		# Determine how many reduction passes are needed
-		# For addition: input < 2N, so 1 pass suffices
-		# For multiplication by c: input < c*N, need ceil(log2(c)) passes
-		cdef int max_val = 1 << n
-		cdef int max_subtractions = (max_val // self._modulus) + 1
-		cdef int iterations = max_subtractions.bit_length()
-
-		for i in range(iterations):
-			toffoli_mod_reduce(_circ, value_qa, n, <int64_t>self._modulus)
-
-		return value
-
 	cdef qint_mod _wrap_result(self, qint result):
 		"""Wrap plain qint result into qint_mod with same modulus."""
-		# Create new qint_mod using existing qubits
 		cdef qint_mod wrapped = qint_mod.__new__(qint_mod)
 
-		# Manually copy qint fields (avoiding __init__ which would allocate qubits)
 		wrapped.counter = result.counter
 		wrapped.bits = result.bits
 		wrapped.value = result.value
@@ -183,17 +155,24 @@ cdef class qint_mod(qint):
 		wrapped.allocated_qubits = result.allocated_qubits
 		wrapped.allocated_start = result.allocated_start
 
-		# Set modulus (cdef attribute)
 		wrapped._modulus = self._modulus
 
 		return wrapped
+
+	cdef void _extract_qubits(self, unsigned int *qa):
+		"""Extract physical qubit indices into C array (LSB-first)."""
+		cdef int n = self.bits
+		cdef int offset = 64 - n
+		cdef int i
+		for i in range(n):
+			qa[i] = self.qubits[offset + i]
 
 	def __add__(self, other):
 		"""Modular addition: (self + other) mod N
 
 		Parameters
 		----------
-		other : qint_mod or int
+		other : qint_mod, qint, or int
 			Value to add.
 
 		Returns
@@ -211,11 +190,18 @@ cdef class qint_mod(qint):
 		>>> x = qint_mod(15, N=17)
 		>>> y = qint_mod(5, N=17)
 		>>> z = x + y  # (15 + 5) mod 17 = 3
-
-		Notes
-		-----
-		Phase 91: Uses C-level toffoli_mod_reduce instead of Python _reduce_mod.
 		"""
+		cdef circuit_t *_circ = <circuit_t*><unsigned long long>_get_circuit()
+		cdef int n = self.bits
+		cdef unsigned int value_qa[64]
+		cdef unsigned int result_qa[64]
+		cdef unsigned int other_qa[64]
+		cdef int i
+		cdef bint _controlled = _get_controlled()
+		cdef unsigned int ctrl_qubit = 0
+		cdef int other_bits
+		cdef int other_offset
+
 		# Check modulus compatibility
 		if isinstance(other, qint_mod):
 			if (<qint_mod>other)._modulus != self._modulus:
@@ -223,23 +209,59 @@ cdef class qint_mod(qint):
 					f"Moduli must match: {self._modulus} != {(<qint_mod>other)._modulus}"
 				)
 
-		# Perform regular addition (using parent class)
-		sum_val = qint.__add__(self, other)
+		# Extract self qubits
+		self._extract_qubits(value_qa)
 
-		# Reduce mod N using C-level function
-		reduced = self._reduce_mod_c(sum_val)
+		# Allocate result register and copy self to it
+		result = qint(width=n)
+		result ^= self
 
-		# Wrap result
-		return self._wrap_result(reduced)
+		# Extract result qubits
+		cdef int result_offset = 64 - n
+		for i in range(n):
+			result_qa[i] = result.qubits[result_offset + i]
+
+		# Get control qubit if in controlled context
+		if _controlled:
+			ctrl_qubit = (<qint>_get_control_bool()).qubits[63]
+
+		if type(other) == int:
+			# CQ modular addition
+			if _controlled:
+				toffoli_cmod_add_cq(_circ, result_qa, n,
+				                    <int64_t>(other % self._modulus), <int64_t>self._modulus,
+				                    ctrl_qubit)
+			else:
+				toffoli_mod_add_cq(_circ, result_qa, n,
+				                   <int64_t>(other % self._modulus), <int64_t>self._modulus)
+		elif isinstance(other, qint):
+			# QQ modular addition (works for both qint_mod and plain qint)
+			other_bits = (<qint>other).bits
+			other_offset = 64 - other_bits
+			for i in range(other_bits):
+				other_qa[i] = (<qint>other).qubits[other_offset + i]
+
+			if _controlled:
+				toffoli_cmod_add_qq(_circ, result_qa, n, other_qa, other_bits,
+				                    <int64_t>self._modulus, ctrl_qubit)
+			else:
+				toffoli_mod_add_qq(_circ, result_qa, n, other_qa, other_bits,
+				                   <int64_t>self._modulus)
+		else:
+			raise TypeError(f"Unsupported operand type for +: {type(other)}")
+
+		return self._wrap_result(result)
+
+	def __radd__(self, other):
+		"""Reverse addition: other + self (for int + qint_mod)."""
+		return self.__add__(other)
 
 	def __sub__(self, other):
 		"""Modular subtraction: (self - other) mod N
 
-		Handles negative results by adding N to ensure [0, N) range.
-
 		Parameters
 		----------
-		other : qint_mod or int
+		other : qint_mod, qint, or int
 			Value to subtract.
 
 		Returns
@@ -257,47 +279,70 @@ cdef class qint_mod(qint):
 		>>> x = qint_mod(5, N=17)
 		>>> y = qint_mod(10, N=17)
 		>>> z = x - y  # (5 - 10) mod 17 = 12
-
-		Notes
-		-----
-		Phase 91: Uses C-level toffoli_mod_reduce instead of Python _reduce_mod.
-		The subtraction result is an n-bit unsigned value that wraps around.
-		For inputs < N, (self - other) mod 2^n is equivalent to
-		(self - other + 2^n) mod N when the result is negative in signed
-		interpretation. The C-level mod_reduce handles this by doing
-		multiple passes of conditional subtraction of N.
 		"""
+		cdef circuit_t *_circ = <circuit_t*><unsigned long long>_get_circuit()
+		cdef int n = self.bits
+		cdef unsigned int value_qa[64]
+		cdef unsigned int result_qa[64]
+		cdef unsigned int other_qa[64]
+		cdef int i
+		cdef bint _controlled = _get_controlled()
+		cdef unsigned int ctrl_qubit = 0
+		cdef int other_bits_sub
+		cdef int other_offset_sub
+
 		if isinstance(other, qint_mod):
 			if (<qint_mod>other)._modulus != self._modulus:
 				raise ValueError(
 					f"Moduli must match: {self._modulus} != {(<qint_mod>other)._modulus}"
 				)
 
-		# Perform regular subtraction
-		# In unsigned n-bit arithmetic: if self < other, result wraps to 2^n + (self - other)
-		# which is > N. The reduce_mod_c will subtract N enough times to get to [0, N).
-		diff = qint.__sub__(self, other)
+		self._extract_qubits(value_qa)
 
-		# For subtraction: if self >= other, diff is in [0, N) already (both < N).
-		# If self < other, diff wraps to [2^n - N + 1, 2^n - 1].
-		# We need to add N to get the correct modular result.
-		# Instead of Python-level comparison (which leaks qbools), we add N
-		# unconditionally and then reduce. Since the input is in [0, 2^n),
-		# after adding N the max value is 2^n + N - 1, and the C-level
-		# reduce_mod_c handles multiple passes.
-		diff += self._modulus
+		# Allocate result register and copy self to it
+		result = qint(width=n)
+		result ^= self
 
-		# Reduce mod N using C-level function
-		reduced = self._reduce_mod_c(diff)
+		cdef int result_offset_sub = 64 - n
+		for i in range(n):
+			result_qa[i] = result.qubits[result_offset_sub + i]
 
-		return self._wrap_result(reduced)
+		if _controlled:
+			ctrl_qubit = (<qint>_get_control_bool()).qubits[63]
+
+		if type(other) == int:
+			# CQ modular subtraction
+			if _controlled:
+				toffoli_cmod_sub_cq(_circ, result_qa, n,
+				                    <int64_t>(other % self._modulus), <int64_t>self._modulus,
+				                    ctrl_qubit)
+			else:
+				toffoli_mod_sub_cq(_circ, result_qa, n,
+				                   <int64_t>(other % self._modulus), <int64_t>self._modulus)
+		elif isinstance(other, qint):
+			# QQ modular subtraction
+			other_bits_sub = (<qint>other).bits
+			other_offset_sub = 64 - other_bits_sub
+			for i in range(other_bits_sub):
+				other_qa[i] = (<qint>other).qubits[other_offset_sub + i]
+
+			if _controlled:
+				toffoli_cmod_sub_qq(_circ, result_qa, n, other_qa, other_bits_sub,
+				                    <int64_t>self._modulus, ctrl_qubit)
+			else:
+				toffoli_mod_sub_qq(_circ, result_qa, n, other_qa, other_bits_sub,
+				                   <int64_t>self._modulus)
+		else:
+			raise TypeError(f"Unsupported operand type for -: {type(other)}")
+
+		return self._wrap_result(result)
 
 	def __mul__(self, other):
 		"""Modular multiplication: (self * other) mod N
 
 		Parameters
 		----------
-		other : qint_mod or int
+		other : qint_mod, qint, or int
 			Value to multiply by.
 
 		Returns
@@ -307,8 +352,6 @@ cdef class qint_mod(qint):
 
 		Raises
 		------
-		NotImplementedError
-			If other is qint_mod (qint_mod * qint_mod not yet supported).
 		ValueError
 			If other is qint_mod with different modulus.
 
@@ -316,32 +359,114 @@ cdef class qint_mod(qint):
 		--------
 		>>> x = qint_mod(5, N=17)
 		>>> z = x * 7  # (5 * 7) mod 17 = 1
-
-		Notes
-		-----
-		Phase 91: Uses C-level toffoli_mod_reduce instead of Python _reduce_mod.
+		>>> x = qint_mod(3, N=7)
+		>>> y = qint_mod(4, N=7)
+		>>> z = x * y  # (3 * 4) mod 7 = 5
 		"""
-		# Check for qint_mod * qint_mod (not supported - causes C-layer segfault)
+		cdef circuit_t *_circ = <circuit_t*><unsigned long long>_get_circuit()
+		cdef int n = self.bits
+		cdef unsigned int value_qa[64]
+		cdef unsigned int result_qa[64]
+		cdef unsigned int other_qa[64]
+		cdef int i
+		cdef bint _controlled = _get_controlled()
+		cdef unsigned int ctrl_qubit = 0
+		cdef int64_t mul_val
+		cdef int other_bits_mul
+		cdef int other_offset_mul
+
 		if isinstance(other, qint_mod):
-			raise NotImplementedError(
-				"qint_mod * qint_mod multiplication is not yet supported. "
-				"Use qint_mod * int instead (e.g., x * 5 instead of x * y)."
-			)
+			if (<qint_mod>other)._modulus != self._modulus:
+				raise ValueError(
+					f"Moduli must match: {self._modulus} != {(<qint_mod>other)._modulus}"
+				)
 
-		# Perform regular multiplication (qint_mod * int)
-		product = qint.__mul__(self, other)
+		self._extract_qubits(value_qa)
 
-		# Reduce mod N (product may be much larger than N)
-		reduced = self._reduce_mod_c(product)
+		# Allocate result register (init |0>)
+		result = qint(width=n)
 
-		return self._wrap_result(reduced)
+		cdef int result_offset_mul = 64 - n
+		for i in range(n):
+			result_qa[i] = result.qubits[result_offset_mul + i]
+
+		if _controlled:
+			ctrl_qubit = (<qint>_get_control_bool()).qubits[63]
+
+		if type(other) == int:
+			# CQ modular multiplication: result = self * other mod N
+			mul_val = <int64_t>(other % self._modulus)
+			if mul_val < 0:
+				mul_val += self._modulus
+			if _controlled:
+				toffoli_cmod_mul_cq(_circ, value_qa, n, result_qa, n,
+				                    mul_val, <int64_t>self._modulus, ctrl_qubit)
+			else:
+				toffoli_mod_mul_cq(_circ, value_qa, n, result_qa, n,
+				                   mul_val, <int64_t>self._modulus)
+		elif isinstance(other, qint):
+			# QQ modular multiplication: result = self * other mod N
+			other_bits_mul = (<qint>other).bits
+			other_offset_mul = 64 - other_bits_mul
+			for i in range(other_bits_mul):
+				other_qa[i] = (<qint>other).qubits[other_offset_mul + i]
+
+			if _controlled:
+				toffoli_cmod_mul_qq(_circ, value_qa, n, other_qa, other_bits_mul,
+				                    result_qa, n, <int64_t>self._modulus, ctrl_qubit)
+			else:
+				toffoli_mod_mul_qq(_circ, value_qa, n, other_qa, other_bits_mul,
+				                   result_qa, n, <int64_t>self._modulus)
+		else:
+			raise TypeError(f"Unsupported operand type for *: {type(other)}")
+
+		return self._wrap_result(result)
+
+	def __rmul__(self, other):
+		"""Reverse multiplication: other * self (for int * qint_mod)."""
+		return self.__mul__(other)
+
+	def __neg__(self):
+		"""Modular negation: (-self) mod N = (N - self) mod N
+
+		Returns
+		-------
+		qint_mod
+			New qint_mod with value (N - self) mod N.
+
+		Examples
+		--------
+		>>> x = qint_mod(5, N=17)
+		>>> y = -x  # (17 - 5) mod 17 = 12
+		>>> x = qint_mod(0, N=7)
+		>>> y = -x  # (7 - 0) mod 7 = 0
+		"""
+		cdef circuit_t *_circ = <circuit_t*><unsigned long long>_get_circuit()
+		cdef int n = self.bits
+		cdef unsigned int value_qa[64]
+		cdef unsigned int result_qa[64]
+		cdef int i
+
+		self._extract_qubits(value_qa)
+
+		# Allocate result register (init |0>)
+		result = qint(width=n)
+
+		cdef int result_offset_neg = 64 - n
+		for i in range(n):
+			result_qa[i] = result.qubits[result_offset_neg + i]
+
+		# result = (0 - self) mod N = (N - self) mod N
+		toffoli_mod_sub_qq(_circ, result_qa, n, value_qa, n, <int64_t>self._modulus)
+
+		return self._wrap_result(result)
 
 	def __iadd__(self, other):
 		"""In-place modular addition: self += other mod N
 
 		Parameters
 		----------
-		other : qint_mod or int
+		other : qint_mod, qint, or int
 			Value to add.
 
 		Returns
@@ -366,7 +491,7 @@ cdef class qint_mod(qint):
 
 		Parameters
 		----------
-		other : qint_mod or int
+		other : qint_mod, qint, or int
 			Value to subtract.
 
 		Returns
@@ -391,7 +516,7 @@ cdef class qint_mod(qint):
 
 		Parameters
 		----------
-		other : qint_mod or int
+		other : qint_mod, qint, or int
 			Value to multiply by.
 
 		Returns
