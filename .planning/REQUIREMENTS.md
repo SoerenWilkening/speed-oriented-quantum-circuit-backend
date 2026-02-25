@@ -12,7 +12,7 @@ Requirements for v5.0 Advanced Arithmetic & Compilation. Each maps to roadmap ph
 - [ ] **FIX-01**: Division correctly uncomputes MSB comparison temporaries (BUG-DIV-02)
 - [ ] **FIX-02**: QFT division/modulo produces correct results for all tested widths (BUG-QFT-DIV)
 - [ ] **FIX-03**: Modular reduction produces correct (a+b) mod N without orphan qubits (BUG-MOD-REDUCE)
-- [ ] **FIX-04**: Compile cache key includes arithmetic_mode, cla_override, and tradeoff_policy
+- [x] **FIX-04**: Compile cache key includes arithmetic_mode, cla_override, and tradeoff_policy
 
 ### Modular Toffoli Arithmetic
 
@@ -37,10 +37,10 @@ Requirements for v5.0 Advanced Arithmetic & Compilation. Each maps to roadmap ph
 
 ### Parametric Compilation
 
-- [ ] **PAR-01**: User can decorate with @ql.compile(parametric=True) to enable parametric mode
-- [ ] **PAR-02**: Parametric functions replay with different classical values without re-capture
-- [ ] **PAR-03**: Toffoli CQ operations fall back to per-value caching with documentation
-- [ ] **PAR-04**: Oracle decorator forces per-value caching for structural parameters
+- [x] **PAR-01**: User can decorate with @ql.compile(parametric=True) to enable parametric mode
+- [x] **PAR-02**: Parametric functions replay with different classical values without re-capture
+- [x] **PAR-03**: Toffoli CQ operations fall back to per-value caching with documentation
+- [x] **PAR-04**: Oracle decorator forces per-value caching for structural parameters
 
 ## Future Requirements
 

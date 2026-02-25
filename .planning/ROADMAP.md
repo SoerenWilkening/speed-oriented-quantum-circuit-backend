@@ -126,7 +126,7 @@
 - [x] **Phase 91: Arithmetic Bug Fixes** - Fix MSB comparison leak, QFT division failures, and modular reduction corruption (completed 2026-02-24)
 - [x] **Phase 92: Modular Toffoli Arithmetic** - Beauregard modular add/sub/mul at C level for Shor's algorithm building blocks (completed 2026-02-25)
 - [x] **Phase 93: Depth/Ancilla Tradeoff** - Policy-based CLA vs RCA adder selection via `ql.option('tradeoff', ...)` (completed 2026-02-25)
-- [ ] **Phase 94: Parametric Compilation** - Compile-once-replay-many for circuits with varying classical values
+- [x] **Phase 94: Parametric Compilation** - Compile-once-replay-many for circuits with varying classical values (completed 2026-02-25)
 
 ## Phase Details
 
@@ -203,12 +203,12 @@ Plans:
   3. Toffoli CQ operations fall back to per-value caching with clear documentation explaining value-dependent topology
   4. Oracle decorator (`@ql.grover_oracle`) forces per-value caching for structural parameters regardless of parametric setting
   5. Parametric replay produces correct circuits verified by Qiskit simulation for at least two distinct classical values
-**Plans**: TBD
+**Plans**: 3
 
 Plans:
-- [ ] 94-01: TBD
-- [ ] 94-02: TBD
-- [ ] 94-03: TBD
+- [x] 94-01-PLAN.md — Mode-aware cache keys (FIX-04) + parametric API surface (PAR-01)
+- [x] 94-02-PLAN.md — Parametric probe/detect/replay lifecycle (PAR-02, PAR-03)
+- [x] 94-03-PLAN.md — Verification tests with Qiskit simulation (PAR-01-04, FIX-04)
 
 ## Progress
 
@@ -229,8 +229,8 @@ Phases execute in numeric order: 90 -> 91 -> 92 -> 93 -> 94
 | 90. Quantum Counting | 2/2 | Complete    | 2026-02-24 | - |
 | 91. Arithmetic Bug Fixes | v5.0 | 3/3 | Complete | 2026-02-24 |
 | 92. Modular Toffoli Arithmetic | v5.0 | Complete    | 2026-02-25 | - |
-| 93. Depth/Ancilla Tradeoff | v5.0 | 0/? | Not started | - |
-| 94. Parametric Compilation | v5.0 | 0/? | Not started | - |
+| 93. Depth/Ancilla Tradeoff | v5.0 | 2/2 | Complete | 2026-02-25 |
+| 94. Parametric Compilation | v5.0 | 3/3 | Complete | 2026-02-25 |
 
 ---
 *Roadmap created: 2026-02-02*

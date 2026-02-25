@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** Phase 93 — Depth/Ancilla Tradeoff
+**Current focus:** Phase 94 — Parametric Compilation (COMPLETE)
 
 ## Current Position
 
-Phase: 93 of 94 (Depth/Ancilla Tradeoff) — fourth phase of v5.0
-Plan: 2 of 2 in current phase
-Status: Phase 93 complete (all plans executed)
-Last activity: 2026-02-25 — Phase 93 complete (tradeoff API + CLA subtraction)
+Phase: 94 of 94 (Parametric Compilation) — fifth phase of v5.0
+Plan: 3 of 3 in current phase
+Status: Phase 94 complete (all plans executed)
+Last activity: 2026-02-25 — Phase 94 complete (parametric compilation)
 
-Progress: [██████████] 100% (2/2 Phase 93 plans)
+Progress: [██████████] 100% (3/3 Phase 94 plans)
 
 ## Performance Metrics
 
@@ -44,14 +44,14 @@ See PROJECT.md Key Decisions table for full history.
 **Carry forward (architectural):**
 - BUG-DIV-02/BUG-QFT-DIV — FIXED in Phase 91 (C-level restoring divmod)
 - BUG-MOD-REDUCE — PARTIALLY FIXED in Phase 91 (leak reduced from n+1 to 1 qubit per mod_reduce call; QQ division and mod_reduce still have persistent ancilla when reduction triggers)
-- Parametric Toffoli CQ limitation — value-dependent gate topology requires per-value fallback (Phase 94)
-- Research flags: Phase 92 (HIGH risk — Beauregard ancilla layout) and Phase 94 (MEDIUM-HIGH — DeferredCQOp design)
+- Parametric Toffoli CQ limitation — value-dependent gate topology requires per-value fallback (RESOLVED in Phase 94 — auto-detected and documented)
+- Research flags: Phase 92 (HIGH risk — Beauregard ancilla layout) — Phase 94 MEDIUM-HIGH risk resolved via two-capture probe
 
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Phase 93 complete, both plans executed
-Resume action: `/gsd:plan-phase 94` or `/gsd:progress`
+Stopped at: Phase 94 complete, all 3 plans executed
+Resume action: `/gsd:progress` — v5.0 milestone may be complete
 
 ---
-*State updated: 2026-02-25 — Phase 93 complete*
+*State updated: 2026-02-25 — Phase 94 complete*
