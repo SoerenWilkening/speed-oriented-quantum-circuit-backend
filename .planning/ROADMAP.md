@@ -127,6 +127,8 @@
 - [x] **Phase 92: Modular Toffoli Arithmetic** - Beauregard modular add/sub/mul at C level for Shor's algorithm building blocks (completed 2026-02-25)
 - [x] **Phase 93: Depth/Ancilla Tradeoff** - Policy-based CLA vs RCA adder selection via `ql.option('tradeoff', ...)` (completed 2026-02-25)
 - [x] **Phase 94: Parametric Compilation** - Compile-once-replay-many for circuits with varying classical values (completed 2026-02-25)
+- [ ] **Phase 95: Verification & Requirements Closure** - Generate missing VERIFICATION.md for Phases 91/93 and update REQUIREMENTS.md checkboxes/traceability
+- [ ] **Phase 96: v5.0 Tech Debt Cleanup** - Remove dead declarations, add explicit qubit accounting test, document known limitations
 
 ## Phase Details
 
@@ -210,6 +212,40 @@ Plans:
 - [x] 94-02-PLAN.md — Parametric probe/detect/replay lifecycle (PAR-02, PAR-03)
 - [x] 94-03-PLAN.md — Verification tests with Qiskit simulation (PAR-01-04, FIX-04)
 
+### Phase 95: Verification & Requirements Closure
+**Goal**: Close all procedural gaps identified by v5.0 milestone audit — missing VERIFICATION.md files and REQUIREMENTS.md updates
+**Depends on**: Phase 94 (all implementation phases complete)
+**Requirements**: FIX-01, FIX-02, FIX-03, TRD-01, TRD-02, TRD-03, TRD-04
+**Gap Closure:** Closes gaps from audit
+**Success Criteria** (what must be TRUE):
+  1. 91-VERIFICATION.md exists and independently verifies FIX-01, FIX-02, FIX-03 against Phase 91 success criteria
+  2. 93-VERIFICATION.md exists and independently verifies TRD-01, TRD-02, TRD-03, TRD-04 against Phase 93 success criteria
+  3. REQUIREMENTS.md checkboxes for FIX-01, FIX-02, FIX-03 are `[x]`
+  4. REQUIREMENTS.md traceability table shows "Complete" for FIX-01, FIX-02, FIX-03
+**Plans**: 3 plans
+
+Plans:
+- [ ] 95-01-PLAN.md — Generate 91-VERIFICATION.md (verify FIX-01, FIX-02, FIX-03)
+- [ ] 95-02-PLAN.md — Generate 93-VERIFICATION.md (verify TRD-01, TRD-02, TRD-03, TRD-04)
+- [ ] 95-03-PLAN.md — Update REQUIREMENTS.md checkboxes and traceability table
+
+### Phase 96: v5.0 Tech Debt Cleanup
+**Goal**: Address tech debt items identified by v5.0 milestone audit that don't block closure but improve code health
+**Depends on**: Phase 95 (verification closure first)
+**Requirements**: None (tech debt, not requirement-mapped)
+**Gap Closure:** Closes tech debt from audit
+**Success Criteria** (what must be TRUE):
+  1. Dead `toffoli_mod_reduce` declaration removed from `_core.pxd`
+  2. Dead `toffoli_cdivmod_cq/qq` imports removed or documented as intentional stubs
+  3. Explicit `circuit_stats()['current_in_use']` qubit accounting test exists for modular operations (FIX-03 gap)
+  4. QQ division ancilla leak documented as known limitation with tracking issue
+**Plans**: 3 plans
+
+Plans:
+- [ ] 96-01-PLAN.md — Remove dead declarations (toffoli_mod_reduce, toffoli_cdivmod_cq/qq)
+- [ ] 96-02-PLAN.md — Add explicit qubit accounting test for modular operations
+- [ ] 96-03-PLAN.md — Document QQ division ancilla leak as known limitation
+
 ## Progress
 
 **Execution Order:**
@@ -231,6 +267,8 @@ Phases execute in numeric order: 90 -> 91 -> 92 -> 93 -> 94
 | 92. Modular Toffoli Arithmetic | v5.0 | Complete    | 2026-02-25 | - |
 | 93. Depth/Ancilla Tradeoff | v5.0 | 2/2 | Complete | 2026-02-25 |
 | 94. Parametric Compilation | 3/3 | Complete    | 2026-02-25 | 2026-02-25 |
+| 95. Verification & Requirements Closure | v5.0 | 0/3 | Pending | - |
+| 96. v5.0 Tech Debt Cleanup | v5.0 | 0/3 | Pending | - |
 
 ---
 *Roadmap created: 2026-02-02*

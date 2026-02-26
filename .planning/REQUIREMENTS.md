@@ -91,9 +91,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FIX-01 | Phase 91 | Pending |
-| FIX-02 | Phase 91 | Pending |
-| FIX-03 | Phase 91 | Pending |
+| FIX-01 | Phase 91 (verify: Phase 95) | Pending |
+| FIX-02 | Phase 91 (verify: Phase 95) | Pending |
+| FIX-03 | Phase 91 (verify: Phase 95) | Pending |
 | FIX-04 | Phase 94 | Complete |
 | MOD-01 | Phase 92 | Complete |
 | MOD-02 | Phase 92 | Complete |
