@@ -1,323 +1,337 @@
-# Pitfalls Research: v5.0 Advanced Arithmetic & Compilation
+# Pitfalls Research: v6.0 Quantum Walk Primitives (Montanaro 2015 Backtracking)
 
-**Domain:** Adding modular Toffoli arithmetic, parametric compilation, automatic depth/ancilla tradeoff, and quantum counting to an existing quantum programming framework
-**Researched:** 2026-02-24
-**Confidence:** HIGH for codebase-specific pitfalls (source inspected + existing bug context), MEDIUM for algorithmic pitfalls (literature-verified)
+**Domain:** Adding quantum walk primitives for Montanaro's 2015 backtracking speedup to an existing quantum programming framework with Grover's search, amplitude estimation, automatic uncomputation, and dual arithmetic backends
+**Researched:** 2026-02-26
+**Confidence:** HIGH for integration pitfalls (codebase inspected, existing bug patterns analyzed), MEDIUM for algorithmic pitfalls (literature-verified but Montanaro paper PDF not fully parseable -- details cross-referenced with Qrisp implementation and Martiel et al. 2019)
 
 ## Executive Summary
 
-The v5.0 milestone combines four distinct feature tracks -- modular Toffoli arithmetic, parametric compilation, automatic depth/ancilla tradeoff, and quantum counting -- on top of an existing framework with three known deferred bugs (BUG-DIV-02, BUG-QFT-DIV, BUG-MOD-REDUCE) and two known architectural limitations (layer-based uncomputation unreliable under optimizer parallelization, BK CLA subtraction falling back to RCA). The primary danger is that these features interact through shared subsystems (the circuit optimizer, the uncomputation mechanism, the `@ql.compile` cache, and the qubit allocator) in ways that compound existing bugs rather than merely adding new ones. The pitfalls below are ordered by severity: the first six are critical (cause silent wrong results or require rewrites), the next five are moderate (cause specific failure modes or performance issues), and the remainder are minor but require awareness.
+The v6.0 milestone adds quantum walk operators for Montanaro's backtracking speedup to a framework that already has Grover's search, `@ql.compile` capture-replay, automatic LIFO uncomputation, and 17-qubit simulation limits. The quantum walk algorithm differs fundamentally from Grover's search in three ways that create integration hazards: (1) the local diffusion operator R_x has node-dependent amplitude coefficients that vary with d(x) (number of valid children), unlike Grover's uniform diffusion; (2) the predicate must be evaluated in superposition and fully uncomputed within the walk operator, not once at circuit build time; and (3) the walk requires position+coin registers plus predicate ancillae, creating qubit pressure that collides with the 17-qubit simulator ceiling.
+
+The most dangerous pitfalls are those that produce circuits that appear structurally correct but have subtly wrong amplitudes in the local diffusion operator -- these break the O(sqrt(T)) speedup guarantee without generating any error. The second class of danger involves the interaction between the walk operator's internal uncomputation requirements and the framework's existing LIFO scope-based uncomputation, which tracks layer ranges that become unreliable when the optimizer parallelizes gates (a known limitation documented in PROJECT.md).
+
+The pitfalls below are ordered by severity: the first seven are critical (silent wrong results, broken speedup guarantees, or require architecture rework), the next five are moderate (specific failure modes or performance traps), and the remainder are integration-specific gotchas.
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Beauregard Modular Addition Requires Comparison-on-Dirty-Ancilla -- Interacts with BUG-DIV-02
+### Pitfall 1: Wrong Amplitude Coefficients in Local Diffusion Operator R_x
 
 **What goes wrong:**
-Beauregard's modular addition circuit (the standard for Shor's algorithm) works by: (1) add a+b, (2) subtract N, (3) check MSB to see if result went negative, (4) conditionally add N back, (5) reset the MSB flag qubit. Step 5 requires subtracting `a` from the register, checking the MSB, flipping the flag, and adding `a` back. This "reset the auxiliary" step is structurally identical to the pattern that causes BUG-DIV-02 (MSB comparison leak in division -- orphan temporaries not uncomputed). The existing `_reduce_mod` in `qint_mod.pyx` (line 107-131) uses `cmp = value >= self._modulus` followed by `with cmp: value -= self._modulus`, which creates a comparison qbool that becomes an orphan temporary after the `with` block exits.
+The local diffusion operator D_x reflects in the subspace spanned by |psi_x> = (1/sqrt(d(x)+1))|x> + sum_{y child of x} (1/sqrt(d(x)+1))|y>, where d(x) is the number of valid children of node x. The coefficient 1/sqrt(d(x)+1) must include the parent state |x> in the count (hence "+1"), not just the children. Getting this wrong -- using 1/sqrt(d(x)) or 1/sqrt(n) where n is the maximum branching factor -- produces a diffusion operator that does not satisfy the spectral gap requirements of Montanaro's Theorem 1. The walk still runs, produces results, but has degraded or zero speedup.
 
 **Why it happens:**
-The existing modular reduction uses the high-level comparison operators which allocate comparison result qubits. These qubits are tracked by the layer-based uncomputation system, but when the optimizer parallelizes gates, the layer ranges become unreliable (known limitation from PROJECT.md). Beauregard's algorithm makes this worse because the auxiliary reset step requires a comparison, a conditional operation, AND correct uncomputation of the comparison result -- all three of which must succeed for the ancilla to be clean for the next iteration.
+The Grover diffusion operator in the existing codebase (`diffusion.py`) uses uniform amplitudes -- all states get equal weight in the reflection. Developers naturally try to reuse this pattern for the local diffusion, using uniform 1/sqrt(d) or 1/sqrt(n) coefficients. But Montanaro's diffusion is state-dependent: the parent node x is included in the superposition being reflected over, and the count d(x) can vary per node. The Qrisp implementation uses controlled rotations with angle phi = 2*arctan(sqrt(d)) for non-root nodes and phi_root = 2*arctan(sqrt(N*d)) for the root, where N is a tuning parameter related to the tree size.
 
 **How to avoid:**
-1. Fix BUG-DIV-02 FIRST, before implementing Beauregard modular arithmetic. The same orphan-temporary pattern will appear in modular addition.
-2. Implement Beauregard's modular addition at the C level as a single atomic operation, not composed from Python-level `>=` and `with` blocks. This avoids the layer-tracking problems entirely because the C-level sequence handles all ancilla internally.
-3. The Beauregard circuit needs exactly one ancilla qubit (the MSB flag). Allocate it explicitly at the start and manage it through the entire sequence, never letting it escape to the Python-level uncomputation system.
-4. Test the complete modular add-subtract-compare-reset cycle exhaustively for widths 2-8 with all input pairs before composing into modular multiplication.
+1. Implement the amplitude preparation as a controlled Ry rotation: Ry(2*arcsin(1/sqrt(d(x)+1))) on the coin qubit, controlled on the node position, to create the correct superposition between parent and children states. This is the Qrisp approach and matches Montanaro's Definition 1.
+2. For the root node, use a different coefficient: the root amplitude is sqrt(n)/sqrt(T_hat) where T_hat is the (unknown) effective tree size, which gets tuned by the outer phase estimation. Implement this as a separate rotation applied only at the root.
+3. Write an explicit unit test that prepares |psi_x> for a known tree, measures the resulting amplitudes via statevector simulation, and compares against the analytically computed values. This catches coefficient errors before they propagate into the walk operator.
+4. Never hardcode amplitudes for a maximum branching factor. The rotation angle must be computed from d(x), not from max_d.
 
 **Warning signs:**
-- Modular addition works for single calls but produces wrong results when chained (e.g., `x += a mod N; x += b mod N` gives wrong result for the second addition)
-- The MSB flag qubit is not in |0> after the operation (measure it in debug mode)
-- `circuit_stats()['current_in_use']` grows with each modular operation call
+- Walk operator applied to a known 2-level tree with one marked leaf does not converge in O(sqrt(T)) steps
+- Statevector of |psi_x> after amplitude preparation does not match 1/sqrt(d(x)+1) within floating-point tolerance
+- Phase estimation returns eigenvalue 0 (no spectral gap) when there are marked nodes
 
 **Phase to address:**
-Bug fix phase (BUG-DIV-02) must precede modular Toffoli arithmetic implementation. Attempting to build modular arithmetic on the broken comparison/uncomputation foundation will compound bugs.
+Phase 1 (Local Diffusion Primitives) -- the amplitude calculation must be correct from the first implementation. Incorrect amplitudes cannot be patched later without rewriting all walk operator tests.
+
+**Confidence:** HIGH -- the Qrisp implementation (arXiv:2402.10060) explicitly documents using phi = 2*arctan(sqrt(d)) for the rotation angle, and Montanaro's paper defines the state |psi_x> with the 1/sqrt(d(x)+1) coefficient.
 
 ---
 
-### Pitfall 2: Modular Reduction Iterative Subtraction Creates O(N) Garbage Qubits
+### Pitfall 2: Variable Branching Factor Requires Dynamic Controlled Rotations
 
 **What goes wrong:**
-The current `_reduce_mod` implementation (line 107-131 of `qint_mod.pyx`) uses a Python-level loop: `for _ in range(iterations): cmp = value >= self._modulus; with cmp: value -= self._modulus`. Each iteration creates a comparison qbool (`cmp`). In the current system, these comparison results persist without auto-uncompute (see Key Decision: "Comparison results persist without auto-uncompute"). This means each modular reduction creates `iterations` orphan qubits. For an n-bit modulus, `iterations = O(log(2^n / N))`, but for modular multiplication the reduction is called after each partial product addition, creating `O(n * log(2^n / N))` total orphan qubits across a single modular multiply.
+In real backtracking trees (SAT, graph coloring), the number of valid children d(x) varies per node. A node at depth 3 in a 3-coloring problem might have 2 valid children (2 colors not yet used by neighbors) while another node at the same depth has 0. The local diffusion must apply Ry(2*arcsin(1/sqrt(d(x)+1))) where d(x) is computed in superposition from the predicate P. If d(x) is approximated as a constant (e.g., always using max_d), the diffusion operator has wrong amplitudes for most nodes, and the walk does not implement the correct Markov chain.
 
 **Why it happens:**
-BUG-MOD-REDUCE was deferred specifically because the existing `_reduce_mod` has result corruption issues. The root cause is that the iterative conditional-subtraction pattern does not properly track which comparison qubits need uncomputation and in what order. Beauregard's algorithm solves this differently -- it uses a single ancilla qubit reset within the modular adder itself, rather than relying on external iterative reduction.
+Computing d(x) requires evaluating the predicate P on each potential child of x and counting how many are valid. This count must be stored in a quantum register, then used to control a rotation angle. The existing framework has no "data-controlled rotation" primitive -- `emit_ry` takes a classical angle parameter. Implementing a rotation whose angle depends on a quantum register requires either: (a) a lookup table of controlled rotations (for each possible value of d, apply the corresponding rotation controlled on d==value), or (b) a quantum arithmetic circuit that computes arcsin(1/sqrt(d+1)) from d and feeds it to a quantum-controlled rotation.
 
 **How to avoid:**
-1. Replace the iterative `_reduce_mod` with Beauregard-style in-circuit modular reduction. This is NOT an optimization -- it is a correctness requirement. The iterative approach fundamentally cannot work correctly in a quantum circuit because each comparison creates entanglement that must be undone.
-2. Implement modular addition as a single C-level primitive: `toffoli_mod_add(bits, modulus, a_qubits, b_qubits, ancilla)`. The primitive internally handles: add, subtract N, check MSB, conditional add-back, reset ancilla.
-3. Do NOT compose modular operations from Python-level arithmetic operators. The Python-level composition creates intermediate qint/qbool objects whose lifetime management conflicts with the quantum requirement that all ancilla be returned to |0>.
+1. Use the lookup-table approach: allocate a register for d(x), count valid children into it, then for each possible value k in [0, max_d], apply Ry(2*arcsin(1/sqrt(k+1))) controlled on (d == k). This is O(max_d) controlled rotations per diffusion step, which is acceptable for small branching factors (max_d <= 8).
+2. For the special case of binary trees (d(x) in {0, 1, 2}), use only 3 controlled rotations. This covers SAT with 2-valued variables, which is the primary demo target.
+3. The child-counting register must be fully uncomputed after the controlled rotation, before moving to the next step. Use the existing `@ql.compile` inverse capability: compile the child-counting function, apply it, do the rotation, then apply `.inverse()` to uncompute.
+4. Never hard-wire d(x) as a constant unless the tree is provably regular (all nodes at the same depth have the same branching factor). Document this constraint explicitly in the API.
 
 **Warning signs:**
-- Qubit count for modular multiplication is orders of magnitude higher than expected
-- Modular multiplication works for 2-bit but fails for 3+ bit moduli
-- Qiskit verification shows non-zero probability on ancilla qubits after modular operations
+- Walk operator gives correct results on uniform-branching test cases but fails on non-uniform ones
+- The d(x) register is not returned to |0> after the diffusion step (measure ancilla qubits)
+- Circuit qubit count grows unexpectedly (ancilla leak from uncomputed child-count register)
 
 **Phase to address:**
-BUG-MOD-REDUCE fix phase. This must be redesigned as a C-level primitive, not patched at the Python level.
+Phase 2 (Variable Branching Support) -- this should be a separate phase after basic fixed-branching walk operators are verified. Attempting variable branching before the fixed case is solid will confuse debugging.
+
+**Confidence:** HIGH -- the Qrisp paper explicitly documents this pattern and provides the controlled rotation angles.
 
 ---
 
-### Pitfall 3: Parametric Compilation Cache Key Must Include Arithmetic Mode AND CLA Override
+### Pitfall 3: Predicate Evaluation Must Be Fully Reversible and Uncomputable Within Walk Step
 
 **What goes wrong:**
-The `@ql.compile` decorator (compile.py) caches gate sequences keyed by `(classical_args, widths, control_count, qubit_saving)`. The v3.0 Toffoli arithmetic added `arithmetic_mode` (QFT vs Toffoli) and `cla_override` (auto CLA vs force RCA) as circuit-level options. The cache key does NOT include either of these. If a user compiles a function in Toffoli mode, switches to QFT mode, and replays the cached function, the Toffoli gate sequence is replayed into a QFT-mode context. The gates themselves will be emitted correctly (they are just X/CX/CCX/P gates), but the qubit layout assumptions are wrong: Toffoli sequences expect ancilla qubits that the QFT layout does not provide.
-
-More subtly: when the automatic depth/ancilla tradeoff feature is added (OPT-01), the adder selection (RCA vs CLA) may change per-call based on width and available qubit budget. If the compile cache stores a sequence that used RCA (width=4, below CLA threshold), and the function is later called with width=8 (above CLA threshold), the cache hit returns the wrong sequence.
+The walk operator applies the predicate P(v) to determine whether a node is accepted, rejected, or undecided. Unlike Grover's oracle (which is called once per iteration as a complete compute-phase-uncompute block), the walk operator's predicate is called INSIDE the local diffusion as part of determining d(x) and node status. The predicate's temporary computations must be fully uncomputed before the diffusion reflection, or the entanglement between predicate ancillae and the walk state will destroy interference.
 
 **Why it happens:**
-The compile.py cache was designed in v2.0 before the Toffoli backend existed. The v3.0 and v4.0 milestones did not update the cache key despite adding new circuit-level mode flags. The existing pitfall from PITFALLS-COMPILE-DECORATOR.md (Pitfall 8: QFT vs Toffoli mode) flagged this, but it was not fixed in v4.0 or v4.1.
+In the existing Grover implementation (`oracle.py`), the oracle is a self-contained compute-phase-uncompute block validated by `_validate_compute_phase_uncompute()`. The walk operator has a different structure: P(v) is called to classify nodes (accept/reject/continue), the classification is used to select the diffusion operation (identity for accepted, minus-identity for rejected, reflection for continue), and then P(v) must be uncomputed. But P(v) might use arithmetic operations (+, -, ==, >=) that allocate qint/qbool temporaries tracked by the framework's scope-based uncomputation. If the predicate is called inside a walk-operator scope, the framework's automatic uncomputation may fire at the wrong time.
 
 **How to avoid:**
-1. Extend the compile cache key immediately: `cache_key = (classical_args, widths, control_count, qubit_saving, arithmetic_mode, cla_override)`. This is a one-line change in `CompiledFunc.__call__` in compile.py.
-2. When adding automatic depth/ancilla tradeoff, the adder selection decision must be captured in the cache key or forced to be deterministic for a given cache key. If the tradeoff is dynamic (based on runtime qubit budget), then compiled functions CANNOT use automatic tradeoff -- they must use the mode that was active during capture.
-3. Add a regression test: compile a function in Toffoli mode, switch to QFT mode, call again, verify it recompiles (cache miss) and produces correct results.
+1. Compile the predicate with `@ql.compile` and use the `.inverse()` method for uncomputation. This gives explicit control over when the predicate is uncomputed, bypassing the scope-based automatic uncomputation system.
+2. The predicate function must return its result (accept/reject/continue) in a dedicated output qubit, not as a qbool that enters the scope stack. Use a raw qubit allocation (`_allocate_qubit()`) for the predicate result, not a qint/qbool constructor.
+3. Validate the predicate's ancilla delta BEFORE integrating it into the walk operator. Reuse the `_validate_ancilla_delta()` pattern from `oracle.py` but applied to the predicate function separately.
+4. The predicate must NOT use `with` blocks (controlled contexts) internally, because the walk operator itself may need to run in a controlled context for phase estimation. Nested controlled contexts would require the predicate to understand multi-level control, which the current framework handles (via `_get_list_of_controls`) but which has not been tested in walk-operator depth.
 
 **Warning signs:**
-- Compiled function gate count changes when arithmetic mode changes (should trigger recompilation)
-- Circuit contains Toffoli gates when QFT mode is active, or vice versa
-- Segfault when replaying compiled function after mode change (qubit layout mismatch)
+- `circuit_stats()['current_in_use']` grows after each walk step (predicate ancillae not uncomputed)
+- Walk operator produces different results when `qubit_saving_mode` is toggled (uncomputation timing changes)
+- Predicate works correctly as a standalone Grover oracle but fails inside the walk operator
 
 **Phase to address:**
-Parametric compilation phase (PAR-01/PAR-02). Fix cache key BEFORE adding new mode flags.
+Phase 1 (Walk Operator Core) -- predicate integration must be designed from the start, not bolted on later. The walk operator's internal structure depends on when and how the predicate is evaluated and uncomputed.
+
+**Confidence:** HIGH -- this is the core architectural difference between Grover's oracle pattern and Montanaro's walk operator. The Qrisp framework handles this with `@auto_uncompute` decorator and explicit temporary variable management; the Quantum Assembly framework needs an equivalent mechanism.
 
 ---
 
-### Pitfall 4: BK CLA Subtraction Fallback Breaks Modular Arithmetic Bidirectionality
+### Pitfall 4: R_A and R_B Must Act on Disjoint Qubit Partitions -- Parity Violation Breaks Walk
 
 **What goes wrong:**
-Beauregard's modular addition requires both addition AND subtraction with the same circuit structure (subtraction = inverse of addition). The BK CLA adder currently falls back to RCA for subtraction because the carry-copy ancilla cannot be uncomputed in reverse (known limitation from PROJECT.md). This means: if automatic depth/ancilla tradeoff selects CLA for a modular addition, the addition uses CLA (O(log n) depth) but the internal subtraction falls back to RCA (O(n) depth). The modular addition circuit is now asymmetric -- the forward and reverse paths use different adder implementations with different qubit layouts and different ancilla counts. This breaks the Beauregard pattern where addition and subtraction are exact inverses.
+Montanaro's walk operator is R_B * R_A, where R_A = product of D_x over x at even depth, R_B = product of D_x over x at odd depth. The critical requirement: R_A and R_B must act on disjoint sets of qubits so that the local diffusions within each operator commute and can be applied in parallel. If the node encoding causes R_A and R_B to overlap on shared qubits (e.g., a position register that is read by both), the walk operator does not implement the correct product of reflections.
 
 **Why it happens:**
-The BK CLA compute-copy-uncompute pattern leaves carry-copy ancilla dirty (documented in tests/python/test_cla_bk_algorithm.py lines 7-12). Running the sequence in reverse (for subtraction) would require the carry-copy ancilla to start in the correct dirty state, which is impossible without computing it first -- creating a circular dependency.
+In a height-encoded tree (as used by Qrisp), the even/odd partition is determined by the height register. Each local diffusion D_x operates on the coin register for height h and the position register entries at depth h. If the position register uses a shared encoding (e.g., a single integer register for the full path), then D_x at depth h and D_y at depth h+1 both read/write the same position register, and R_A and R_B are NOT disjoint. The solution is to use a QuantumArray (one register per tree level) so that each D_x touches only its level's position register and the coin register for that level.
 
 **How to avoid:**
-1. For modular arithmetic, force RCA mode for all internal additions and subtractions. Do NOT allow automatic CLA selection within modular primitives. This ensures forward/reverse symmetry.
-2. OR: Implement a CLA subtractor that does not rely on inverting the CLA adder. The Draper-Kutin CLA paper (quant-ph/0406142) describes a direct subtraction circuit, but it requires different ancilla management.
-3. The automatic depth/ancilla tradeoff feature (OPT-01) must be aware of this constraint: when selecting an adder for use inside a modular arithmetic primitive, only RCA is safe unless a dedicated CLA subtractor is implemented.
-4. Document this constraint clearly in the API: `ql.option('cla', True)` may not apply to modular arithmetic internally.
+1. Encode the tree path as a QuantumArray with one entry per tree depth level (Qrisp's `branch_qa` approach). This ensures D_x at depth h only touches `branch_qa[h]` and the coin/height registers for depth h.
+2. Use one-hot encoding for the height register (n+1 qubits for depth-n tree). One-hot encoding enables efficient controlled operations (each diffusion is controlled on a single height qubit) and makes the even/odd partition trivial.
+3. Verify disjointness with a test: apply R_A, then R_B, and confirm via statevector that the result equals applying all local diffusions simultaneously. If R_A and R_B commute (because they act on disjoint qubit sets), the order should not matter and the combined product should match independent application.
+4. Never use a single position register that encodes the entire tree path as one integer. This seems qubit-efficient but makes disjoint partitioning impossible.
 
 **Warning signs:**
-- Modular addition gate count is asymmetric (forward path cheaper than reverse)
-- Modular addition works but modular subtraction fails
-- Automatic tradeoff selects CLA for modular operations but results are wrong
+- Applying R_A then R_B gives different results than R_B then R_A (should be identical up to global phase if disjoint)
+- Local diffusions within R_A interfere with each other (they should commute)
+- Walk operator does not converge even for trivial trees
 
 **Phase to address:**
-Automatic depth/ancilla tradeoff phase (OPT-01). The tradeoff logic must exclude CLA from modular primitives unless a direct CLA subtractor exists.
+Phase 1 (Architecture Design) -- the qubit register layout must be designed for disjoint R_A/R_B from the start. Retrofitting a different encoding is a rewrite.
+
+**Confidence:** MEDIUM -- verified from Qrisp's architecture (which uses QuantumArray branch_qa + one-hot height), but the disjointness requirement is implicit in Montanaro's paper and easy to miss.
 
 ---
 
-### Pitfall 5: Quantum Counting Sign Ambiguity Produces Wrong Solution Count
+### Pitfall 5: Qubit Budget Explosion Under 17-Qubit Simulator Ceiling
 
 **What goes wrong:**
-Quantum counting applies QPE to the Grover operator G = WV (diffusion * oracle). The eigenvalues of G are e^(+/-2i*theta) where sin^2(theta) = M/N. However, the standard implementation of the diffusion operator W = 2|s><s| - I has a global phase. The existing diffusion operator in `diffusion.py` implements W~ = -W (X-MCZ-X pattern), which is equivalent to -2|s><s| + I. This global phase is irrelevant for Grover search (measurement probabilities unchanged) but shifts the QPE eigenvalues from e^(+/-2i*theta) to -e^(+/-2i*theta) = e^(+/-2i*(theta +/- pi/2)). Using the standard formula M = N * sin^2(pi * j / 2^t) with the shifted eigenvalue produces the wrong solution count.
-
-As shown by Chung and Nepomechie (arXiv:2310.07428), using the wrong sign convention in quantum counting can yield m approximately 5 instead of the correct m approximately 3 for a specific example -- an error by almost a factor of 2.
+The walk operator requires: (1) height register: n+1 qubits (one-hot) or ceil(log(n+1)) (binary); (2) path register: n * ceil(log(max_d)) qubits (one entry per depth level, each encoding a branch choice); (3) coin register: 1-2 qubits per depth level for amplitude preparation; (4) predicate ancillae: depends on the predicate complexity (comparisons, arithmetic); (5) child-count register: ceil(log(max_d+1)) qubits for variable branching. For a SAT instance with n=4 variables and max_d=2 (binary branching): height=5 (one-hot) + path=4*1=4 + coin=4 + predicate ancillae >= 2 = minimum 15 qubits BEFORE any arithmetic in the predicate. This is already at the 17-qubit simulator limit.
 
 **Why it happens:**
-The existing `diffusion()` function was designed for Grover search where the sign does not matter. Quantum counting reuses this diffusion operator but applies QPE, where the sign matters critically.
+Each component of the walk operator demands its own qubit register. Unlike Grover's search (where the search register IS the computation space), the walk operator has auxiliary structure (height, coin, path) on top of the problem encoding. The 17-qubit Qiskit simulation limit (documented in MEMORY.md) makes it nearly impossible to verify non-trivial instances.
 
 **How to avoid:**
-1. When implementing `ql.count_solutions`, use the corrected formula: `M = N * sin^2(pi * (j/2^t - 1/2))` if using the W~ = -W diffusion operator, NOT the standard `M = N * sin^2(pi * j / 2^t)`.
-2. OR: Modify the diffusion operator for quantum counting to include the correct global phase (add an extra global phase gate after the X-MCZ-X pattern).
-3. Add a parameter to `diffusion()`: `sign_convention='grover'` (default, omits phase) vs `sign_convention='counting'` (includes correct phase for QPE).
-4. Test with known solution counts: oracle that marks exactly k solutions out of N, verify `count_solutions` returns k.
+1. Design the minimal demo instance first: a binary tree of depth 2-3 with a trivial predicate (constant accept/reject). Calculate exact qubit count before implementation.
+2. Use binary encoding for the height register (ceil(log(n+1)) qubits) instead of one-hot (n+1 qubits) when qubit-constrained. One-hot is more gate-efficient but qubit-expensive.
+3. Use matrix_product_state (MPS) simulator for verification of circuits exceeding 17 qubits, as already done for division tests (documented in Key Decisions). MPS can handle 40+ qubits for low-entanglement circuits.
+4. Implement a resource estimator that calculates total qubits needed for a given tree before circuit construction. Fail fast with a clear error if the qubit budget exceeds the simulation target.
+5. The predicate should reuse existing framework primitives (qint comparisons) but its ancilla overhead must be tracked and reported separately.
 
 **Warning signs:**
-- `count_solutions` returns approximately correct but consistently off by a factor related to pi/2
-- Solution count is wrong by a symmetric amount (e.g., returns N-M instead of M)
-- QPE phase outputs cluster around unexpected values
+- Simulation hangs or runs out of memory (exceeding 17-qubit statevector limit)
+- Test instances seem trivially small but still exceed qubit budgets
+- Cannot verify any non-trivial SAT instance end-to-end
 
 **Phase to address:**
-Quantum counting phase (GADV-01). Must be addressed in the core counting algorithm design, not as a post-hoc fix.
+Phase 1 (Design) -- qubit budget must be calculated during architecture design, not discovered during testing. The demo instance choice must be qubit-budget-aware.
+
+**Confidence:** HIGH -- the 17-qubit limit is documented in MEMORY.md, and the qubit counts above are computed from the algorithm structure.
 
 ---
 
-### Pitfall 6: Parametric Compilation Cannot Parameterize Toffoli CQ Sequences
+### Pitfall 6: Interaction Between Walk Operator Uncomputation and Framework LIFO Scope Uncomputation
 
 **What goes wrong:**
-Parametric compilation (PAR-01/PAR-02) aims to "compile once for all classical values." For QFT-based CQ operations, this is conceptually possible: `CQ_add(bits=8, value=V)` produces a sequence where the classical value `V` only affects rotation angles (gate values), not circuit topology. The topology (which qubits connect to which) is identical for all values of V at the same width. So a parametric version could store the topology once and patch rotation angles per-value.
-
-But for Toffoli-based CQ operations, this is NOT possible. `toffoli_CQ_add(bits=8, value=V)` generates a structurally different circuit for each value of V. The inline CQ generators (Phase 73) exploit known classical bit values to eliminate gates at zero-bit positions -- a value with 3 set bits produces fewer Toffoli gates than a value with 7 set bits. The circuit TOPOLOGY changes per value, not just gate parameters.
+The walk operator internally creates and uncomputes quantum state (predicate evaluation, child counting, amplitude preparation). The framework's automatic uncomputation system uses LIFO (last-in-first-out) scope-based tracking tied to layer ranges. If the walk operator creates qint/qbool variables inside a Python scope, the framework may attempt to uncompute them at scope exit -- but the walk operator has already uncomputed them as part of its algorithm. This double-uncomputation corrupts the quantum state.
 
 **Why it happens:**
-The Toffoli CQ optimization (Phase 73) specifically designed the CQ path to be value-dependent for T-count reduction. This is correct for performance but fundamentally incompatible with parametric compilation's goal of compile-once-replay-many.
+The framework's uncomputation system (documented in KEY DECISIONS: "LIFO cascade uncomputation", "Layer tracking on all qint operations", "Strict < for LAZY scope comparison") tracks every qint/qbool creation and generates reverse gates at scope exit. The walk operator needs fine-grained control: compute predicate, use result, uncompute predicate, apply diffusion, etc. This interleaved compute-use-uncompute pattern within a single scope does not match the framework's all-at-once uncomputation at scope exit.
+
+The known limitation "Layer-based uncomputation tracking unreliable when optimizer parallelizes gates" (PROJECT.md) makes this worse: if the walk operator's internal uncomputation gates are reordered by the optimizer, the layer ranges used for reverse_instruction_range become invalid.
 
 **How to avoid:**
-1. Parametric compilation for Toffoli CQ must be explicitly scoped out or handled differently: either (a) use the non-optimized path (X-init temp, run QQ adder, X-cleanup) which has fixed topology per width, or (b) cache per-value as the current `@ql.compile` does (not truly parametric, but correct).
-2. Document clearly: "Parametric compilation parameterizes over QFT rotation angles. Toffoli CQ operations are value-dependent and require per-value compilation."
-3. If implementing parametric compilation, detect Toffoli mode and either fall back to per-value caching or use the unoptimized CQ path for parametric functions.
-4. The compile cache key already includes classical args, so per-value caching is the existing behavior. The new feature should NOT change this for Toffoli mode.
+1. Implement the entire walk operator at a level below the automatic uncomputation system. Use `_allocate_qubit()` and `_deallocate_qubits()` directly (as `_wrap_bitflip_oracle` does in oracle.py) rather than qint/qbool constructors that enter the scope stack.
+2. Alternatively, compile the walk operator with `@ql.compile` which captures the complete gate sequence and manages its own ancilla tracking (the v2.1 ancilla tracking system). The compiled function's `.inverse()` handles uncomputation independently of the scope system.
+3. Set `qubit_saving_mode = False` (lazy uncomputation) during walk operator execution to prevent eager uncomputation from interfering with the walk's internal state management.
+4. Test with both qubit_saving modes to verify the walk operator is self-contained and does not depend on the framework's uncomputation timing.
 
 **Warning signs:**
-- Parametric compiled function produces wrong results in Toffoli mode when classical argument changes
-- T-count is unexpectedly high (using unoptimized CQ path when optimized was expected)
-- Parametric compiled function works in QFT mode but fails in Toffoli mode
+- Walk operator produces different results depending on `qubit_saving_mode`
+- "Oracle ancilla delta is N (must be 0)" errors from validation
+- Walk operator works in isolation but fails when called inside a `with` block or from within a compiled function
 
 **Phase to address:**
-Parametric compilation phase (PAR-01/PAR-02). Must design the parametric boundary carefully per backend.
+Phase 1 (Walk Operator Core) -- the decision about how the walk operator interacts with the uncomputation system must be made at the architecture level, before any gate emission code is written.
+
+**Confidence:** HIGH -- this pitfall is a direct extrapolation from the PITFALLS_GROVER.md analysis of oracle-uncomputation interaction, which was confirmed as a real issue (Pitfall 2 in that document).
+
+---
+
+### Pitfall 7: Detection Mode vs Solution-Finding Mode Confusion
+
+**What goes wrong:**
+Montanaro's Algorithm 1 is a DETECTION algorithm: it determines whether a marked node exists in the tree, but does not return which node is marked. Users expect a "find the solution" API (like `ql.grover()` which returns the measured value). Converting detection to solution-finding requires a classical outer loop that traverses the tree top-down, at each node using the quantum detection algorithm to determine which subtree contains a solution. Implementing only detection and calling it "quantum walk search" will confuse users who expect solution output.
+
+**Why it happens:**
+The quantum walk detects the existence of a marked state by performing phase estimation on R_B * R_A and checking whether the resulting eigenvalue is close to 1 (no marked node) or separated from 1 (marked node exists). Extracting the actual solution requires Montanaro's Algorithm 2, which classically selects child nodes and recursively applies Algorithm 1 on subtrees. This hybrid classical-quantum loop adds n calls to the detection algorithm (one per tree depth level), increasing total complexity to O(sqrt(T) * n^(3/2) * log(n)) but still providing speedup.
+
+**How to avoid:**
+1. Implement detection mode first (Algorithm 1) as the fundamental primitive.
+2. Implement solution-finding (Algorithm 2) as a separate higher-level API that calls detection repeatedly.
+3. Make the API naming unambiguous: `ql.quantum_walk_detect(predicate, tree)` returns bool, `ql.quantum_walk_find(predicate, tree)` returns the solution path. Do not name anything "quantum_walk_search" unless it actually returns a solution.
+4. Document the complexity difference: detection is O(sqrt(T)), solution-finding is O(sqrt(T) * n^(3/2) * log(n)).
+
+**Warning signs:**
+- Users call the detection API and get confused by a boolean result instead of a solution
+- Phase estimation returns an eigenvalue but code does not threshold it correctly for detection
+- Solution-finding mode does not reduce to detection mode as a building block
+
+**Phase to address:**
+Phase 1 (API Design) -- the distinction between detection and solution-finding should be in the API specification before implementation begins.
+
+**Confidence:** HIGH -- Montanaro's paper explicitly separates Algorithm 1 (detection) from Algorithm 2 (finding), and the Qrisp documentation notes that "Montanaro's algorithm only determines solution existence."
 
 ---
 
 ## Moderate Pitfalls
 
-### Pitfall 7: Automatic Depth/Ancilla Tradeoff Requires Qubit Budget Information Not Currently Available
+### Pitfall 8: Phase Estimation Precision Determines Detection Reliability
 
 **What goes wrong:**
-The automatic tradeoff (OPT-01) should select RCA (1 ancilla, O(n) depth) vs CLA (O(n) ancilla, O(log n) depth) based on the circuit's qubit budget. But the framework has no concept of a qubit budget. The `qubit_allocator.c` allocates qubits up to `ALLOCATOR_MAX_QUBITS` (8192) without any feedback about how many qubits are "affordable." The decision to use CLA vs RCA currently depends solely on width (`cla_override == 0 && result_bits >= CLA_THRESHOLD` in hot_path_add_toffoli.c line 112), not on available qubit headroom.
+The detection algorithm uses phase estimation on R_B * R_A to distinguish eigenvalue 1 (no solution) from eigenvalue cos^2(theta) (solution exists). The precision of phase estimation determines how small a spectral gap can be detected. If the phase estimation uses too few precision qubits, it cannot distinguish "solution exists with small spectral gap" from "no solution." This produces false negatives (says no solution when one exists).
 
 **Why it happens:**
-The current architecture has no mechanism for the adder selection logic to query "how many ancilla qubits can I afford?" The allocator tracks `peak_allocated` and `current_in_use` but does not expose a "remaining budget" concept. Without this, the tradeoff cannot be truly automatic -- it can only be threshold-based (use CLA for width >= T, RCA otherwise).
+The spectral gap depends on the tree structure, the branching factor, and the effective resistance of the graph. For unbalanced trees or trees with many rejected branches, the spectral gap can be very small, requiring more precision qubits. The existing `ql.amplitude_estimate()` uses IQAE (Iterative Quantum Amplitude Estimation) which avoids QFT-based phase estimation, but Montanaro's algorithm specifically requires phase estimation on the walk operator, which is a different use case.
 
 **How to avoid:**
-1. Start with the simple width-threshold approach (already implemented as `CLA_THRESHOLD`). This is sufficient for v5.0. Rename the feature from "automatic depth/ancilla tradeoff" to "configurable depth/ancilla tradeoff" if no qubit budget mechanism is added.
-2. If a true automatic selection is desired, add a `qubit_budget` option: `ql.option('qubit_budget', 1000)`. The adder selection checks `current_in_use + cla_ancilla_count <= qubit_budget` before selecting CLA.
-3. For modular arithmetic, the qubit budget is critical: a modular multiplication with CLA adders needs O(n^2) ancilla across all partial products vs O(n) with RCA. The tradeoff must consider the total operation, not just individual additions.
+1. Implement phase estimation using the framework's existing Ry rotation and controlled-operation capabilities. The walk operator must support controlled application (controlled-R_B * controlled-R_A) for phase estimation to work.
+2. Start with a generous number of precision qubits (e.g., ceil(log2(sqrt(T))) + 5) and optimize downward based on empirical testing.
+3. The threshold for detection should be conservative: eigenvalue < cos(pi/(2*sqrt(T))) indicates a marked node exists. Implement this threshold as a configurable parameter.
+4. Add the precision qubit count to the total qubit budget calculation (Pitfall 5). Phase estimation qubits are often forgotten in initial estimates.
 
 **Warning signs:**
-- CLA selected for large widths causes `ALLOCATOR_MAX_QUBITS` exceeded error
-- Automatic selection makes different choices for the same width in different contexts
-- Performance is worse with automatic selection than with manual RCA (CLA ancilla overhead exceeds depth benefit)
+- Detection returns "no solution" on instances known to have solutions
+- Phase estimation eigenvalue is always exactly 0 or 1 (precision too low to resolve intermediate values)
+- Adding more precision qubits changes the detection result
 
 **Phase to address:**
-Automatic depth/ancilla tradeoff phase (OPT-01).
+Phase 3 (Detection Mode) -- after the walk operator is verified to be correct, phase estimation integration can be tuned.
+
+**Confidence:** MEDIUM -- the precision requirements depend on the specific tree structure and are hard to predict analytically. Empirical tuning will be necessary.
 
 ---
 
-### Pitfall 8: Quantum Counting QPE Precision vs Qubit Count for Practical Circuits
+### Pitfall 9: Node Encoding Choice (Height vs. Depth) Has Downstream Consequences
 
 **What goes wrong:**
-Quantum counting uses QPE with `t` ancilla qubits to estimate the eigenvalue of the Grover operator. The precision of the solution count estimate scales as O(2^t). For a search space of N = 2^n, the counting ancilla register needs t = O(n) qubits to distinguish M solutions from M+1 solutions. This means quantum counting on an 8-qubit search space needs approximately 8 additional ancilla qubits for QPE, plus the search register (8 qubits), plus oracle ancilla. Total qubit count for even modest problems exceeds 20, approaching the Qiskit simulation limit of 17 qubits (from project memory constraints).
+Montanaro's paper uses distance from the root (depth) as the primary node identifier. The Qrisp implementation uses height (distance from the leaves). These are complementary (height = max_depth - depth), but the encoding choice affects how the even/odd partition for R_A/R_B is computed, how the predicate evaluates node status, and how the tree traversal in solution-finding mode works. Mixing conventions within the implementation causes subtle off-by-one errors in the diffusion operators.
 
 **Why it happens:**
-The QPE-based quantum counting has inherent qubit overhead. The IQAE-based approach (already implemented in `amplitude_estimation.py`) avoids this by using iterative measurements instead of a QPE register, but IQAE estimates amplitude (probability), not solution count directly. Converting amplitude to count requires M = N * sin^2(theta), which introduces rounding errors for integer M.
+The choice between height and depth encoding affects multiple components:
+- Height encoding (Qrisp) puts the root at maximum height, leaves at height 0. The accept function checks height == 0 for full solutions.
+- Depth encoding (Montanaro) puts the root at depth 0. The even/odd partition aligns with depth parity.
+- One-hot encoding of height requires n+1 qubits where the root's qubit is `h[n]` and leaves are `h[0]`. Off-by-one in indexing produces valid-looking circuits with wrong diffusion targets.
 
 **How to avoid:**
-1. Implement `ql.count_solutions` using the IQAE infrastructure (already built) rather than QPE-based quantum counting. IQAE estimates sin^2(theta) = M/N with epsilon precision using O(1/epsilon) oracle calls and NO additional QPE ancilla qubits. Then M = round(N * estimate).
-2. For exact counting (when M must be an integer), use the IQAE estimate to narrow the range, then run a few Grover searches at nearby iteration counts to verify.
-3. Document the qubit limit: "Quantum counting with QPE requires n_search + t_precision + n_oracle_ancilla qubits. For Qiskit simulation, total must be <= 17."
-4. The project's simulation constraint (max 17 qubits) means QPE-based counting can only be tested for search spaces of 4-5 qubits. IQAE-based counting can handle larger spaces because it does not add QPE ancilla.
+1. Choose ONE convention (recommend height, following Qrisp) and document it prominently.
+2. Name all variables and functions with the chosen convention: `height_register` not `level_register`, `h[0]` is the leaf level.
+3. Write a conversion utility `depth_to_height(d, max_depth)` for any interface that uses the other convention.
+4. The even/odd parity for R_A/R_B should be computed from the chosen convention and tested explicitly: confirm that R_A applies to nodes at the correct levels.
 
 **Warning signs:**
-- QPE-based counting exceeds simulation qubit limit for any non-trivial problem
-- IQAE-based counting gives M = 2.7 for a problem that should have exactly 3 solutions
-- Counting results are consistently off by +/- 1 due to rounding
+- Accept function returns True for root instead of leaves (or vice versa)
+- R_A and R_B are applied to the wrong levels (odd instead of even)
+- Walk converges on some trees but not others of the same depth with different parity
 
 **Phase to address:**
-Quantum counting phase (GADV-01).
+Phase 1 (Architecture Design) -- convention must be established in the initial design document.
+
+**Confidence:** MEDIUM -- the Qrisp paper (arXiv:2402.10060) explicitly discusses the height vs. depth choice and its impact. Within the Quantum Assembly framework, no convention yet exists.
 
 ---
 
-### Pitfall 9: Layer-Based Uncomputation Breaks When Modular Operations Span Many Layers
+### Pitfall 10: Accept and Reject Must Never Return True on the Same Node
 
 **What goes wrong:**
-A modular multiplication `x *= a mod N` expands to O(n) modular additions, each of which expands to O(1) plain additions, subtractions, comparisons, and conditional operations. The total gate count for an 8-bit modular multiply is in the thousands. The existing `_start_layer` / `_end_layer` tracking records the layer range for uncomputation. But the known limitation -- "Layer-based uncomputation tracking unreliable when optimizer parallelizes gates" -- means the layer range may not bracket the correct gates after optimization. For modular arithmetic with thousands of gates across hundreds of layers, the optimizer has maximum freedom to reorder, making the layer range almost certainly wrong.
+The walk operator classifies each node into three categories: accepted (solution found), rejected (prune this subtree), or continue (explore children). If the accept and reject predicates are not mutually exclusive, a node can be simultaneously accepted and rejected. This puts the diffusion operator into an undefined state: it should apply identity (accepted), minus-identity (rejected), or reflection (continue), but cannot satisfy two conditions simultaneously.
 
 **Why it happens:**
-The optimizer's `minimum_layer()` function schedules gates at the earliest possible layer where all operand qubits are available. For Toffoli circuits with many ancilla qubits (which have no prior occupancy), gates can be scheduled much earlier than expected. A comparison gate from modular operation B might be scheduled into a layer that is within the layer range of modular operation A.
+This constraint is easy to violate in practice. For example, in graph coloring, a partial assignment might be accepted (all variables assigned, valid coloring) AND rejected (some constraint violated). The predicates must be designed so that accept implies NOT reject and vice versa. In the Qrisp implementation, this is documented as a critical requirement: "accept and reject must never return True on the same node."
 
 **How to avoid:**
-1. For v5.0, do NOT rely on layer-based uncomputation for modular operations. Instead, implement modular operations as `@ql.compile`-wrapped functions where the compile decorator handles uncomputation via its own gate-list tracking (not layer indices).
-2. The compile decorator's `_partition_ancillas` and `_auto_uncompute` mechanism operates on the captured gate list (Python-level), not on layer indices, making it immune to optimizer reordering.
-3. Long-term: transition from layer-based to instruction-counter-based uncomputation tracking (noted as future work in PROJECT.md).
-4. Short-term: disable the optimizer for modular arithmetic sequences (emit all gates with sequential layer_floor advancement).
+1. Validate at API level: if both accept(x) and reject(x) return True for any classically enumerable state, raise an error before circuit construction.
+2. Design the predicate interface as a single function returning a 3-valued result (accept/reject/continue) rather than two separate boolean functions. This makes mutual exclusion structural rather than a convention.
+3. For SAT instances, the standard pattern is: accept = (all variables assigned AND all clauses satisfied), reject = (some clause is unsatisfied with all its variables assigned). These are naturally mutually exclusive because accept requires ALL clauses satisfied while reject requires SOME clause unsatisfied.
+4. Add a classical pre-check that evaluates accept(x) and reject(x) on all nodes of a small test tree (depth 2-3) before launching quantum simulation.
 
 **Warning signs:**
-- Modular operations work without optimizer but fail after optimization
-- `reverse_circuit_range` on a modular operation reverses wrong gates
-- Uncomputation of modular result corrupts other registers
+- Walk operator produces wrong results on specific instances but works on others
+- Phase estimation returns unexpected eigenvalues (neither 1 nor the expected spectral gap)
+- Debugging shows a node with both accept and reject flags set in statevector analysis
 
 **Phase to address:**
-This is a cross-cutting concern that affects all phases. Modular arithmetic phase should use compile-decorator-based uncomputation from the start.
+Phase 1 (Predicate Interface Design) -- the predicate API must enforce mutual exclusion from the start.
+
+**Confidence:** HIGH -- Qrisp documentation explicitly states this as a critical constraint, and it was the source of a bug fix in the Qrisp framework (reject function inconsistency on non-algorithmic states).
 
 ---
 
-### Pitfall 10: Controlled Modular Multiplication for Shor's Requires Controlled-Controlled Operations
+### Pitfall 11: Root Node Requires Special Treatment in the Diffusion Operator
 
 **What goes wrong:**
-Shor's algorithm requires controlled modular exponentiation: for each qubit in the QPE register, apply a controlled modular multiplication. The modular multiplication internally uses conditional subtraction (controlled by comparison results). This creates controlled-controlled operations (the QPE control AND the comparison control). With Toffoli gates, this means some internal gates become CCCX (3-control X), which exceeds `MAXCONTROLS=2` and requires the `large_control` path or AND-ancilla decomposition. Each CCCX decomposes into 2 CCX + 1 ancilla, doubling the ancilla count for controlled modular arithmetic.
+The root node's diffusion amplitude is different from all other nodes. In Montanaro's formulation, the root uses a weighting coefficient that depends on n (a tuning parameter related to the effective tree size), not just d(root). The Qrisp implementation uses phi_root = 2*arctan(sqrt(N*d)) instead of the standard phi = 2*arctan(sqrt(d)). If the root is treated identically to other nodes, the initial state preparation is wrong, and the walk operator's spectral properties change.
 
 **Why it happens:**
-The Toffoli adder uses CCX as its fundamental gate. Adding an external control (for QPE) turns every CCX into CCCX. The existing MCX decomposition handles this (Phase 74: AND-ancilla pattern), but the ancilla count doubles. For controlled modular multiplication with n partial products each containing O(n) adder gates, the total AND-ancilla count is O(n^2).
+The root amplitude asymmetry comes from Montanaro's definition of the walk's initial state |r>. The walk starts from the root with amplitude proportional to sqrt(n)/sqrt(norm), while children have amplitude proportional to 1/sqrt(norm). Forgetting to implement this special case is easy because the root "looks like" any other node with children.
 
 **How to avoid:**
-1. Pre-allocate a single AND-ancilla qubit for the entire controlled modular multiplication and reuse it across all CCCX decompositions. The AND-ancilla pattern (compute, use, uncompute) returns the ancilla to |0> after each use, so a single ancilla suffices.
-2. Verify that the `allocator_alloc()` count=1 reuse path (line 94 of qubit_allocator.c) correctly recycles the AND-ancilla. Currently, count=1 reuse works, so this should be fine.
-3. Track the AND-ancilla count in circuit stats to verify it stays at 1 (not growing linearly).
+1. Implement root diffusion as a separate code path from non-root diffusion. Control the selection with the height register: root is at h[max_depth] (one-hot) or h == max_depth (binary).
+2. The root rotation angle must include the tree-size parameter n. This parameter is either known a priori or tuned by the outer detection algorithm.
+3. Test the root diffusion independently: prepare the root state, apply D_root, measure amplitudes, and verify they match the formula.
 
 **Warning signs:**
-- Controlled modular multiply uses 2x or more ancilla than uncontrolled
-- `allocator_get_stats()` shows many more ancilla allocations than expected
-- Qubit count exceeds simulation limit for even small widths
+- Walk operator works for subtrees but not for the full tree starting from root
+- Initial state has wrong amplitude distribution
+- Detection algorithm converges too slowly or not at all (wrong spectral gap from root)
 
 **Phase to address:**
-Modular Toffoli arithmetic phase (FTE-02), specifically when implementing controlled modular multiplication for Shor's.
+Phase 1 (Local Diffusion Primitives) -- must be implemented together with the general diffusion, not deferred.
+
+**Confidence:** MEDIUM -- the Qrisp paper documents the different root rotation angle. The exact formula depends on how Montanaro's parameter n is set, which varies between Algorithm 1 (detection) and Algorithm 2 (finding).
 
 ---
 
-### Pitfall 11: Parametric Compilation Interaction with Oracle Caching
+### Pitfall 12: Circuit Depth Explosion for Walk Operator Iterations
 
 **What goes wrong:**
-The existing `@ql.compile` and `@ql.grover_oracle` decorators both cache gate sequences. Parametric compilation (PAR-01/PAR-02) adds a new caching layer where classical parameters can vary without recompilation. If a Grover oracle uses arithmetic operations with classical parameters (e.g., `lambda x: x * a + b == target` where `a`, `b`, `target` are classical), the oracle's compiled form depends on these classical values. Parametric compilation might cache the oracle's gate sequence once and try to parameterize over `a`, `b`, `target`. But changing `a` changes the circuit topology (especially in Toffoli mode, per Pitfall 6), not just gate angles.
+Each walk step (R_B * R_A) involves: (a) evaluate predicate on all nodes at even depths, (b) apply local diffusions at even depths, (c) uncompute predicates, (d) repeat for odd depths. Each predicate evaluation may involve arithmetic comparisons creating O(w) gates per comparison (where w is the qint width). For a tree of depth n with max branching d, each walk step has O(n * d * predicate_depth) gates. Phase estimation requires O(sqrt(T)) walk steps with controlled operation, and each controlled step doubles the control depth. Total circuit depth can easily reach millions of gates for modest instances.
 
 **Why it happens:**
-The oracle decorator delegates to `@ql.compile` for gate capture. Parametric compilation wraps `@ql.compile`. If parametric compilation is applied to an oracle without understanding which classical parameters are structural (change topology) vs parametric (change angles only), the cached oracle becomes invalid.
+The existing framework can handle large circuits (QFT up to 2000 variables, benchmarks in `circuit-gen-results/`), but simulation time grows with depth. The 17-qubit limit means we are stuck with small-tree instances, but even these can produce deep circuits when the predicate involves arithmetic.
 
 **How to avoid:**
-1. Oracles must NEVER use parametric compilation for structural parameters. The `@ql.grover_oracle` decorator should force per-value caching for all classical arguments, regardless of whether parametric compilation is enabled globally.
-2. Parametric compilation should be opt-in per function, not global: `@ql.compile(parametric=['theta'])` explicitly names which parameters are angle-only.
-3. Document: "Parametric compilation only applies to parameters that affect gate angles, not circuit structure. For oracles with classical integer parameters, use standard per-value caching."
+1. Profile the circuit depth of a single walk step on the target demo instance before implementing the full detection algorithm. Use `circuit().depth` and `circuit().gate_count` to get exact numbers.
+2. Optimize the predicate to minimize gate count. For SAT, the reject function should check only the newly assigned variable's constraints, not all constraints. This reduces per-step predicate cost from O(clauses) to O(clauses involving the current variable).
+3. Use the Qrisp "subspace optimization" approach: if the predicate returns the same result on non-algorithmic states (states where branch_qa has values at unassigned positions), skip those evaluations. This can dramatically reduce gate count.
+4. Consider whether the demo should use phase estimation at all, or just demonstrate the walk operator R_B * R_A applied for a fixed number of steps with measurement, similar to how `ql.grover()` applies a fixed number of iterations.
 
 **Warning signs:**
-- Oracle returns wrong results after classical parameter changes
-- Oracle cache hit when cache miss was expected (classical param changed)
-- Grover search finds wrong solutions after changing search target
+- Circuit generation takes minutes for small instances
+- Circuit depth exceeds 10,000 for a 3-variable SAT instance
+- Qiskit simulation times out even with MPS backend
 
 **Phase to address:**
-Parametric compilation phase (PAR-01/PAR-02).
+Phase 2 (Demo Construction) -- circuit depth analysis should drive the choice of demo instance.
 
----
-
-## Minor Pitfalls
-
-### Pitfall 12: Quantum Counting Requires Controlled Grover Operator -- Not Just Controlled Oracle
-
-**What goes wrong:**
-QPE-based quantum counting needs controlled-G^(2^k) where G = WV (diffusion * oracle). Implementers often provide controlled-V (controlled oracle) but forget that the diffusion W must also be controlled. A controlled diffusion operator requires a multi-controlled-Z on (n+1) qubits (n search qubits + 1 control), which is more expensive than the standard n-qubit MCZ.
-
-**How to avoid:**
-- Implement `controlled_grover_operator(oracle, search_qubits, control_qubit)` as a single function that applies both controlled-oracle and controlled-diffusion.
-- If using IQAE-based counting (recommended per Pitfall 8), this is handled by the iterative protocol which already supports controlled Grover iterations.
-
-**Phase to address:** Quantum counting phase (GADV-01).
-
----
-
-### Pitfall 13: Automatic Tradeoff Width Threshold Interacts with Hardcoded Sequences
-
-**What goes wrong:**
-Toffoli arithmetic has hardcoded sequences for widths 1-8 (CDKM and BK CLA, ~120 C files). If the automatic tradeoff selects a different adder than the hardcoded sequence assumes, the wrong sequence is dispatched. Currently, `CLA_THRESHOLD` controls which adder is used, and hardcoded sequences are generated for both CDKM and BK CLA. But if the threshold changes dynamically (based on qubit budget), the mapping from width to hardcoded sequence becomes ambiguous.
-
-**How to avoid:**
-- Hardcoded sequences should be keyed by (width, adder_type), not just width. The existing separate caches (`precompiled_toffoli_QQ_add[]` for CDKM, `precompiled_toffoli_QQ_add_bk[]` for BK) already do this. The dispatch logic just needs to respect the tradeoff decision.
-- Verify: when tradeoff changes the adder selection at runtime, the correct cache array is accessed.
-
-**Phase to address:** Automatic depth/ancilla tradeoff phase (OPT-01).
-
----
-
-### Pitfall 14: Modular Toffoli Multiplication Qubit Count May Exceed Simulation Limit
-
-**What goes wrong:**
-An n-bit modular multiplication requires: n data qubits (x), n data qubits (result), 1 ancilla (Beauregard flag), plus adder ancilla per partial product. For CDKM RCA: 1 carry ancilla reusable = n+n+1+1 = 2n+2 qubits. But the comparison operations within modular reduction add more: each `>=` comparison creates a comparison result qubit. For n=8: minimum 18 qubits, more likely 25-30 with comparison temporaries. This approaches the simulation limit (17 qubits max for Qiskit).
-
-**How to avoid:**
-- Test modular Toffoli arithmetic at widths 2-4 initially (well within 17-qubit limit)
-- Use `matrix_product_state` simulator for wider tests (already used for division tests at 44+ qubits)
-- Track qubit count during implementation and set expectations: modular multiplication at width 8+ requires MPS simulator, not statevector
-
-**Phase to address:** Modular Toffoli arithmetic phase (FTE-02) -- testing strategy.
+**Confidence:** HIGH -- circuit depth is a well-known issue with quantum walk implementations. The Qrisp paper reports 3,968 circuit depth for a 4x4 Sudoku with 9 empty fields using 91 qubits.
 
 ---
 
@@ -327,49 +341,48 @@ Shortcuts that seem reasonable but create long-term problems.
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Python-level modular reduction (current `_reduce_mod`) | Works for QFT mode | Creates O(n) orphan qubits per reduction; BUG-MOD-REDUCE | Never for Toffoli mode; replace with C-level Beauregard |
-| Width-only threshold for RCA/CLA selection | Simple to implement | Ignores qubit budget; fails for nested operations | Acceptable for v5.0 as starting point |
-| Per-value caching for Toffoli CQ in parametric mode | Correct results | No compile-once benefit for Toffoli CQ | Acceptable if documented; true parametric only for QFT |
-| Using existing diffusion operator for quantum counting | Reuses code | Wrong sign convention yields wrong M estimate | Never -- must fix sign or use corrected formula |
-| Layer-based uncomputation for modular operations | Consistent with existing system | Unreliable under optimizer; known limitation | Never for large composite operations; use compile decorator |
+| Hardcoding branching factor as constant | Simpler amplitude preparation | Cannot handle real CSP instances with variable branching | MVP/demo only, must be replaced before any real use |
+| Using binary height encoding to save qubits | Saves n - ceil(log(n+1)) qubits | Controlled operations need multi-qubit equality checks instead of single-qubit controls, increasing gate count | When qubit budget is severely constrained (< 12 qubits available) |
+| Skipping phase estimation, using fixed iterations | Avoids controlled-walk complexity and precision qubits | No detection guarantee, cannot determine if solution exists | Acceptable for walk operator verification phase only |
+| Implementing predicate at Python level (not compiled) | Faster development iteration | Cannot use `.inverse()` for uncomputation, must manually reverse | Never for production; okay for initial prototyping |
+| Using qubit_saving_mode=False globally | Avoids uncomputation timing conflicts | Wastes qubits, may exceed 17-qubit limit sooner | Acceptable during development if qubit budget allows |
 
 ## Integration Gotchas
 
-Common mistakes when integrating these features with existing subsystems.
+Common mistakes when connecting quantum walk to existing framework subsystems.
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| Modular arithmetic + optimizer | Assuming optimizer preserves modular operation boundaries | Disable optimizer for modular sequences or use compile decorator |
-| Parametric compilation + Toffoli mode | Assuming classical params only affect gate angles | Toffoli CQ topology depends on classical value; per-value cache required |
-| Quantum counting + existing diffusion | Assuming diffusion sign is irrelevant | Use corrected formula M = N*sin^2(pi*(j/2^t - 1/2)) for W~ = -W |
-| Automatic tradeoff + modular arithmetic | Allowing CLA inside modular primitives | Force RCA inside modular operations (CLA subtraction broken) |
-| Compile cache + new mode flags | Keeping old cache key | Add arithmetic_mode and cla_override to compile cache key |
-| BUG-DIV-02 fix + modular arithmetic | Fixing bugs independently | Modular arithmetic depends on the same MSB comparison pattern; fix together |
+| `@ql.compile` for walk operator | Compiling the entire walk operator as a single function -- cache key does not capture tree structure | Compile the predicate and local diffusion separately; compose the walk operator from compiled primitives |
+| `ql.option('fault_tolerant')` | Forgetting that walk operator Ry rotations are NOT Toffoli-compatible -- fault_tolerant mode decomposes CCX but not Ry | Either (a) use QFT mode for walk operators, or (b) decompose Ry rotations into Clifford+T separately with `ql.option('toffoli_decompose')` |
+| `ql.amplitude_estimate()` / IQAE | Trying to use IQAE for walk detection -- IQAE estimates amplitude of a marked state, not eigenvalue of a unitary | Walk detection needs phase estimation on R_B * R_A, which is a different algorithm from IQAE. Cannot reuse the existing amplitude estimation API directly. |
+| `ql.grover_oracle` decorator | Wrapping the walk predicate with `@ql.grover_oracle` -- oracle validation checks for compute-phase-uncompute pattern which the walk predicate does not follow | Use `@ql.compile` only for the predicate; the walk operator handles the compute-use-uncompute pattern internally |
+| Diffusion operator reuse | Reusing `diffusion.py`'s X-MCZ-X pattern for local diffusion D_x | The walk's local diffusion is a reflection over |psi_x> (a specific superposition), NOT over |0...0>. New diffusion implementation needed. |
+| Phase proxy (`x.phase += theta`) | Using `x.phase += pi` inside the walk operator for phase marking | The walk operator uses diffusion-based marking (D_x = identity on accepted, -identity on rejected), not phase kickback. Different mechanism. |
 
 ## Performance Traps
 
-Patterns that work at small scale but fail as usage grows.
+Patterns that work at small scale but fail as instance size grows.
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Python-level modular reduction loop | Correct for 2-bit | O(n) orphan qubits per call | Width >= 4 |
-| CLA adder inside modular multiply | Faster single addition | O(n^2) ancilla across all partial products | Width >= 6 |
-| QPE-based quantum counting | Works for small N | Requires n+t qubits (exceeds 17) | Search space >= 5 qubits |
-| Controlled modular multiply without AND-ancilla reuse | Correct results | O(n^2) AND-ancilla qubits | Width >= 4 |
-| Parametric compile with Toffoli CQ | Cache hit appears to work | Wrong circuit topology | When classical value changes bit pattern |
+| O(max_d) controlled rotations per diffusion step | Walk operator works for binary trees but is too slow for higher-arity trees | Use QROM (quantum read-only memory) for the rotation lookup table for max_d > 4 | max_d > 8 |
+| Predicate evaluates ALL constraints at every node | Gate count per walk step is O(n * constraints) | Incremental predicate: only check constraints involving the newly assigned variable | Trees deeper than 4-5 levels |
+| Full statevector simulation for verification | Works for < 17 qubits | MPS backend for verification; additionally, use circuit_stats() for structural validation without simulation | > 17 qubits |
+| Unoptimized controlled walk step for phase estimation | Controlled-R_B * controlled-R_A doubles gate count per control qubit | Implement efficient controlled walk using ancilla decomposition of multi-controlled gates (existing MCX infrastructure) | Phase estimation with > 3 precision qubits |
 
 ## "Looks Done But Isn't" Checklist
 
 Things that appear complete but are missing critical pieces.
 
-- [ ] **Modular addition:** Often missing the auxiliary reset step (step 5 of Beauregard) -- verify ancilla returns to |0> after each call
-- [ ] **Modular multiplication:** Often missing the controlled variant for Shor's -- verify controlled modular multiply works with external QPE control
-- [ ] **Parametric compilation:** Often missing Toffoli CQ handling -- verify classical value changes trigger recompilation in Toffoli mode
-- [ ] **Compile cache key:** Often missing new mode flags -- verify cache miss when arithmetic_mode or cla_override changes
-- [ ] **Quantum counting:** Often using wrong sign formula -- verify count matches known-solution oracle for M=1,2,3
-- [ ] **Automatic tradeoff:** Often allowing CLA inside modular ops -- verify modular arithmetic forces RCA internally
-- [ ] **BUG-DIV-02 fix:** Often fixing division only -- verify the same MSB comparison pattern works for modular reduction
-- [ ] **Quantum counting IQAE:** Often returning float -- verify integer rounding produces correct M for exact solution counts
+- [ ] **Walk operator R_B * R_A:** Often missing correct root treatment -- verify root diffusion uses different amplitude from all other nodes
+- [ ] **Local diffusion D_x:** Often missing the parent state in the superposition -- verify |psi_x> includes |x> (parent) with weight 1/sqrt(d(x)+1), not just children
+- [ ] **Predicate integration:** Often missing uncomputation of predicate ancillae -- verify `circuit_stats()['current_in_use']` returns to pre-step value after each walk step
+- [ ] **Variable branching:** Often hardcodes max_d -- verify amplitude is correct for nodes with fewer than max_d valid children (d(x) < max_d)
+- [ ] **Detection mode:** Often missing phase estimation threshold -- verify detection correctly maps eigenvalue to boolean (solution exists / does not exist)
+- [ ] **Disjoint partition:** Often uses shared position register -- verify R_A qubits and R_B qubits have zero overlap via qubit index enumeration
+- [ ] **Controlled walk step:** Often forgets that phase estimation needs controlled-U^k -- verify walk operator supports controlled application and power k
+- [ ] **Accept/reject mutual exclusion:** Often missing runtime validation -- verify no node has both accept=True and reject=True in classical pre-check
 
 ## Recovery Strategies
 
@@ -377,13 +390,13 @@ When pitfalls occur despite prevention, how to recover.
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Modular add orphan qubits (Pitfall 2) | HIGH | Rewrite as C-level Beauregard primitive; cannot be patched at Python level |
-| Compile cache mode mismatch (Pitfall 3) | LOW | Add mode flags to cache key; one-line change |
-| CLA inside modular ops (Pitfall 4) | MEDIUM | Add mode flag to force RCA inside modular primitives |
-| Quantum counting sign error (Pitfall 5) | LOW | Switch to corrected formula; one-line change in counting |
-| Toffoli CQ parametric failure (Pitfall 6) | MEDIUM | Fall back to per-value caching for Toffoli CQ; document limitation |
-| Layer-based uncomputation failure (Pitfall 9) | HIGH | Migrate to compile-decorator-based uncomputation; architectural change |
-| BUG-DIV-02 compounds modular (Pitfall 1) | HIGH | Must fix BUG-DIV-02 first; blocks modular arithmetic |
+| Wrong amplitude coefficients (Pitfall 1) | MEDIUM | Fix the rotation angle formula, re-run all walk operator tests. No architectural change needed. |
+| Variable branching not implemented (Pitfall 2) | HIGH | Requires adding child-count register, controlled rotation lookup, and uncomputation. Touches walk operator internals. |
+| Predicate ancilla leak (Pitfall 3) | HIGH | May require redesigning predicate interface to use raw qubit allocation instead of qint/qbool. Touches framework boundaries. |
+| R_A/R_B overlap (Pitfall 4) | VERY HIGH | Requires changing the tree encoding (register layout). All walk operator code must be rewritten. |
+| Qubit budget exceeded (Pitfall 5) | MEDIUM | Simplify demo instance, switch to MPS backend, or switch height encoding from one-hot to binary. |
+| Uncomputation conflict (Pitfall 6) | HIGH | Requires moving walk operator below automatic uncomputation system. Significant refactoring. |
+| Detection vs. finding confusion (Pitfall 7) | LOW | API renaming and documentation fix. Code structure unchanged if detection was implemented correctly. |
 
 ## Pitfall-to-Phase Mapping
 
@@ -391,34 +404,31 @@ How roadmap phases should address these pitfalls.
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Pitfall 1: BUG-DIV-02 compounds modular | Bug fix phase (BUG-DIV-02) | MSB comparison qubits properly uncomputed; no orphan temporaries |
-| Pitfall 2: Modular reduction garbage qubits | Bug fix phase (BUG-MOD-REDUCE) | `circuit_stats()['current_in_use']` stable after modular operations |
-| Pitfall 3: Compile cache missing mode flags | Parametric compilation (PAR-01) | Cache miss on mode change; regression test |
-| Pitfall 4: CLA subtraction in modular ops | Depth/ancilla tradeoff (OPT-01) | Modular arithmetic forces RCA; assertion in code |
-| Pitfall 5: Quantum counting sign | Quantum counting (GADV-01) | `count_solutions` returns exact M for known-solution oracles |
-| Pitfall 6: Toffoli CQ parametric | Parametric compilation (PAR-01) | Toffoli CQ triggers recompilation on value change |
-| Pitfall 7: No qubit budget | Depth/ancilla tradeoff (OPT-01) | Width-threshold works; document limitation |
-| Pitfall 8: Counting qubit overhead | Quantum counting (GADV-01) | Use IQAE-based counting; test within 17-qubit limit |
-| Pitfall 9: Layer uncomputation failure | Modular arithmetic (FTE-02) | Use compile decorator for modular ops; avoid layer-based uncomputation |
-| Pitfall 10: Controlled modular CCCX | Modular arithmetic (FTE-02) | AND-ancilla reuse verified; qubit count matches expectation |
-| Pitfall 11: Oracle parametric caching | Parametric compilation (PAR-01) | Oracles force per-value caching for structural params |
-| Pitfall 12: Controlled diffusion for counting | Quantum counting (GADV-01) | Controlled Grover operator includes both oracle and diffusion |
-| Pitfall 13: Threshold vs hardcoded sequences | Depth/ancilla tradeoff (OPT-01) | Correct cache array accessed per tradeoff decision |
-| Pitfall 14: Modular qubit count | Modular arithmetic (FTE-02) | Width 2-4 with statevector; width 5+ with MPS simulator |
+| Pitfall 1 (Wrong amplitudes) | Phase 1: Local Diffusion Primitives | Statevector test: prepare |psi_x>, verify amplitudes match 1/sqrt(d(x)+1) |
+| Pitfall 2 (Variable branching) | Phase 2: Variable Branching | Test with non-uniform tree: d(x)=2 for some nodes, d(x)=1 for others |
+| Pitfall 3 (Predicate uncomputation) | Phase 1: Walk Operator Core | `circuit_stats()['current_in_use']` unchanged after walk step |
+| Pitfall 4 (R_A/R_B overlap) | Phase 1: Architecture Design | Qubit index enumeration test: R_A qubits and R_B qubits are disjoint sets |
+| Pitfall 5 (Qubit budget) | Phase 1: Architecture Design | Resource estimator outputs qubit count before circuit construction |
+| Pitfall 6 (Uncomputation conflict) | Phase 1: Walk Operator Core | Walk operator produces same result with qubit_saving=True and False |
+| Pitfall 7 (Detection vs. finding) | Phase 1: API Design | API names clearly distinguish detection from finding |
+| Pitfall 8 (Phase estimation precision) | Phase 3: Detection Mode | Detection returns correct result for known-solution test tree |
+| Pitfall 9 (Encoding convention) | Phase 1: Architecture Design | All code uses consistent height/depth convention |
+| Pitfall 10 (Accept/reject exclusion) | Phase 1: Predicate Interface | Classical pre-check validates no overlap on test tree |
+| Pitfall 11 (Root special case) | Phase 1: Local Diffusion | Root amplitude differs from non-root in statevector test |
+| Pitfall 12 (Circuit depth) | Phase 2: Demo Construction | Circuit depth < 10,000 for target demo instance |
 
 ## Sources
 
-- Codebase inspection: `src/quantum_language/qint_mod.pyx`, `src/quantum_language/compile.py`, `src/quantum_language/qint_division.pxi`, `c_backend/src/ToffoliAdditionCDKM.c`, `c_backend/src/ToffoliAdditionCLA.c`, `c_backend/src/hot_path_add_toffoli.c`, `c_backend/include/circuit.h`, `c_backend/include/toffoli_arithmetic_ops.h`
-- [Chung & Nepomechie, "Quantum counting, and a relevant sign" (arXiv:2310.07428)](https://arxiv.org/abs/2310.07428) -- sign ambiguity in quantum counting
-- [Beauregard, "Circuit for Shor's algorithm using 2n+3 qubits" (arXiv:quant-ph/0205095)](https://arxiv.org/abs/quant-ph/0205095) -- modular arithmetic circuit design
-- [A Comprehensive Study of Quantum Arithmetic Circuits (arXiv:2406.03867)](https://arxiv.org/html/2406.03867v1) -- depth-count tradeoffs, RCA vs CLA comparison
-- [Draper-Kutin-Rains-Svore CLA Adder (arXiv:quant-ph/0406142)](https://arxiv.org/abs/quant-ph/0406142) -- CLA ancilla requirements
-- [Optimal compilation of parametrised quantum circuits (arXiv:2401.12877)](https://arxiv.org/abs/2401.12877) -- parametric compilation constraints
-- [Quantum counting algorithm -- Wikipedia](https://en.wikipedia.org/wiki/Quantum_counting_algorithm) -- QPE-based counting overview
-- [Classiq: Quantum Counting Using IQAE](https://docs.classiq.io/latest/explore/algorithms/amplitude_estimation/quantum_counting/quantum_counting/) -- IQAE-based counting approach
-- Previous research: `.planning/research/PITFALLS-TOFFOLI-ARITHMETIC.md`, `.planning/research/PITFALLS-COMPILE-DECORATOR.md`, `.planning/research/PITFALLS_GROVER.md`
-- Known bugs: BUG-DIV-02 (MSB comparison leak), BUG-QFT-DIV (QFT division failures), BUG-MOD-REDUCE (_reduce_mod corruption)
+- [Montanaro 2015, "Quantum walk speedup of backtracking algorithms"](https://arxiv.org/abs/1509.02374) -- original algorithm definition, Theorem 1, Algorithms 1 and 2
+- [Martiel et al. 2019, "Practical implementation of a quantum backtracking algorithm"](https://arxiv.org/abs/1908.11291) -- practical O(n log d) qubit implementation, encoding choices
+- [Qrisp QuantumBacktrackingTree documentation](https://qrisp.eu/reference/Algorithms/QuantumBacktrackingTree.html) -- implementation details, accept/reject constraints, subspace optimization
+- [Qrisp Quantum Backtracking Sudoku paper (arXiv:2402.10060)](https://arxiv.org/html/2402.10060) -- rotation angles, circuit depth analysis, verification methodology
+- [Ambainis & Kokainis 2017, "Improved quantum backtracking algorithms using effective resistance estimates"](https://arxiv.org/abs/1711.05295) -- improved spectral gap analysis, effective resistance tuning
+- Quantum Assembly PROJECT.md -- known limitations (layer-based uncomputation, 17-qubit limit, QQ division ancilla leak)
+- Quantum Assembly PITFALLS_GROVER.md -- oracle uncomputation pitfalls (directly relevant to predicate integration)
+- Quantum Assembly oracle.py, diffusion.py, grover.py -- existing framework patterns for oracle and diffusion implementation
+- Quantum Assembly KNOWN-ISSUES.md -- QQ division ancilla leak pattern (analogous to predicate ancilla leak risk)
 
 ---
-*Pitfalls research for: v5.0 Advanced Arithmetic & Compilation (modular Toffoli arithmetic, parametric compilation, depth/ancilla tradeoff, quantum counting)*
-*Researched: 2026-02-24*
+*Pitfalls research for: v6.0 Quantum Walk Primitives (Montanaro 2015 Backtracking Speedup)*
+*Researched: 2026-02-26*

@@ -1,208 +1,247 @@
-# Stack Research: v5.0 Advanced Arithmetic & Compilation
+# Stack Research: v6.0 Quantum Walk Primitives (Montanaro 2015)
 
-**Domain:** Quantum programming framework -- modular Toffoli arithmetic, parametric compilation, automatic depth/ancilla tradeoff, quantum counting
-**Researched:** 2026-02-24
-**Confidence:** HIGH (all four features build on existing verified infrastructure with well-understood algorithms)
+**Domain:** Quantum walk operators for backtracking tree search (constraint satisfaction speedup)
+**Researched:** 2026-02-26
+**Confidence:** HIGH (core gate primitives all exist; additions are algorithmic Python composing existing infrastructure)
 
 ## Executive Summary
 
-The v5.0 milestone requires **zero new external dependencies**. All four features -- modular Toffoli arithmetic, parametric compilation, automatic depth/ancilla tradeoff, and quantum counting -- are algorithmic compositions of existing C backend primitives and Python infrastructure. The only stack action needed is declaring the already-used scipy dependency in `pyproject.toml`.
+The v6.0 quantum walk milestone requires **no new external dependencies** and **no new C-level gate primitives**. The existing gate set -- Ry, CRy, H, CH, X, CX, MCZ, MCX, P, CP -- is sufficient to implement every operator from Montanaro's 2015 backtracking algorithm. What is needed is a new Python-level `quantum_walk` module that composes these existing primitives into the walk operators R_A, R_B, and the local diffusion D_x with correct amplitudes based on variable branching factor d(x).
+
+The detection mode (Montanaro Algorithm 1) requires estimating the eigenvalue of the walk operator R_B R_A. Rather than building full Quantum Phase Estimation (QPE) from scratch, the existing IQAE infrastructure (`ql.amplitude_estimate()`) can be adapted to work with walk-step powers instead of Grover-iterate powers, reusing the entire verified estimation pipeline.
+
+The primary engineering work is algorithmic composition in Python -- about 400-600 lines in a new `quantum_walk.py` module, following the same patterns as `grover.py` and `amplitude_estimation.py`.
 
 ## Recommended Stack
 
-### Core Technologies (Unchanged)
+### Core Technologies (All Existing -- No Changes)
 
 | Technology | Version | Purpose | Status |
 |------------|---------|---------|--------|
-| Python | >=3.11 | Frontend, algorithm logic | **Existing** -- no change |
-| Cython | >=3.0.11,<4.0 | C/Python bindings | **Existing** -- no change |
-| C (gcc/clang, C11) | System | Backend gate/circuit engine | **Existing** -- no change |
-| NumPy | >=1.24 | Array ops, angle math | **Existing** -- no change |
-| Pillow | >=9.0 | Circuit visualization | **Existing** -- no change |
-| Qiskit | >=1.0 | Verification (optional) | **Existing** -- no change |
-| qiskit-aer | >=0.13 | Simulation backend (optional) | **Existing** -- no change |
+| Python | >=3.11 | Frontend quantum_walk module, algorithm orchestration | **Existing** -- no change |
+| Cython | >=3.0.11,<4.0 | Gate emission (emit_ry, emit_h, emit_x, emit_mcz, emit_p) | **Existing** -- no change |
+| C backend (gcc/clang, C11) | System | gate.h: ry, cry, h, ch, x, cx, mcz, mcx, p, cp | **Existing** -- no change |
+| NumPy | >=1.24 | Angle calculations (arctan, sqrt) | **Existing** -- no change |
+| SciPy | >=1.10 | IQAE confidence intervals (already used by amplitude_estimation.py) | **Existing** -- no change |
+| Qiskit | >=1.0 | Verification via sim_backend.py | **Existing** -- no change |
+| qiskit-aer | >=0.13 | Simulation (statevector + measurement) | **Existing** -- no change |
+| Pillow | >=9.0 | Circuit visualization (optional) | **Existing** -- no change |
 
-### Critical Fix: Undeclared scipy Dependency
+### New Module (Pure Python, No New Dependencies)
 
-| Technology | Version | Purpose | Status |
-|------------|---------|---------|--------|
-| SciPy | >=1.10 | `beta.ppf` for Clopper-Pearson CI in IQAE | **Used but undeclared** -- add to pyproject.toml |
+| Module | Lines (est.) | Purpose | Built From |
+|--------|-------------|---------|------------|
+| `src/quantum_language/quantum_walk.py` | 400-600 | Walk operators, local diffusion, tree encoding, detection | Composes emit_ry, emit_h, emit_x, emit_mcz, emit_p via existing _gates.pyx |
 
-`amplitude_estimation.py` line 29 imports `from scipy.stats import beta` but scipy is absent from `pyproject.toml` `[project].dependencies`. Quantum counting (`ql.count_solutions`) will reuse the IQAE infrastructure, making this dependency critical. SciPy >=1.10 because it introduced improved `beta.ppf` numerical stability via the Boost Math C++ backend. Current stable is v1.17.0.
+## What Exists vs What Is Needed
 
-### Supporting Libraries (Unchanged)
+### Already Available (DO NOT Re-implement)
 
-| Library | Version | Purpose | When Used |
-|---------|---------|---------|-----------|
-| pytest | >=7.0 | Test runner | Dev dependency, existing |
-| pytest-cov | >=6.0 | Coverage | Dev dependency, existing |
-| ruff | >=0.1.0 | Linting | Dev dependency, existing |
-
-### Development Tools (Unchanged)
-
-| Tool | Purpose | Notes |
-|------|---------|-------|
-| Cython >=3.0.11 | Extension compilation | `CYTHON_USE_SYS_MONITORING=0` still needed on Python 3.13 for coverage |
-| gcc/clang | C backend compilation | `-Os` release, `-O3` debug |
-| pre-commit | Code quality hooks | Existing |
-
-## Feature-Specific Stack Analysis
-
-### 1. Modular Toffoli Arithmetic (FTE-02)
-
-**Existing building blocks (verified, tested):**
-
-| C Function | Location | Purpose |
-|------------|----------|---------|
-| `toffoli_QQ_add(bits)` | `ToffoliAdditionCDKM.c` | a += b via CDKM RCA |
-| `toffoli_CQ_add(bits, value)` | `ToffoliAdditionCDKM.c` | a += classical_value |
-| `toffoli_cQQ_add(bits)` | `ToffoliAdditionCDKM.c` | Controlled a += b |
-| `toffoli_cCQ_add(bits, value)` | `ToffoliAdditionCDKM.c` | Controlled a += classical_value |
-| `toffoli_mul_cq(...)` | `ToffoliMultiplication.c` | ret = a * classical_value |
-| `toffoli_cmul_cq(...)` | `ToffoliMultiplication.c` | Controlled ret = a * classical_value |
-| `IntegerComparison` | `IntegerComparison.c` | a >= b, a < b, etc. |
-
-**Existing Python layer:**
-
-| Component | Location | Purpose |
-|-----------|----------|---------|
-| `qint_mod` class | `qint_mod.pyx` | Modular arithmetic with classical modulus N |
-| `_reduce_mod()` | `qint_mod.pyx:107` | Comparison + conditional subtraction loop |
-| `_wrap_result()` | `qint_mod.pyx:133` | Wrap plain qint as qint_mod |
-
-**What needs to be built (no new deps):**
-
-The modular arithmetic hierarchy for Shor's algorithm is:
-
-```
-Layer 1: modular_add(a, b, N)          = add(a,b); if result >= N: subtract N
-Layer 2: controlled_modular_add(a,b,N,ctrl) = controlled version of Layer 1
-Layer 3: modular_mul(a, c, N)          = loop of controlled_modular_add (shift-and-add)
-Layer 4: controlled_modular_mul(a,c,N,ctrl) = controlled version of Layer 3
-Layer 5: modular_exp(a, x, N)          = repeated controlled_modular_mul (square-and-multiply)
-```
-
-Each layer composes exclusively from existing C functions. Following Haner-Roetteler-Svore (2017): purely Toffoli-based, O(n^3 log n) total gates, 2n+2 qubits. The existing `_reduce_mod` pattern is correct in structure (compare + conditional subtract); the BUG-MOD-REDUCE is an implementation issue, not an architectural one.
-
-**Implementation location:** New C file `ToffoliModular.c` for optimized modular add/sub, or pure Python composition at `qint_mod.pyx` level using existing hot paths.
-
-**Stack impact:** Zero new dependencies.
-
-### 2. Parametric Compilation (PAR-01, PAR-02)
-
-**Existing infrastructure:**
-
-| Component | Location | How It Works |
-|-----------|----------|-------------|
-| `CompiledFunc.__call__` | `compile.py:594` | Classify args -> cache lookup -> capture or replay |
-| `_classify_args` | `compile.py` | Splits args into quantum (qint/qarray) and classical (int) |
-| Cache key structure | `compile.py:608` | `(tuple(classical_args), tuple(widths), control_count, qubit_saving)` |
-| Gate list storage | `compile.py` | List of dicts with `type`, `target`, `angle`, `controls`, etc. |
-
-**The problem parametric compilation solves:**
-
-Currently, `f(x, 5)` and `f(x, 7)` produce two separate cache entries because the classical value `5` vs `7` is part of the cache key. For modular arithmetic where the modulus N is a classical parameter but the circuit structure is identical (only CQ gate X-patterns differ), this means N separate compilations.
-
-**Implementation approach (pure Python, no new deps):**
-
-1. Add `parametric` kwarg to `@ql.compile`: `@ql.compile(parametric=['modulus'])`
-2. During capture, detect CQ operations and store classical value as a symbolic reference: `{'type': _X, 'target': 3, 'param_ref': 'modulus', 'bit_index': 2}`
-3. Cache key excludes parametric args: `(tuple(non_parametric_classical), tuple(widths), control_count, qubit_saving)`
-4. During replay, substitute concrete values: iterate gate list, resolve `param_ref` to concrete int, emit/skip X gates per bit
-
-**What NOT to use:**
-
-| Avoid | Why | Use Instead |
-|-------|-----|-------------|
-| SymPy | 20+ transitive deps, designed for continuous symbolic algebra; our params are discrete integers | Simple dict lookup / lambda closures for X-gate bit selection |
-| Qiskit Parameter/ParameterVector | For variational circuits with continuous rotation angles; our CQ operations use integer bit patterns | Custom param_ref in gate dict |
-| Abstract Syntax Tree (AST) analysis | Fragile, version-dependent Python internals | Gate-level capture already works |
-
-**Stack impact:** Zero new dependencies. Refactoring of `compile.py` only.
-
-### 3. Automatic Depth/Ancilla Tradeoff (OPT-01)
-
-**Existing infrastructure:**
-
-| Component | Location | Current Behavior |
+| Primitive | Location | How Walk Uses It |
 |-----------|----------|-----------------|
-| `CLA_THRESHOLD` | `hot_path_add_toffoli.c:24` | Hardcoded `= 2` (use CLA for width >= 2) |
-| `circuit_s.cla_override` | `_core.pxd:145` | 0 = auto CLA, 1 = force RCA |
-| `ql.option('cla', bool)` | `_core.pyx:229` | Python API for CLA toggle |
-| `toffoli_dispatch_qq` | `hot_path_add_toffoli.c` | Try CLA first, fallback to RCA |
-| `toffoli_dispatch_cq` | `hot_path_add_toffoli.c` | Try CLA first, fallback to RCA |
-| `bk_cla_ancilla_count(bits)` | `ToffoliAdditionCLA.c` | Ancilla cost for BK CLA |
+| `emit_ry(target, angle)` | `_gates.pyx:37` | Local diffusion D_x: Ry rotations for walk state amplitudes |
+| `emit_h(target)` | `_gates.pyx:80` | Child state superposition in U_x preparation |
+| `emit_x(target)` | `_gates.pyx:60` | Bit flips for phase marking, state prep |
+| `emit_mcz(target, controls)` | `_gates.pyx:114` | Phase flip on accept/reject in D_x |
+| `emit_p(target, angle)` / `emit_p_raw` | `_gates.pyx:183/159` | Phase rotations for QPE (if used) |
+| CRy gate (C level) | `gate.h:39 cry()` | Controlled Ry for variable branching controlled on height register |
+| CH gate (C level) | `gate.h:40 ch()` | Controlled Hadamard in psi_prep |
+| MCX decomposition | `gate.h:46 mcx()` | Multi-controlled operations in walk operators |
+| CX gate (C level) | `gate.h:44 cx()` | SWAP decomposition (3 CX = 1 SWAP), parity computation |
+| `_allocate_qubit()` | `_core.pyx:949` | Ancilla allocation for height register, QPE |
+| `_deallocate_qubits()` | `_core.pyx:967` | Ancilla cleanup after walk step |
+| `@ql.compile` decorator | `compile.py` | Cache and replay walk operator circuits |
+| `GroverOracle` pattern | `oracle.py` | Reusable compute-uncompute pattern for predicate |
+| `_predicate_to_oracle()` | `oracle.py:162` | Lambda tracing for accept/reject predicates |
+| `diffusion()` X-MCZ-X | `diffusion.py:77` | Reusable sub-pattern; D_x generalizes this |
+| `_collect_qubits()` | `diffusion.py:21` | Extract physical qubit indices from registers |
+| `amplitude_estimate()` | `amplitude_estimation.py:482` | Adaptable for walk-operator detection mode |
+| `_build_and_simulate()` | `amplitude_estimation.py:337` | Circuit build + multi-shot simulation pattern |
+| `circuit()`, `option()` | `_core.pyx` | Circuit creation and mode configuration |
+| `to_openqasm()` | `openqasm.pyx` | Export for Qiskit verification |
+| `load_qasm()`, `simulate()` | `sim_backend.py` | Verification simulation pipeline |
+| Controlled context (`with qbool:`) | `qint.pyx` | Auto-derives CRy/CH from Ry/H when inside controlled block |
 
-**Known tradeoff metrics:**
+### New Primitives Needed (All Composable from Existing Gates)
 
-| Adder | Depth | Ancilla | Toffoli Count | Best For |
-|-------|-------|---------|---------------|----------|
-| CDKM RCA | O(n) (2n-1 layers) | 1 | 2n-1 Toffoli | Ancilla-constrained circuits |
-| BK CLA | O(log n) | 2*(n-1) + tree_merges | ~4n Toffoli | Depth-constrained circuits |
+| Primitive | Complexity | Built From | Purpose |
+|-----------|-----------|------------|---------|
+| **Tree state encoding** | Medium | `_allocate_qubit()`, qint for branch registers | One-hot height register + branch array encoding tree vertices |
+| **Walk state prep U_x** | Medium | `emit_ry(phi)`, `emit_h`, controlled context | Prepare \|psi_x> = (d(x)+1)^{-1/2} (\|x> + sum \|child>) |
+| **Local diffusion D_x** | Medium | U_x, U_x_dag, MCZ | D_x = U_x_dag . phase_flip . U_x (identity for marked vertices) |
+| **R_A operator** | Low | D_x controlled on even-depth parity | Direct sum of D_x across even-parity depth vertices |
+| **R_B operator** | Low | D_x controlled on odd-depth parity + root reflection | Direct sum of D_x across odd-parity depth plus \|r><r\| |
+| **Walk step U = R_B R_A** | Low | R_A followed by R_B | One complete walk step |
+| **Detection routine** | Medium | Walk step powers + threshold measurement (or IQAE) | Algorithm 1: does a solution exist? |
 
-**What needs to change (C-level, no new deps):**
+## Detailed Technical Analysis
 
-1. Add `adder_strategy` field to `circuit_s` struct: enum `{ADDER_AUTO, ADDER_PREFER_DEPTH, ADDER_PREFER_ANCILLA}`
-2. Replace static `CLA_THRESHOLD` with dynamic decision in `toffoli_dispatch_qq`/`toffoli_dispatch_cq`:
-   - `ADDER_PREFER_DEPTH`: always try CLA first (current behavior)
-   - `ADDER_PREFER_ANCILLA`: always use RCA (current `cla_override=1` behavior)
-   - `ADDER_AUTO`: use CLA when width >= 4 AND depth reduction > 2x AND ancilla budget available
-3. Add `ql.option('adder_strategy', 'auto'|'depth'|'ancilla')` Python API
+### 1. Local Diffusion D_x (The Core Primitive)
 
-**Stack impact:** C struct change + option handler. Zero new dependencies.
+**Mathematical definition:**
+For non-marked vertex x with d(x) children, the walk state is:
+```
+|psi_x> = (1 / sqrt(d(x) + 1)) * (|x> + sum_{y: child of x} |y>)
+```
 
-### 4. Quantum Counting (GADV-01)
+The diffusion operator is:
+- D_x = I - 2|psi_x><psi_x| for non-marked (neither accepted nor rejected) vertices
+- D_x = I (identity) for accepted vertices
+- D_x reflects away from children for rejected vertices (prunes branch)
 
-**Existing infrastructure:**
+**Circuit implementation pattern (validated against Qrisp reference):**
+```
+D_x = U_x_dag . phase_flip_on_|x> . U_x
+```
 
-| Component | Location | Purpose |
-|-----------|----------|---------|
-| `amplitude_estimate()` | `amplitude_estimation.py:482` | Full IQAE implementation |
-| `_iqae_loop` | `amplitude_estimation.py:390` | Core IQAE algorithm |
-| `_build_and_simulate` | `amplitude_estimation.py:337` | Build circuit + simulate multi-shot |
-| `_count_good_states` | `amplitude_estimation.py:188` | Count satisfying outcomes |
-| `_clopper_pearson_confint` | `amplitude_estimation.py:219` | Confidence intervals (uses scipy.stats.beta) |
-| `AmplitudeEstimationResult` | `amplitude_estimation.py:52` | Result wrapper with float-like behavior |
-| Oracle synthesis | `oracle.py`, `grover.py` | Lambda -> GroverOracle conversion |
+Where U_x creates the walk state superposition from \|x>. The phase flip uses MCZ controlled on accept/reject qbools (existing `emit_mcz`).
 
-**What needs to be built:**
+**Rotation angle for walk state preparation:**
+```python
+import math
 
-`ql.count_solutions` is a thin wrapper:
+# For non-root vertex with branching factor deg (e.g., deg=2 for binary):
+phi = 2 * math.atan(math.sqrt(deg))
+# Binary tree: phi = 2 * atan(sqrt(2)) approx 1.9106 radians
+
+# For root vertex (absorbs depth factor):
+phi_root = 2 * math.atan(math.sqrt(deg * max_depth))
+# Binary depth-3: phi_root = 2 * atan(sqrt(6)) approx 2.3562 radians
+```
+
+**Why Ry at this angle:** The Ry(phi) rotation on a qubit starting in \|0> produces:
+```
+cos(phi/2)|0> + sin(phi/2)|1>
+```
+With phi = 2*atan(sqrt(deg)):
+```
+cos(atan(sqrt(deg))) = 1/sqrt(deg+1)
+sin(atan(sqrt(deg))) = sqrt(deg)/sqrt(deg+1)
+```
+This gives amplitude 1/sqrt(deg+1) for \|0> (parent) and sqrt(deg)/sqrt(deg+1) distributed across children, matching the walk state definition. For uniform branching, each child gets 1/sqrt(deg+1) after further splitting with Hadamard gates.
+
+**Existing gate coverage:** emit_ry for the rotation, emit_h for child splitting, emit_mcz for phase flip. Complete.
+
+### 2. Tree State Encoding
+
+**Register layout:**
+```
+|vertex> = |branch_qa[0]>|branch_qa[1]>...|branch_qa[d-1]>|h[0]>|h[1]>...|h[d]>
+```
+
+- **Height register (h):** One-hot encoding with (max_depth + 1) qubits. Root has h = max_depth. Leaves have h = 0. One-hot simplifies even/odd parity selection to a single XOR on alternating height qubits.
+- **Branch register (branch_qa):** Array of max_depth entries, each encoding which child was taken at that level. For binary tree: 1 qubit per level. For k-ary tree: ceil(log2(k)) qubits per level.
+
+**Implementation approach:** Use raw `_allocate_qubit()` for the one-hot height register (these are individually controlled, not treated as an integer). Use `qint` width-1 registers for binary branch entries, or multi-bit qint for higher branching.
+
+**Why one-hot for height:** Parity selection (even/odd depth) reduces to XOR on a subset of height qubits: `for i in range(max_depth + 1): if i % 2 == target_parity: CX(h[i], parity_qubit)`. This is O(n) CX gates, simpler than extracting parity from binary encoding.
+
+### 3. R_A and R_B via Parity-Controlled Diffusion
+
+**Key insight from Qrisp reference:** R_A and R_B are NOT explicit loops over all tree vertices. They are implemented as a single diffusion operation controlled on the height parity bit:
 
 ```python
-def count_solutions(oracle, *, width=None, widths=None, epsilon=1.0,
-                    confidence_level=0.95, **kwargs):
-    """Estimate M = number of solutions satisfying oracle.
+def qstep_diffuser(self, even):
+    # Compute parity of current height
+    parity_qubit = _allocate_qubit()
+    for i in range(max_depth + 1):
+        if (i % 2 == 0) == even:
+            emit_x_controlled(h[i], parity_qubit)  # CX
 
-    Uses IQAE: M = N * a, where a = sin^2(theta) is the amplitude estimate
-    and N = 2^(sum of register widths) is the search space size.
-    """
-    # Compute search space size
-    N = 2 ** sum(register_widths)
+    # Apply local diffusion D_x controlled on parity
+    with parity_qubit:  # controlled context
+        apply_local_diffusion(...)  # U_x_dag . phase . U_x
 
-    # Scale epsilon for counting precision: epsilon_a = epsilon / N
-    epsilon_a = epsilon / N
+    # Uncompute parity
+    for i in range(max_depth + 1):
+        if (i % 2 == 0) == even:
+            emit_x_controlled(h[i], parity_qubit)  # CX (self-inverse)
 
-    result = amplitude_estimate(oracle, width=width, widths=widths,
-                                 epsilon=epsilon_a,
-                                 confidence_level=confidence_level, **kwargs)
-    M = N * float(result)
-    ci = (N * result.confidence_interval[0], N * result.confidence_interval[1])
-    return QuantumCountingResult(M, N, result.num_oracle_calls, ci)
+    _deallocate_qubits(parity_qubit, 1)
 ```
 
-The math: Brassard-Hoyer-Mosca-Tapp (1998) showed quantum counting = amplitude estimation where `M = N * sin^2(theta)`. Since IQAE already estimates `a = sin^2(theta)`, the conversion is `M = N * a`.
+The walk step is then:
+```python
+def quantum_step(self):
+    self.qstep_diffuser(even=not self.max_depth % 2)  # R_A
+    self.qstep_diffuser(even=self.max_depth % 2)       # R_B
+```
 
-**Stack impact:** New `counting.py` (~100-150 lines). Reuses all IQAE + oracle infrastructure. Zero new dependencies.
+**Why this works:** The tree state is in superposition. The controlled diffusion acts on each branch of the superposition independently. A vertex at even depth has its parity qubit in state \|1>, activating the diffusion. Vertices at odd depth have parity qubit \|0>, leaving them unchanged. This achieves the direct sum implicitly.
+
+**Existing support:** The `with qbool:` controlled context in the framework auto-derives CRy from Ry, CH from H, etc. -- exactly what is needed for height-parity-controlled diffusion.
+
+### 4. Detection Mode
+
+**Montanaro Algorithm 1 (Detect):**
+1. Prepare initial state \|r> (root vertex)
+2. Apply walk step U = R_B R_A repeatedly O(sqrt(T * n)) times
+3. Measure: if walk state has non-trivial component at eigenvalue != 1, a marked vertex exists
+
+**Implementation options:**
+
+| Approach | Qubit Overhead | Circuit Depth | Reuses Existing |
+|----------|---------------|---------------|-----------------|
+| **IQAE adaptation** | 0 extra (reuses data qubits) | Moderate (iterative) | Yes -- `amplitude_estimate()` pipeline |
+| Full QPE | p ancilla qubits | Deep (controlled walk powers) | Partial -- needs inverse QFT |
+| Repeated measurement | 0 extra | Variable | Yes -- simple multi-shot |
+
+**Recommended: IQAE adaptation** because:
+1. Already implemented and verified (`amplitude_estimation.py`)
+2. No additional ancilla qubits (critical with 17-qubit limit)
+3. QFT-free (no inverse QFT circuit to build)
+4. The walk step R_B R_A substitutes for the Grover iterate in the IQAE power sequence
+
+The adaptation replaces `oracle + diffusion` in `_build_and_simulate()` with `walk_step()`, while keeping the IQAE outer loop, confidence interval computation, and result reporting identical.
+
+### 5. Predicate Integration (accept/reject)
+
+**User API design:**
+```python
+def detect(accept, reject, *, max_depth, branching_factor=2, epsilon=0.01):
+    """Detect if a solution exists in the backtracking tree.
+
+    Parameters
+    ----------
+    accept : callable
+        accept(node_state) -> qbool. True if node is a solution.
+    reject : callable
+        reject(node_state) -> qbool. True if subtree should be pruned.
+    max_depth : int
+        Maximum tree depth.
+    branching_factor : int
+        Children per node (default 2 for binary).
+    """
+```
+
+**Predicate tracing:** Reuse the `_predicate_to_oracle` tracing mechanism from `oracle.py`. Call `accept(branch_registers)` and `reject(branch_registers)` with real qint objects. The framework's existing comparison operators capture gates automatically. The resulting qbools control the MCZ phase in the local diffusion.
+
+**Constraint (from Qrisp docs):** Both accept and reject must:
+- Not modify the tree state registers
+- Uncompute all temporary qubits (ancilla delta = 0)
+- Never both return True on the same node
+
+These constraints match the existing `@ql.grover_oracle` validation (ancilla delta check, compute-phase-uncompute pattern).
+
+## Qubit Budget Analysis (17-Qubit Simulator Limit)
+
+| Component | Binary Depth 2 | Binary Depth 3 | Notes |
+|-----------|----------------|-----------------|-------|
+| Height register (one-hot) | 3 | 4 | max_depth + 1 qubits |
+| Branch register | 2 | 3 | max_depth qubits (1 per level for binary) |
+| Parity ancilla | 1 | 1 | Allocated/deallocated within walk step |
+| Accept/reject ancilla (est.) | 2-3 | 2-3 | Depends on predicate complexity |
+| **Total (detection only)** | **8-9** | **10-11** | Fits within 17-qubit limit |
+| QPE ancillae (if used) | +3-4 | +3-4 | Only if full QPE approach is chosen |
+| **Total (with QPE)** | **11-13** | **13-15** | Tight but feasible for depth 3 |
+
+**Recommended demo target:** Binary tree, depth 2-3, simple SAT predicate (2-3 variables). This keeps total qubit count at 10-11, well within the simulator limit with margin for predicate ancillae.
 
 ## Installation
 
 ```bash
-# Fix: Add scipy to declared dependencies in pyproject.toml
-# Change:
-#   dependencies = ["numpy>=1.24", "Pillow>=9.0"]
-# To:
-#   dependencies = ["numpy>=1.24", "Pillow>=9.0", "scipy>=1.10"]
+# No new packages needed. Everything required is already installed.
+# No pip install, no npm install, no new dependencies.
 
 # Build (unchanged):
 pip install -e ".[dev,verification]"
@@ -212,96 +251,73 @@ pip install -e ".[dev,verification]"
 
 | Recommended | Alternative | When to Use Alternative |
 |-------------|-------------|-------------------------|
-| Haner-Roetteler-Svore modular approach (Toffoli-only) | Beauregard QFT-based modular addition | If QFT mode were the default. But `fault_tolerant` is default and Toffoli-only is required for error correction readiness |
-| Python closure parametric substitution | SymPy symbolic compilation | If parametric params were continuous rotation angles needing differentiation (variational algorithms). Our params are discrete integers |
-| IQAE-based quantum counting | QPE-based quantum counting | If exact eigenvalue estimation were needed (requires QFT circuit, counting register qubits, not implemented). IQAE is already implemented, fewer qubits, no QFT |
-| Dynamic CLA/RCA dispatch with cost model | Static `CLA_THRESHOLD = 2` | Never -- static threshold ignores circuit context (ancilla pressure, depth budget) |
-| Conditional subtraction mod reduce | Barrett/Montgomery reduction | If moduli exceeded 64 bits or if reduce_mod were called in tight inner loops. Conditional subtraction is simpler, correct for width 1-64, and composes from existing primitives |
-| Composition from existing C functions | New dedicated modular arithmetic C module | Start with composition; only create dedicated C functions if profiling shows performance bottleneck in inner loop of modular multiplication |
+| One-hot height encoding | Binary height encoding | Binary uses fewer qubits (ceil(log2(n+1)) vs n+1) but requires complex parity extraction circuit. Use binary only if qubit count is extremely tight (depth > 4). One-hot matches Qrisp reference and simplifies parity to XOR |
+| IQAE for detection | Full QPE circuit | QPE is the textbook Algorithm 1. Use QPE only if eigenvalue precision beyond IQAE capability is needed. For v6.0 demos, IQAE is practical and reuses existing code |
+| Pure Python quantum_walk.py | C-level walk operators | C implementation only worthwhile if walk operator compilation becomes a bottleneck. Walk step is O(n) gates for depth n -- negligible compilation time |
+| Controlled context for R_A/R_B | Explicit controlled gate emission | Controlled context (`with qbool:`) auto-derives CRy/CH from Ry/H, matching existing codebase patterns. Explicit emission only if controlled context has bugs |
+| Single quantum_walk.py module | Separate files (tree.py, diffusion.py, detect.py) | Single module matches existing pattern (grover.py = 563 lines, amplitude_estimation.py = 633 lines). Split only if module exceeds ~800 lines |
+| @ql.compile for walk step | No caching | Walk step is called O(sqrt(T)) times. Caching avoids re-generation. Only skip caching if walk step parameters vary per call |
+| accept/reject callable pair | Single 3-valued predicate | Two callables is cleaner API (matches Qrisp), avoids ternary return value encoding. Single predicate only if user ergonomics demand it |
 
 ## What NOT to Use
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| SymPy | Massive dependency tree (~20 transitive packages), designed for continuous symbolic math. Our parametric values are integers controlling X-gate bit patterns | Python closures / dict substitution in captured gate lists |
-| Qiskit Parameter/ParameterVector | Designed for variational algorithms (QAOA, VQE) with continuous rotation parameters. Incompatible with our capture-replay model | Custom `param_ref` field in gate dict for integer CQ parameters |
-| QPE for quantum counting | Requires QFT circuit construction (not implemented), counting register qubits (extra overhead), more complex than IQAE | `ql.amplitude_estimate()` with `M = N * a` conversion |
-| Gidney 2025 CQ adder (constant workspace) | Uses "venting" (X-basis measurement + classical feedforward) which the framework does not support. Would require mid-circuit measurement infrastructure | Standard temp-register CQ approach (`toffoli_CQ_add`) already implemented and verified |
-| External modular arithmetic libraries | Unnecessary dependency for something trivially composable from existing Toffoli add/sub/mul/compare | Layer-by-layer composition from existing C primitives |
-| New Cython modules | v5.0 features are either C-level (modular arith, tradeoff) or pure Python (parametric, counting) | C functions for performance-critical paths, pure Python for algorithm orchestration |
-
-## Stack Patterns by Feature
-
-**For modular Toffoli arithmetic:**
-- Implement modular add/sub as C functions in new `ToffoliModular.c` (or extend `ToffoliAdditionHelpers.c`)
-- Pattern: `plain_add(a, b)` -> `compare(result, N)` -> `controlled_subtract(result, N, cmp_flag)` -> `uncompute(cmp_flag)`
-- Expose via Cython `cdef extern` in `_core.pxd`
-- Rewrite `qint_mod._reduce_mod` to call new C-level modular operations directly
-- Fix BUG-MOD-REDUCE by using Beauregard-style ancilla for overflow detection instead of comparison-based approach
-
-**For parametric compilation:**
-- Modify `CompiledFunc._classify_args` to detect parametric-marked args
-- Change cache key: parametric args excluded (wildcard) -> single cache entry for all classical values
-- Store gate list with `param_ref` metadata on CQ gates instead of resolved bit patterns
-- On replay: evaluate param_ref -> concrete int -> emit/skip X gates per bit position
-- Backwards compatible: default behavior unchanged unless `parametric=` specified
-
-**For automatic depth/ancilla tradeoff:**
-- Add `adder_strategy` enum to `circuit_s` struct in `qubit_allocator.h`
-- Modify `toffoli_dispatch_qq`/`toffoli_dispatch_cq` decision tree in `hot_path_add_toffoli.c`
-- Expose via `ql.option('adder_strategy', 'auto')` in `_core.pyx`
-- Auto mode: prefer CLA at width >= 4, fall back to RCA if ancilla count exceeds threshold
-
-**For quantum counting:**
-- New `counting.py` in `src/quantum_language/`
-- `QuantumCountingResult` class wrapping count estimate + IQAE metadata
-- `count_solutions()` function: resolve widths, compute N, call `amplitude_estimate`, convert `a -> M = N * a`
-- Register in `__init__.py` as `ql.count_solutions`
+| New C-level gate types | Existing gate set (Ry, CRy, H, CH, X, CX, MCZ, MCX, P, CP) covers everything. Adding C gates increases binary size and maintenance for zero benefit | Compose existing C gates via Python-level emit_* functions |
+| Native SWAP gate | Framework has no SWAP gate. Decompose as 3 CX if needed. Most "swaps" in the walk can be Python-level qubit reference reassignment (zero gates) | 3 CX gates (emit_x with control) or Python pointer swap |
+| qint.branch() for walk state prep | branch() applies uniform Ry to ALL qubits in a register. Walk state prep needs targeted per-qubit rotations with angles depending on d(x) and vertex height | Direct emit_ry() calls at specific qubit indices with computed angles |
+| Full QFT for QPE inverse | Existing C-level QFT (gate.h: QFT/QFT_inverse) operates on sequence_t, not compatible with Python-level circuit building. Also, QFT adds significant depth | Adapt IQAE (no QFT needed); or build inverse QFT from emit_h + emit_p if QPE is required later |
+| NetworkX or graph libraries | Tree structure is implicit in the qubit encoding. No explicit graph data structure needed | Height register + branch array encodes tree implicitly in superposition |
+| New Cython modules | No performance-critical loop in walk step compilation. Python-level composition is sufficient | Pure Python quantum_walk.py composing existing Cython emit_* functions |
+| Qrisp-style iSWAP/XX+YY gates | These are Qrisp-specific decomposition choices. Our framework's Ry + H + controlled-context achieves the same walk state preparation without exotic gates | Standard Ry rotations + Hadamard + controlled context |
+| External quantum walk libraries | No Python library provides composable walk primitives that integrate with our gate-emission model | Build from scratch using existing gate infrastructure |
 
 ## Version Compatibility
 
 | Package | Compatible With | Notes |
 |---------|-----------------|-------|
-| scipy>=1.10 | Python >=3.9, NumPy >=1.22 | Already implicitly required; v1.17.0 (stable) supports Python 3.13 |
-| Cython >=3.0.11,<4.0 | Python 3.11-3.13 | No new .pyx modules needed for v5.0 |
-| qiskit>=1.0 | Python >=3.8 | Verification only, no change |
-| qiskit-aer>=0.13 | qiskit>=1.0 | Verification only, no change |
-
-**Python 3.13 compatibility confirmed:** SciPy 1.17.0 supports Python 3.13. The `CYTHON_USE_SYS_MONITORING=0` workaround in `setup.py` remains necessary for Cython 3.2.x coverage builds on Python 3.13+.
+| Python 3.11+ | All existing Cython, C backend | No version change |
+| NumPy (existing) | math.atan, math.sqrt | Standard math functions; no version sensitivity |
+| SciPy (existing) | scipy.stats.beta | Already used by IQAE; no new scipy features needed |
+| Qiskit 1.x | sim_backend.py | Detection verification uses same pipeline as Grover verification |
+| qiskit-aer (existing) | AerSimulator | May benefit from statevector_simulator for walk state verification (already supported) |
 
 ## Confidence Assessment
 
 | Area | Confidence | Source | Notes |
 |------|------------|--------|-------|
-| No new deps needed | HIGH | Codebase analysis | All four features compose from existing primitives |
-| scipy undeclared | HIGH | `grep` of source + pyproject.toml | `amplitude_estimation.py:29` imports scipy, not in dependencies |
-| Modular arith hierarchy | HIGH | Haner-Roetteler-Svore (2017), Beauregard (2003) | Well-established building block composition |
-| Parametric compilation approach | MEDIUM | Architectural analysis | Novel for this codebase; needs careful cache key design |
-| CLA/RCA tradeoff metrics | HIGH | Draper-Kutin-Rains-Svore (2006), CDKM (2004) | Standard complexity results |
-| IQAE-based counting | HIGH | BHMT (1998), Classiq implementation reference | M = N * a is standard conversion |
+| No new deps needed | HIGH | Codebase gate.h + _gates.pyx analysis | Every required gate already exists in C backend |
+| Walk state Ry angle formula | HIGH | Qrisp source code + Montanaro paper | phi = 2*atan(sqrt(deg)) validated against reference implementation |
+| One-hot height encoding | HIGH | Qrisp implementation, Martiel 2019 | Standard approach in all implementations surveyed |
+| IQAE adaptation for detection | MEDIUM | Architectural analysis | Novel adaptation -- IQAE replaces Grover iterate with walk step. Mathematically sound but untested in this codebase |
+| Qubit budget estimates | HIGH | Register layout analysis | Binary depth 2-3 at 10-11 qubits, well within 17-qubit limit |
+| Predicate integration pattern | HIGH | oracle.py existing infrastructure | Same tracing mechanism as lambda predicate oracles |
+| R_A/R_B via parity control | HIGH | Qrisp backtracking_tree.py source | Validated implementation pattern, matches theory |
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- [Haner, Roetteler, Svore (2017) - Factoring using 2n+2 qubits with Toffoli based modular multiplication](https://arxiv.org/abs/1611.07995) -- Toffoli-only modular mult hierarchy, O(n^3 log n) gates, 2n+2 qubits
-- [Beauregard (2003) - Circuit for Shor's algorithm using 2n+3 qubits](https://arxiv.org/abs/quant-ph/0205095) -- QFT-based modular addition hierarchy (reference, not used for Toffoli path)
-- [Brassard, Hoyer, Mosca, Tapp (1998) - Quantum Counting](https://arxiv.org/abs/quant-ph/9805082) -- quantum counting = amplitude estimation + M = N * a
-- [Grinko, Gacon, Zoufal, Woerner (2021) - Iterative Quantum Amplitude Estimation](https://www.nature.com/articles/s41534-021-00379-1) -- IQAE already implemented in framework
-- [SciPy v1.17.0 docs - scipy.stats.beta](https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.beta.html) -- beta.ppf for Clopper-Pearson CI, Boost Math backend
+- [Montanaro 2015 - Quantum walk speedup of backtracking algorithms (arXiv:1509.02374)](https://arxiv.org/abs/1509.02374) -- foundational algorithm: D_x, R_A, R_B, Algorithm 1 (detect)
+- [Theory of Computing published version (v014a015)](https://theoryofcomputing.org/articles/v014a015/) -- peer-reviewed version of Montanaro
+- [Qrisp QuantumBacktrackingTree documentation](https://qrisp.eu/reference/Algorithms/QuantumBacktrackingTree.html) -- reference implementation API, one-hot encoding, quantum_step
+- [Qrisp backtracking_tree.py source](https://github.com/eclipse-qrisp/Qrisp/blob/main/src/qrisp/algorithms/quantum_backtracking/backtracking_tree.py) -- implementation patterns: qstep_diffuser, psi_prep, rotation angles, MCZ phase marking
 
 ### Secondary (MEDIUM confidence)
-- [Classiq - Quantum Counting Using IQAE](https://docs.classiq.io/latest/explore/algorithms/amplitude_estimation/quantum_counting/quantum_counting/) -- Reference implementation of IQAE-based counting
-- [Gidney (2025) - Classical-Quantum Adder with Constant Workspace](https://arxiv.org/abs/2507.23079) -- State-of-art CQ adder (not used: requires venting/mid-circuit measurement)
-- [Draper, Kutin, Rains, Svore (2006) - Logarithmic-depth quantum carry-lookahead adder](https://www.researchgate.net/publication/2193063_A_logarithmic-depth_quantum_carry-lookahead_adder) -- CLA depth/ancilla tradeoffs
+- [Martiel 2019 - Practical implementation of a quantum backtracking algorithm (arXiv:1908.11291)](https://arxiv.org/pdf/1908.11291) -- circuit depth analysis, practical considerations
+- [Qrisp Sudoku application (arXiv:2402.10060)](https://arxiv.org/html/2402.10060v1) -- qubit count formulas: O(n*log(d)) data qubits, 6n+14 CX per controlled diffuser
+- [Quantum Search on Computation Trees (arXiv:2505.22405)](https://arxiv.org/html/2505.22405) -- generalized walk state with weights: D_x = I - 2|psi_x><psi_x|, R_A/R_B definitions
 
-### Codebase Analysis (HIGH confidence)
-- `c_backend/include/toffoli_arithmetic_ops.h` -- Full Toffoli add/mul function signatures
-- `c_backend/src/hot_path_add_toffoli.c` -- CLA/RCA dispatch, CLA_THRESHOLD=2
-- `src/quantum_language/compile.py:594-625` -- Cache key structure, classify_args
-- `src/quantum_language/amplitude_estimation.py` -- Full IQAE implementation with scipy dependency
-- `src/quantum_language/qint_mod.pyx` -- Existing modular arithmetic with _reduce_mod
+### Codebase Analysis (HIGH confidence -- direct code reading)
+- `c_backend/include/gate.h` -- Full gate function signatures: ry, cry, h, ch, x, cx, mcz, mcx, p, cp
+- `c_backend/include/types.h` -- Gate type enum: X, Y, Z, R, H, Rx, Ry, Rz, P, M, T_GATE, TDG_GATE
+- `src/quantum_language/_gates.pyx` -- Python gate emission: emit_ry, emit_h, emit_x, emit_mcz, emit_p, emit_p_raw with auto-controlled context
+- `src/quantum_language/grover.py` -- Walk API pattern reference: circuit creation, register allocation, iteration loop, Qiskit verification
+- `src/quantum_language/diffusion.py` -- X-MCZ-X pattern: walk local diffusion generalizes this
+- `src/quantum_language/oracle.py` -- Predicate tracing and oracle validation: reusable for accept/reject
+- `src/quantum_language/amplitude_estimation.py` -- IQAE infrastructure: adaptable for walk-operator detection
+- `src/quantum_language/_core.pyx` -- _allocate_qubit, _deallocate_qubits for ancilla management
 
 ---
-*Stack research for: Quantum Assembly v5.0 -- modular Toffoli arithmetic, parametric compilation, automatic depth/ancilla tradeoff, quantum counting*
-*Researched: 2026-02-24*
-*Conclusion: One fix (declare scipy>=1.10 in pyproject.toml). Zero new external dependencies. All features compose from existing infrastructure.*
+*Stack research for: Quantum Assembly v6.0 -- Quantum Walk Primitives (Montanaro 2015 backtracking)*
+*Researched: 2026-02-26*
+*Conclusion: Zero new external dependencies. Zero new C-level gates. One new Python module (~400-600 lines) composing existing gate primitives into walk operators.*

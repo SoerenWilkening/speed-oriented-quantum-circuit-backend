@@ -1,8 +1,8 @@
-# Architecture Research: v5.0 Advanced Arithmetic & Compilation
+# Architecture Research: v6.0 Quantum Walk Primitives (Montanaro 2015 Backtracking)
 
-**Domain:** Quantum programming framework -- modular Toffoli arithmetic, parametric compilation, depth/ancilla tradeoff, quantum counting
-**Researched:** 2026-02-24
-**Confidence:** HIGH (codebase-verified integration points, algorithm design from literature)
+**Domain:** Quantum programming framework -- quantum walk operators for backtracking speedup
+**Researched:** 2026-02-26
+**Confidence:** HIGH (codebase-verified integration points, algorithm from published literature, reference implementation studied in Qrisp)
 
 ## System Overview: Current Architecture
 
@@ -15,617 +15,618 @@
 |  | qarray    |  |          |  |         |  |         |  | (v4.0)| |
 |  +-----------+  +----------+  +---------+  +---------+  +-------+ |
 |       |              |             |            |            |     |
-+-------+--------------+-------------+------------+------------+----+
-|                    Cython Bindings                                 |
-|  +----------+  +----------+  +---------+  +----------+            |
-|  | _core.pyx|  | qint.pyx |  |_gates.pyx| |openqasm  |           |
-|  | (circuit)|  | (arith)  |  |(emit_*)  | |(.pyx)    |           |
-|  +----------+  +----------+  +---------+  +----------+            |
-+-------------------------------------------------------------------+
-|                    C Backend                                       |
-|  +-------------+  +----------------+  +------------+  +----------+|
-|  | hot_path_   |  | ToffoliAddition|  | circuit.h  |  | qubit_  ||
+|  +-----------+  +--------------------------------------------------+
+|  | quantum_  |  | quantum_counting (v5.0)                         |
+|  | walk      |  +--------------------------------------------------+
+|  | (v6.0)    |                                                     |
+|  | **NEW**   |                                                     |
+|  +-----------+                                                     |
++--------------------------------------------------------------------+
+|                    Cython Bindings                                  |
+|  +----------+  +----------+  +---------+  +----------+             |
+|  | _core.pyx|  | qint.pyx |  |_gates.pyx| |openqasm  |            |
+|  | (circuit)|  | (arith)  |  |(emit_*)  | |(.pyx)    |            |
+|  +----------+  +----------+  +---------+  +----------+             |
++--------------------------------------------------------------------+
+|                    C Backend                                        |
+|  +-------------+  +----------------+  +------------+  +-----------+|
+|  | hot_path_   |  | ToffoliAddition|  | circuit.h  |  | qubit_   ||
 |  | add/mul/xor |  | CDKM/CLA/Mul  |  | (circuit_t)|  | allocator||
-|  +-------------+  +----------------+  +------------+  +----------+|
-|  +-------------+  +----------------+  +------------+              |
-|  | arithmetic_ |  | execution.c    |  | sequences/ |              |
-|  | ops.h (QFT) |  | run_instruction|  | (hardcoded)|              |
-|  +-------------+  +----------------+  +------------+              |
-+-------------------------------------------------------------------+
+|  +-------------+  +----------------+  +------------+  +-----------+|
+|  +-------------+  +----------------+  +------------+               |
+|  | arithmetic_ |  | execution.c    |  | sequences/ |               |
+|  | ops.h (QFT) |  | run_instruction|  | (hardcoded)|               |
+|  +-------------+  +----------------+  +------------+               |
++--------------------------------------------------------------------+
 ```
 
-### Component Responsibilities
+### Component Responsibilities (v6.0 changes marked)
 
-| Component | Responsibility | Relevant to v5.0 |
-|-----------|----------------|-------------------|
-| `qint_mod.pyx` | Modular arithmetic via `_reduce_mod` conditional subtraction | **MODIFY**: Replace QFT-based modular ops with Toffoli-native C calls |
-| `compile.py` | Gate capture/replay with cache keyed on `(classical_args, widths, control, qubit_saving)` | **MODIFY**: Add parametric placeholder support |
-| `grover.py` | Grover search with BBHT adaptive and exact-M modes | **EXTEND**: Add `count_solutions` wrapper |
-| `amplitude_estimation.py` | IQAE (Grinko et al.) with multi-shot simulation | **REUSE**: Core engine for quantum counting |
-| `hot_path_add_toffoli.c` | CLA/RCA dispatch based on `cla_override`, `qubit_saving` fields | **MODIFY**: Add automatic tradeoff logic |
-| `circuit.h` (`circuit_t`) | Circuit struct with `arithmetic_mode`, `cla_override`, `qubit_saving` | **EXTEND**: Add tradeoff policy field |
-| `_core.pyx` | Global circuit state, option(), allocator access | **EXTEND**: Expose tradeoff option |
+| Component | Responsibility | v6.0 Impact |
+|-----------|----------------|-------------|
+| `grover.py` | Grover search with BBHT adaptive / exact-M modes, oracle synthesis | **NO CHANGE** -- quantum walk is architecturally separate |
+| `oracle.py` | `GroverOracle` wrapper, predicate-to-oracle tracing, validation | **REFERENCE PATTERN** -- predicate tracing mechanism reused |
+| `diffusion.py` | Grover's global S_0 diffusion (X-MCZ-X) | **REFERENCE PATTERN** -- local diffusion D_x is analogous but per-node |
+| `amplitude_estimation.py` | IQAE with multi-shot simulation | **REUSE** -- detection algorithm uses phase estimation internally |
+| `compile.py` | Gate capture/replay with caching | **REUSE** -- walk step operators can be compiled for replay |
+| `_gates.pyx` | emit_ry, emit_h, emit_x, emit_mcz, emit_p_raw | **REUSE** -- D_x needs emit_ry for controlled rotations, emit_x, emit_mcz |
+| `_core.pyx` | circuit(), option(), allocator, gate extract/inject | **REUSE** -- standard circuit building path |
+| `sim_backend.py` | Qiskit QASM load and simulate | **REUSE** -- verification and demo execution |
+| `qint.pyx` | branch(), arithmetic, comparisons | **REUSE** -- predicate evaluation uses existing operators |
 
-## New Components and Integration Points
+## New Component: `quantum_walk.py`
 
-### Feature 1: Modular Toffoli Arithmetic (FTE-02)
+### Why a Separate Module (Not Extending `grover.py`)
 
-**What changes:** The current `qint_mod` class (v1.0) performs modular reduction via `_reduce_mod`, which uses the generic `__add__`/`__sub__`/`>=` operators. Those operators dispatch to QFT or Toffoli based on `circuit.arithmetic_mode`. The problem is that `_reduce_mod` is broken (BUG-MOD-REDUCE) -- the conditional subtraction loop creates orphan temporaries and result corruption.
+Quantum walk and Grover search share the *concept* of amplitude amplification but differ fundamentally:
 
-**Architecture decision: Beauregard-style modular adder at C level.**
+| Aspect | Grover (`grover.py`) | Quantum Walk (`quantum_walk.py`) |
+|--------|---------------------|----------------------------------|
+| State space | Flat superposition over N items | Tree of partial assignments (exponentially structured) |
+| Diffusion | Global S_0 on all qubits (X-MCZ-X) | Local D_x per node, amplitude depends on children count |
+| Oracle | Boolean predicate returning accept/reject via qbool | Tri-valued predicate returning accept/reject/indeterminate |
+| Operators | Oracle + diffusion (2 operators) | R_A + R_B (2 operators, each composed from many D_x) |
+| Detection | Direct measurement after iterations | Quantum phase estimation on walk operator |
+| Registers | Search registers only | Node register (branch_qa) + height register (h) + coin qubits |
 
-Instead of fixing `_reduce_mod` in Python (which stacks generic operations creating excessive ancilla), implement a dedicated Toffoli modular adder in C that uses the well-known Beauregard/VBE pattern:
+Grover is a special case of quantum walk, but the implementation has almost no shared code. The shared pieces (emit_ry, emit_mcz, circuit building, qint operators for predicate evaluation) are already in the lower layers.
 
-```
-modular_add(a, b, N):
-  1. b += a                    (Toffoli QQ add)
-  2. b -= N                    (Toffoli CQ sub -- N is classical)
-  3. ancilla = MSB(b)          (borrow/carry flag -- already in result)
-  4. if ancilla: b += N        (Toffoli cCQ add, controlled on MSB)
-  5. b -= a                    (Toffoli QQ sub -- undo step 1)
-  6. ancilla_restore = MSB(b)  (restore ancilla to |0> via CNOT)
-  7. b += a                    (redo addition)
-```
-
-This is 5 additions/subtractions (3 QQ, 2 CQ) sharing the same ancilla qubit. The key advantage over the Python `_reduce_mod` approach: no comparison operator (which allocates temporary qbools and creates uncomputation nightmares), just MSB inspection of the subtraction result.
-
-**New files:**
-- `c_backend/src/ToffoliModularArithmetic.c` -- Beauregard modular add/sub/mul
-- `c_backend/include/toffoli_modular_ops.h` -- API declarations
-
-**Modified files:**
-- `qint_mod.pyx` -- Replace `_reduce_mod` with C-level modular operations
-- `qint_mod.pxd` -- Add cdef declarations for new Cython wrappers
-- `setup.py` -- Add new C source to build
-
-**Integration point:** The C modular adder calls `toffoli_QQ_add`/`toffoli_CQ_add`/`toffoli_cCQ_add` internally (already implemented in v3.0). It composes them into the Beauregard sequence. The Python `qint_mod` class calls through Cython to the C modular adder instead of stacking Python-level operations.
-
-**Qubit layout for modular add (b += a mod N):**
+### Module Structure
 
 ```
-[0..n-1]        = register a (source, preserved)
-[n..2n-1]       = register b (target, gets a+b mod N)
-[2n]            = carry/borrow ancilla (shared across all 5 sub-operations)
-[2n+1..3n]      = temp register (for CQ operations that need temp)
-```
-
-Total ancilla: 1 carry + n temp = n+1 ancilla qubits for n-bit modular addition. Compare to the current Python approach which creates 4n+ qubits via intermediate temporaries.
-
-**Why this works with existing architecture:** The existing Toffoli adder functions accept qubit arrays and width parameters. The modular adder calls them in sequence with different qubit array subsets. No changes to the adder functions themselves. The `allocator_alloc`/`allocator_free` pattern for ancilla is already used throughout `hot_path_add_toffoli.c`.
-
-**Modular multiplication** builds on modular addition:
-
-```
-modular_mul(x, a, N):   // x *= a mod N (a is classical)
-  result = |0>
-  for bit j in binary(a):
-    if bit j == 1:
-      modular_add(x << j, result, N)
-  swap(x, result)
-  modular_add_inverse(result, ..., N)  // uncompute result register
-```
-
-This is the standard shift-and-add approach where each partial product is a modular addition. The existing `toffoli_mul_cq` uses the same shift-and-add pattern but without modular reduction.
-
-**Controlled modular operations** (needed for Shor's modular exponentiation): Add an external control qubit to the Beauregard sequence. The CQ steps become cCQ, the QQ steps become cQQ. The existing controlled Toffoli adders (`toffoli_cQQ_add`, `toffoli_cCQ_add`) already support this.
-
-### Feature 2: Parametric Compilation (PAR-01, PAR-02)
-
-**What changes:** Currently, `@ql.compile` creates a separate cache entry for each distinct `classical_args` tuple. If you call `f(x, 5)` and then `f(x, 7)`, the second call triggers a full re-capture because the classical argument changed. For Shor's algorithm, modular exponentiation calls the modular multiplier with many different classical values -- re-capturing for each is expensive.
-
-**Architecture decision: Deferred classical substitution in gate lists.**
-
-The compile system captures gate sequences as Python dicts with virtual qubit indices. For parametric compilation, classical arguments are stored as symbolic placeholders in the captured gate list, and substitution happens during replay.
-
-**How it works:**
-
-1. During capture, the function is invoked once with a representative classical value (the first call's value). This produces the real gate sequence.
-2. The captured sequence is analyzed: gates that originated from CQ operations are tagged with a `DeferredCQOp` marker recording the operation type, bit width, and which parameter provided the classical value.
-3. On replay with a different classical value, normal gates are replayed as-is, but `DeferredCQOp` markers trigger fresh CQ sequence generation with the new value.
-4. Cache key omits `classical_args`, so one capture serves all classical values of the same width.
-
-**The challenge:** CQ (classical-quantum) operations in the C backend generate value-dependent gate sequences. A `CQ_add(bits=4, value=5)` produces a completely different Toffoli sequence than `CQ_add(bits=4, value=7)` (different X gates for different bit patterns). This means parametric compilation cannot simply cache gate dicts and substitute values.
-
-**Solution approach: Two-level parametric.**
-
-Level 1 (rotation parametric): For QFT-based CQ operations where the classical value only affects rotation angles, store the angle formula as a function of the parameter. On replay, compute angles from the new classical value. Each rotation's angle is `2*pi*value / 2^k` for position k.
-
-Level 2 (operation-level parametric): For Toffoli CQ operations where the classical value determines which gates exist (X gates for bit initialization), store the operation as a "deferred CQ" node in the gate list. On replay, regenerate the CQ sequence fresh with the new value but skip all the overhead of capture (function re-execution, qubit mapping, optimization).
-
-**Modified files:**
-- `compile.py` -- Add `parametric=True` option, placeholder types, two-level replay
-- No C changes needed -- the C functions already accept value parameters
-
-**New classes in compile.py:**
-
-```python
-class ParametricPlaceholder:
-    """Represents a deferred classical value in a compiled gate list."""
-    def __init__(self, param_index: int, transform=None):
-        self.param_index = param_index
-        self.transform = transform  # e.g., lambda v: 2*pi*v/N for QFT angles
-
-class DeferredCQOp:
-    """Represents a Toffoli CQ operation with deferred classical value."""
-    def __init__(self, op_type, bits, param_index, qubit_mapping):
-        self.op_type = op_type  # 'add', 'sub', 'mul'
-        self.bits = bits
-        self.param_index = param_index
-        self.qubit_mapping = qubit_mapping
-```
-
-**Cache key change:**
-
-```python
-# Current: re-captures for each classical value
-cache_key = (tuple(classical_args), tuple(widths), control_count, qubit_saving)
-
-# Parametric: one capture for all classical values of same width
-cache_key = (tuple(widths), control_count, qubit_saving, True)  # True = parametric
-```
-
-**Integration with existing compile system:** The parametric mode is opt-in via `@ql.compile(parametric=True)`. The existing non-parametric mode remains unchanged. During `_capture`, when `parametric=True`, the system records which gates correspond to CQ operations involving classical parameters. The `_replay` method checks for deferred nodes and resolves them against actual classical arguments.
-
-**Key constraint:** Parametric compilation requires that the circuit topology (which operations, in which order, on which qubits) is identical across all classical values. This holds for modular arithmetic where the structure is always "5 adder calls in Beauregard sequence" regardless of N, but would NOT hold for operations where classical values affect control flow (e.g., variable-length loops). The decorator should validate this assumption or document it clearly.
-
-### Feature 3: Automatic Depth/Ancilla Tradeoff (OPT-01)
-
-**What changes:** Currently, the CLA/RCA selection is controlled by two circuit-level flags:
-- `circuit.cla_override = 0` (auto) or `1` (force RCA)
-- `circuit.qubit_saving = 0` (prefer KS CLA, more ancilla, lower depth) or `1` (prefer BK CLA, fewer ancilla)
-
-The threshold `CLA_THRESHOLD = 2` is hardcoded in `hot_path_add_toffoli.c`. There is no automatic selection based on actual resource constraints.
-
-**Architecture decision: Policy-based dispatch at C level.**
-
-Add a tradeoff policy to `circuit_t` that the dispatch logic in `hot_path_add_toffoli.c` consults:
-
-```c
-typedef enum {
-    TRADEOFF_AUTO = 0,      // Select based on available qubits and width
-    TRADEOFF_MIN_DEPTH = 1, // Always prefer CLA (more ancilla, lower depth)
-    TRADEOFF_MIN_QUBITS = 2 // Always prefer RCA (fewer ancilla, higher depth)
-} tradeoff_policy_t;
-```
-
-**Decision logic for TRADEOFF_AUTO:**
-
-```c
-// In hot_path_add_toffoli.c, replacing hardcoded CLA dispatch:
-if (policy == TRADEOFF_AUTO) {
-    int cla_ancilla = compute_cla_ancilla_count(circ, result_bits);
-    int rca_ancilla = 1;  // CDKM uses 1 ancilla
-
-    // CLA depth is O(log n), RCA depth is O(n)
-    // CLA is worth it when: width >= threshold AND ancilla available
-    int available = allocator_available(circ->allocator);
-    if (result_bits >= CLA_THRESHOLD && cla_ancilla <= available) {
-        // Use CLA (try BK, which is the only implemented variant)
-    } else {
-        // Fall back to RCA
-    }
-} else if (policy == TRADEOFF_MIN_DEPTH) {
-    // Try CLA unconditionally (fail to RCA only if allocation fails)
-} else {  // TRADEOFF_MIN_QUBITS
-    // Force RCA, skip CLA entirely
-}
-```
-
-**Modified files:**
-- `c_backend/include/circuit.h` -- Add `tradeoff_policy_t` enum and field to `circuit_t`
-- `c_backend/src/hot_path_add_toffoli.c` -- Replace hardcoded CLA dispatch with policy-based
-- `c_backend/include/qubit_allocator.h` -- Add `allocator_available()` query if not present
-- `c_backend/src/qubit_allocator.c` -- Implement `allocator_available()`
-- `_core.pyx` -- Expose `ql.option('tradeoff', 'auto'|'min_depth'|'min_qubits')`
-- `c_backend/src/circuit_allocations.c` -- Initialize new field in `init_circuit()`
-
-**Integration:** This is a minimal change. The existing dispatch in `hot_path_add_toffoli.c` already has the CLA-try-then-RCA-fallback pattern. The tradeoff policy makes the decision criteria configurable rather than hardcoded. The `allocator_available()` function simply returns `allocator->capacity - allocator->next_free` (or equivalent), which is O(1).
-
-**Why this is the right abstraction level:** Users should not need to understand BK vs KS vs CDKM. They care about "minimize depth" vs "minimize qubits" vs "let the system decide." The policy maps cleanly to the existing dispatch:
-
-| Policy | BK CLA | KS CLA | CDKM RCA |
-|--------|--------|--------|----------|
-| AUTO | Try if ancilla available | Try if available (stub today) | Fallback |
-| MIN_DEPTH | Prefer KS then BK (lowest depth) | Primary choice when implemented | Last resort |
-| MIN_QUBITS | Skip | Skip | Always |
-
-Note: KS CLA is currently a stub (returns NULL). AUTO and MIN_DEPTH currently degrade to BK CLA, then RCA. When KS is implemented, the policy layer naturally routes to it without API changes.
-
-### Feature 4: Quantum Counting (GADV-01)
-
-**What changes:** The system already has `ql.grover()` (search for solutions) and `ql.amplitude_estimate()` (estimate probability). Quantum counting answers: "How many solutions exist?" This is the standard Brassard-Hoyer-Tapp quantum counting algorithm, which uses amplitude estimation to determine M from the estimated amplitude.
-
-**Architecture decision: Thin wrapper over `amplitude_estimate()`.**
-
-Quantum counting is mathematically: `M = N * sin^2(theta)` where `theta` comes from amplitude estimation. The existing IQAE implementation already estimates `a = sin^2(theta)` (the success probability). Quantum counting simply multiplies by N.
-
-**New files:**
-- `src/quantum_language/counting.py` -- `count_solutions()` function and `CountResult` class
-
-**Implementation sketch:**
-
-```python
-class CountResult:
-    """Result of quantum counting with integer count and metadata."""
-    def __init__(self, count, estimate, confidence_interval, num_oracle_calls):
-        self.count = count                       # int: rounded M estimate
-        self.estimate = estimate                 # float: raw fraction M/N
-        self.confidence_interval = confidence_interval  # (low_count, high_count)
-        self.num_oracle_calls = num_oracle_calls # int: total queries used
-
-def count_solutions(oracle, *, width=None, widths=None, epsilon=0.5,
-                    confidence_level=0.95, max_iterations=None):
-    """Estimate the number of solutions to a search problem.
-
-    Uses IQAE to estimate the fraction of marked states,
-    then multiplies by the search space size N.
-    """
-    # Resolve register widths (reuse grover.py helpers)
-    register_widths = _resolve_register_widths(oracle, width, widths)
-    N = 1
-    for w in register_widths:
-        N *= 2 ** w
-
-    # Convert count-space epsilon to probability-space epsilon
-    prob_epsilon = epsilon / N
-
-    # Run existing IQAE
-    result = amplitude_estimate(
-        oracle, width=width, widths=widths,
-        epsilon=prob_epsilon,
-        confidence_level=confidence_level,
-        max_iterations=max_iterations
-    )
-
-    # Convert probability to count
-    count = round(result.estimate * N)
-    ci_low = round(result.confidence_interval[0] * N)
-    ci_high = round(result.confidence_interval[1] * N)
-
-    return CountResult(count, result.estimate, (ci_low, ci_high),
-                       result.num_oracle_calls)
-```
-
-**Modified files:**
-- `src/quantum_language/__init__.py` -- Add `count_solutions` to imports and `__all__`
-
-**Integration:** This is the simplest of the four features. It adds no new C code, no new Cython bindings, and no modifications to existing components. It wraps the existing amplitude estimation infrastructure with a count-oriented API.
-
-## Data Flow Changes
-
-### Current Data Flow (arithmetic)
-
-```
-Python: x += 5
-  |
-  v
-qint.__iadd__(self, 5)
-  |
-  v
-qint.addition_inplace(self, 5)  [qint_arithmetic.pxi]
-  |
-  v (C call via nogil)
-hot_path_add_cq(circ, qubits, bits, value=5, ...)  [hot_path_add.c]
-  |
-  v (dispatch)
-circ->arithmetic_mode == ARITH_TOFFOLI?
-  YES --> toffoli_dispatch_cq(...)  [hot_path_add_toffoli.c]
-          |
-          v
-          CLA or RCA based on width/cla_override
-  NO  --> CQ_add(bits, value)  [QFT path]
-```
-
-### New Data Flow (modular Toffoli arithmetic)
-
-```
-Python: x += y  (where x, y are qint_mod)
-  |
-  v
-qint_mod.__add__(self, y)  [qint_mod.pyx -- MODIFIED]
-  |
-  v (Cython call to C)
-toffoli_mod_add_qq(circ, a_qubits, b_qubits, bits, N)  [NEW: ToffoliModularArithmetic.c]
-  |
-  v (internally calls existing Toffoli adders 5x in Beauregard sequence)
-  1. toffoli_QQ_add(...)    -- b += a
-  2. toffoli_CQ_add(...)    -- b -= N (classical, inverted)
-  3. [CNOT to extract MSB borrow flag]
-  4. toffoli_cCQ_add(...)   -- if MSB: b += N (controlled)
-  5. toffoli_QQ_add(...)    -- b -= a (inverted, undo step 1)
-  6. [CNOT to restore ancilla to |0>]
-  7. toffoli_QQ_add(...)    -- b += a (redo)
-```
-
-### New Data Flow (parametric compilation)
-
-```
-Python: @ql.compile(parametric=True)
-        def mod_mul(x, classical_val):
-            x *= classical_val
-
-        mod_mul(reg, 5)   # First call: capture (classical_val=5)
-        mod_mul(reg, 7)   # Second call: parametric replay (substitute 7)
-  |
-  v
-CompiledFunc.__call__(reg, 7)
-  |
-  v
-cache_key = (widths=(8,), control=0, qubit_saving=0, parametric=True)
-  |
-  v (cache HIT -- same widths, parametric ignores classical value)
-_parametric_replay(cached_block, quantum_args=[reg], classical_args=[7])
-  |
-  v (for each node in cached_block.gates)
-  - Normal gate dict: remap qubits, inject into circuit (as today)
-  - DeferredCQOp node: call C-level CQ function with value=7, inject result
-  - ParametricPlaceholder: compute angle from value=7, emit rotation gate
-```
-
-### New Data Flow (tradeoff policy)
-
-```
-Python: ql.option('tradeoff', 'min_depth')
-  |
-  v
-circuit_t.tradeoff_policy = TRADEOFF_MIN_DEPTH
-  |
-  v (during any Toffoli addition)
-hot_path_add_toffoli.c toffoli_qq_uncont():
-  policy == TRADEOFF_MIN_DEPTH?
-    --> allocator_available(circ->allocator) >= cla_ancilla_count?
-        YES: Use BK CLA (O(log n) depth)
-        NO:  Fall back to RCA (O(n) depth, 1 ancilla)
-```
-
-## Recommended Project Structure (new/modified files only)
-
-```
-c_backend/
-  include/
-    toffoli_modular_ops.h       # NEW: modular add/sub/mul declarations
-    circuit.h                    # MODIFY: add tradeoff_policy_t enum + field
-    qubit_allocator.h            # MODIFY: add allocator_available()
-  src/
-    ToffoliModularArithmetic.c   # NEW: Beauregard modular adder implementation
-    hot_path_add_toffoli.c       # MODIFY: policy-based CLA/RCA dispatch
-    qubit_allocator.c            # MODIFY: add allocator_available()
-    circuit_allocations.c        # MODIFY: init tradeoff_policy in init_circuit()
-
 src/quantum_language/
-    compile.py                   # MODIFY: parametric=True, DeferredCQOp, ParametricPlaceholder
-    counting.py                  # NEW: count_solutions(), CountResult
-    qint_mod.pyx                 # MODIFY: C-level modular ops instead of _reduce_mod
-    qint_mod.pxd                 # MODIFY: cdef declarations for new wrappers
-    __init__.py                  # MODIFY: import count_solutions
-
-setup.py                         # MODIFY: add ToffoliModularArithmetic.c to c_sources
-
-tests/python/
-    test_modular_toffoli.py      # NEW: Beauregard modular adder verification
-    test_parametric_compile.py   # NEW: parametric compilation tests
-    test_tradeoff.py             # NEW: policy-based dispatch tests
-    test_counting.py             # NEW: quantum counting tests
+    quantum_walk.py          # NEW: Main module -- public API + algorithm
+    quantum_walk_tree.py     # NEW: Tree state encoding (height, path registers)
+    quantum_walk_diffusion.py # NEW: Local diffusion D_x and R_A/R_B operators
 ```
 
-### Structure Rationale
+**Rationale for splitting into 3 files:**
+- `quantum_walk.py` owns the public API (`ql.quantum_walk()`, `ql.detect_solution()`) and the detection/search algorithms
+- `quantum_walk_tree.py` owns the qubit register layout and tree node encoding -- this is the data structure
+- `quantum_walk_diffusion.py` owns the D_x construction, R_A, R_B -- this is the operator construction
 
-- **C modular ops:** Placed alongside existing `ToffoliAdditionCDKM.c`, `ToffoliAdditionCLA.c`, `ToffoliMultiplication.c` -- follows the established pattern of one C file per algorithm family.
-- **counting.py:** Standalone Python module like `amplitude_estimation.py` and `grover.py` -- follows the pattern of one file per algorithm.
-- **compile.py modifications:** Parametric features are in the same file because they share the `CompiledFunc` class, cache management, and gate replay infrastructure.
+This mirrors how grover.py (algorithm), diffusion.py (operator), and oracle.py (predicate handling) are split today.
+
+## Algorithm Architecture: Montanaro Backtracking
+
+### The Predicate Interface
+
+The predicate is the user-supplied function that defines the constraint satisfaction problem. Unlike Grover's boolean predicate (returns qbool), the walk predicate is **tri-valued**:
+
+```python
+class PredicateResult(enum.IntEnum):
+    ACCEPT = 0      # Node is a valid complete solution
+    REJECT = 1      # Node violates constraints; prune entire subtree
+    INDETERMINATE = 2  # Node is consistent so far; continue exploring children
+```
+
+**Implementation via two qbools:** The predicate returns two qbool values `(is_accept, is_reject)` rather than a single tri-state. This maps naturally to the existing tracing infrastructure:
+
+```python
+def my_predicate(tree):
+    """User defines accept and reject as separate conditions."""
+    # tree.node gives current partial assignment as qint values
+    # tree.depth gives current depth
+    # User evaluates constraints using existing qint operators
+    is_accept = (tree.depth == 0) & all_constraints_satisfied(tree)
+    is_reject = some_constraint_violated(tree)
+    return is_accept, is_reject
+```
+
+**Key difference from Grover's oracle interface:** Grover's `_predicate_to_oracle` calls the predicate with qint args and expects a single qbool return. The walk predicate takes a tree state object and returns two qbools. However, the underlying mechanism is identical: the predicate calls are traced (gates captured into the circuit) using existing qint/qbool operators. No new tracing infrastructure is needed.
+
+**Alternative considered and rejected:** Single predicate function called twice (once for accept, once for reject). Rejected because it would double the gate count for predicates that share computation between accept and reject evaluation.
+
+### Tree State Encoding
+
+The tree is encoded in quantum registers following the Montanaro/Martiel convention:
+
+```
+Registers:
+  branch_qa[0..max_depth-1]  : QuantumArray of qint, each width = ceil(log2(branching_factor))
+                                Stores the path from root to current node (reversed)
+  h[0..max_depth]            : One-hot encoded height register (max_depth+1 qubits)
+                                Root has h = max_depth, leaves have h = 0
+
+Node encoding example (binary tree, depth 4):
+  Node at path [left, right, left] = branch_qa = |0,1,0,*| with h = |00010| (height 1)
+  Root = branch_qa = |*,*,*,*| with h = |10000| (height 4)
+```
+
+**Why one-hot for height:** The height register participates in conditional operations (controlled gates). One-hot encoding means "is height == k?" is a single qubit check (control on h[k]) rather than a multi-qubit comparison. This saves gates in the local diffusion operator which must condition on height.
+
+**Qubit budget:**
+
+| Register | Qubits | Purpose |
+|----------|--------|---------|
+| branch_qa | max_depth * ceil(log2(branching_factor)) | Path encoding |
+| h | max_depth + 1 | One-hot height |
+| predicate ancillae | varies per predicate | Accept/reject evaluation |
+| Total (binary, depth n) | n + (n+1) + ancillae = 2n + 1 + ancillae | |
+
+For the 17-qubit simulator limit: a binary tree of depth 5 needs 11 data qubits, leaving 6 for predicate ancillae. Depth 4 needs 9 data qubits, leaving 8. Small SAT demos (2-3 variables, binary branching, depth 3-4) are feasible.
+
+### Tree State Class
+
+```python
+class QuantumBacktrackingTree:
+    """Quantum state representing a node in the backtracking tree.
+
+    Manages qubit registers for the tree encoding and provides
+    methods to initialize, traverse, and inspect nodes.
+    """
+    def __init__(self, max_depth, branching_factor, accept_fn, reject_fn):
+        self.max_depth = max_depth
+        self.branching_factor = branching_factor
+        self._accept_fn = accept_fn
+        self._reject_fn = reject_fn
+
+        # Compute widths
+        self._branch_width = math.ceil(math.log2(branching_factor))
+
+        # Allocate registers (qint/qarray from existing infrastructure)
+        self.branch_qa = ql.array(dim=max_depth, width=self._branch_width)
+        self.h = ql.qint(0, width=max_depth + 1)  # One-hot height
+
+        # Initialize root: h = max_depth (one-hot)
+        # Set bit at position max_depth in h register
+```
+
+**Integration with existing types:** The tree uses `ql.array` (qarray) for branch_qa and `ql.qint` for the height register. No new quantum types needed. The predicate functions receive the tree object and use its `.branch_qa` and `.h` attributes to evaluate constraints using standard qint operators.
+
+### Local Diffusion Operator D_x
+
+The local diffusion D_x is the core building block. For each non-leaf, non-marked node x with d(x) valid children:
+
+```
+D_x acts on subspace H_x = span{|x>, |child_1>, ..., |child_d(x)>}
+
+Define |psi_x> = (1/sqrt(d(x)+1)) * (|x> + sum_{y: child of x} |y>)
+
+D_x = 2|psi_x><psi_x| - I    (reflection about |psi_x>)
+
+Special cases:
+  - If x is accepted (solution found): D_x = I (identity)
+  - If x is rejected (prune subtree): D_x = -I (global phase flip)
+```
+
+**Gate-level implementation of D_x:**
+
+The key insight is that D_x is a Grover-like diffusion but restricted to the subspace of x and its children. The amplitude `1/sqrt(d(x)+1)` determines a rotation angle:
+
+```
+theta_x = 2 * arcsin(1/sqrt(d(x)+1))
+```
+
+This is implemented as:
+
+1. **Evaluate predicate** on node x to get (is_accept, is_reject)
+2. **If accepted:** Apply identity (skip diffusion, or apply phase flip for detection)
+3. **If rejected:** Apply -I (Z gate on height qubit, controlled on is_reject)
+4. **If indeterminate:** Apply local Grover diffusion:
+   a. Controlled-Ry(theta_x) on coin qubits to create superposition of children
+   b. X gates on all children labels
+   c. MCZ on the children-label subspace
+   d. X gates (undo)
+   e. Controlled-Ry(-theta_x) to undo coin rotation
+
+**Variable branching (d(x) varies per node):**
+
+For fixed branching (all nodes have the same number of children), theta_x is a constant and can be precomputed. For variable branching, the predicate must additionally compute d(x) -- the number of valid children -- and the Ry angle is controlled on d(x). This requires:
+
+```python
+# Count valid children by evaluating predicate on each potential child
+count = 0
+for child_label in range(branching_factor):
+    # Check if this child is not rejected
+    child_valid = ~reject_fn(child_state(x, child_label))
+    count += child_valid
+
+# theta depends on count: theta = 2 * arcsin(1/sqrt(count+1))
+# Implemented as controlled-Ry rotations conditioned on count value
+```
+
+This is the most expensive part of the algorithm. For a branching factor of b, evaluating all b children requires b predicate calls. The controlled-Ry rotation conditioned on the count value requires at most b different angle values, each controlled on the count register.
+
+**Architecture decision: Variable branching is deferred to v6.1.** The v6.0 implementation assumes fixed branching factor (all nodes have the same number of children, which is the common case for SAT/CSP backtracking where each level assigns one variable with d possible values). Variable branching requires counting valid children per-node, which is significantly more complex and can be layered on top of the fixed-branching infrastructure.
+
+### R_A and R_B Operators
+
+The vertices of the backtracking tree are partitioned into two sets based on distance from root:
+
+```
+A = {vertices at even distance from root}
+B = {vertices at odd distance from root}
+
+R_A = direct_sum_{x in A} D_x     (apply D_x independently to each even-level node)
+R_B = |root><root| + direct_sum_{x in B} D_x   (root reflection + odd-level diffusions)
+```
+
+**Why R_A and R_B parallelize naturally:**
+
+Nodes at the same depth operate on disjoint qubits (different branch_qa entries and different height register bits). The existing circuit builder in `_core.pyx` (`add_gate` -> `optimizer.c`) automatically parallelizes gates on disjoint qubits into the same layer. Therefore, emitting all D_x for x in A sequentially in Python code produces a circuit where the D_x operations on sibling nodes are automatically parallelized. No explicit parallelization code is needed.
+
+**Implementation pattern:**
+
+```python
+def emit_R_A(tree):
+    """Emit R_A: local diffusions on even-depth nodes."""
+    for depth in range(0, tree.max_depth + 1, 2):
+        # D_x for all nodes at this depth
+        # Controlled on h[depth] being active (one-hot)
+        _emit_local_diffusion(tree, depth)
+
+def emit_R_B(tree):
+    """Emit R_B: root reflection + local diffusions on odd-depth nodes."""
+    _emit_root_reflection(tree)
+    for depth in range(1, tree.max_depth + 1, 2):
+        _emit_local_diffusion(tree, depth)
+```
+
+The local diffusion at each depth is automatically conditioned on the height register (one-hot), so it only activates for nodes at that depth. This is implemented using the existing `with qbool:` controlled context mechanism -- the height qubit serves as the control.
+
+### Walk Step and Detection Algorithm
+
+**Walk step:** W = R_B * R_A
+
+One step of the quantum walk applies R_A then R_B. This is the analog of one Grover iteration (oracle + diffusion) but on the tree structure.
+
+**Detection algorithm (Montanaro Algorithm 1):**
+
+```
+1. Prepare initial state |root> (set h to one-hot max_depth, branch_qa to |0>)
+2. Apply quantum phase estimation on walk operator W:
+   a. Allocate precision register (p qubits)
+   b. Apply controlled-W^{2^k} for k = 0, ..., p-1
+   c. Apply inverse QFT on precision register
+   d. Measure precision register
+3. If measured phase is close to 0: output "marked vertex exists"
+   Otherwise: output "no marked vertex"
+```
+
+**Architecture decision: Phase estimation deferred; use power method instead.**
+
+Full QPE requires an inverse QFT on the precision register, which adds significant qubit overhead and gate count. For the initial v6.0 implementation, use the detection approach from Montanaro Algorithm 1 directly:
+
+```
+Repeat O(sqrt(T) * n^{3/2}) times:
+  1. Initialize |root>
+  2. Apply t steps of the walk (W^t)
+  3. Measure
+  4. Check if result is a marked vertex
+
+If no marked vertex found after all repetitions: output "no marked vertex"
+```
+
+This is analogous to how `ql.grover()` uses BBHT adaptive search rather than exact iteration counts. The walk step count t is varied adaptively.
+
+**Alternative (QPE-based):** The full QPE approach offers better theoretical complexity but requires:
+- Additional precision qubits (at least 3-5)
+- Inverse QFT circuit
+- Larger total qubit count
+
+For v6.0 demos within the 17-qubit simulator limit, the iterative approach is more practical. QPE can be added as an enhancement in v6.1.
+
+## Data Flow
+
+### Walk Operation Data Flow
+
+```
+User Code
+    |
+    v
+ql.quantum_walk(accept, reject, max_depth, branching_factor)
+    |
+    v
+quantum_walk.py: _build_walk_circuit()
+    |
+    +-- quantum_walk_tree.py: QuantumBacktrackingTree()
+    |       |-- ql.array(dim=max_depth, ...) -> qarray (branch_qa)
+    |       |-- ql.qint(0, width=max_depth+1) -> qint (height)
+    |       |-- Qubit allocation via _core._allocate_qubit()
+    |
+    +-- quantum_walk_diffusion.py: emit_walk_step()
+    |       |-- emit_R_A(tree)
+    |       |       |-- For each even depth:
+    |       |       |     emit_local_diffusion(tree, depth)
+    |       |       |       |-- Evaluate predicate via user fn (gates traced)
+    |       |       |       |-- Controlled-Ry(theta) via emit_ry()
+    |       |       |       |-- MCZ via emit_mcz()
+    |       |       |       |-- Uncompute predicate (reverse gates)
+    |       |
+    |       |-- emit_R_B(tree)
+    |               |-- emit_root_reflection()
+    |               |-- For each odd depth: emit_local_diffusion()
+    |
+    +-- Repeat walk steps (adaptive or fixed count)
+    |
+    +-- to_openqasm() -> QASM string
+    |
+    +-- sim_backend.simulate() -> measurement
+    |
+    v
+Parse result, verify classically, return
+```
+
+### Predicate Evaluation Flow (Key Integration Point)
+
+```
+quantum_walk_diffusion.py:
+    _emit_local_diffusion(tree, depth)
+        |
+        v
+    # 1. Condition on height = depth (use with tree.h_qubit(depth):)
+    with height_control:
+        |
+        v
+    # 2. Call user predicate (TRACED -- gates captured into circuit)
+    is_accept, is_reject = tree._accept_fn(tree), tree._reject_fn(tree)
+        |                       |
+        v                       v
+    # User code runs:       # User code runs:
+    # qint comparisons      # qint comparisons
+    # via existing           # via existing
+    # operators              # operators
+    # -> qbool result        # -> qbool result
+        |
+        v
+    # 3. Controlled operations based on predicate results
+    with is_reject:
+        emit_z(height_qubit)     # -I for rejected nodes
+
+    with ~is_accept & ~is_reject:
+        _emit_grover_diffusion_local(tree, depth)  # Ry + MCZ + Ry^dag
+        |
+        v
+    # 4. Uncompute predicate ancillae
+    # (reverse the gates from step 2)
+```
+
+**Critical insight:** The predicate evaluation uses the exact same tracing mechanism as Grover's `_predicate_to_oracle`. The user writes Python code using qint operators; those operators emit gates into the circuit. The difference is that the walk predicate is evaluated inside a controlled context (conditioned on height), and its output is used to conditionally select between identity, phase-flip, and local diffusion -- rather than just phase-flipping.
+
+### Comparison: Grover Oracle vs Walk Predicate Tracing
+
+| Aspect | Grover Oracle Tracing | Walk Predicate Tracing |
+|--------|----------------------|----------------------|
+| Input | qint registers | Tree state (branch_qa, h) |
+| Output | Single qbool (marks solutions) | Two qbools (accept, reject) |
+| Context | Direct call | Inside height-controlled context |
+| Uncompute | Automatic via compute-phase-uncompute | Must be explicit (reverse predicate gates) |
+| Gate emission | Via `_predicate_to_oracle` wrapper | Directly in diffusion operator loop |
+| Caching | Oracle caches captured gates | Walk operator compiled via `@ql.compile` |
+
+## Integration Points
+
+### New Module -> Existing Infrastructure
+
+| New Code | Uses From | How |
+|----------|-----------|-----|
+| `quantum_walk.py` | `_core.circuit()` | Fresh circuit per walk attempt |
+| `quantum_walk.py` | `_core.option()` | Set fault_tolerant mode |
+| `quantum_walk.py` | `openqasm.to_openqasm()` | Export for simulation |
+| `quantum_walk.py` | `sim_backend.simulate()` | Qiskit verification |
+| `quantum_walk_tree.py` | `qint`, `qarray` | Register allocation |
+| `quantum_walk_tree.py` | `_core._allocate_qubit()` | Height register qubits |
+| `quantum_walk_diffusion.py` | `_gates.emit_ry()` | Local diffusion rotation |
+| `quantum_walk_diffusion.py` | `_gates.emit_x()` | Pauli-X in diffusion |
+| `quantum_walk_diffusion.py` | `_gates.emit_mcz()` | Multi-controlled Z |
+| `quantum_walk_diffusion.py` | `_gates.emit_h()` | Hadamard in coin operations |
+| `quantum_walk_diffusion.py` | `_core.extract_gate_range()` | Capture predicate gates for uncompute |
+| `quantum_walk_diffusion.py` | `_core.reverse_instruction_range()` | Uncompute predicate evaluation |
+| `quantum_walk_diffusion.py` | `diffusion._collect_qubits()` | Gather qubits for MCZ |
+
+### Existing Infrastructure -> Unchanged
+
+No modifications needed to:
+- `grover.py` -- separate algorithm, no coupling
+- `oracle.py` -- walk uses its own predicate interface
+- `diffusion.py` -- walk uses local diffusion, not global S_0
+- `compile.py` -- walk operators can optionally use `@ql.compile`
+- `_gates.pyx` -- all needed gate primitives already exist
+- `_core.pyx` -- all needed circuit operations already exist
+- C backend -- no new gate types, no new C code needed
+
+### `__init__.py` Modification
+
+Add exports:
+
+```python
+from .quantum_walk import quantum_walk, detect_solution
+```
 
 ## Architectural Patterns
 
-### Pattern 1: Composition of Existing Primitives (Modular Arithmetic)
+### Pattern 1: Predicate Tracing via Existing Operators
 
-**What:** Build higher-level operations by composing calls to existing lower-level C functions rather than implementing new gate sequences from scratch.
+**What:** User-defined predicates are Python functions that take quantum types as arguments. When called during circuit building, the qint/qbool operators automatically emit gates into the circuit. No AST parsing, no custom tracing infrastructure.
 
-**When to use:** When the algorithm is a well-defined sequence of existing operations (e.g., Beauregard modular adder = 5 calls to existing adders).
+**When to use:** Any new algorithm that needs user-defined quantum functions.
 
-**Trade-offs:**
-- PRO: Reuses tested, optimized, hardcoded-sequence-accelerated code
-- PRO: Automatically benefits from CLA/RCA dispatch in each sub-call
-- PRO: Significantly less new code to write (hundreds of lines vs thousands)
-- CON: Cannot optimize across sub-operation boundaries (e.g., cancel gates between step 2 and step 3)
-- CON: Ancilla allocation happens per-sub-call, not globally optimized
+**This is the same pattern used by:**
+- `_predicate_to_oracle` in `oracle.py` (Grover lambda predicates)
+- `@ql.compile` capture phase in `compile.py`
 
-**Example:**
-```c
-void toffoli_mod_add_qq(circuit_t *circ,
-                        const unsigned int *a_qubits,
-                        const unsigned int *b_qubits,
-                        int bits, int64_t N) {
-    // Allocate shared ancilla for entire modular add sequence
-    qubit_t temp_start = allocator_alloc(circ->allocator, bits + 1, true);
-    if (temp_start == (qubit_t)-1) return;
+**For quantum walk:** The accept/reject predicates follow this pattern exactly. The user writes:
 
-    unsigned int qa[256];
-
-    // Step 1: b += a (reuse existing QQ adder via toffoli_dispatch_qq)
-    build_qq_layout(qa, a_qubits, b_qubits, bits, temp_start);
-    sequence_t *seq = toffoli_QQ_add(bits);
-    if (seq) run_instruction(seq, qa, /*invert=*/0, circ);
-
-    // Step 2: b -= N (reuse existing CQ adder)
-    build_cq_layout(qa, b_qubits, bits, temp_start);
-    seq = toffoli_CQ_add(bits, N);
-    if (seq) { run_instruction(seq, qa, /*invert=*/1, circ); toffoli_sequence_free(seq); }
-
-    // Steps 3-7: MSB check, conditional add-back, undo, redo ...
-
-    allocator_free(circ->allocator, temp_start, bits + 1);
-}
-```
-
-### Pattern 2: Opt-In Enhancement (Parametric Compilation)
-
-**What:** Add optional behavior to existing systems via flags/parameters rather than changing default behavior.
-
-**When to use:** When the new feature changes semantics (parametric caching is fundamentally different from exact caching) and must not break existing code.
-
-**Trade-offs:**
-- PRO: Zero regression risk for existing users
-- PRO: Can be adopted incrementally
-- CON: Two code paths to maintain
-- CON: Users must know to opt in
-
-**Example:**
 ```python
-# Existing behavior unchanged:
-@ql.compile
-def add_one(x):
-    x += 1
+def accept(tree):
+    # tree.branch_qa[i] gives qint for assignment at depth i
+    # tree.h is the height register
+    return (tree.h == 0)  # Accept only leaves (complete assignments)
 
-# New parametric behavior (opt-in):
-@ql.compile(parametric=True)
-def mod_mul(x, classical_val):
-    x *= classical_val
-    # On first call, captures gate structure
-    # On subsequent calls with different classical_val,
-    # replays structure but regenerates CQ sequences
+def reject(tree):
+    # Check constraint: no two adjacent nodes same color (graph coloring)
+    conflict = (tree.branch_qa[0] == tree.branch_qa[1])
+    return conflict
 ```
 
-### Pattern 3: Policy Abstraction (Depth/Ancilla Tradeoff)
+These functions, when called during the walk operator construction, emit comparison gates into the circuit. The resulting qbool values are used as controls for the diffusion operator.
 
-**What:** Replace hardcoded thresholds with named policies that users select, while the system maps policies to implementation details.
+### Pattern 2: Height-Controlled Operations via `with` Context
 
-**When to use:** When there are multiple valid strategies and the "best" one depends on user context (hardware constraints, optimization goals).
+**What:** Operations that should only activate at a specific tree depth are wrapped in `with h_qubit:` blocks, leveraging the existing quantum conditional mechanism.
 
-**Trade-offs:**
-- PRO: Clean user API (`ql.option('tradeoff', 'min_depth')`)
-- PRO: System can evolve internally (add new adder variants) without API changes
-- CON: "auto" policy requires heuristics that may not be optimal for all cases
-- CON: Policy selection is circuit-global, not per-operation
+**When to use:** Any depth-dependent operation in the walk.
 
-### Pattern 4: Thin API Wrapper (Quantum Counting)
+**Implementation:**
 
-**What:** Expose a new user-facing API that is a thin mathematical transformation layer over existing infrastructure.
+```python
+# In quantum_walk_diffusion.py
+from quantum_language.qbool import qbool
 
-**When to use:** When the underlying algorithm is already implemented and the new feature is a straightforward conversion of its output.
+def _emit_local_diffusion(tree, depth):
+    """Emit D_x for all nodes at given depth."""
+    # Get the one-hot height qubit for this depth
+    h_qubit = tree.h_qubit(depth)  # Returns a qbool wrapping that qubit
 
-**Trade-offs:**
-- PRO: Minimal code, minimal risk, fast to implement
-- PRO: Automatically benefits from improvements to the underlying system
-- CON: Limited optimization opportunities (cannot specialize IQAE for counting)
-- CON: Epsilon conversion from count-space to probability-space may surprise users
-
-## Recommended Build Order
-
-The four features have the following dependency structure:
-
-```
-Bug fixes (BUG-DIV-02, BUG-QFT-DIV, BUG-MOD-REDUCE)
-    |  (BUG-MOD-REDUCE is superseded by Beauregard C implementation)
-    v
-1. Quantum Counting (GADV-01) -- independent, simplest
-    |
-2. Modular Toffoli Arithmetic (FTE-02) -- core C work
-    |
-3. Depth/Ancilla Tradeoff (OPT-01) -- enhances modular perf
-    |
-4. Parametric Compilation (PAR-01, PAR-02) -- most complex
+    with h_qubit:
+        # Everything inside here is controlled on h[depth] == 1
+        # This means it only activates for nodes at this depth
+        is_accept, is_reject = _evaluate_predicate(tree)
+        _apply_diffusion_conditional(tree, is_accept, is_reject)
 ```
 
-**Detailed rationale:**
+This reuses the existing `_controlled` / `_control_bool` mechanism in `_core.pyx`. When inside `with h_qubit:`, all emitted gates automatically become controlled gates (CRy instead of Ry, CX instead of X, etc.).
 
-1. **Quantum Counting first** -- zero dependencies on other v5.0 features, wraps existing `amplitude_estimate()`, can ship independently. Provides immediate user value.
+### Pattern 3: Capture-Reverse for Predicate Uncomputation
 
-2. **Modular Toffoli Arithmetic second** -- the core feature. Requires C implementation but reuses all existing Toffoli adders. BUG-MOD-REDUCE is resolved as a side effect (the Python `_reduce_mod` is replaced by correct C implementation). Bug fixes BUG-DIV-02 and BUG-QFT-DIV can be addressed in parallel or before, as they affect the non-Toffoli paths.
+**What:** Capture the gate range emitted during predicate evaluation, then reverse it to uncompute ancillae.
 
-3. **Depth/Ancilla Tradeoff third** -- enhances all Toffoli operations including the new modular arithmetic. The tradeoff is meaningful only after modular arithmetic creates real demand for ancilla optimization. Small, contained change to `hot_path_add_toffoli.c`.
+**When to use:** After using the predicate result (is_accept, is_reject) as controls.
 
-4. **Parametric Compilation last** -- the most complex feature, touching compile.py's cache and replay system. Benefits from modular arithmetic being stable (it is the primary use case for parametric compilation). Needs careful testing against both QFT and Toffoli backends.
+**Implementation:**
+
+```python
+start_layer = get_current_layer()
+
+# Evaluate predicate (gates emitted into circuit)
+is_accept, is_reject = _evaluate_predicate(tree)
+
+pred_end_layer = get_current_layer()
+
+# Use predicate results as controls for diffusion
+_apply_conditional_diffusion(tree, is_accept, is_reject)
+
+# Uncompute predicate (reverse the captured gates)
+reverse_instruction_range(start_layer, pred_end_layer)
+```
+
+This is the same compute-phase-uncompute pattern used by `GroverOracle` (`_validate_compute_phase_uncompute`), but applied manually rather than via decoration.
+
+### Pattern 4: Module-per-Concern (Algorithm / DataStructure / Operators)
+
+**What:** Split a complex algorithm module into algorithm logic, data structure, and operator construction.
+
+**Precedent:** Grover uses grover.py (algorithm), oracle.py (predicate handling), diffusion.py (operator). Quantum walk follows the same split.
+
+**Benefits:**
+- `quantum_walk_tree.py` can be tested independently (register allocation, initialization)
+- `quantum_walk_diffusion.py` can be unit-tested with mock predicates
+- `quantum_walk.py` composes the pieces and adds the simulation/measurement layer
 
 ## Anti-Patterns
 
-### Anti-Pattern 1: Python-Level Modular Reduction
+### Anti-Pattern 1: Implementing D_x as a Matrix
 
-**What people do:** Implement modular arithmetic by stacking Python-level `qint` operations (add, compare, conditional subtract) as the current `_reduce_mod` does.
+**What people do:** Construct the D_x operator as a unitary matrix and apply it.
+**Why it's wrong:** D_x acts on a subspace of size d(x)+1, which grows with branching factor. Matrix construction is O(d^2) and doesn't compose with circuit building.
+**Do this instead:** Implement D_x as a sequence of Ry + MCZ + Ry^{dag} gates (Grover-like diffusion restricted to the local subspace). This emits gates into the circuit naturally.
 
-**Why it is wrong:** Each Python-level operation allocates its own temporaries and ancilla independently. A 4-bit modular add via `_reduce_mod` creates ~8 temporary qint objects, each with their own qubit allocation, layer tracking, and uncomputation chains. This causes:
-- Excessive qubit consumption (30+ qubits for a 4-bit mod add vs ~13 with C-level Beauregard)
-- BUG-MOD-REDUCE: Orphan temporaries from intermediate comparisons corrupt results
-- Uncomputation chains that are impossible to reverse correctly
+### Anti-Pattern 2: Evaluating Predicate on Every Possible Node
 
-**Do this instead:** Implement the Beauregard modular adder at the C level where ancilla allocation is explicit, shared across sub-operations, and correctly lifecycle-managed via `allocator_alloc`/`allocator_free`.
+**What people do:** Loop over all possible nodes in the tree and evaluate the predicate on each.
+**Why it's wrong:** There are O(b^n) nodes in a tree of branching factor b and depth n. The whole point of the quantum walk is that it explores the tree in superposition.
+**Do this instead:** The predicate is evaluated once per depth level inside the R_A/R_B operators. The quantum superposition handles all nodes at that depth simultaneously. The predicate gates are controlled on the height register, so they only activate for the appropriate depth.
 
-### Anti-Pattern 2: Separate Cache for Each Classical Value
+### Anti-Pattern 3: Using Grover Diffusion (X-MCZ-X) for Local Diffusion
 
-**What people do:** In parametric compilation, create a new `CompiledBlock` for every unique classical argument value (the current default behavior).
+**What people do:** Reuse the existing `diffusion()` function from `diffusion.py` for D_x.
+**Why it's wrong:** Grover diffusion reflects about the equal superposition |+...+>. Local diffusion D_x reflects about |psi_x> which has amplitudes `1/sqrt(d(x)+1)`, not `1/sqrt(N)`. Using the wrong amplitudes breaks the walk.
+**Do this instead:** Implement local diffusion with Ry(theta_x) rotations where `theta_x = 2 * arcsin(1/sqrt(d(x)+1))`, then X-MCZ-X on the coin register, then Ry(-theta_x).
 
-**Why it is wrong:** For Shor's modular exponentiation, the classical multiplier changes at every step. With a 10-bit modulus, that is up to 1024 unique classical values, each requiring a full capture pass (function execution, gate extraction, virtual mapping, optimization). This defeats the purpose of compilation.
+### Anti-Pattern 4: Adding New Gate Types to the C Backend
 
-**Do this instead:** Capture once with deferred CQ operations, replay many times with value substitution. The circuit topology is identical across classical values -- only CQ sequence contents and rotation angles differ.
+**What people do:** Add walk-specific gate types to the Standardgate_t enum in types.h.
+**Why it's wrong:** The quantum walk uses only standard gates (Ry, X, CX, MCZ, H, Z). Adding walk-specific gates would require changes across the entire C backend (output, optimizer, QASM export, Clifford+T decomposition, visualization).
+**Do this instead:** Compose walk operators from existing gate primitives. The circuit builder handles parallelization automatically.
 
-### Anti-Pattern 3: Exposing Internal Adder Selection to Users
+## Scalability Considerations
 
-**What people do:** Add API options like `ql.option('adder', 'cdkm')` or `ql.option('adder', 'brent_kung')` that force specific internal algorithms.
+| Circuit Size | Approach | Feasibility |
+|-------------|----------|-------------|
+| Depth 2-3, binary (5-7 data qubits) | Direct Qiskit simulation | Easy -- well within 17-qubit limit |
+| Depth 4, binary (9 data qubits) | MPS simulator if ancillae push past 17 | Moderate -- depends on predicate complexity |
+| Depth 5+, binary (11+ data qubits) | Likely exceeds 17-qubit limit with ancillae | Not feasible for simulation; circuit generation still works |
+| Higher branching (4-ary, depth 3) | 6 branch qubits + 4 height = 10 data | Tight but possible for simple predicates |
 
-**Why it is wrong:** Users should not need quantum circuit design expertise to get good performance. Internal adder choice should be an implementation detail that can change between versions.
+**The 17-qubit simulator limit is the primary scaling constraint.** The quantum walk algorithm requires O(n log d) data qubits plus predicate ancillae. For v6.0 demos:
 
-**Do this instead:** Expose a policy-level option (`'tradeoff': 'auto'|'min_depth'|'min_qubits'`) that maps to implementation choices internally. The system can add Kogge-Stone, Draper CLA, or other adder variants without API changes.
+- **2-variable 2-SAT, binary tree depth 3:** 3 branch + 4 height = 7 data qubits. Predicate needs ~2-3 ancillae for comparisons. Total ~10 qubits. Feasible.
+- **3-variable 2-SAT, binary tree depth 4:** 4 branch + 5 height = 9 data qubits. Total ~12-14 qubits. Tight but feasible.
+- **Graph 3-coloring, 2 vertices:** 2-bit color per vertex, depth 3, branching 3. 3*2 + 4 = 10 data. Close to limit.
 
-### Anti-Pattern 4: Monolithic Modular Arithmetic Function
+## Build Order (Suggested Phases)
 
-**What people do:** Implement the entire Beauregard modular add as one large function that manually emits CCX/CX/X gates.
+### Phase 1: Tree State Encoding (quantum_walk_tree.py)
 
-**Why it is wrong:** Duplicates the CDKM/CLA logic already in `ToffoliAdditionCDKM.c` and `ToffoliAdditionCLA.c`. Does not benefit from hardcoded sequences. Harder to maintain and verify.
+**Dependencies:** qint, qarray, _core._allocate_qubit
+**New:** QuantumBacktrackingTree class, register allocation, initialization
+**Test:** Create tree, verify qubit allocation, check one-hot height encoding
+**No predicate needed yet -- pure data structure.**
 
-**Do this instead:** The modular adder should call the existing `toffoli_QQ_add()`, `toffoli_CQ_add()`, etc. as subroutines. These already handle CLA/RCA dispatch, hardcoded sequence lookup, and Clifford+T decomposition. The modular adder only needs to orchestrate the Beauregard sequence of calls.
+### Phase 2: Local Diffusion Operator (quantum_walk_diffusion.py)
 
-## Integration Points Summary
+**Dependencies:** Phase 1 + _gates.emit_ry, emit_x, emit_mcz, _core.extract_gate_range, reverse_instruction_range
+**New:** _emit_local_diffusion(), _emit_R_A(), _emit_R_B()
+**Test:** Build diffusion circuit for fixed-branching tree, verify gate count, verify amplitudes via statevector simulation
+**Requires mock predicate (always indeterminate) for initial testing.**
 
-### Internal Boundaries
+### Phase 3: Predicate Integration
 
-| Boundary | Communication | Changes in v5.0 |
-|----------|---------------|------------------|
-| Python `qint_mod` <-> C modular ops | New Cython `cdef extern` block wrapping `toffoli_mod_*` | NEW: declarations in `qint_mod.pyx` extern block |
-| `compile.py` <-> `_core.pyx` | `extract_gate_range`, `inject_remapped_gates` | MODIFY: parametric replay may call `inject_remapped_gates` multiple times per deferred op |
-| `compile.py` cache key <-> `_classify_args` | Determines cache hit/miss | MODIFY: parametric mode omits classical args from key |
-| `circuit_t` <-> `hot_path_add_toffoli.c` | `circ->cla_override`, `circ->qubit_saving` fields | EXTEND: Add `circ->tradeoff_policy` read in dispatch |
-| `counting.py` <-> `amplitude_estimation.py` | Direct function call to `amplitude_estimate()` | NEW: thin wrapper, no changes to callee |
-| `__init__.py` <-> `counting.py` | Import and re-export `count_solutions` | EXTEND: one new import line |
-| `option()` <-> `circuit_t` | Mapping string options to C struct fields | EXTEND: map `'tradeoff'` -> `circ->tradeoff_policy` |
+**Dependencies:** Phase 2 + existing qint comparison operators
+**New:** Predicate calling convention, accept/reject evaluation, predicate uncomputation
+**Test:** Real predicate (e.g., simple equality check), verify gates traced correctly, verify uncomputation leaves zero ancilla delta
+**This is where the oracle-like tracing is integrated.**
 
-### Verification Points
+### Phase 4: Walk Step and Detection Algorithm (quantum_walk.py)
 
-| Feature | Verification Method | Qubit Budget |
-|---------|---------------------|--------------|
-| Modular Toffoli add (4-bit) | Qiskit simulation, exhaustive N=3..15 | ~13 qubits (within 17-qubit limit) |
-| Modular Toffoli add (8-bit) | matrix_product_state simulator | ~25 qubits (exceeds statevector limit) |
-| Modular Toffoli mul (4-bit) | Qiskit simulation, selected N values | ~17 qubits (borderline) |
-| Parametric compile | Gate-count comparison: parametric vs non-parametric | N/A (structural verification) |
-| Tradeoff policy | Depth/ancilla metrics comparison across policies | N/A (metric verification) |
-| Quantum counting | Known-M oracles with classical verification | Same as amplitude_estimate |
+**Dependencies:** Phase 3 + sim_backend, to_openqasm
+**New:** quantum_walk() public API, detection algorithm, adaptive walk
+**Test:** End-to-end demo on small SAT instance, Qiskit verification
+**Composes all pieces into the user-facing API.**
 
-## Scaling Considerations
+### Phase 5: Verification and Demo
 
-| Concern | 4-bit modulus | 16-bit modulus | 64-bit modulus |
-|---------|---------------|----------------|----------------|
-| Modular add qubits | ~13 (2*4+4+1) | ~49 (2*16+16+1) | ~193 (2*64+64+1) |
-| Modular add depth (RCA) | ~40 gates | ~160 gates | ~640 gates |
-| Modular add depth (CLA) | ~20 gates | ~64 gates | ~256 gates |
-| Parametric cache entries | 1 per width | 1 per width | 1 per width |
-| Parametric replay cost | ~0.1ms | ~1ms | ~10ms |
-| Modular exponentiation (full) | ~260 mod-muls | ~4K mod-muls | ~64K mod-muls |
+**Dependencies:** Phase 4
+**New:** Test suite, 2-SAT demo, graph coloring demo
+**Test:** Verify detection probability, compare with classical brute force
 
-The critical scalability concern is qubit count for modular arithmetic. A complete Shor's factoring of an n-bit number requires ~5n qubits for the Beauregard approach. At 64 bits, that is ~320 qubits -- well within the circuit generation capability (tested to 2000+ variables for QFT) but far beyond the 17-qubit simulation limit. Verification of large modular circuits must use `matrix_product_state` simulator or purely classical validation.
+## Decision: All Python, No New C Code
 
-For parametric compilation, the scalability advantage is most dramatic for Shor's: without parametric mode, an n-bit factoring requires n^2 separate cache entries (one per classical multiplier in the exponentiation). With parametric mode, it requires 1 cache entry total.
+**Recommendation:** Keep all quantum walk code in Python. No new C backend code needed.
+
+**Rationale:**
+
+1. **All required gate primitives exist in C.** The walk uses Ry, X, CX, CCX, MCZ, H, Z -- all already available via `_gates.pyx` which calls C functions (`ry()`, `x()`, `mcz()`, etc.).
+
+2. **The walk is compositional, not computational.** Unlike arithmetic (where inner loops over bit positions benefit from C speed), the walk constructs circuits by composing high-level operators. The inner loop is over tree depth levels (typically 3-5), not over bit positions (which could be 64).
+
+3. **Predicate evaluation is in Python by design.** The user's predicate function is Python code. It uses qint operators that dispatch to C. Adding C code for the walk would not help because the bottleneck is the Python predicate, not the walk operator emission.
+
+4. **Performance is not a concern.** Circuit generation time is dominated by the number of gates, not the Python overhead of emitting them. A depth-4 binary walk generates hundreds of gates; a depth-8 walk generates thousands. Both are built in milliseconds. The Cython/C path is relevant for arithmetic inner loops (millions of gates for large-width operations), not for walk construction.
+
+5. **Maintainability.** The grover.py, diffusion.py, oracle.py, amplitude_estimation.py, and quantum_counting.py modules are all pure Python. Adding the walk module in the same style keeps the codebase consistent.
+
+**When C would be appropriate (future):** If variable branching with many children (b > 16) requires many controlled-Ry rotations per node, the rotation emission loop could be moved to C for speed. But this is a v6.1+ concern, not v6.0.
 
 ## Sources
 
-- Beauregard, "Circuit for Shor's algorithm using 2n+3 qubits" (2003): [ResearchGate](https://www.researchgate.net/publication/2188063_Circuit_for_Shor's_algorithm_using_2n3_qubits)
-- Haner, Roetteler, Svore, "Factoring using 2n+2 qubits with Toffoli based modular multiplication" (2016): [arXiv 1611.07995](https://arxiv.org/pdf/1611.07995)
-- Cuccaro, Draper, Kutin, Moulton, "A new quantum ripple-carry addition circuit" (CDKM): [arXiv quant-ph/0410184](https://arxiv.org/abs/quant-ph/0410184)
-- Grinko, Gacon, Zoufal, Woerner, "Iterative quantum amplitude estimation" (2021): used by existing `amplitude_estimation.py`
-- Brassard, Hoyer, Tapp, "Quantum Counting" (1998): [arXiv quant-ph/9805082](https://arxiv.org/abs/quant-ph/9805082)
-- Optimal compilation of parametrised quantum circuits (2024): [arXiv 2401.12877](https://arxiv.org/abs/2401.12877)
-- Efficient control modular adder on CLA using relative-phase Toffoli gates: [arXiv 2010.00255](https://arxiv.org/abs/2010.00255)
-- Quantum counting via IQAE: [Classiq documentation](https://docs.classiq.io/latest/explore/algorithms/amplitude_estimation/quantum_counting/quantum_counting/)
-- Comprehensive study of quantum arithmetic circuits: [arXiv 2406.03867](https://arxiv.org/html/2406.03867v1)
-- Windowed modular arithmetic optimizations (2025): [arXiv 2502.17325](https://arxiv.org/pdf/2502.17325)
+- [Montanaro 2015 -- Quantum walk speedup of backtracking algorithms (arXiv:1509.02374)](https://arxiv.org/abs/1509.02374)
+- [Martiel & Remaud 2019 -- Practical implementation of a quantum backtracking algorithm (arXiv:1908.11291)](https://arxiv.org/abs/1908.11291)
+- [Qrisp Quantum Backtracking reference implementation](https://qrisp.eu/reference/Algorithms/QuantumBacktrackingTree.html)
+- [Qrisp Sudoku tutorial -- practical backtracking application](https://www.qrisp.eu/general/tutorial/Sudoku.html)
+- [Jarret & Wan 2018 -- Improved quantum backtracking via effective resistance (arXiv:1711.05295)](https://arxiv.org/abs/1711.05295)
 
 ---
-*Architecture research for: Quantum Assembly v5.0 Advanced Arithmetic & Compilation*
-*Researched: 2026-02-24*
+*Architecture research for: v6.0 Quantum Walk Primitives (Montanaro 2015 Backtracking)*
+*Researched: 2026-02-26*
