@@ -127,7 +127,7 @@
 - [x] **Phase 92: Modular Toffoli Arithmetic** - Beauregard modular add/sub/mul at C level for Shor's algorithm building blocks (completed 2026-02-25)
 - [x] **Phase 93: Depth/Ancilla Tradeoff** - Policy-based CLA vs RCA adder selection via `ql.option('tradeoff', ...)` (completed 2026-02-25)
 - [x] **Phase 94: Parametric Compilation** - Compile-once-replay-many for circuits with varying classical values (completed 2026-02-25)
-- [ ] **Phase 95: Verification & Requirements Closure** - Generate missing VERIFICATION.md for Phases 91/93 and update REQUIREMENTS.md checkboxes/traceability
+- [x] **Phase 95: Verification & Requirements Closure** - Generate missing VERIFICATION.md for Phases 91/93 and update REQUIREMENTS.md checkboxes/traceability (completed 2026-02-26)
 - [ ] **Phase 96: v5.0 Tech Debt Cleanup** - Remove dead declarations, add explicit qubit accounting test, document known limitations
 
 ## Phase Details
@@ -267,7 +267,7 @@ Phases execute in numeric order: 90 -> 91 -> 92 -> 93 -> 94
 | 92. Modular Toffoli Arithmetic | v5.0 | Complete    | 2026-02-25 | - |
 | 93. Depth/Ancilla Tradeoff | v5.0 | 2/2 | Complete | 2026-02-25 |
 | 94. Parametric Compilation | 3/3 | Complete    | 2026-02-25 | 2026-02-25 |
-| 95. Verification & Requirements Closure | v5.0 | 3/3 | Complete | 2026-02-26 |
+| 95. Verification & Requirements Closure | v5.0 | Complete    | 2026-02-26 | 2026-02-26 |
 | 96. v5.0 Tech Debt Cleanup | v5.0 | 0/3 | Pending | - |
 
 ---
