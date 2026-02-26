@@ -9,9 +9,9 @@ Requirements for v5.0 Advanced Arithmetic & Compilation. Each maps to roadmap ph
 
 ### Bug Fixes
 
-- [ ] **FIX-01**: Division correctly uncomputes MSB comparison temporaries (BUG-DIV-02)
-- [ ] **FIX-02**: QFT division/modulo produces correct results for all tested widths (BUG-QFT-DIV)
-- [ ] **FIX-03**: Modular reduction produces correct (a+b) mod N without orphan qubits (BUG-MOD-REDUCE)
+- [x] **FIX-01**: Division correctly uncomputes MSB comparison temporaries (BUG-DIV-02)
+- [x] **FIX-02**: QFT division/modulo produces correct results for all tested widths (BUG-QFT-DIV)
+- [x] **FIX-03**: Modular reduction produces correct (a+b) mod N without orphan qubits (BUG-MOD-REDUCE)
 - [x] **FIX-04**: Compile cache key includes arithmetic_mode, cla_override, and tradeoff_policy
 
 ### Modular Toffoli Arithmetic
@@ -91,9 +91,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FIX-01 | Phase 91 (verify: Phase 95) | Pending |
-| FIX-02 | Phase 91 (verify: Phase 95) | Pending |
-| FIX-03 | Phase 91 (verify: Phase 95) | Pending |
+| FIX-01 | Phase 91 (verify: Phase 95) | Complete |
+| FIX-02 | Phase 91 (verify: Phase 95) | Complete |
+| FIX-03 | Phase 91 (verify: Phase 95) | Complete |
 | FIX-04 | Phase 94 | Complete |
 | MOD-01 | Phase 92 | Complete |
 | MOD-02 | Phase 92 | Complete |
@@ -119,4 +119,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-24*
-*Last updated: 2026-02-24 after roadmap creation*
+*Last updated: 2026-02-26 after Phase 95 verification closure*
