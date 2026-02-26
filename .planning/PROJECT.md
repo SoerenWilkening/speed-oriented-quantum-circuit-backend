@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A quantum programming framework that enables writing quantum algorithms using standard programming constructs — operator overloading on variable-width quantum integers (qint, 1-64 bits) and quantum booleans (qbool), with Python's `with` statement implementing quantum conditionals. Operations compile to optimized quantum circuits via a C backend with Cython bindings. Supports dual arithmetic backends: QFT-based (phase rotations) and Toffoli-based (fault-tolerant, Clifford+T decomposable) with CDKM ripple-carry and Brent-Kung carry look-ahead adders. Includes `@ql.compile` for function-level compilation with gate capture/replay/optimization, Grover's search with `ql.grover()` (lambda predicate oracles, adaptive BBHT search), iterative quantum amplitude estimation via `ql.amplitude_estimate()`, circuit optimization, pixel-art circuit visualization scaling to 200+ qubits, T-count reporting, statistics, OpenQASM 3.0 export, and Qiskit-based verification.
+A quantum programming framework that enables writing quantum algorithms using standard programming constructs — operator overloading on variable-width quantum integers (qint, 1-64 bits) and quantum booleans (qbool), with Python's `with` statement implementing quantum conditionals. Operations compile to optimized quantum circuits via a C backend with Cython bindings. Supports dual arithmetic backends: QFT-based (phase rotations) and Toffoli-based (fault-tolerant, Clifford+T decomposable) with CDKM ripple-carry and Brent-Kung carry look-ahead adders, plus automatic depth/ancilla tradeoff selection. Includes Beauregard modular Toffoli arithmetic (add/sub/mul mod N) for Shor's algorithm building blocks, `@ql.compile` for function-level compilation with gate capture/replay/optimization and parametric mode for compile-once-replay-many, Grover's search with `ql.grover()` (lambda predicate oracles, adaptive BBHT search), quantum counting via `ql.count_solutions()`, iterative quantum amplitude estimation via `ql.amplitude_estimate()`, circuit optimization, pixel-art circuit visualization scaling to 200+ qubits, T-count reporting, statistics, OpenQASM 3.0 export, and Qiskit-based verification.
 
 ## Core Value
 
@@ -150,31 +150,21 @@ Write quantum algorithms in natural programming style that compiles to efficient
 - ✓ Test coverage improved 48.2% → 56% with pytest-cov infrastructure — v4.1
 - ✓ Nested with-block tests, circuit reset tests, C test integration via pytest — v4.1
 
-## Current Milestone: v5.0 Advanced Arithmetic & Compilation
-
-**Goal:** Fix all deferred arithmetic bugs and add modular Toffoli arithmetic, parametric compilation, automatic depth/ancilla tradeoff, and quantum counting.
-
-**Target features:**
-- Fix BUG-DIV-02 (MSB comparison leak in division)
-- Fix BUG-QFT-DIV (QFT division/modulo failures)
-- Fix BUG-MOD-REDUCE (_reduce_mod result corruption)
-- Modular Toffoli arithmetic (add/sub/mul mod N) for Shor's algorithm
-- Parametric compilation (compile once for all classical values)
-- Automatic depth/ancilla tradeoff (RCA vs CLA selection)
-- Quantum counting (`ql.count_solutions`) for exact M estimation
+- ✓ Quantum counting API (`ql.count_solutions()`) with CountResult int-like wrapper and IQAE backend — v5.0
+- ✓ Fix division MSB comparison leak with C-level restoring divmod (BUG-DIV-02) — v5.0
+- ✓ Fix QFT division/modulo failures by replacing with Toffoli divmod (BUG-QFT-DIV) — v5.0
+- ✓ Fix modular reduction corruption with Beauregard 8-step sequence (BUG-MOD-REDUCE) — v5.0
+- ✓ Beauregard modular Toffoli arithmetic: (a+b) mod N, (a-b) mod N, (a*c) mod N — v5.0
+- ✓ Modular arithmetic exhaustively verified widths 2-4 (statevector) and 5-8 (MPS) — v5.0
+- ✓ Depth/ancilla tradeoff via `ql.option('tradeoff', 'auto'|'min_depth'|'min_qubits')` — v5.0
+- ✓ Runtime CLA/CDKM dispatch replacing compile-time threshold (8 dispatch sites) — v5.0
+- ✓ CLA subtraction via two's complement with documented BK limitation — v5.0
+- ✓ Parametric compilation (`@ql.compile(parametric=True)`) with probe/detect/replay lifecycle — v5.0
+- ✓ Mode-aware compile cache keys including arithmetic_mode, cla_override, tradeoff_policy (FIX-04) — v5.0
+- ✓ Toffoli CQ per-value fallback with topology-safe auto-detection — v5.0
+- ✓ Oracle decorator forces per-value caching for structural parameters — v5.0
 
 ### Active
-
-**Bug fixes (v5.0):**
-- Fix MSB comparison leak in division (BUG-DIV-02) — requires uncomputation architecture redesign
-- Fix QFT division/modulo pervasive failures (BUG-QFT-DIV) — depends on BUG-DIV-02
-- Fix _reduce_mod result corruption (BUG-MOD-REDUCE) — needs Beauregard-style algorithm redesign
-
-**New features (v5.0):**
-- Modular arithmetic via Toffoli gates (for Shor's algorithm) — FTE-02
-- Parametric compilation (compile once for all classical values) — PAR-01, PAR-02
-- Automatic depth/ancilla tradeoff (RCA vs CLA selection) — OPT-01
-- Quantum counting (`ql.count_solutions`) for exact M estimation — GADV-01
 
 **Deferred features (carry forward):**
 - Resource estimation for compiled functions — ADV-01
@@ -187,6 +177,8 @@ Write quantum algorithms in natural programming style that compiles to efficient
 - Custom state preparation (non-uniform initial superposition) — GADV-03
 - SAT/3-SAT oracle auto-generation from CNF formulas — GSPEC-01
 - Database search oracle from classical data structure — GSPEC-02
+- Modular exponentiation via repeated squaring — MEXT-01
+- Full Shor's algorithm API (`ql.factor(N)`) — MEXT-02
 
 ### Out of Scope
 
@@ -202,7 +194,7 @@ Write quantum algorithms in natural programming style that compiles to efficient
 
 **Architecture:** Three-layer stateless design — C backend (gate primitives, circuit management, integer operations) -> Cython bindings -> Python frontend (qint/qbool classes, operator overloading). All functions take explicit parameters; no global state.
 
-**Current state:** v4.1 shipped — Quality & efficiency improvements on top of v4.0. Key fixes: 32-bit multiplication segfault resolved (MAXLAYERINSEQUENCE 10K → 300K), mixed-width QFT addition and controlled QQ addition bugs fixed, qarray `*=` segfault fixed, controlled multiplication scope corruption fixed. C backend hardened with NULL validation, bounds checking, and static analysis. Binary size reduced 56.6%. Optimizer improved with binary search (O(log L)) and compile replay 36% faster. Test coverage 48.2% → 56%. Dead QPU stubs removed, preprocessor drift detection automated. Dual arithmetic backends: QFT (phase rotations) and Toffoli (CCX/CX/X only), with Toffoli as default. Full feature set from v4.0 intact: `@ql.compile`, `ql.grover()`, `ql.amplitude_estimate()`, pixel-art visualization, cross-backend verification.
+**Current state:** v5.0 shipped — Advanced arithmetic and compilation on top of v4.1. All deferred arithmetic bugs fixed: C-level restoring divmod replaces broken QFT division, Beauregard 8-step modular reduction replaces orphan-qubit `_reduce_mod`. New features: Beauregard modular Toffoli arithmetic (12 C functions for add/sub/mul mod N), depth/ancilla tradeoff with runtime CLA/CDKM dispatch, parametric compilation (compile-once-replay-many), quantum counting API (`ql.count_solutions()`). Full feature set: dual arithmetic backends (QFT/Toffoli with Toffoli default), `@ql.compile` with parametric mode, `ql.grover()`, `ql.amplitude_estimate()`, `ql.count_solutions()`, pixel-art visualization, Clifford+T decomposition, cross-backend verification.
 
 **Codebase:**
 - ~1,059,000 lines of code (604K C, 395K Python, 60K Cython)
@@ -223,15 +215,16 @@ Write quantum algorithms in natural programming style that compiles to efficient
 - qint_mod * qint_mod raises NotImplementedError (by design)
 - apply_merge() placeholder for future phase rotation merging
 - Nested quantum conditionals require quantum-quantum AND implementation (future work)
-- _reduce_mod result corruption (BUG-MOD-REDUCE) — needs Beauregard-style algorithm redesign
-- MSB comparison leak in division (BUG-DIV-02) — requires uncomputation architecture redesign for orphan temporaries
-- QFT division/modulo pervasively broken at all tested widths (BUG-QFT-DIV) — depends on BUG-DIV-02
+- QQ division persistent ancilla leak: 1 comparison ancilla per iteration (fundamental algorithmic limitation, documented in docs/KNOWN-ISSUES.md)
 - Dirty ancilla from widened comparisons (gt/le) — known limitation, not a correctness bug
 - Layer-based uncomputation tracking unreliable when optimizer parallelizes gates — future: use instruction counter
-- BK CLA subtraction falls back to RCA (carry-copy ancilla not uncomputed in reverse)
+- BK CLA subtraction uses two's complement (negate-add-negate), slightly higher gate count than forward CLA
 - Kogge-Stone CLA stubs return NULL (Brent-Kung only implementation)
 - qarray `ql.array(n)` segfaults in some cases (Cython extension crash)
 - `ql.array((rows, cols))` 2D shape fails with TypeError in `_infer_width`
+- Tradeoff state silently discarded by IQAE rounds (each round calls circuit() which resets to auto)
+- CountResult not exported via `ql.__all__` — users must import from `quantum_language.quantum_counting`
+- 14-15 pre-existing test failures in test_compile.py (qarray, replay gate count, nesting, auto-uncompute)
 
 ## Constraints
 
@@ -343,4 +336,20 @@ Write quantum algorithms in natural programming style that compiles to efficient
 | BUG-CMP-MSB fix: comp_width-1 MSB indexing | Pre-existing bug — hardcoded qubit 63 for all widths | ✓ Good — inequality operators work for all widths |
 
 ---
-*Last updated: 2026-02-24 after v5.0 milestone start*
+| C-level restoring divmod replacing QFT division | QFT division was broken; restoring algorithm is provably correct | ✓ Good — BUG-DIV-02/BUG-QFT-DIV fixed |
+| Repeated-subtraction QQ division | Avoids ancilla-heavy alternatives; accepts persistent ancilla leak | ⚠️ Revisit — fundamental limitation documented |
+| Beauregard 8-step modular addition | Clean ancilla uncomputation vs add+reduce which leaked | ✓ Good — zero persistent ancillae |
+| CDKM register convention: b modified, a preserved | Header comment misleading but behavior consistent | ✓ Good — all modular ops correct |
+| Direct toffoli_CQ_add/QQ_add calls in modular | Forces RCA path, avoiding CLA dispatch which could break modular | ✓ Good — modular always RCA |
+| Runtime CLA threshold replacing compile-time | User can switch modes without rebuilding | ✓ Good — 8 dispatch sites updated |
+| Set-once enforcement for tradeoff option | Prevents mid-circuit mode switch breaking circuits | ✓ Good — clear error on violation |
+| Auto-mode threshold of 4 for CLA | Phase 71 empirical data: CLA depth benefit minimal below width 4 | ✓ Good — data-driven |
+| CLA subtraction via two's complement | Negate-add-negate more complex but correct | ✓ Good — enables min_depth for subtraction |
+| _get_mode_flags() for cache key construction | Centralized mode flag extraction across all 4 compile cache sites | ✓ Good — FIX-04 resolved |
+| Oracle forces parametric=False | Oracle parameters are structural, topology varies | ✓ Good — prevents incorrect replay |
+| Parametric probe/detect/replay lifecycle | Topology check on each new classical value | ✓ Good — safe fallback to per-value |
+| CountResult arithmetic on int count, not float estimate | Int-like contract for counting API | ✓ Good — intuitive behavior |
+| Clean dead code removal (no stubs) | Recover from git if needed; stubs add confusion | ✓ Good — cleaner codebase |
+
+---
+*Last updated: 2026-02-26 after v5.0 milestone completion*

@@ -1,5 +1,38 @@
 # Project Milestones: Quantum Assembly
 
+## v5.0 Advanced Arithmetic & Compilation (Shipped: 2026-02-26)
+
+**Delivered:** Fixed all deferred arithmetic bugs (division, modular reduction) with C-level restoring divmod, added Beauregard modular Toffoli arithmetic for Shor's building blocks, parametric compilation for compile-once-replay-many, automatic depth/ancilla tradeoff policy, and quantum counting API.
+
+**Phases completed:** 90-96 (19 plans total)
+
+**Key accomplishments:**
+
+- Quantum counting API (`ql.count_solutions()`) wrapping IQAE for exact solution count estimation with CountResult int-like wrapper
+- Fixed BUG-DIV-02/BUG-QFT-DIV/BUG-MOD-REDUCE: C-level restoring divmod replacing broken QFT division, Beauregard modular reduction replacing orphan-qubit `_reduce_mod`
+- Beauregard modular Toffoli arithmetic (add/sub/mul mod N) — 12 C functions for Shor's algorithm building blocks, exhaustively verified widths 2-8
+- Depth/ancilla tradeoff via `ql.option('tradeoff', 'auto'|'min_depth'|'min_qubits')` with runtime CLA/CDKM dispatch replacing compile-time threshold
+- Parametric compilation (`@ql.compile(parametric=True)`) — probe/detect/replay lifecycle with topology-safe per-value fallback for Toffoli CQ
+- Full requirements closure: 20/20 satisfied, milestone audit PASSED with zero integration gaps
+
+**Stats:**
+
+- 80 commits, 106 files changed (+22,357 / -2,388 lines)
+- 7 phases, 19 plans
+- 3 days (2026-02-24 → 2026-02-26)
+
+**Known gaps (tech debt, non-blocking):**
+- QQ division persistent ancilla leak (fundamental algorithmic limitation, documented in KNOWN-ISSUES.md)
+- 13 xfailed QQ division tests (a >= b cases)
+- 14-15 pre-existing test failures in test_compile.py (unrelated to v5.0)
+- Dead C function bodies kept intentionally (Cython refs removed)
+
+**Git range:** v4.1..HEAD (80 commits)
+
+**What's next:** TBD — next milestone planning via `/gsd:new-milestone`
+
+---
+
 ## v4.1 Quality & Efficiency (Shipped: 2026-02-24)
 
 **Delivered:** Comprehensive quality and efficiency improvements — fixed critical 32-bit multiplication segfault and QFT arithmetic bugs, hardened C backend security with pointer validation and static analysis, optimized binary size by 56.6%, improved test coverage from 48.2% to 56%, and eliminated dead code and tech debt.
@@ -473,6 +506,8 @@
 **What's next:** v1.1 — QPU State Removal
 
 ---
+
+
 
 
 
