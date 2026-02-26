@@ -79,30 +79,30 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TREE-01 | — | Pending |
-| TREE-02 | — | Pending |
-| TREE-03 | — | Pending |
-| PRED-01 | — | Pending |
-| PRED-02 | — | Pending |
-| PRED-03 | — | Pending |
-| DIFF-01 | — | Pending |
-| DIFF-02 | — | Pending |
-| DIFF-03 | — | Pending |
-| DIFF-04 | — | Pending |
-| WALK-01 | — | Pending |
-| WALK-02 | — | Pending |
-| WALK-03 | — | Pending |
-| WALK-04 | — | Pending |
-| WALK-05 | — | Pending |
-| DET-01 | — | Pending |
-| DET-02 | — | Pending |
-| DET-03 | — | Pending |
+| TREE-01 | Phase 97 | Pending |
+| TREE-02 | Phase 97 | Pending |
+| TREE-03 | Phase 97 | Pending |
+| PRED-01 | Phase 97 | Pending |
+| PRED-02 | Phase 97 | Pending |
+| PRED-03 | Phase 97 | Pending |
+| DIFF-01 | Phase 98 | Pending |
+| DIFF-02 | Phase 98 | Pending |
+| DIFF-03 | Phase 98 | Pending |
+| DIFF-04 | Phase 100 | Pending |
+| WALK-01 | Phase 99 | Pending |
+| WALK-02 | Phase 99 | Pending |
+| WALK-03 | Phase 99 | Pending |
+| WALK-04 | Phase 99 | Pending |
+| WALK-05 | Phase 99 | Pending |
+| DET-01 | Phase 101 | Pending |
+| DET-02 | Phase 101 | Pending |
+| DET-03 | Phase 101 | Pending |
 
 **Coverage:**
 - v6.0 requirements: 18 total
-- Mapped to phases: 0
-- Unmapped: 18
+- Mapped to phases: 18
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-26*
-*Last updated: 2026-02-26 after initial definition*
+*Last updated: 2026-02-26 after roadmap creation (all 18 requirements mapped to Phases 97-101)*

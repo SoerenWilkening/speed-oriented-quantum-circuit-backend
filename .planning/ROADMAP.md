@@ -13,6 +13,7 @@
 - v4.0 Grover's Algorithm -- Phases 76-81 (shipped 2026-02-22) -- See `milestones/v4.0-ROADMAP.md`
 - v4.1 Quality & Efficiency -- Phases 82-89 (shipped 2026-02-24) -- See `milestones/v4.1-ROADMAP.md`
 - v5.0 Advanced Arithmetic & Compilation -- Phases 90-96 (shipped 2026-02-26) -- See `milestones/v5.0-ROADMAP.md`
+- v6.0 Quantum Walk Primitives -- Phases 97-101 (in progress)
 
 ## Phases
 
@@ -132,7 +133,97 @@
 
 </details>
 
+### v6.0 Quantum Walk Primitives (In Progress)
+
+**Milestone Goal:** Predicate-aware quantum walk operators based on Montanaro 2015 backtracking speedup, with variable branching, correct amplitude calculation, and Qiskit-verified demos on small SAT instances.
+
+- [ ] **Phase 97: Tree Encoding & Predicate Interface** - Foundational data structures, register allocation, predicate API, and resource estimation
+- [ ] **Phase 98: Local Diffusion Operator** - D_x with correct amplitude angles for uniform branching, root special case, and statevector verification
+- [ ] **Phase 99: Walk Operators** - R_A, R_B via parity-controlled diffusion, composed walk step, @ql.compile wrapping, disjointness validation
+- [ ] **Phase 100: Variable Branching** - Dynamic child counting via predicate evaluation and controlled Ry rotation based on d(x)
+- [ ] **Phase 101: Detection & Demo** - Iterative power-method detection, SAT demo within 17-qubit budget, Qiskit statevector verification
+
+## Phase Details
+
+### Phase 97: Tree Encoding & Predicate Interface
+**Goal**: Users can create a QuantumBacktrackingTree with correct register layout and define accept/reject predicates that are validated before circuit construction
+**Depends on**: Nothing (first phase of v6.0)
+**Requirements**: TREE-01, TREE-02, TREE-03, PRED-01, PRED-02, PRED-03
+**Success Criteria** (what must be TRUE):
+  1. User can instantiate QuantumBacktrackingTree(max_depth, branching_degree) and it allocates one-hot height register (max_depth+1 qubits) plus QuantumArray branch registers (one per depth level)
+  2. User can call the resource estimator with tree parameters and receive exact qubit count; estimator raises an error before circuit construction if budget exceeds 17 qubits
+  3. User can prepare the root state (height qubit set, branch registers initialized) and verify via statevector that the root is correctly encoded
+  4. User can pass a predicate callable returning (is_accept, is_reject) qbools and the framework validates mutual exclusion (both cannot be true simultaneously)
+  5. Predicate uncomputation works correctly via raw allocation or @ql.compile inverse pattern without conflicting with LIFO scope tracking
+**Plans**: TBD
+
+Plans:
+- [ ] 97-01: TBD
+- [ ] 97-02: TBD
+- [ ] 97-03: TBD
+
+### Phase 98: Local Diffusion Operator
+**Goal**: Users can apply verified-correct local diffusion D_x to any tree node with proper amplitude coefficients
+**Depends on**: Phase 97
+**Requirements**: DIFF-01, DIFF-02, DIFF-03
+**Success Criteria** (what must be TRUE):
+  1. Local diffusion D_x for uniform branching uses phi = 2*arctan(sqrt(d)) and produces amplitudes matching 1/sqrt(d(x)+1) for parent and each child (the "+1" includes the parent node)
+  2. Root node diffusion uses a separate phi_root formula (different amplitude weighting per Montanaro section 2) and is controlled on the root height qubit h[max_depth]
+  3. Statevector tests confirm |psi_x> amplitudes match the 1/sqrt(d(x)+1) tolerance for non-root nodes and the correct root formula for the root node
+**Plans**: TBD
+
+Plans:
+- [ ] 98-01: TBD
+- [ ] 98-02: TBD
+
+### Phase 99: Walk Operators
+**Goal**: Users can apply the complete walk step U = R_B * R_A as a compiled, cacheable operation with verified qubit disjointness between R_A and R_B
+**Depends on**: Phase 98
+**Requirements**: WALK-01, WALK-02, WALK-03, WALK-04, WALK-05
+**Success Criteria** (what must be TRUE):
+  1. R_A applies local diffusions at even-depth nodes via height-parity control, and R_B applies local diffusions at odd-depth nodes plus root reflection via height-parity control
+  2. Qubit disjointness test confirms R_A and R_B operate on zero overlapping qubit indices (structural correctness of the product-of-reflections)
+  3. Walk step U = R_B * R_A is wrapped in @ql.compile and the controlled variant is accessible for phase estimation
+  4. Applying the walk step to a known tree state produces the expected statevector transformation (verified via Qiskit simulation)
+**Plans**: TBD
+
+Plans:
+- [ ] 99-01: TBD
+- [ ] 99-02: TBD
+
+### Phase 100: Variable Branching
+**Goal**: Walk operators support trees where different nodes have different numbers of valid children, with amplitude angles computed dynamically from predicate evaluation
+**Depends on**: Phase 99
+**Requirements**: DIFF-04
+**Success Criteria** (what must be TRUE):
+  1. Variable branching counts valid children per node by evaluating the predicate on each potential child and produces the correct d(x) count
+  2. Controlled Ry rotation applies the angle phi = 2*arctan(sqrt(d(x))) conditioned on the child count d(x), so nodes with fewer valid children get different diffusion amplitudes
+  3. Statevector tests confirm correct amplitudes for a tree where different nodes have different branching factors (at least one node pruned vs. one node fully branching)
+**Plans**: TBD
+
+Plans:
+- [ ] 100-01: TBD
+- [ ] 100-02: TBD
+
+### Phase 101: Detection & Demo
+**Goal**: Users can detect whether a solution exists in a backtracking tree, verified end-to-end on a small SAT instance within the 17-qubit simulator ceiling
+**Depends on**: Phase 100
+**Requirements**: DET-01, DET-02, DET-03
+**Success Criteria** (what must be TRUE):
+  1. Iterative power-method detection algorithm applies walk step powers, measures, and correctly identifies solution existence when threshold probability exceeds 3/8
+  2. Demo runs on a small SAT instance (binary tree depth 2-3, within 17-qubit budget) and correctly detects the known solution
+  3. Qiskit statevector verification confirms detection probability is above threshold on a known-solution instance and below threshold on a no-solution instance
+  4. Detection returns false (no false positive) on a tree with no satisfying assignment
+**Plans**: TBD
+
+Plans:
+- [ ] 101-01: TBD
+- [ ] 101-02: TBD
+
 ## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 97 -> 98 -> 99 -> 100 -> 101
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -146,6 +237,11 @@
 | 76-81 | v4.0 | 18/18 | Complete | 2026-02-22 |
 | 82-89 | v4.1 | 21/21 | Complete | 2026-02-24 |
 | 90-96 | v5.0 | 19/19 | Complete | 2026-02-26 |
+| 97. Tree Encoding & Predicate Interface | v6.0 | 0/? | Not started | - |
+| 98. Local Diffusion Operator | v6.0 | 0/? | Not started | - |
+| 99. Walk Operators | v6.0 | 0/? | Not started | - |
+| 100. Variable Branching | v6.0 | 0/? | Not started | - |
+| 101. Detection & Demo | v6.0 | 0/? | Not started | - |
 
 ---
 *Roadmap created: 2026-02-02*
@@ -159,3 +255,4 @@
 *Milestone v4.0 shipped: 2026-02-22*
 *Milestone v4.1 shipped: 2026-02-24*
 *Milestone v5.0 shipped: 2026-02-26*
+*Milestone v6.0 roadmap created: 2026-02-26*
