@@ -225,9 +225,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 95-01-PLAN.md — Generate 91-VERIFICATION.md (verify FIX-01, FIX-02, FIX-03)
-- [ ] 95-02-PLAN.md — Generate 93-VERIFICATION.md (verify TRD-01, TRD-02, TRD-03, TRD-04)
-- [ ] 95-03-PLAN.md — Update REQUIREMENTS.md checkboxes and traceability table
+- [x] 95-01-PLAN.md — Generate 91-VERIFICATION.md (verify FIX-01, FIX-02, FIX-03) -- completed 2026-02-26
+- [x] 95-02-PLAN.md — Generate 93-VERIFICATION.md (verify TRD-01, TRD-02, TRD-03, TRD-04) -- completed 2026-02-26
+- [x] 95-03-PLAN.md — Update REQUIREMENTS.md checkboxes and traceability table -- completed 2026-02-26
 
 ### Phase 96: v5.0 Tech Debt Cleanup
 **Goal**: Address tech debt items identified by v5.0 milestone audit that don't block closure but improve code health
@@ -267,7 +267,7 @@ Phases execute in numeric order: 90 -> 91 -> 92 -> 93 -> 94
 | 92. Modular Toffoli Arithmetic | v5.0 | Complete    | 2026-02-25 | - |
 | 93. Depth/Ancilla Tradeoff | v5.0 | 2/2 | Complete | 2026-02-25 |
 | 94. Parametric Compilation | 3/3 | Complete    | 2026-02-25 | 2026-02-25 |
-| 95. Verification & Requirements Closure | v5.0 | 0/3 | Pending | - |
+| 95. Verification & Requirements Closure | v5.0 | 3/3 | Complete | 2026-02-26 |
 | 96. v5.0 Tech Debt Cleanup | v5.0 | 0/3 | Pending | - |
 
 ---
