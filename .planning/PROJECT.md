@@ -166,6 +166,19 @@ Write quantum algorithms in natural programming style that compiles to efficient
 
 ### Active
 
+## Current Milestone: v6.0 Quantum Walk Primitives
+
+**Goal:** Predicate-aware quantum walk operators based on Montanaro 2015 backtracking speedup, with variable branching, correct amplitude calculation, and Qiskit-verified demos on small SAT instances.
+
+**Target features:**
+- Predicate-aware walk operator (user provides P(v) → accept/reject/continue)
+- Local diffusion R_x with correct amplitudes based on number of valid children d(x)
+- Walk operators R_A/R_B built from parallel local diffusions on disjoint qubit sets
+- Variable branching support (dynamic amplitude calculation via controlled rotations)
+- Detection mode (does a solution exist?) per Montanaro Algorithm 1
+- New `quantum_walk` module (separate from grover)
+- Demo + Qiskit verification on small SAT instance
+
 **Deferred features (carry forward):**
 - Resource estimation for compiled functions — ADV-01
 - Serialization of compiled functions to disk — ADV-02
@@ -194,7 +207,7 @@ Write quantum algorithms in natural programming style that compiles to efficient
 
 **Architecture:** Three-layer stateless design — C backend (gate primitives, circuit management, integer operations) -> Cython bindings -> Python frontend (qint/qbool classes, operator overloading). All functions take explicit parameters; no global state.
 
-**Current state:** v5.0 shipped — Advanced arithmetic and compilation on top of v4.1. All deferred arithmetic bugs fixed: C-level restoring divmod replaces broken QFT division, Beauregard 8-step modular reduction replaces orphan-qubit `_reduce_mod`. New features: Beauregard modular Toffoli arithmetic (12 C functions for add/sub/mul mod N), depth/ancilla tradeoff with runtime CLA/CDKM dispatch, parametric compilation (compile-once-replay-many), quantum counting API (`ql.count_solutions()`). Full feature set: dual arithmetic backends (QFT/Toffoli with Toffoli default), `@ql.compile` with parametric mode, `ql.grover()`, `ql.amplitude_estimate()`, `ql.count_solutions()`, pixel-art visualization, Clifford+T decomposition, cross-backend verification.
+**Current state:** v6.0 in progress — Quantum walk primitives based on Montanaro 2015. Previous: v5.0 shipped advanced arithmetic (Beauregard modular Toffoli, C-level restoring divmod, parametric compilation, quantum counting). Full feature set: dual arithmetic backends (QFT/Toffoli with Toffoli default), `@ql.compile` with parametric mode, `ql.grover()`, `ql.amplitude_estimate()`, `ql.count_solutions()`, pixel-art visualization, Clifford+T decomposition, cross-backend verification.
 
 **Codebase:**
 - ~1,059,000 lines of code (604K C, 395K Python, 60K Cython)
@@ -352,4 +365,4 @@ Write quantum algorithms in natural programming style that compiles to efficient
 | Clean dead code removal (no stubs) | Recover from git if needed; stubs add confusion | ✓ Good — cleaner codebase |
 
 ---
-*Last updated: 2026-02-26 after v5.0 milestone completion*
+*Last updated: 2026-02-26 after v6.0 milestone started*

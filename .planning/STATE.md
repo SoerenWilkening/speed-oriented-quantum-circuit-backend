@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.0
-milestone_name: Advanced Arithmetic & Compilation
-status: shipped
-last_updated: "2026-02-26T12:40:00.000Z"
+milestone: v6.0
+milestone_name: Quantum Walk Primitives
+status: requirements
+last_updated: "2026-02-26T13:00:00.000Z"
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 19
-  completed_plans: 19
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
@@ -18,13 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v5.0 shipped — planning next milestone
+**Current focus:** v6.0 Quantum Walk Primitives — defining requirements
 
 ## Current Position
 
-Phase: 96 of 96 — v5.0 COMPLETE
-Status: Milestone shipped and archived
-Last activity: 2026-02-26 — v5.0 milestone archived
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-26 — Milestone v6.0 started
 
 ## Performance Metrics
 
@@ -42,6 +43,7 @@ Last activity: 2026-02-26 — v5.0 milestone archived
 | v4.0 Grover's Algorithm | 76-81 | 18 | Complete (2026-02-22) |
 | v4.1 Quality & Efficiency | 82-89 | 21 | Complete (2026-02-24) |
 | v5.0 Advanced Arithmetic | 90-96 | 19 | Shipped (2026-02-26) |
+| v6.0 Quantum Walk | 97-? | 0 | In Progress |
 
 ## Accumulated Context
 
@@ -59,8 +61,8 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: v5.0 milestone archived
-Resume action: `/gsd:new-milestone` to start next milestone cycle
+Stopped at: Defining v6.0 requirements
+Resume action: Continue requirements definition and roadmap creation
 
 ---
-*State updated: 2026-02-26 — v5.0 milestone shipped and archived*
+*State updated: 2026-02-26 — v6.0 milestone started*
