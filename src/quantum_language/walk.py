@@ -218,9 +218,10 @@ class QWalkTree:
             self._predicate_is_compiled = True
 
         # Mutual exclusion check -- at construction, root is computational
-        # basis state so qbool values are deterministic
-        accept_val = int(is_accept)
-        reject_val = int(is_reject)
+        # basis state so qbool values are deterministic. Use .measure()
+        # to access the classical initialization value (cdef field).
+        accept_val = is_accept.measure()
+        reject_val = is_reject.measure()
         if accept_val and reject_val:
             raise ValueError(
                 "Predicate mutual exclusion violated: both accept and reject "
@@ -231,11 +232,17 @@ class QWalkTree:
     def uncompute_predicate(self):
         """Uncompute predicate qbools.
 
-        For @ql.compile predicates, calls .inverse() to cleanly uncompute.
-        For raw callables, this is a no-op (user manages cleanup).
+        For @ql.compile predicates, calls .adjoint() to replay the inverse
+        gate sequence. For raw callables, this is a no-op (user manages
+        cleanup).
+
+        Note: Uses adjoint (standalone inverse replay) rather than inverse
+        (which requires matching forward-call qubit tracking). The predicate
+        receives a TreeNode wrapper, not raw qint arguments, so the
+        inverse proxy cannot match inputs.
         """
         if self._predicate is None:
             return
         if self._predicate_is_compiled:
             node = TreeNode(self.height_register, self.branch_registers, self.max_depth)
-            self._predicate.inverse(node)
+            self._predicate.adjoint(node)
