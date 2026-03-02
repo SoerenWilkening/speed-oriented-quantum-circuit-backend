@@ -146,6 +146,9 @@ class QWalkTree:
         root_qubit = self.height_register.qubits[63]
         emit_x(root_qubit)
 
+        # Precompute diffusion angles for all depth levels
+        self._setup_diffusion()
+
         # Predicate validation (if provided) -- called at scope depth 0
         # to avoid LIFO scope interference with returned qbools
         if self._predicate is not None:
@@ -181,6 +184,114 @@ class QWalkTree:
                 f"{self.max_qubits} qubits. Reduce tree size or increase "
                 f"max_qubits parameter."
             )
+
+    def _setup_diffusion(self):
+        """Precompute diffusion rotation angles for all depth levels.
+
+        Stores per-level angle data in ``self._diffusion_data`` (list indexed
+        by level_idx 0..max_depth-1) and the special root angle in
+        ``self._root_phi``.
+
+        Angles follow Montanaro 2015 Section 2:
+        - Parent-children split: phi = 2*arctan(sqrt(d))
+        - Cascade angles: theta_k = 2*arctan(sqrt(1/(d-1-k))) for k=0..d-2
+        - Root special case: phi_root = 2*arctan(sqrt(n*d_root))
+        """
+        self._diffusion_data = []
+
+        for level_idx in range(self.max_depth):
+            d = self.branching[level_idx]
+            depth = self.max_depth - level_idx
+
+            # Parent-children split: phi = 2*arctan(sqrt(d))
+            phi = 2.0 * math.atan(math.sqrt(d))
+
+            # Child cascade angles: theta_k = 2*arctan(sqrt(1/(d-1-k)))
+            cascade_angles = []
+            for k in range(max(0, d - 1)):
+                remaining = d - 1 - k
+                if remaining > 0:
+                    theta = 2.0 * math.atan(math.sqrt(1.0 / remaining))
+                else:
+                    theta = 0.0
+                cascade_angles.append(theta)
+
+            self._diffusion_data.append(
+                {
+                    "phi": phi,
+                    "cascade": cascade_angles,
+                    "d": d,
+                    "depth": depth,
+                    "level_idx": level_idx,
+                }
+            )
+
+        # Root angle: phi_root = 2*arctan(sqrt(n*d_root))
+        d_root = self.branching[0]  # root is at level_idx=0
+        n = self.max_depth
+        self._root_phi = 2.0 * math.atan(math.sqrt(n * d_root))
+
+    def _height_qubit(self, depth):
+        """Get physical qubit index for height register bit at given depth.
+
+        In one-hot encoding, h[depth] = |1> means the node is at depth
+        ``depth``.  Root is at depth=max_depth, leaves at depth=0.
+
+        Parameters
+        ----------
+        depth : int
+            Depth level (0..max_depth).
+
+        Returns
+        -------
+        int
+            Physical qubit index for h[depth].
+        """
+        width = self.max_depth + 1
+        return int(self.height_register.qubits[64 - width + depth])
+
+    def diffusion_info(self, depth):
+        """Return diffusion angle data for inspection at a given depth.
+
+        Parameters
+        ----------
+        depth : int
+            Depth level (0..max_depth).
+
+        Returns
+        -------
+        dict
+            Angle data including 'phi', 'cascade_angles', 'd', 'depth',
+            'is_root', and optionally 'phi_root' or 'is_leaf'.
+
+        Raises
+        ------
+        ValueError
+            If depth is out of range.
+        """
+        if depth < 0 or depth > self.max_depth:
+            raise ValueError(f"depth must be 0..{self.max_depth}, got {depth}")
+
+        # Leaf: no children, no diffusion
+        if depth == 0:
+            return {"depth": 0, "d": 0, "is_leaf": True}
+
+        level_idx = self.max_depth - depth
+        data = self._diffusion_data[level_idx]
+        info = {
+            "phi": data["phi"],
+            "cascade_angles": list(data["cascade"]),
+            "d": data["d"],
+            "depth": depth,
+        }
+
+        if depth == self.max_depth:
+            info["is_root"] = True
+            info["phi_root"] = self._root_phi
+        else:
+            info["is_root"] = False
+
+        return info
 
     def _validate_predicate(self):
         """Validate predicate mutual exclusion on root state.
