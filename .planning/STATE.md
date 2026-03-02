@@ -75,8 +75,8 @@ Recent from Phase 97:
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 98-02-PLAN.md (Phase 98 complete)
-Resume file: .planning/phases/98-local-diffusion-operator/98-02-SUMMARY.md
+Stopped at: Phase 99 context gathered
+Resume file: .planning/phases/99-walk-operators/99-CONTEXT.md
 Resume action: Plan and execute Phase 99 (Walk Operators)
 
 ---
