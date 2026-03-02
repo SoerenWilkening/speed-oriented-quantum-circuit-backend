@@ -13,8 +13,199 @@ References
 
 import math
 
-from ._gates import emit_x
+import numpy as np
+
+from ._gates import emit_ry, emit_x
 from .qint import qint
+
+
+def _make_qbool_wrapper(qubit_idx):
+    """Create a qbool wrapping an existing physical qubit (no allocation).
+
+    Builds a proper 64-element numpy qubit array with the qubit at index 63
+    (right-aligned, as expected by the gate emission infrastructure).
+
+    Parameters
+    ----------
+    qubit_idx : int
+        Physical qubit index to wrap.
+
+    Returns
+    -------
+    qbool
+        A qbool backed by the existing qubit.
+    """
+    from .qbool import qbool
+
+    arr = np.zeros(64, dtype=np.uint32)
+    arr[63] = qubit_idx
+    return qbool(create_new=False, bit_list=arr)
+
+
+def _plan_cascade_ops(d, w):
+    """Pre-compute the gate operations for a d-way equal superposition cascade.
+
+    Returns a list of gate operations in execution order. Each operation is
+    a tuple of one of:
+        ('ry', bit_offset, angle)         -- unconditional Ry
+        ('cry', bit_offset, angle, ctrl_bit_offset)  -- singly-controlled Ry
+        ('x', bit_offset)                 -- unconditional X
+
+    The operations use bit offsets (0=MSB) relative to the branch register.
+    They are designed to be executed sequentially with at most one level of
+    ``with qbool:`` control (no nesting).
+
+    Parameters
+    ----------
+    d : int
+        Number of states to superpose equally.
+    w : int
+        Width of the branch register in qubits.
+
+    Returns
+    -------
+    list[tuple]
+        Gate operations in execution order.
+    """
+    if d <= 1:
+        return []
+
+    ops = []
+    _plan_cascade_ops_recursive(d, w, 0, ops, control_stack=[])
+    return ops
+
+
+def _plan_cascade_ops_recursive(d, w, bit_offset, ops, control_stack):
+    """Recursively build gate operation list for cascade.
+
+    Uses balanced binary splitting. For each split, emits the rotation
+    and schedules child operations with the appropriate control context.
+
+    Multi-qubit controls (depth > 1) are decomposed into sequences of
+    singly-controlled and unconditional gates using V-gate decomposition.
+    """
+    if d <= 1 or bit_offset >= w:
+        return
+
+    left_count = (d + 1) // 2
+    right_count = d - left_count
+
+    if right_count == 0:
+        _plan_cascade_ops_recursive(d, w, bit_offset + 1, ops, control_stack)
+        return
+
+    # Ry angle: sin^2(theta/2) = right_count/d
+    theta = 2.0 * math.asin(math.sqrt(right_count / d))
+
+    if not control_stack:
+        # No control: simple Ry
+        ops.append(("ry", bit_offset, theta))
+    elif len(control_stack) == 1:
+        # Single control: CRy
+        ctrl_bit, ctrl_on_zero = control_stack[0]
+        if ctrl_on_zero:
+            ops.append(("x", ctrl_bit))
+        ops.append(("cry", bit_offset, theta, ctrl_bit))
+        if ctrl_on_zero:
+            ops.append(("x", ctrl_bit))
+    else:
+        # Multi-control: decompose CCRy into CRy + CNOT sequence
+        # For 2 controls: CCRy(theta) = CRy(theta/2, c1) CNOT(c0,c1) CRy(-theta/2, c1) CNOT(c0,c1) CRy(theta/2, c0)
+        # For simplicity, handle up to 2 controls; beyond that, raise error
+        if len(control_stack) == 2:
+            c0_bit, c0_on_zero = control_stack[0]
+            c1_bit, c1_on_zero = control_stack[1]
+
+            # Prepare controls (flip for on-zero conditions)
+            if c0_on_zero:
+                ops.append(("x", c0_bit))
+            if c1_on_zero:
+                ops.append(("x", c1_bit))
+
+            # Decompose CCRy(theta) using the V-gate pattern:
+            # CRy(theta/2, c1, target), CNOT(c0, c1), CRy(-theta/2, c1, target),
+            # CNOT(c0, c1), CRy(theta/2, c0, target)
+            ops.append(("cry", bit_offset, theta / 2, c1_bit))
+            ops.append(("cx", c1_bit, c0_bit))  # CNOT(c0 -> c1)
+            ops.append(("cry", bit_offset, -theta / 2, c1_bit))
+            ops.append(("cx", c1_bit, c0_bit))  # CNOT(c0 -> c1)
+            ops.append(("cry", bit_offset, theta / 2, c0_bit))
+
+            # Undo control flips
+            if c1_on_zero:
+                ops.append(("x", c1_bit))
+            if c0_on_zero:
+                ops.append(("x", c0_bit))
+        else:
+            # For 3+ controls, use recursive decomposition or raise
+            raise NotImplementedError(
+                f"Cascade with {len(control_stack)} nested controls not supported "
+                f"(d={d} requires deeper decomposition). Reduce branching degree."
+            )
+
+    # Recurse on left subtree (controlled on current bit = |0>)
+    if left_count > 1 and bit_offset + 1 < w:
+        _plan_cascade_ops_recursive(
+            left_count,
+            w,
+            bit_offset + 1,
+            ops,
+            control_stack + [(bit_offset, True)],  # True = control on |0>
+        )
+
+    # Recurse on right subtree (controlled on current bit = |1>)
+    if right_count > 1 and bit_offset + 1 < w:
+        _plan_cascade_ops_recursive(
+            right_count,
+            w,
+            bit_offset + 1,
+            ops,
+            control_stack + [(bit_offset, False)],  # False = control on |1>
+        )
+
+
+def _emit_cascade_ops(branch_reg, ops, sign=1):
+    """Execute pre-planned cascade gate operations on a branch register.
+
+    Parameters
+    ----------
+    branch_reg : qint
+        Branch register to operate on.
+    ops : list[tuple]
+        Gate operations from ``_plan_cascade_ops``.
+    sign : int
+        +1 for forward cascade, -1 for inverse (negates Ry angles).
+    """
+    w = branch_reg.width
+
+    if sign == -1:
+        # Inverse: reverse operation order and negate angles
+        ops = list(reversed(ops))
+
+    for op in ops:
+        if op[0] == "ry":
+            _, bit_off, angle = op
+            qubit = int(branch_reg.qubits[64 - w + bit_off])
+            emit_ry(qubit, sign * angle)
+        elif op[0] == "cry":
+            _, bit_off, angle, ctrl_bit_off = op
+            qubit = int(branch_reg.qubits[64 - w + bit_off])
+            ctrl_qubit = int(branch_reg.qubits[64 - w + ctrl_bit_off])
+            ctrl = _make_qbool_wrapper(ctrl_qubit)
+            with ctrl:
+                emit_ry(qubit, sign * angle)
+        elif op[0] == "x":
+            _, bit_off = op
+            qubit = int(branch_reg.qubits[64 - w + bit_off])
+            emit_x(qubit)
+        elif op[0] == "cx":
+            # CNOT: target, control
+            _, target_bit_off, ctrl_bit_off = op
+            target_qubit = int(branch_reg.qubits[64 - w + target_bit_off])
+            ctrl_qubit = int(branch_reg.qubits[64 - w + ctrl_bit_off])
+            ctrl = _make_qbool_wrapper(ctrl_qubit)
+            with ctrl:
+                emit_x(target_qubit)
 
 
 class TreeNode:
@@ -186,18 +377,26 @@ class QWalkTree:
             )
 
     def _setup_diffusion(self):
-        """Precompute diffusion rotation angles for all depth levels.
+        """Precompute diffusion rotation angles and cascade ops for all levels.
 
         Stores per-level angle data in ``self._diffusion_data`` (list indexed
         by level_idx 0..max_depth-1) and the special root angle in
         ``self._root_phi``.
+
+        Also pre-plans cascade gate operations for each unique (d, w) pair
+        so that the cascade can be emitted as a flat sequence of gates
+        (avoiding nested control contexts).
 
         Angles follow Montanaro 2015 Section 2:
         - Parent-children split: phi = 2*arctan(sqrt(d))
         - Cascade angles: theta_k = 2*arctan(sqrt(1/(d-1-k))) for k=0..d-2
         - Root special case: phi_root = 2*arctan(sqrt(n*d_root))
         """
+        from .compile import compile as ql_compile
+
         self._diffusion_data = []
+        self._cascade_ops = {}  # (d, w) -> list of gate ops
+        self._cascade_compiled = {}  # (d, w) -> (fwd_compiled, inv_compiled)
 
         for level_idx in range(self.max_depth):
             d = self.branching[level_idx]
@@ -225,6 +424,27 @@ class QWalkTree:
                     "level_idx": level_idx,
                 }
             )
+
+            # Pre-plan cascade gate operations for this (d, w)
+            branch_reg = self.branch_registers[level_idx]
+            w = branch_reg.width
+            key = (d, w)
+            if key not in self._cascade_ops and d > 1:
+                ops = _plan_cascade_ops(d, w)
+                self._cascade_ops[key] = ops
+
+                # Build compiled forward/inverse cascade for height-controlled use
+                _ops_capture = ops
+
+                def _fwd_body(reg, _ops=_ops_capture):
+                    _emit_cascade_ops(reg, _ops, sign=1)
+
+                def _inv_body(reg, _ops=_ops_capture):
+                    _emit_cascade_ops(reg, _ops, sign=-1)
+
+                fwd_compiled = ql_compile(key=lambda r: r.width)(_fwd_body)
+                inv_compiled = ql_compile(key=lambda r: r.width)(_inv_body)
+                self._cascade_compiled[key] = (fwd_compiled, inv_compiled)
 
         # Root angle: phi_root = 2*arctan(sqrt(n*d_root))
         d_root = self.branching[0]  # root is at level_idx=0
@@ -292,6 +512,79 @@ class QWalkTree:
             info["is_root"] = False
 
         return info
+
+    def local_diffusion(self, depth):
+        """Apply local diffusion operator D_x at the given depth.
+
+        D_x is the reflection 2|psi_x><psi_x| - I on the local subspace
+        of a node at depth ``depth``. Implemented as U * S_0 * U_dagger
+        where U prepares |psi_x> from |0...0>.
+
+        All gates are controlled on the height qubit h[depth], so calling
+        at a depth where h[depth] != |1> is a no-op (safe for walk operator
+        loops over all depths).
+
+        Parameters
+        ----------
+        depth : int
+            Depth level (0..max_depth). Leaf (depth=0) is a no-op.
+
+        Raises
+        ------
+        ValueError
+            If depth is out of range.
+        """
+        if depth < 0 or depth > self.max_depth:
+            raise ValueError(f"depth must be 0..{self.max_depth}, got {depth}")
+
+        # Leaf skip: leaves have no children, no diffusion
+        if depth == 0:
+            return
+
+        # Get level data
+        level_idx = self.max_depth - depth
+        data = self._diffusion_data[level_idx]
+        d = data["d"]
+        branch_reg = self.branch_registers[level_idx]
+        w = branch_reg.width
+
+        # Height-controlled dispatch: all gates controlled on h[depth]
+        h_qubit_idx = self._height_qubit(depth)
+        h_control = _make_qbool_wrapper(h_qubit_idx)
+
+        is_root = depth == self.max_depth
+
+        # Get compiled cascade functions (handles height control via @ql.compile)
+        cascade_key = (d, w)
+        cascade_fwd, cascade_inv = self._cascade_compiled.get(cascade_key, (None, None))
+
+        with h_control:
+            # D_x = U * S_0 * U_dagger (reflection about |psi_x>)
+
+            # Step A: U_dagger (inverse state preparation)
+            # First undo cascade, then undo parent-child split
+            if d > 1 and cascade_inv is not None:
+                cascade_inv(branch_reg)
+            if is_root:
+                emit_ry(self._height_qubit(depth - 1), -self._root_phi)
+            else:
+                emit_ry(self._height_qubit(depth - 1), -data["phi"])
+
+            # Step B: S_0 reflection on the local subspace
+            from .diffusion import diffusion as _s0_reflection
+
+            # Local subspace is h[depth-1] + branch register
+            h_child = _make_qbool_wrapper(self._height_qubit(depth - 1))
+            _s0_reflection(h_child, branch_reg)
+
+            # Step C: U (forward state preparation)
+            # First parent-child split, then cascade
+            if is_root:
+                emit_ry(self._height_qubit(depth - 1), self._root_phi)
+            else:
+                emit_ry(self._height_qubit(depth - 1), data["phi"])
+            if d > 1 and cascade_fwd is not None:
+                cascade_fwd(branch_reg)
 
     def _validate_predicate(self):
         """Validate predicate mutual exclusion on root state.
