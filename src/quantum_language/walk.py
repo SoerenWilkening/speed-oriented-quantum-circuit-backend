@@ -5,12 +5,17 @@ The tree uses a one-hot height register (max_depth+1 qubits) and per-level branc
 registers. Local diffusion operators, walk operators, and detection are built on
 top of this encoding in later modules.
 
+Variable branching (Phase 100) extends the diffusion to support trees where
+different nodes have different numbers of valid children, determined dynamically
+by predicate evaluation at each node.
+
 References
 ----------
     A. Montanaro, "Quantum speedup of backtracking algorithms",
     Theory of Computing, 2018 (arXiv:1509.02374).
 """
 
+import itertools
 import math
 
 import numpy as np
@@ -283,6 +288,142 @@ def _emit_cascade_h_controlled(branch_reg, ops, h_qubit_idx, sign=1):
             emit_h(target_q)
 
 
+def _emit_multi_controlled_ry(target_qubit, angle, ctrl_qubits):
+    """Emit Ry(angle) on target controlled by multiple qubits.
+
+    For zero controls, emits unconditional Ry. For one control, uses
+    CRy via qbool wrapper. For two or more controls, uses recursive
+    V-gate decomposition.
+
+    Parameters
+    ----------
+    target_qubit : int
+        Physical qubit index for the Ry target.
+    angle : float
+        Rotation angle.
+    ctrl_qubits : list[int]
+        Physical qubit indices for controls.
+    """
+    if abs(angle) < 1e-15:
+        return
+
+    if not ctrl_qubits:
+        emit_ry(target_qubit, angle)
+        return
+
+    if len(ctrl_qubits) == 1:
+        ctrl = _make_qbool_wrapper(ctrl_qubits[0])
+        with ctrl:
+            emit_ry(target_qubit, angle)
+        return
+
+    if len(ctrl_qubits) == 2:
+        # V-gate decomposition: CCRy(theta) =
+        #   CRy(theta/2, c1) CNOT(c0,c1) CRy(-theta/2, c1) CNOT(c0,c1) CRy(theta/2, c0)
+        c0, c1 = ctrl_qubits
+        c0_ctrl = _make_qbool_wrapper(c0)
+        c1_ctrl = _make_qbool_wrapper(c1)
+        with c1_ctrl:
+            emit_ry(target_qubit, angle / 2)
+        with c0_ctrl:
+            emit_x(c1)
+        with c1_ctrl:
+            emit_ry(target_qubit, -angle / 2)
+        with c0_ctrl:
+            emit_x(c1)
+        with c0_ctrl:
+            emit_ry(target_qubit, angle / 2)
+        return
+
+    # 3+ controls: peel off last control, recurse
+    primary = ctrl_qubits[-1]
+    remaining = ctrl_qubits[:-1]
+    p_ctrl = _make_qbool_wrapper(primary)
+    with p_ctrl:
+        emit_ry(target_qubit, angle / 2)
+    for r in remaining:
+        r_ctrl = _make_qbool_wrapper(r)
+        with r_ctrl:
+            emit_x(primary)
+    with p_ctrl:
+        emit_ry(target_qubit, -angle / 2)
+    for r in remaining:
+        r_ctrl = _make_qbool_wrapper(r)
+        with r_ctrl:
+            emit_x(primary)
+    _emit_multi_controlled_ry(target_qubit, angle / 2, remaining)
+
+
+def _emit_multi_controlled_x(target_qubit, ctrl_qubits):
+    """Emit X on target controlled by multiple qubits.
+
+    For zero controls: unconditional X. One control: CX. Two+ controls:
+    H-MCZ-H decomposition.
+
+    Parameters
+    ----------
+    target_qubit : int
+        Physical qubit index for the X target.
+    ctrl_qubits : list[int]
+        Physical qubit indices for controls.
+    """
+    if not ctrl_qubits:
+        emit_x(target_qubit)
+        return
+    if len(ctrl_qubits) == 1:
+        ctrl = _make_qbool_wrapper(ctrl_qubits[0])
+        with ctrl:
+            emit_x(target_qubit)
+        return
+    from ._gates import emit_h, emit_mcz
+
+    emit_h(target_qubit)
+    emit_mcz(target_qubit, ctrl_qubits)
+    emit_h(target_qubit)
+
+
+def _emit_cascade_multi_controlled(branch_reg, ops, ctrl_qubits, sign=1):
+    """Execute cascade ops with multiple control qubits.
+
+    Each cascade gate operation is additionally controlled by all qubits
+    in ctrl_qubits. Uses V-gate decomposition for multi-controlled gates.
+
+    Parameters
+    ----------
+    branch_reg : qint
+        Branch register to operate on.
+    ops : list[tuple]
+        Gate operations from ``_plan_cascade_ops``.
+    ctrl_qubits : list[int]
+        Physical qubit indices for additional controls.
+    sign : int
+        +1 for forward cascade, -1 for inverse (negates Ry angles).
+    """
+    w = branch_reg.width
+    if sign == -1:
+        ops = list(reversed(ops))
+
+    for op in ops:
+        if op[0] == "ry":
+            _, bit_off, angle = op
+            qubit = int(branch_reg.qubits[64 - w + bit_off])
+            _emit_multi_controlled_ry(qubit, sign * angle, ctrl_qubits)
+        elif op[0] == "cry":
+            _, bit_off, angle, ctrl_bit_off = op
+            qubit = int(branch_reg.qubits[64 - w + bit_off])
+            cascade_ctrl = int(branch_reg.qubits[64 - w + ctrl_bit_off])
+            _emit_multi_controlled_ry(qubit, sign * angle, ctrl_qubits + [cascade_ctrl])
+        elif op[0] == "x":
+            _, bit_off = op
+            qubit = int(branch_reg.qubits[64 - w + bit_off])
+            _emit_multi_controlled_x(qubit, ctrl_qubits)
+        elif op[0] == "cx":
+            _, target_bit_off, ctrl_bit_off = op
+            target_q = int(branch_reg.qubits[64 - w + target_bit_off])
+            cascade_ctrl = int(branch_reg.qubits[64 - w + ctrl_bit_off])
+            _emit_multi_controlled_x(target_q, ctrl_qubits + [cascade_ctrl])
+
+
 class TreeNode:
     """Wraps tree registers for predicate evaluation.
 
@@ -538,6 +679,28 @@ class QWalkTree:
         n = self.max_depth
         self._root_phi = 2.0 * math.atan(math.sqrt(n * d_root))
 
+        # Variable branching: precompute angles for all possible child counts
+        # d=1..d_max at each level. Used when predicate prunes some children.
+        self._variable_angles = {}  # d_val -> {'phi': float, 'cascade_ops': list}
+        for level_idx in range(self.max_depth):
+            d_max_level = self.branching[level_idx]
+            branch_reg = self.branch_registers[level_idx]
+            w = branch_reg.width
+            for d_val in range(1, d_max_level + 1):
+                if d_val not in self._variable_angles:
+                    phi_d = 2.0 * math.atan(math.sqrt(d_val))
+                    ops_d = _plan_cascade_ops(d_val, w) if d_val > 1 else []
+                    self._variable_angles[d_val] = {
+                        "phi": phi_d,
+                        "cascade_ops": ops_d,
+                    }
+
+        # Root angles for variable branching: phi_root(d) = 2*arctan(sqrt(n*d))
+        self._variable_root_angles = {}
+        d_root_max = self.branching[0]
+        for d_val in range(1, d_root_max + 1):
+            self._variable_root_angles[d_val] = 2.0 * math.atan(math.sqrt(n * d_val))
+
     def _height_qubit(self, depth):
         """Get physical qubit index for height register bit at given depth.
 
@@ -600,6 +763,240 @@ class QWalkTree:
 
         return info
 
+    @property
+    def _use_variable_branching(self):
+        """True if variable branching is active (predicate provided)."""
+        return self._predicate is not None
+
+    def _variable_diffusion(self, depth):
+        """Apply variable-branching local diffusion D_x at the given depth.
+
+        Evaluates the predicate on each potential child to determine which
+        are valid, then applies angle-conditional rotations based on the
+        count of valid children d(x). When d(x) = 0 (all rejected), the
+        diffusion is skipped entirely (the conditional rotation blocks
+        produce identity for the all-zeros validity pattern).
+
+        The structure is:
+        1. Allocate validity ancillae (one per potential child)
+        2. Evaluate predicate on each child (navigate, evaluate, store, undo)
+        3. Conditional U_dagger * S_0 * U for each possible d(x) value
+        4. Uncompute validity ancillae (reverse of step 2)
+
+        Parameters
+        ----------
+        depth : int
+            Depth level (1..max_depth). Must not be called for depth=0.
+        """
+        from .qbool import qbool
+
+        level_idx = self.max_depth - depth
+        d_max = self.branching[level_idx]
+        branch_reg = self.branch_registers[level_idx]
+        h_qubit_idx = self._height_qubit(depth)
+        h_control = _make_qbool_wrapper(h_qubit_idx)
+        is_root = depth == self.max_depth
+
+        # --- Step 1: Allocate validity ancillae ---
+        # validity[i] = |1> means child i is VALID (not rejected).
+        validity = [qbool() for _ in range(d_max)]
+
+        # --- Step 2: Evaluate predicate on each child ---
+        self._evaluate_children(depth, level_idx, d_max, validity)
+
+        # --- Step 3: Conditional D_x = U * S_0 * U_dagger for each d(x) ---
+        # For each possible d value (1..d_max), for each bit pattern with
+        # exactly d ones among d_max validity ancillae, emit the conditional
+        # rotation block.
+
+        validity_qubits = [int(validity[j].qubits[63]) for j in range(d_max)]
+
+        # Step 3a: U_dagger (inverse state preparation) conditional on d(x)
+        for d_val in range(1, d_max + 1):
+            angle_data = self._variable_angles.get(d_val)
+            if angle_data is None:
+                continue
+            phi_d = angle_data["phi"]
+            if is_root:
+                phi_d = self._variable_root_angles.get(d_val, phi_d)
+            cascade_ops_d = angle_data["cascade_ops"]
+
+            for pattern in itertools.combinations(range(d_max), d_val):
+                # Flip zeros so all validity qubits are |1> when pattern matches
+                zeros = [j for j in range(d_max) if j not in pattern]
+                for z in zeros:
+                    emit_x(validity_qubits[z])
+
+                ctrl_qubits = [h_qubit_idx] + validity_qubits
+
+                # U_dagger: inverse cascade then inverse parent-child split
+                if d_val > 1 and cascade_ops_d:
+                    _emit_cascade_multi_controlled(branch_reg, cascade_ops_d, ctrl_qubits, sign=-1)
+                _emit_multi_controlled_ry(self._height_qubit(depth - 1), -phi_d, ctrl_qubits)
+
+                # Undo X flips
+                for z in zeros:
+                    emit_x(validity_qubits[z])
+
+        # Step 3b: S_0 reflection (independent of d(x))
+        # Same as uniform: X-MCZ-X on local subspace, controlled on h[depth]
+        from ._gates import emit_mcz, emit_z
+        from .diffusion import _collect_qubits
+
+        h_child = _make_qbool_wrapper(self._height_qubit(depth - 1))
+        s0_qubits = _collect_qubits(h_child, branch_reg)
+        with h_control:
+            for q in s0_qubits:
+                emit_x(q)
+        all_s0_with_h = [h_qubit_idx] + s0_qubits
+        if len(all_s0_with_h) == 1:
+            emit_z(all_s0_with_h[0])
+        else:
+            emit_mcz(all_s0_with_h[-1], all_s0_with_h[:-1])
+        with h_control:
+            for q in s0_qubits:
+                emit_x(q)
+
+        # Step 3c: U forward conditional on d(x)
+        for d_val in range(1, d_max + 1):
+            angle_data = self._variable_angles.get(d_val)
+            if angle_data is None:
+                continue
+            phi_d = angle_data["phi"]
+            if is_root:
+                phi_d = self._variable_root_angles.get(d_val, phi_d)
+            cascade_ops_d = angle_data["cascade_ops"]
+
+            for pattern in itertools.combinations(range(d_max), d_val):
+                zeros = [j for j in range(d_max) if j not in pattern]
+                for z in zeros:
+                    emit_x(validity_qubits[z])
+
+                ctrl_qubits = [h_qubit_idx] + validity_qubits
+
+                # U forward: parent-child Ry then cascade
+                _emit_multi_controlled_ry(self._height_qubit(depth - 1), phi_d, ctrl_qubits)
+                if d_val > 1 and cascade_ops_d:
+                    _emit_cascade_multi_controlled(branch_reg, cascade_ops_d, ctrl_qubits, sign=1)
+
+                for z in zeros:
+                    emit_x(validity_qubits[z])
+
+        # --- Step 4: Uncompute validity ancillae (reverse of step 2) ---
+        self._uncompute_children(depth, level_idx, d_max, validity)
+
+    def _evaluate_children(self, depth, level_idx, d_max, validity):
+        """Evaluate predicate on each child and store validity results.
+
+        For each child i (0..d_max-1):
+        1. Navigate to child state (set branch register, flip height)
+        2. Evaluate predicate
+        3. Store validity: validity[i] = NOT reject (|1> = valid)
+        4. Uncompute predicate and undo navigation
+
+        Parameters
+        ----------
+        depth : int
+            Current depth level.
+        level_idx : int
+            Level index (max_depth - depth).
+        d_max : int
+            Maximum branching degree at this level.
+        validity : list[qbool]
+            Validity ancillae to store results.
+        """
+        br = self.branch_registers[level_idx]
+        bw = br.width
+
+        for i in range(d_max):
+            # Navigate to child i: encode child index in branch register
+            for bit in range(bw):
+                if (i >> (bw - 1 - bit)) & 1:
+                    emit_x(int(br.qubits[64 - bw + bit]))
+
+            # Flip height: move from depth to depth-1 (child's depth)
+            emit_x(self._height_qubit(depth))
+            emit_x(self._height_qubit(depth - 1))
+
+            # Evaluate predicate
+            node = self.node
+            _accept_q, reject_q = self._predicate(node)
+
+            # Store validity: validity[i] = NOT reject
+            # CNOT from reject to validity, then X to invert
+            reject_qubit = int(reject_q.qubits[63])
+            validity_qubit = int(validity[i].qubits[63])
+            reject_ctrl = _make_qbool_wrapper(reject_qubit)
+            with reject_ctrl:
+                emit_x(validity_qubit)
+            emit_x(validity_qubit)  # Flip: validity=|1> means valid
+
+            # Uncompute predicate
+            if self._predicate_is_compiled:
+                self._predicate.adjoint(node)
+
+            # Undo height flip
+            emit_x(self._height_qubit(depth - 1))
+            emit_x(self._height_qubit(depth))
+
+            # Undo branch register encoding
+            for bit in range(bw):
+                if (i >> (bw - 1 - bit)) & 1:
+                    emit_x(int(br.qubits[64 - bw + bit]))
+
+    def _uncompute_children(self, depth, level_idx, d_max, validity):
+        """Uncompute validity ancillae (reverse of _evaluate_children).
+
+        Must be called after the conditional diffusion blocks to disentangle
+        the validity ancillae from the tree state.
+
+        Parameters
+        ----------
+        depth : int
+            Current depth level.
+        level_idx : int
+            Level index (max_depth - depth).
+        d_max : int
+            Maximum branching degree at this level.
+        validity : list[qbool]
+            Validity ancillae to uncompute.
+        """
+        br = self.branch_registers[level_idx]
+        bw = br.width
+
+        for i in reversed(range(d_max)):
+            # Navigate to child i (same as forward)
+            for bit in range(bw):
+                if (i >> (bw - 1 - bit)) & 1:
+                    emit_x(int(br.qubits[64 - bw + bit]))
+
+            emit_x(self._height_qubit(depth))
+            emit_x(self._height_qubit(depth - 1))
+
+            # Re-evaluate predicate
+            node = self.node
+            _accept_q, reject_q = self._predicate(node)
+
+            # Undo validity store (reverse: X then CNOT)
+            reject_qubit = int(reject_q.qubits[63])
+            validity_qubit = int(validity[i].qubits[63])
+            emit_x(validity_qubit)
+            reject_ctrl = _make_qbool_wrapper(reject_qubit)
+            with reject_ctrl:
+                emit_x(validity_qubit)
+
+            # Uncompute predicate
+            if self._predicate_is_compiled:
+                self._predicate.adjoint(node)
+
+            # Undo navigation
+            emit_x(self._height_qubit(depth - 1))
+            emit_x(self._height_qubit(depth))
+
+            for bit in range(bw):
+                if (i >> (bw - 1 - bit)) & 1:
+                    emit_x(int(br.qubits[64 - bw + bit]))
+
     def local_diffusion(self, depth):
         """Apply local diffusion operator D_x at the given depth.
 
@@ -610,6 +1007,10 @@ class QWalkTree:
         All gates are controlled on the height qubit h[depth], so calling
         at a depth where h[depth] != |1> is a no-op (safe for walk operator
         loops over all depths).
+
+        When a predicate is provided, dispatches to _variable_diffusion()
+        which evaluates the predicate on each potential child and applies
+        conditional rotations based on the count of valid children d(x).
 
         Parameters
         ----------
@@ -626,6 +1027,11 @@ class QWalkTree:
 
         # Leaf skip: leaves have no children, no diffusion
         if depth == 0:
+            return
+
+        # Variable branching dispatch: predicate provided -> evaluate per-child
+        if self._use_variable_branching:
+            self._variable_diffusion(depth)
             return
 
         # Get level data
