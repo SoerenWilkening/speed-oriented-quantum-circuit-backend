@@ -21,8 +21,8 @@ Requirements for quantum walk primitives (Montanaro 2015 backtracking speedup). 
 
 ### Local Diffusion
 
-- [ ] **DIFF-01**: D_x local diffusion operator for uniform branching with correct amplitude angle phi = 2*arctan(sqrt(d))
-- [ ] **DIFF-02**: Root node diffusion with separate phi_root formula (different amplitude weighting per Montanaro section 2)
+- [x] **DIFF-01**: D_x local diffusion operator for uniform branching with correct amplitude angle phi = 2*arctan(sqrt(d))
+- [x] **DIFF-02**: Root node diffusion with separate phi_root formula (different amplitude weighting per Montanaro section 2)
 - [ ] **DIFF-03**: Statevector tests verifying |psi_x> amplitudes match 1/sqrt(d(x)+1) tolerance
 - [ ] **DIFF-04**: Variable branching support — count valid children per node via predicate evaluation, controlled Ry rotation based on child count d(x)
 
@@ -85,8 +85,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PRED-01 | Phase 97 | Complete |
 | PRED-02 | Phase 97 | Complete |
 | PRED-03 | Phase 97 | Complete |
-| DIFF-01 | Phase 98 | Pending |
-| DIFF-02 | Phase 98 | Pending |
+| DIFF-01 | Phase 98 | Complete |
+| DIFF-02 | Phase 98 | Complete |
 | DIFF-03 | Phase 98 | Pending |
 | DIFF-04 | Phase 100 | Pending |
 | WALK-01 | Phase 99 | Pending |
