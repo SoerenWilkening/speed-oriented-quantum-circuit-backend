@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Quantum Walk Primitives
 status: executing
-last_updated: "2026-03-02T18:24:53.166Z"
+last_updated: "2026-03-02T18:44:45.687Z"
 progress:
   total_phases: 17
-  completed_phases: 16
+  completed_phases: 17
   total_plans: 45
-  completed_plans: 44
+  completed_plans: 45
 ---
 
 # Project State
@@ -18,23 +18,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v6.0 Quantum Walk Primitives -- Phase 98 Plan 01 complete
+**Current focus:** v6.0 Quantum Walk Primitives -- Phase 98 complete
 
 ## Current Position
 
 Phase: 98 of 101 (Local Diffusion Operator)
-Plan: 1 of 2 complete
-Status: Executing
-Last activity: 2026-03-02 -- Phase 98 Plan 01 complete (local diffusion operator)
+Plan: 2 of 2 complete
+Status: Phase Complete
+Last activity: 2026-03-02 -- Phase 98 Plan 02 complete (statevector verification tests)
 
 Progress: [###.......] 30%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 262 (v1.0-v6.0)
+- Total plans completed: 264 (v1.0-v6.0)
 - Average duration: ~13 min/plan
-- Total execution time: ~44.1 hours
+- Total execution time: ~44.7 hours
 
 **By Milestone:**
 
@@ -45,7 +45,7 @@ Progress: [###.......] 30%
 | v4.0 Grover's Algorithm | 76-81 | 18 | Complete (2026-02-22) |
 | v4.1 Quality & Efficiency | 82-89 | 21 | Complete (2026-02-24) |
 | v5.0 Advanced Arithmetic | 90-96 | 19 | Shipped (2026-02-26) |
-| v6.0 Quantum Walk | 97-101 | 3/? | In Progress |
+| v6.0 Quantum Walk | 97-101 | 5/? | In Progress |
 
 ## Accumulated Context
 
@@ -53,10 +53,10 @@ Progress: [###.......] 30%
 
 See PROJECT.md Key Decisions table for full history.
 
-Recent from Phase 98 Plan 01:
+Recent from Phase 98:
+- V-gate CCRy decomposition avoids nested with-block limitation for height-controlled cascade
+- Inline S_0 reflection replaces @ql.compile diffusion call to fix first-call control propagation bug
 - Flat cascade gate planning avoids framework nested control context limitation
-- Pre-planned cascade ops compiled via @ql.compile for height-controlled dispatch
-- CCRy decomposed using V-gate pattern for d>4 branching
 - _make_qbool_wrapper creates 64-element numpy arrays for gate emission compatibility
 - Binary splitting cascade with balanced ceil(d/2)/floor(d/2) for arbitrary d
 
@@ -70,14 +70,14 @@ Recent from Phase 97:
 **Carry forward (architectural):**
 - QQ Division Ancilla Leak -- DOCUMENTED (see docs/KNOWN-ISSUES.md)
 - 14-15 pre-existing test failures in test_compile.py -- unrelated to v6.0
-- Framework limitation: `with qbool:` cannot nest (quantum-quantum AND not supported) -- worked around via @ql.compile cascade pattern
+- Framework limitation: `with qbool:` cannot nest (quantum-quantum AND not supported) -- worked around via V-gate CCRy decomposition and inline gate emission
 
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 98-01-PLAN.md
-Resume file: .planning/phases/98-local-diffusion-operator/98-01-SUMMARY.md
-Resume action: Execute Plan 98-02 via `/gsd:execute-phase 98`
+Stopped at: Completed 98-02-PLAN.md (Phase 98 complete)
+Resume file: .planning/phases/98-local-diffusion-operator/98-02-SUMMARY.md
+Resume action: Plan and execute Phase 99 (Walk Operators)
 
 ---
-*State updated: 2026-03-02 -- Phase 98 Plan 01 complete (local diffusion operator)*
+*State updated: 2026-03-02 -- Phase 98 complete (local diffusion operator with statevector tests)*

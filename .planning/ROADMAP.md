@@ -138,7 +138,7 @@
 **Milestone Goal:** Predicate-aware quantum walk operators based on Montanaro 2015 backtracking speedup, with variable branching, correct amplitude calculation, and Qiskit-verified demos on small SAT instances.
 
 - [x] **Phase 97: Tree Encoding & Predicate Interface** - Foundational data structures, register allocation, predicate API, and resource estimation -- completed 2026-03-02
-- [ ] **Phase 98: Local Diffusion Operator** - D_x with correct amplitude angles for uniform branching, root special case, and statevector verification
+- [x] **Phase 98: Local Diffusion Operator** - D_x with correct amplitude angles for uniform branching, root special case, and statevector verification (completed 2026-03-02)
 - [ ] **Phase 99: Walk Operators** - R_A, R_B via parity-controlled diffusion, composed walk step, @ql.compile wrapping, disjointness validation
 - [ ] **Phase 100: Variable Branching** - Dynamic child counting via predicate evaluation and controlled Ry rotation based on d(x)
 - [ ] **Phase 101: Detection & Demo** - Iterative power-method detection, SAT demo within 17-qubit budget, Qiskit statevector verification
@@ -237,7 +237,7 @@ Phases execute in numeric order: 97 -> 98 -> 99 -> 100 -> 101
 | 82-89 | v4.1 | 21/21 | Complete | 2026-02-24 |
 | 90-96 | v5.0 | 19/19 | Complete | 2026-02-26 |
 | 97. Tree Encoding & Predicate Interface | v6.0 | 2/2 | Complete | 2026-03-02 |
-| 98. Local Diffusion Operator | 1/2 | In Progress|  | - |
+| 98. Local Diffusion Operator | 2/2 | Complete   | 2026-03-02 | - |
 | 99. Walk Operators | v6.0 | 0/? | Not started | - |
 | 100. Variable Branching | v6.0 | 0/? | Not started | - |
 | 101. Detection & Demo | v6.0 | 0/? | Not started | - |
