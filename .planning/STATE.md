@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v6.0
-milestone_name: Quantum Walk Primitives
-status: shipped
+milestone: v6.1
+milestone_name: Quantum Chess Demo
+status: defining_requirements
 last_updated: "2026-03-03"
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 11
-  completed_plans: 11
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
@@ -18,16 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v6.0 Quantum Walk Primitives shipped -- Planning next milestone
+**Current focus:** v6.1 Quantum Chess Demo — defining requirements
 
 ## Current Position
 
-Phase: 102 of 102 (Verification & Cosmetic Cleanup)
-Plan: 1 of 1 complete
-Status: Milestone Shipped
-Last activity: 2026-03-03 -- v6.0 milestone archived
-
-Progress: [##########] 100%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-03 — Milestone v6.1 started
 
 ## Performance Metrics
 
@@ -46,6 +44,7 @@ Progress: [##########] 100%
 | v4.1 Quality & Efficiency | 82-89 | 21 | Complete (2026-02-24) |
 | v5.0 Advanced Arithmetic | 90-96 | 19 | Shipped (2026-02-26) |
 | v6.0 Quantum Walk | 97-102 | 11 | Shipped (2026-03-03) |
+| v6.1 Quantum Chess Demo | — | — | Defining requirements |
 
 ## Accumulated Context
 
@@ -64,9 +63,9 @@ See PROJECT.md Key Decisions table for full history.
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: v6.0 milestone shipped and archived
+Stopped at: v6.1 milestone requirements definition
 Resume file: N/A
-Resume action: Start next milestone via `/gsd:new-milestone`
+Resume action: Continue requirements definition
 
 ---
-*State updated: 2026-03-03 -- v6.0 Quantum Walk Primitives milestone shipped*
+*State updated: 2026-03-03 -- v6.1 Quantum Chess Demo milestone started*

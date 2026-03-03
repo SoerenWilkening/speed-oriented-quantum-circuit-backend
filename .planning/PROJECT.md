@@ -173,6 +173,17 @@ Write quantum algorithms in natural programming style that compiles to efficient
 
 ### Active
 
+## Current Milestone: v6.1 Quantum Chess Demo
+
+**Goal:** Build a quantum minimax chess solver demo using raw quantum_language primitives — manual quantum walk on a chess game tree with legal move generation, demonstrating the framework's expressiveness without using the QWalkTree API.
+
+**Target features:**
+- Chess board encoding (8x8, 2 kings + white knights) with legal move generation
+- Manual quantum walk operators (height registers, branch registers, diffusion, R_A/R_B) from raw primitives
+- demo.py with full manual quantum walk script (circuit generation, no simulation)
+- Secondary QWalkTree comparison script
+- Classical Monte Carlo tree walk verification (separate phase)
+
 **Deferred features (carry forward):**
 - Resource estimation for compiled functions — ADV-01
 - Serialization of compiled functions to disk — ADV-02
@@ -378,4 +389,4 @@ Write quantum algorithms in natural programming style that compiles to efficient
 | All Python implementation for walk module | Walk is compositional, not computational at bit-width scale | ✓ Good — no new C code needed |
 
 ---
-*Last updated: 2026-03-03 after v6.0 milestone*
+*Last updated: 2026-03-03 after v6.1 milestone started*
