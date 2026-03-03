@@ -14,10 +14,12 @@ Encode a chess endgame position (2 kings + 2 white knights) and generate legal m
 ## Implementation Decisions
 
 ### Board encoding strategy
-- Piece-centric encoding: each piece gets 6 qubits for its square position (file + rank)
-- 4 pieces total (white king, black king, 2 white knights) = 24 position qubits
+- Square-centric encoding: qarray of 64 qbools, one per square, storing whether a piece occupies that square
+- Separate qarrays per piece type as needed (e.g., white knights, white king, black king) — Claude's discretion on exact layering
+- 64 qbools per layer; more qubits than piece-centric but better for downstream phases (attack maps, legality checks, move application)
 - Starting positions are classical input — set via X gates at circuit initialization time
 - Positions are configurable via Python parameters (not hardcoded)
+- Matches the pattern already used in `demo.py` (8x8 qarray of qbool for knight positions)
 
 ### Move representation format
 - Legal moves represented as an enumerated index list (0..d-1)
@@ -43,7 +45,7 @@ Encode a chess endgame position (2 kings + 2 white knights) and generate legal m
 - Tests in main test suite: tests/python/test_chess.py following existing conventions
 
 ### Claude's Discretion
-- Bit layout within the 6-qubit position encoding (3+3 split vs 6-bit index)
+- Exact qarray layering for piece types (one qarray per piece type vs combined encoding)
 - Oracle API interface design (full position vs incremental)
 - Default demo starting position (interesting endgame vs center placement)
 - Spot-check priority ordering (encoding vs oracle first)
