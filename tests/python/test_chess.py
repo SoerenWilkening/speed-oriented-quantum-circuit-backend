@@ -530,19 +530,42 @@ class TestMoveOracle:
         branch = ql.qint(0, width=result["branch_width"])
 
         # Calling apply_move should not raise
-        apply_move(board, branch)
+        apply_move(
+            board["white_king"],
+            board["black_king"],
+            board["white_knights"],
+            branch,
+        )
 
     def test_oracle_inverse_exists(self, clean_circuit):
-        """apply_move has .inverse() method available (from inverse=True)."""
-        from chess_encoding import get_legal_moves_and_oracle
+        """apply_move has .inverse property available (from inverse=True)."""
+        import quantum_language as ql
+        from chess_encoding import encode_position, get_legal_moves_and_oracle
 
         wk_sq, bk_sq, wn_squares = 4, 60, [27]
         result = get_legal_moves_and_oracle(wk_sq, bk_sq, wn_squares, "white")
         apply_move = result["apply_move"]
 
-        # inverse() should return a callable proxy (not None)
-        inv = apply_move.inverse()
-        assert inv is not None
+        # .inverse is a property returning a callable proxy
+        assert apply_move.inverse is not None
+
+        # Must call forward first, then .inverse uncomputes it
+        board = encode_position(wk_sq, bk_sq, wn_squares)
+        branch = ql.qint(0, width=result["branch_width"])
+        apply_move(
+            board["white_king"],
+            board["black_king"],
+            board["white_knights"],
+            branch,
+        )
+
+        # Calling .inverse with same qubits should not raise
+        apply_move.inverse(
+            board["white_king"],
+            board["black_king"],
+            board["white_knights"],
+            branch,
+        )
 
     def test_oracle_deterministic(self):
         """Calling get_legal_moves_and_oracle twice with same position produces same result."""
@@ -619,7 +642,12 @@ class TestMoveOracleSubcircuit:
         branch = ql.qint(0, width=result["branch_width"])
 
         # Apply move should generate circuit gates without error
-        apply_move(board, branch)
+        apply_move(
+            board["white_king"],
+            board["black_king"],
+            board["white_knights"],
+            branch,
+        )
 
     def test_tiny_board_inverse_works(self, clean_circuit):
         """Inverse of apply_move can be called on a minimal position."""
@@ -637,9 +665,19 @@ class TestMoveOracleSubcircuit:
         branch = ql.qint(0, width=result["branch_width"])
 
         # Forward call
-        apply_move(board, branch)
-        # Inverse call -- should not raise
-        apply_move.inverse()(board, branch)
+        apply_move(
+            board["white_king"],
+            board["black_king"],
+            board["white_knights"],
+            branch,
+        )
+        # Inverse call -- should not raise (inverse is a property returning proxy)
+        apply_move.inverse(
+            board["white_king"],
+            board["black_king"],
+            board["white_knights"],
+            branch,
+        )
 
     def test_single_knight_circuit(self, clean_circuit):
         """Single knight position generates correct move count in circuit."""
@@ -665,4 +703,9 @@ class TestMoveOracleSubcircuit:
 
         # Circuit generation should succeed
         apply_move = result["apply_move"]
-        apply_move(board, branch)
+        apply_move(
+            board["white_king"],
+            board["black_king"],
+            board["white_knights"],
+            branch,
+        )
