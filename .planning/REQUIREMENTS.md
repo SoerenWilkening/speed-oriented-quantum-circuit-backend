@@ -62,26 +62,26 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CHESS-01 | — | Pending |
-| CHESS-02 | — | Pending |
-| CHESS-03 | — | Pending |
-| CHESS-04 | — | Pending |
-| CHESS-05 | — | Pending |
-| WALK-01 | — | Pending |
-| WALK-02 | — | Pending |
-| WALK-03 | — | Pending |
-| WALK-04 | — | Pending |
-| WALK-05 | — | Pending |
-| WALK-06 | — | Pending |
-| WALK-07 | — | Pending |
-| DEMO-01 | — | Pending |
-| DEMO-02 | — | Pending |
+| CHESS-01 | Phase 103 | Pending |
+| CHESS-02 | Phase 103 | Pending |
+| CHESS-03 | Phase 103 | Pending |
+| CHESS-04 | Phase 103 | Pending |
+| CHESS-05 | Phase 103 | Pending |
+| WALK-01 | Phase 104 | Pending |
+| WALK-02 | Phase 104 | Pending |
+| WALK-03 | Phase 104 | Pending |
+| WALK-04 | Phase 105 | Pending |
+| WALK-05 | Phase 105 | Pending |
+| WALK-06 | Phase 105 | Pending |
+| WALK-07 | Phase 105 | Pending |
+| DEMO-01 | Phase 106 | Pending |
+| DEMO-02 | Phase 106 | Pending |
 
 **Coverage:**
 - v6.1 requirements: 14 total
-- Mapped to phases: 0
-- Unmapped: 14 ⚠️
+- Mapped to phases: 14
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-03*
-*Last updated: 2026-03-03 after initial definition*
+*Last updated: 2026-03-03 after roadmap creation -- all 14 requirements mapped to phases 103-106*

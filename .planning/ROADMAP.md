@@ -14,6 +14,7 @@
 - v4.1 Quality & Efficiency -- Phases 82-89 (shipped 2026-02-24) -- See `milestones/v4.1-ROADMAP.md`
 - v5.0 Advanced Arithmetic & Compilation -- Phases 90-96 (shipped 2026-02-26) -- See `milestones/v5.0-ROADMAP.md`
 - v6.0 Quantum Walk Primitives -- Phases 97-102 (shipped 2026-03-03) -- See `milestones/v6.0-ROADMAP.md`
+- v6.1 Quantum Chess Demo -- Phases 103-106 (in progress)
 
 ## Phases
 
@@ -145,7 +146,82 @@
 
 </details>
 
+### v6.1 Quantum Chess Demo (In Progress)
+
+**Milestone Goal:** Build a quantum minimax chess solver demo using raw quantum_language primitives -- manual quantum walk on a chess game tree with legal move generation, demonstrating the framework's expressiveness without using the QWalkTree API.
+
+**Context:** Chess has at most 218 legal moves per turn. In our simplified endgame (2 kings + white knights): white has max ~32 moves (5-bit branch register), black has max 8 moves (3-bit branch register). Branch register width per level is fixed at the maximum for that player's turn.
+
+- [ ] **Phase 103: Chess Board Encoding & Legal Moves** - Board representation, piece encoding, move generation, and compiled move oracle
+- [ ] **Phase 104: Walk Register Scaffolding & Local Diffusion** - One-hot height register, branch registers, board-state-from-branch-history derivation, and single D_x diffusion operator with position-aware branching factor
+- [ ] **Phase 105: Full Walk Operators** - Height-controlled diffusion cascade, R_A, R_B, and compiled walk step U = R_B * R_A
+- [ ] **Phase 106: Demo Scripts** - Manual walk demo.py with circuit statistics and QWalkTree comparison script
+
+## Phase Details
+
+### Phase 103: Chess Board Encoding & Legal Moves
+**Goal**: Users can encode a chess endgame position and generate legal moves for any piece using quantum primitives
+**Depends on**: Nothing (first phase of v6.1; builds on existing v6.0 framework)
+**Requirements**: CHESS-01, CHESS-02, CHESS-03, CHESS-04, CHESS-05
+**Success Criteria** (what must be TRUE):
+  1. A chess position with 2 kings and white knights is encoded as a qarray with correct square-to-qubit mapping
+  2. Knight attack patterns are generated correctly from any occupied square, respecting board boundaries
+  3. King moves are generated for all 8 directions with edge-awareness (no wrapping off board edges)
+  4. Legal move filtering excludes destinations attacked by opponent or occupied by friendly pieces
+  5. The move oracle is wrapped as a `@ql.compile` function that produces a legal move set for a given position
+**Plans**: TBD
+
+Plans:
+- [ ] 103-01: TBD
+- [ ] 103-02: TBD
+
+### Phase 104: Walk Register Scaffolding & Local Diffusion
+**Goal**: Users can construct quantum walk registers and apply a local diffusion operator with correct Montanaro angles from raw primitives (not QWalkTree). Crucially, the diffusion operator must derive the board position at each node by applying the sequence of moves encoded in branch registers to the starting position — only then can it determine which child moves are legal and compute the correct branching factor d(x) for diffusion angles.
+**Depends on**: Phase 103
+**Requirements**: WALK-01, WALK-02, WALK-03
+**Success Criteria** (what must be TRUE):
+  1. A one-hot height register of (max_depth+1) qubits is created from raw qint with the root qubit initialized to |1>
+  2. Per-level branch registers are created encoding the chosen move index from the legal move list at each depth
+  3. The board position at any tree node is correctly derived by replaying the move sequence encoded in branch registers 0..d-1 from the starting position
+  4. A single local diffusion D_x applies Ry rotations with correct Montanaro angles (phi = 2*arctan(sqrt(d))) where d is the number of legal moves at the derived board position, using raw gate primitives
+**Plans**: TBD
+
+Plans:
+- [ ] 104-01: TBD
+- [ ] 104-02: TBD
+
+### Phase 105: Full Walk Operators
+**Goal**: Users can compose a complete quantum walk step U = R_B * R_A from manual height-controlled diffusion operators
+**Depends on**: Phase 104
+**Requirements**: WALK-04, WALK-05, WALK-06, WALK-07
+**Success Criteria** (what must be TRUE):
+  1. Height-controlled diffusion cascade activates D_x only at the correct depth level via one-hot qubit control
+  2. R_A composes diffusion at even depths (excluding root) with correct height-register conditioning
+  3. R_B composes diffusion at odd depths plus root with correct height-register conditioning
+  4. Walk step U = R_B * R_A is composed via `@ql.compile` and produces a valid quantum circuit
+**Plans**: TBD
+
+Plans:
+- [ ] 105-01: TBD
+- [ ] 105-02: TBD
+
+### Phase 106: Demo Scripts
+**Goal**: Users can run demo scripts that showcase the manual quantum walk on a chess game tree and compare against the QWalkTree API
+**Depends on**: Phase 103, Phase 104, Phase 105
+**Requirements**: DEMO-01, DEMO-02
+**Success Criteria** (what must be TRUE):
+  1. demo.py runs end-to-end producing a quantum circuit for a chess endgame walk -- showing starting position, legal move tree structure, walk operators, and circuit statistics (depth, gate count, qubit count)
+  2. A secondary comparison script applies the QWalkTree API to the same chess position and prints side-by-side circuit statistics against the manual approach
+**Plans**: TBD
+
+Plans:
+- [ ] 106-01: TBD
+- [ ] 106-02: TBD
+
 ## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 103 -> 104 -> 105 -> 106
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -160,6 +236,10 @@
 | 82-89 | v4.1 | 21/21 | Complete | 2026-02-24 |
 | 90-96 | v5.0 | 19/19 | Complete | 2026-02-26 |
 | 97-102 | v6.0 | 11/11 | Complete | 2026-03-03 |
+| 103. Chess Board Encoding & Legal Moves | v6.1 | 0/TBD | Not started | - |
+| 104. Walk Register Scaffolding & Local Diffusion | v6.1 | 0/TBD | Not started | - |
+| 105. Full Walk Operators | v6.1 | 0/TBD | Not started | - |
+| 106. Demo Scripts | v6.1 | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-02-02*
@@ -174,3 +254,4 @@
 *Milestone v4.1 shipped: 2026-02-24*
 *Milestone v5.0 shipped: 2026-02-26*
 *Milestone v6.0 shipped: 2026-03-03*
+*Milestone v6.1 roadmap created: 2026-03-03*

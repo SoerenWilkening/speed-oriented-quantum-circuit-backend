@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v6.1
 milestone_name: Quantum Chess Demo
-status: defining_requirements
+status: ready_to_plan
 last_updated: "2026-03-03"
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -18,14 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v6.1 Quantum Chess Demo — defining requirements
+**Current focus:** v6.1 Quantum Chess Demo -- Phase 103 ready to plan
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-03-03 — Milestone v6.1 started
+Phase: 103 of 106 (Chess Board Encoding & Legal Moves)
+Plan: 0 of TBD in current phase
+Status: Ready to plan
+Last activity: 2026-03-03 -- v6.1 roadmap created (4 phases, 14 requirements)
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -44,7 +46,7 @@ Last activity: 2026-03-03 — Milestone v6.1 started
 | v4.1 Quality & Efficiency | 82-89 | 21 | Complete (2026-02-24) |
 | v5.0 Advanced Arithmetic | 90-96 | 19 | Shipped (2026-02-26) |
 | v6.0 Quantum Walk | 97-102 | 11 | Shipped (2026-03-03) |
-| v6.1 Quantum Chess Demo | — | — | Defining requirements |
+| v6.1 Quantum Chess Demo | 103-106 | TBD | Ready to plan |
 
 ## Accumulated Context
 
@@ -52,20 +54,25 @@ Last activity: 2026-03-03 — Milestone v6.1 started
 
 See PROJECT.md Key Decisions table for full history.
 
+Recent decisions affecting current work:
+- Manual quantum walk operators (not QWalkTree API) for educational/demo purposes
+- Circuit generation only -- no Qiskit simulation (qubit count exceeds 17-qubit budget)
+- Simplified endgame: 2 kings + white knights (no castling, en passant, promotion)
+
 ### Blockers/Concerns
 
 **Carry forward (architectural):**
 - QQ Division Ancilla Leak -- DOCUMENTED (see docs/KNOWN-ISSUES.md)
-- 14-15 pre-existing test failures in test_compile.py -- unrelated to v6.0
+- 14-15 pre-existing test failures in test_compile.py -- unrelated to v6.1
 - Framework limitation: `with qbool:` cannot nest (quantum-quantum AND not supported)
 - Raw predicate qubit allocation: each predicate call allocates new qbools
 
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: v6.1 milestone requirements definition
+Stopped at: v6.1 roadmap created -- 4 phases (103-106), 14 requirements mapped
 Resume file: N/A
-Resume action: Continue requirements definition
+Resume action: Plan Phase 103 via `/gsd:plan-phase 103`
 
 ---
-*State updated: 2026-03-03 -- v6.1 Quantum Chess Demo milestone started*
+*State updated: 2026-03-03 -- v6.1 Quantum Chess Demo roadmap created*
