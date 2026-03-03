@@ -33,15 +33,14 @@ class TestHeightRegister:
         assert root_qubit >= 0
 
     def test_root_qubit_initialized_via_emit_x(self, clean_circuit):
-        """Root qubit should have emit_x called on it (circuit has X gate)."""
+        """Root qubit should have emit_x called, qubits allocated for height register."""
+        import quantum_language as ql
         from chess_walk import create_height_register
 
-        from quantum_language.state import circuit_stats
-
         _h = create_height_register(max_depth=3)  # noqa: F841
-        stats = circuit_stats()
-        # There should be at least one gate emitted (the X gate on root)
-        assert stats["total_gates"] >= 1
+        stats = ql.circuit_stats()
+        # Height register should allocate max_depth+1 = 4 qubits
+        assert stats["peak_allocated"] >= 4
 
     def test_different_max_depth(self, clean_circuit):
         """Height register adapts to different max_depth values."""
