@@ -1,9 +1,9 @@
 ---
 phase: 103
 slug: chess-board-encoding-legal-moves
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: approved
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-03-03
 ---
 
@@ -41,7 +41,7 @@ created: 2026-03-03
 | 103-01-01 | 01 | 1 | CHESS-01 | unit | `pytest tests/python/test_chess.py::TestBoardEncoding -x` | ❌ W0 | ⬜ pending |
 | 103-01-02 | 01 | 1 | CHESS-02 | unit | `pytest tests/python/test_chess.py::TestKnightMoves -x` | ❌ W0 | ⬜ pending |
 | 103-01-03 | 01 | 1 | CHESS-03 | unit | `pytest tests/python/test_chess.py::TestKingMoves -x` | ❌ W0 | ⬜ pending |
-| 103-02-01 | 02 | 2 | CHESS-04 | unit | `pytest tests/python/test_chess.py::TestLegalMoveFiltering -x` | ❌ W0 | ⬜ pending |
+| 103-01-04 | 01 | 1 | CHESS-04 | unit | `pytest tests/python/test_chess.py::TestLegalMoveFiltering -x` | ❌ W0 | ⬜ pending |
 | 103-02-02 | 02 | 2 | CHESS-05 | unit + subcircuit | `pytest tests/python/test_chess.py::TestMoveOracle -x` | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
@@ -50,11 +50,11 @@ created: 2026-03-03
 
 ## Wave 0 Requirements
 
-- [ ] `tests/python/test_chess.py` — stubs for CHESS-01 through CHESS-05
+- [x] `tests/python/test_chess.py` — created via TDD in Plan 01 Task 1 (tests written before implementation)
 - No framework install needed (pytest already configured)
 - No conftest changes needed (`clean_circuit` fixture already exists)
 
-*Existing infrastructure covers framework requirements.*
+*Wave 0 satisfied by TDD pattern: Plan 01 Task 1 writes all test stubs before implementation code.*
 
 ---
 
@@ -66,11 +66,11 @@ created: 2026-03-03
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 15s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references (TDD tasks create tests inline before implementation)
+- [x] No watch-mode flags
+- [x] Feedback latency < 15s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-03-03
