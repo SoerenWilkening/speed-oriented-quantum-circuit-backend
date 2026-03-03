@@ -184,11 +184,11 @@ Plans:
   2. Per-level branch registers are created encoding the chosen move index from the legal move list at each depth
   3. The board position at any tree node is correctly derived by replaying the move sequence encoded in branch registers 0..d-1 from the starting position
   4. A single local diffusion D_x applies Ry rotations with correct Montanaro angles (phi = 2*arctan(sqrt(d))) where d is the number of legal moves at the derived board position, using raw gate primitives
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 104-01: TBD
-- [ ] 104-02: TBD
+- [ ] 104-01-PLAN.md -- Register scaffolding: height register, branch registers, board state replay (WALK-01, WALK-02)
+- [ ] 104-02-PLAN.md -- Local diffusion D_x with Montanaro angles and variable branching (WALK-03)
 
 ### Phase 105: Full Walk Operators
 **Goal**: Users can compose a complete quantum walk step U = R_B * R_A from manual height-controlled diffusion operators
@@ -237,7 +237,7 @@ Phases execute in numeric order: 103 -> 104 -> 105 -> 106
 | 90-96 | v5.0 | 19/19 | Complete | 2026-02-26 |
 | 97-102 | v6.0 | 11/11 | Complete | 2026-03-03 |
 | 103. Chess Board Encoding & Legal Moves | v6.1 | Complete    | 2026-03-03 | 2026-03-03 |
-| 104. Walk Register Scaffolding & Local Diffusion | v6.1 | 0/TBD | Not started | - |
+| 104. Walk Register Scaffolding & Local Diffusion | v6.1 | 0/2 | Not started | - |
 | 105. Full Walk Operators | v6.1 | 0/TBD | Not started | - |
 | 106. Demo Scripts | v6.1 | 0/TBD | Not started | - |
 
