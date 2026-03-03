@@ -236,7 +236,7 @@ Phases execute in numeric order: 103 -> 104 -> 105 -> 106
 | 82-89 | v4.1 | 21/21 | Complete | 2026-02-24 |
 | 90-96 | v5.0 | 19/19 | Complete | 2026-02-26 |
 | 97-102 | v6.0 | 11/11 | Complete | 2026-03-03 |
-| 103. Chess Board Encoding & Legal Moves | v6.1 | 0/2 | Planning | - |
+| 103. Chess Board Encoding & Legal Moves | 1/2 | In Progress|  | - |
 | 104. Walk Register Scaffolding & Local Diffusion | v6.1 | 0/TBD | Not started | - |
 | 105. Full Walk Operators | v6.1 | 0/TBD | Not started | - |
 | 106. Demo Scripts | v6.1 | 0/TBD | Not started | - |

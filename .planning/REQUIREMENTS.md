@@ -9,10 +9,10 @@ Requirements for Quantum Chess Demo milestone. Each maps to roadmap phases.
 
 ### Chess Board & Legal Moves
 
-- [ ] **CHESS-01**: 8x8 board with piece positions encoded as qarray (2 kings + white knights)
-- [ ] **CHESS-02**: Knight attack pattern generation from any occupied square
-- [ ] **CHESS-03**: King move generation (8 adjacent squares, edge-aware)
-- [ ] **CHESS-04**: Legal move filtering — destination not attacked by opponent, not occupied by friendly piece
+- [x] **CHESS-01**: 8x8 board with piece positions encoded as qarray (2 kings + white knights)
+- [x] **CHESS-02**: Knight attack pattern generation from any occupied square
+- [x] **CHESS-03**: King move generation (8 adjacent squares, edge-aware)
+- [x] **CHESS-04**: Legal move filtering — destination not attacked by opponent, not occupied by friendly piece
 - [ ] **CHESS-05**: Move oracle as `@ql.compile` function producing legal move set for current position
 
 ### Manual Quantum Walk Operators
@@ -62,10 +62,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CHESS-01 | Phase 103 | Pending |
-| CHESS-02 | Phase 103 | Pending |
-| CHESS-03 | Phase 103 | Pending |
-| CHESS-04 | Phase 103 | Pending |
+| CHESS-01 | Phase 103 | Complete |
+| CHESS-02 | Phase 103 | Complete |
+| CHESS-03 | Phase 103 | Complete |
+| CHESS-04 | Phase 103 | Complete |
 | CHESS-05 | Phase 103 | Pending |
 | WALK-01 | Phase 104 | Pending |
 | WALK-02 | Phase 104 | Pending |
