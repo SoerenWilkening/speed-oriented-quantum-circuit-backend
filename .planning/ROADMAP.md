@@ -172,8 +172,8 @@
 **Plans**: 2 plans
 
 Plans:
-- [ ] 103-01-PLAN.md -- Classical chess module: board encoding, move generation, filtering, enumeration (CHESS-01 through CHESS-04)
-- [ ] 103-02-PLAN.md -- Compiled move oracle with @ql.compile and subcircuit spot-checks (CHESS-05)
+- [x] 103-01-PLAN.md -- Classical chess module: board encoding, move generation, filtering, enumeration (CHESS-01 through CHESS-04)
+- [x] 103-02-PLAN.md -- Compiled move oracle with @ql.compile and subcircuit spot-checks (CHESS-05)
 
 ### Phase 104: Walk Register Scaffolding & Local Diffusion
 **Goal**: Users can construct quantum walk registers and apply a local diffusion operator with correct Montanaro angles from raw primitives (not QWalkTree). Crucially, the diffusion operator must derive the board position at each node by applying the sequence of moves encoded in branch registers to the starting position — only then can it determine which child moves are legal and compute the correct branching factor d(x) for diffusion angles.
@@ -236,7 +236,7 @@ Phases execute in numeric order: 103 -> 104 -> 105 -> 106
 | 82-89 | v4.1 | 21/21 | Complete | 2026-02-24 |
 | 90-96 | v5.0 | 19/19 | Complete | 2026-02-26 |
 | 97-102 | v6.0 | 11/11 | Complete | 2026-03-03 |
-| 103. Chess Board Encoding & Legal Moves | 1/2 | In Progress|  | - |
+| 103. Chess Board Encoding & Legal Moves | v6.1 | 2/2 | Complete | 2026-03-03 |
 | 104. Walk Register Scaffolding & Local Diffusion | v6.1 | 0/TBD | Not started | - |
 | 105. Full Walk Operators | v6.1 | 0/TBD | Not started | - |
 | 106. Demo Scripts | v6.1 | 0/TBD | Not started | - |

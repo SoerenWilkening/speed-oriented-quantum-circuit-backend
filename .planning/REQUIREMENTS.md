@@ -13,7 +13,7 @@ Requirements for Quantum Chess Demo milestone. Each maps to roadmap phases.
 - [x] **CHESS-02**: Knight attack pattern generation from any occupied square
 - [x] **CHESS-03**: King move generation (8 adjacent squares, edge-aware)
 - [x] **CHESS-04**: Legal move filtering — destination not attacked by opponent, not occupied by friendly piece
-- [ ] **CHESS-05**: Move oracle as `@ql.compile` function producing legal move set for current position
+- [x] **CHESS-05**: Move oracle as `@ql.compile` function producing legal move set for current position
 
 ### Manual Quantum Walk Operators
 
@@ -66,7 +66,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CHESS-02 | Phase 103 | Complete |
 | CHESS-03 | Phase 103 | Complete |
 | CHESS-04 | Phase 103 | Complete |
-| CHESS-05 | Phase 103 | Pending |
+| CHESS-05 | Phase 103 | Complete |
 | WALK-01 | Phase 104 | Pending |
 | WALK-02 | Phase 104 | Pending |
 | WALK-03 | Phase 104 | Pending |

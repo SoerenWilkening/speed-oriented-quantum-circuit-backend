@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v6.1
 milestone_name: Quantum Chess Demo
 status: executing
-stopped_at: Completed 103-01-PLAN.md
-last_updated: "2026-03-03T19:04:30Z"
-last_activity: 2026-03-03 -- Completed 103-01 classical chess module (board encoding, move generation)
+stopped_at: Completed 103-02-PLAN.md
+last_updated: "2026-03-03T19:27:00Z"
+last_activity: 2026-03-03 -- Completed 103-02 compiled move oracle (Phase 103 complete)
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 8
-  completed_plans: 1
-  percent: 12
+  completed_plans: 2
+  percent: 25
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-03)
 ## Current Position
 
 Phase: 103 of 106 (Chess Board Encoding & Legal Moves)
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-03-03 -- Completed 103-01 classical chess module (board encoding, move generation)
+Plan: 2 of 2 in current phase (COMPLETE)
+Status: Phase 103 complete -- ready for Phase 104
+Last activity: 2026-03-03 -- Completed 103-02 compiled move oracle (CHESS-05)
 
-Progress: [#░░░░░░░░░] 12%
+Progress: [##░░░░░░░░] 25%
 
 ## Performance Metrics
 
@@ -49,7 +49,7 @@ Progress: [#░░░░░░░░░] 12%
 | v4.1 Quality & Efficiency | 82-89 | 21 | Complete (2026-02-24) |
 | v5.0 Advanced Arithmetic | 90-96 | 19 | Shipped (2026-02-26) |
 | v6.0 Quantum Walk | 97-102 | 11 | Shipped (2026-03-03) |
-| v6.1 Quantum Chess Demo | 103-106 | 1/8 | In progress |
+| v6.1 Quantum Chess Demo | 103-106 | 2/8 | In progress |
 
 ## Accumulated Context
 
@@ -64,6 +64,10 @@ Recent decisions affecting current work:
 - Square index convention: sq = rank * 8 + file, consistent with qarray[rank, file]
 - Black king exclusion zone includes bk_sq + king_attacks(bk_sq) for white king filtering
 - White attack set includes wk_sq + king_attacks + knight_attacks for black king filtering
+- Oracle factory pattern: _make_apply_move() creates @ql.compile function with classical move_specs in closure
+- Separate qarray args (wk_arr, bk_arr, wn_arr, branch) for compile cache key + inverse support
+- Use ~qbool (controlled NOT) for square flipping -- ^= 1 unsupported in controlled context
+- .inverse is a @property returning _AncillaInverseProxy, called as f.inverse(args)
 
 ### Blockers/Concerns
 
@@ -75,10 +79,10 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-03T19:04:30Z
-Stopped at: Completed 103-01-PLAN.md
-Resume file: .planning/phases/103-chess-board-encoding-legal-moves/103-01-SUMMARY.md
-Resume action: Execute Phase 103 Plan 02 via `/gsd:execute-phase 103`
+Last session: 2026-03-03T19:27:00Z
+Stopped at: Completed 103-02-PLAN.md (Phase 103 complete)
+Resume file: .planning/phases/103-chess-board-encoding-legal-moves/103-02-SUMMARY.md
+Resume action: Plan Phase 104 (Walk Register Scaffolding & Local Diffusion) via `/gsd:plan-phase 104`
 
 ---
-*State updated: 2026-03-03 -- Completed 103-01 classical chess module*
+*State updated: 2026-03-03 -- Completed Phase 103 (chess board encoding + compiled move oracle)*
