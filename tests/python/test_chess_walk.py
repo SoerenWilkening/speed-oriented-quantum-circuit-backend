@@ -1,10 +1,12 @@
-"""Tests for chess quantum walk register scaffolding and board state replay.
+"""Tests for chess quantum walk register scaffolding, board state replay, and local diffusion.
 
-Component tests for Phase 104 requirements WALK-01 and WALK-02.
+Component tests for Phase 104 requirements WALK-01, WALK-02, and WALK-03.
 Tests stay within 17-qubit budget by testing registers in isolation.
 Derive/underive tests verify call order at circuit-generation level (no simulation).
+Diffusion tests verify circuit generation without simulation (qubit count exceeds budget).
 """
 
+import math
 import os
 import sys
 from unittest.mock import MagicMock
@@ -309,3 +311,168 @@ class TestPrepareWalkData:
         black_moves = data[1]["move_count"]  # Level 1 = black
         # White has knight + king, black has only king
         assert white_moves > black_moves
+
+
+class TestAngles:
+    """WALK-03: Montanaro angle formulas for internal nodes and root."""
+
+    def test_montanaro_phi_d4(self):
+        """phi(4) = 2*arctan(sqrt(4)) = 2*arctan(2) approx 2.2143."""
+        from chess_walk import montanaro_phi
+
+        result = montanaro_phi(4)
+        expected = 2.0 * math.atan(math.sqrt(4))
+        assert abs(result - expected) < 1e-10
+        assert abs(result - 2.214297435588181) < 1e-6
+
+    def test_montanaro_phi_d1(self):
+        """phi(1) = 2*arctan(1) = pi/2."""
+        from chess_walk import montanaro_phi
+
+        result = montanaro_phi(1)
+        assert abs(result - math.pi / 2) < 1e-10
+
+    def test_montanaro_phi_d2(self):
+        """phi(2) = 2*arctan(sqrt(2))."""
+        from chess_walk import montanaro_phi
+
+        result = montanaro_phi(2)
+        expected = 2.0 * math.atan(math.sqrt(2))
+        assert abs(result - expected) < 1e-10
+
+    def test_montanaro_root_phi_d4_n3(self):
+        """root_phi(4, 3) = 2*arctan(sqrt(3*4)) = 2*arctan(sqrt(12))."""
+        from chess_walk import montanaro_root_phi
+
+        result = montanaro_root_phi(4, 3)
+        expected = 2.0 * math.atan(math.sqrt(12))
+        assert abs(result - expected) < 1e-10
+
+    def test_montanaro_root_phi_d1_n1(self):
+        """root_phi(1, 1) = 2*arctan(1) = pi/2."""
+        from chess_walk import montanaro_root_phi
+
+        result = montanaro_root_phi(1, 1)
+        assert abs(result - math.pi / 2) < 1e-10
+
+
+class TestPrecomputeAngles:
+    """Precomputed diffusion angle dict structure and content."""
+
+    def test_dict_keys_1_to_dmax(self):
+        """precompute_diffusion_angles returns dict with keys 1..d_max."""
+        from chess_walk import precompute_diffusion_angles
+
+        result = precompute_diffusion_angles(d_max=4, branch_width=3)
+        assert set(result.keys()) == {1, 2, 3, 4}
+
+    def test_phi_values(self):
+        """Each d_val entry has correct phi = 2*arctan(sqrt(d_val))."""
+        from chess_walk import precompute_diffusion_angles
+
+        result = precompute_diffusion_angles(d_max=3, branch_width=2)
+        for d_val in range(1, 4):
+            expected_phi = 2.0 * math.atan(math.sqrt(d_val))
+            assert abs(result[d_val]["phi"] - expected_phi) < 1e-10
+
+    def test_cascade_ops_empty_for_d1(self):
+        """d_val=1 has empty cascade_ops (no cascade needed for single child)."""
+        from chess_walk import precompute_diffusion_angles
+
+        result = precompute_diffusion_angles(d_max=4, branch_width=3)
+        assert result[1]["cascade_ops"] == []
+
+    def test_cascade_ops_nonempty_for_d_gt_1(self):
+        """d_val > 1 has non-empty cascade_ops."""
+        from chess_walk import precompute_diffusion_angles
+
+        result = precompute_diffusion_angles(d_max=4, branch_width=3)
+        for d_val in range(2, 5):
+            assert len(result[d_val]["cascade_ops"]) > 0
+
+
+class TestEvaluateChildren:
+    """Circuit-generation test for child evaluation loop."""
+
+    def test_evaluate_children_no_crash(self, clean_circuit):
+        """evaluate_children completes without error for a simple position."""
+        import quantum_language as ql
+        from chess_walk import (
+            create_branch_registers,
+            create_height_register,
+            evaluate_children,
+            prepare_walk_data,
+        )
+        from quantum_language.qbool import qbool
+
+        # Simple position: wk=4, bk=60, wn=[10], max_depth=1
+        max_depth = 1
+        data = prepare_walk_data(wk_sq=4, bk_sq=60, wn_squares=[10], max_depth=max_depth)
+        h_reg = create_height_register(max_depth)
+        branch_regs = create_branch_registers(max_depth, data)
+
+        level_idx = 0  # For depth=max_depth=1, level_idx=max_depth-depth=0
+        d_max = data[level_idx]["move_count"]
+        oracle = data[level_idx]["apply_move"]
+        board_arrs = ql.encode_position(4, 60, [10])
+        validity = [qbool() for _ in range(d_max)]
+
+        # Should not crash -- circuit generation only
+        evaluate_children(
+            depth=max_depth,
+            level_idx=level_idx,
+            d_max=d_max,
+            branch_reg=branch_regs[level_idx],
+            h_reg=h_reg,
+            max_depth=max_depth,
+            oracle=oracle,
+            board_arrs=board_arrs,
+            validity=validity,
+        )
+
+    def test_uncompute_children_no_crash(self, clean_circuit):
+        """uncompute_children completes without error."""
+        import quantum_language as ql
+        from chess_walk import (
+            create_branch_registers,
+            create_height_register,
+            evaluate_children,
+            prepare_walk_data,
+            uncompute_children,
+        )
+        from quantum_language.qbool import qbool
+
+        max_depth = 1
+        data = prepare_walk_data(wk_sq=4, bk_sq=60, wn_squares=[10], max_depth=max_depth)
+        h_reg = create_height_register(max_depth)
+        branch_regs = create_branch_registers(max_depth, data)
+
+        level_idx = 0
+        d_max = data[level_idx]["move_count"]
+        oracle = data[level_idx]["apply_move"]
+        board_arrs = ql.encode_position(4, 60, [10])
+        validity = [qbool() for _ in range(d_max)]
+
+        # Forward then reverse
+        evaluate_children(
+            depth=max_depth,
+            level_idx=level_idx,
+            d_max=d_max,
+            branch_reg=branch_regs[level_idx],
+            h_reg=h_reg,
+            max_depth=max_depth,
+            oracle=oracle,
+            board_arrs=board_arrs,
+            validity=validity,
+        )
+        uncompute_children(
+            depth=max_depth,
+            level_idx=level_idx,
+            d_max=d_max,
+            branch_reg=branch_regs[level_idx],
+            h_reg=h_reg,
+            max_depth=max_depth,
+            oracle=oracle,
+            board_arrs=board_arrs,
+            validity=validity,
+        )
