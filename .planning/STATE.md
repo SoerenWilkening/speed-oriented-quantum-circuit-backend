@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v6.1
 milestone_name: Quantum Chess Demo
 status: completed
-stopped_at: Completed 104-01 walk register scaffolding
-last_updated: "2026-03-03T22:32:51.449Z"
-last_activity: 2026-03-03 -- Completed 104-01 walk register scaffolding (WALK-01, WALK-02)
+stopped_at: Completed 104-02 local diffusion -- Phase 104 complete
+last_updated: "2026-03-03T22:44:57Z"
+last_activity: 2026-03-03 -- Completed 104-02 local diffusion (WALK-03)
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 4
-  completed_plans: 3
-  percent: 38
+  completed_plans: 4
+  percent: 50
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-03)
 ## Current Position
 
 Phase: 104 of 106 (Walk Register Scaffolding & Local Diffusion)
-Plan: 1 of 2 in current phase
-Status: 104-01 complete -- ready for 104-02 local diffusion
-Last activity: 2026-03-03 -- Completed 104-01 walk register scaffolding (WALK-01, WALK-02)
+Plan: 2 of 2 in current phase
+Status: 104 complete -- all plans done (WALK-01, WALK-02, WALK-03)
+Last activity: 2026-03-03 -- Completed 104-02 local diffusion (WALK-03)
 
-Progress: [###░░░░░░░] 38%
+Progress: [#####░░░░░] 50%
 
 ## Performance Metrics
 
@@ -49,8 +49,9 @@ Progress: [###░░░░░░░] 38%
 | v4.1 Quality & Efficiency | 82-89 | 21 | Complete (2026-02-24) |
 | v5.0 Advanced Arithmetic | 90-96 | 19 | Shipped (2026-02-26) |
 | v6.0 Quantum Walk | 97-102 | 11 | Shipped (2026-03-03) |
-| v6.1 Quantum Chess Demo | 103-106 | 3/8 | In progress |
+| v6.1 Quantum Chess Demo | 103-106 | 4/8 | In progress |
 | Phase 104 P01 | 3min | 1 tasks | 2 files |
+| Phase 104 P02 | 10min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,9 @@ Recent decisions affecting current work:
 - Height qubit addressing: int(h_reg.qubits[64 - (max_depth+1) + depth])
 - Side alternation: level % 2 == 0 is white, odd is black
 - [Phase 104]: Purely functional walk module: 6 standalone functions, board_arrs as tuple, oracle replay pattern
+- [Phase 104-02]: Derive/underive uses level_idx (max_depth - depth) not depth for oracle replay count
+- [Phase 104-02]: Cascade fallback for d_val exceeding register control depth (NotImplementedError -> empty ops)
+- [Phase 104-02]: S_0 via public ql.diffusion() in with h_control: context (not manual X-MCZ-X)
 
 ### Blockers/Concerns
 
@@ -86,10 +90,10 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-03T22:32:51.440Z
-Stopped at: Completed 104-01 walk register scaffolding
+Last session: 2026-03-03T22:44:57Z
+Stopped at: Completed 104-02 local diffusion -- Phase 104 complete
 Resume file: None
-Resume action: Execute Phase 104 Plan 02 (Local Diffusion) via `/gsd:execute-phase 104`
+Resume action: Execute Phase 105 (Walk Operators R_A/R_B) via `/gsd:execute-phase 105`
 
 ---
-*State updated: 2026-03-03 -- Completed 104-01 walk register scaffolding (WALK-01, WALK-02)*
+*State updated: 2026-03-03 -- Completed 104-02 local diffusion (WALK-03), Phase 104 complete*

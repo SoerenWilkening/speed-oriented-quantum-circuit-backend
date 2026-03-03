@@ -153,7 +153,7 @@
 **Context:** Chess has at most 218 legal moves per turn. In our simplified endgame (2 kings + white knights): white has max ~32 moves (5-bit branch register), black has max 8 moves (3-bit branch register). Branch register width per level is fixed at the maximum for that player's turn.
 
 - [x] **Phase 103: Chess Board Encoding & Legal Moves** - Board representation, piece encoding, move generation, and compiled move oracle (completed 2026-03-03)
-- [ ] **Phase 104: Walk Register Scaffolding & Local Diffusion** - One-hot height register, branch registers, board-state-from-branch-history derivation, and single D_x diffusion operator with position-aware branching factor
+- [x] **Phase 104: Walk Register Scaffolding & Local Diffusion** - One-hot height register, branch registers, board-state-from-branch-history derivation, and single D_x diffusion operator with position-aware branching factor (completed 2026-03-03)
 - [ ] **Phase 105: Full Walk Operators** - Height-controlled diffusion cascade, R_A, R_B, and compiled walk step U = R_B * R_A
 - [ ] **Phase 106: Demo Scripts** - Manual walk demo.py with circuit statistics and QWalkTree comparison script
 
@@ -237,7 +237,7 @@ Phases execute in numeric order: 103 -> 104 -> 105 -> 106
 | 90-96 | v5.0 | 19/19 | Complete | 2026-02-26 |
 | 97-102 | v6.0 | 11/11 | Complete | 2026-03-03 |
 | 103. Chess Board Encoding & Legal Moves | v6.1 | Complete    | 2026-03-03 | 2026-03-03 |
-| 104. Walk Register Scaffolding & Local Diffusion | 1/2 | In Progress|  | - |
+| 104. Walk Register Scaffolding & Local Diffusion | 2/2 | Complete   | 2026-03-03 | - |
 | 105. Full Walk Operators | v6.1 | 0/TBD | Not started | - |
 | 106. Demo Scripts | v6.1 | 0/TBD | Not started | - |
 
