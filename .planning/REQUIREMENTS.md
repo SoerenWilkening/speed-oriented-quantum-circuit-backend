@@ -9,10 +9,10 @@ Requirements for multi-level compile infrastructure. Each maps to roadmap phases
 
 ### Compilation API
 
-- [ ] **CAPI-01**: User can set `@ql.compile(opt=1)` to generate standalone sequences with call graph DAG (default)
+- [x] **CAPI-01**: User can set `@ql.compile(opt=1)` to generate standalone sequences with call graph DAG (default)
 - [ ] **CAPI-02**: User can set `@ql.compile(opt=2)` to selectively merge overlapping-qubit sequences
-- [ ] **CAPI-03**: User can set `@ql.compile(opt=3)` for full circuit expansion (current behavior, backward compatible)
-- [ ] **CAPI-04**: Existing 106+ compile tests pass unchanged when opt=3 is used
+- [x] **CAPI-03**: User can set `@ql.compile(opt=3)` for full circuit expansion (current behavior, backward compatible)
+- [x] **CAPI-04**: Existing 106+ compile tests pass unchanged when opt=3 is used
 
 ### Call Graph
 
@@ -64,10 +64,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CAPI-01 | Phase 107 | Pending |
+| CAPI-01 | Phase 107 | Complete |
 | CAPI-02 | Phase 109 | Pending |
-| CAPI-03 | Phase 107 | Pending |
-| CAPI-04 | Phase 107 | Pending |
+| CAPI-03 | Phase 107 | Complete |
+| CAPI-04 | Phase 107 | Complete |
 | CGRAPH-01 | Phase 107 | Complete |
 | CGRAPH-02 | Phase 107 | Complete |
 | CGRAPH-03 | Phase 107 | Complete |

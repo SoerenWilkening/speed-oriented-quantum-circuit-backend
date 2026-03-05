@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v7.0
 milestone_name: Compile Infrastructure
 status: executing
-stopped_at: Completed 107-01-PLAN.md
-last_updated: "2026-03-05T20:34:00Z"
-last_activity: 2026-03-05 -- Completed 107-01 CallGraphDAG module (TDD, 32 tests)
+stopped_at: Completed 107-02-PLAN.md (Phase 107 complete)
+last_updated: "2026-03-05T21:06:00Z"
+last_activity: 2026-03-05 -- Completed 107-02 compile DAG integration (opt param, 43 tests)
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 2
-  completed_plans: 1
-  percent: 0
+  completed_plans: 2
+  percent: 25
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 ## Current Position
 
 Phase: 107 of 110 (Call Graph DAG Foundation)
-Plan: 1 of 2
-Status: Executing (Plan 01 complete)
-Last activity: 2026-03-05 -- Completed 107-01 CallGraphDAG module (TDD, 32 tests)
+Plan: 2 of 2
+Status: Phase 107 Complete
+Last activity: 2026-03-05 -- Completed 107-02 compile DAG integration (opt param, 43 tests)
 
-Progress: [█████░░░░░] 50%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -66,6 +66,9 @@ Recent decisions affecting current work:
 - DAGNode uses __slots__ + pre-computed np.uint64 bitmask for fast overlap
 - build_overlap_edges skips parent-child call edges to avoid double-counting
 - parallel_groups uses separate undirected PyGraph for clean component detection
+- __call__ refactored into __call__ + _call_inner for clean DAG try/finally
+- Capture path uses placeholder node updated after block finalization
+- opt parameter NOT in cache key (DAG building is observational only)
 
 ### Blockers/Concerns
 
@@ -76,10 +79,10 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-05T20:34:00Z
-Stopped at: Completed 107-01-PLAN.md
-Resume file: .planning/phases/107-call-graph-dag-foundation/107-01-SUMMARY.md
-Resume action: `/gsd:execute-phase 107` (plan 02 next)
+Last session: 2026-03-05T21:06:00Z
+Stopped at: Completed 107-02-PLAN.md (Phase 107 complete)
+Resume file: .planning/phases/107-call-graph-dag-foundation/107-02-SUMMARY.md
+Resume action: `/gsd:execute-phase 108` (next phase)
 
 ---
-*State updated: 2026-03-05 -- 107-01 CallGraphDAG module complete (TDD, 32 tests)*
+*State updated: 2026-03-05 -- 107-02 compile DAG integration complete (opt param, 43 tests)*
