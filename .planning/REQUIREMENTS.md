@@ -16,9 +16,9 @@ Requirements for multi-level compile infrastructure. Each maps to roadmap phases
 
 ### Call Graph
 
-- [ ] **CGRAPH-01**: Call graph DAG built from sequence calls with qubit sets per node
-- [ ] **CGRAPH-02**: Parallel sequences (disjoint qubit sets) identified as concurrent groups
-- [ ] **CGRAPH-03**: Weighted qubit overlap edges between dependent sequences
+- [x] **CGRAPH-01**: Call graph DAG built from sequence calls with qubit sets per node
+- [x] **CGRAPH-02**: Parallel sequences (disjoint qubit sets) identified as concurrent groups
+- [x] **CGRAPH-03**: Weighted qubit overlap edges between dependent sequences
 - [ ] **CGRAPH-04**: Precise gate count, depth, qubit count, and T-count extractable per node from call graph
 - [ ] **CGRAPH-05**: Aggregate totals (gates, depth, T-count) computed across full call graph without building circuit
 
@@ -68,9 +68,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CAPI-02 | Phase 109 | Pending |
 | CAPI-03 | Phase 107 | Pending |
 | CAPI-04 | Phase 107 | Pending |
-| CGRAPH-01 | Phase 107 | Pending |
-| CGRAPH-02 | Phase 107 | Pending |
-| CGRAPH-03 | Phase 107 | Pending |
+| CGRAPH-01 | Phase 107 | Complete |
+| CGRAPH-02 | Phase 107 | Complete |
+| CGRAPH-03 | Phase 107 | Complete |
 | CGRAPH-04 | Phase 108 | Pending |
 | CGRAPH-05 | Phase 108 | Pending |
 | VIS-01 | Phase 108 | Pending |

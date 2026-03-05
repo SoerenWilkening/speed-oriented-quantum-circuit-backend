@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v7.0
 milestone_name: Compile Infrastructure
-status: planning
-stopped_at: Phase 107 context gathered
-last_updated: "2026-03-05T20:17:31.412Z"
-last_activity: 2026-03-05 -- Roadmap created (4 phases, 15 requirements mapped)
+status: executing
+stopped_at: Completed 107-01-PLAN.md
+last_updated: "2026-03-05T20:34:00Z"
+last_activity: 2026-03-05 -- Completed 107-01 CallGraphDAG module (TDD, 32 tests)
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 2
+  completed_plans: 1
   percent: 0
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 ## Current Position
 
 Phase: 107 of 110 (Call Graph DAG Foundation)
-Plan: --
-Status: Ready to plan
-Last activity: 2026-03-05 -- Roadmap created (4 phases, 15 requirements mapped)
+Plan: 1 of 2
+Status: Executing (Plan 01 complete)
+Last activity: 2026-03-05 -- Completed 107-01 CallGraphDAG module (TDD, 32 tests)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -63,6 +63,9 @@ Recent decisions affecting current work:
 - opt_flag=1 builds DAG alongside normal expansion (no C backend changes)
 - rustworkx PyDAG for graph primitives, NumPy bitmasks for qubit overlap
 - Sparse circuit arrays deferred to v8.0 (independent C-level track)
+- DAGNode uses __slots__ + pre-computed np.uint64 bitmask for fast overlap
+- build_overlap_edges skips parent-child call edges to avoid double-counting
+- parallel_groups uses separate undirected PyGraph for clean component detection
 
 ### Blockers/Concerns
 
@@ -73,10 +76,10 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-05T20:17:31.404Z
-Stopped at: Phase 107 context gathered
-Resume file: .planning/phases/107-call-graph-dag-foundation/107-CONTEXT.md
-Resume action: `/gsd:plan-phase 107`
+Last session: 2026-03-05T20:34:00Z
+Stopped at: Completed 107-01-PLAN.md
+Resume file: .planning/phases/107-call-graph-dag-foundation/107-01-SUMMARY.md
+Resume action: `/gsd:execute-phase 107` (plan 02 next)
 
 ---
-*State updated: 2026-03-05 -- v7.0 roadmap created with 4 phases (107-110)*
+*State updated: 2026-03-05 -- 107-01 CallGraphDAG module complete (TDD, 32 tests)*
