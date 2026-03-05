@@ -212,11 +212,11 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. demo.py runs end-to-end producing a quantum circuit for a chess endgame walk -- showing starting position, legal move tree structure, walk operators, and circuit statistics (depth, gate count, qubit count)
   2. A secondary comparison script applies the QWalkTree API to the same chess position and prints side-by-side circuit statistics against the manual approach
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 106-01: TBD
-- [ ] 106-02: TBD
+- [ ] 106-01-PLAN.md -- Manual chess walk demo with progressive walkthrough and circuit stats (DEMO-01)
+- [ ] 106-02-PLAN.md -- QWalkTree comparison script with side-by-side stats table (DEMO-02)
 
 ## Progress
 
@@ -239,7 +239,7 @@ Phases execute in numeric order: 103 -> 104 -> 105 -> 106
 | 103. Chess Board Encoding & Legal Moves | v6.1 | Complete    | 2026-03-03 | 2026-03-03 |
 | 104. Walk Register Scaffolding & Local Diffusion | 2/2 | Complete    | 2026-03-03 | - |
 | 105. Full Walk Operators | 2/2 | Complete    | 2026-03-05 | - |
-| 106. Demo Scripts | v6.1 | 0/TBD | Not started | - |
+| 106. Demo Scripts | v6.1 | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-02*
