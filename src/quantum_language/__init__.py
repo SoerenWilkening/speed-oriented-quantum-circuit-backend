@@ -47,6 +47,7 @@ from ._core import (
     reverse_instruction_range,
 )
 from .amplitude_estimation import amplitude_estimate
+from .call_graph import CallGraphDAG
 from .compile import compile
 from .diffusion import diffusion
 from .grover import grover
@@ -183,6 +184,7 @@ __all__ = [
     # Circuit
     "circuit",
     # Utilities
+    "CallGraphDAG",
     "compile",
     "diffusion",
     "amplitude_estimate",
