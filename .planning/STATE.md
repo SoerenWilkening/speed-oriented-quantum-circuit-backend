@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v6.1
 milestone_name: Quantum Chess Demo
 status: completed
-stopped_at: Completed 104-02 local diffusion -- Phase 104 complete
-last_updated: "2026-03-03T23:10:59.243Z"
+stopped_at: Phase 105 context gathered
+last_updated: "2026-03-05T13:15:08.279Z"
 last_activity: 2026-03-03 -- Completed 104-02 local diffusion (WALK-03)
 progress:
   total_phases: 4
@@ -90,9 +90,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-03T22:44:57Z
-Stopped at: Completed 104-02 local diffusion -- Phase 104 complete
-Resume file: None
+Last session: 2026-03-05T13:15:08.270Z
+Stopped at: Phase 105 context gathered
+Resume file: .planning/phases/105-full-walk-operators/105-CONTEXT.md
 Resume action: Execute Phase 105 (Walk Operators R_A/R_B) via `/gsd:execute-phase 105`
 
 ---
