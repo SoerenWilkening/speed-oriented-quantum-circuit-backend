@@ -1,7 +1,7 @@
 """Tests for chess quantum walk register scaffolding, board state replay, and local diffusion.
 
 Component tests for Phase 104 requirements WALK-01, WALK-02, WALK-03,
-and Phase 105 requirements WALK-04, WALK-05, WALK-06.
+Phase 105 requirements WALK-04, WALK-05, WALK-06, WALK-07.
 Tests stay within 17-qubit budget by testing registers in isolation.
 Derive/underive tests verify call order at circuit-generation level (no simulation).
 Diffusion tests verify circuit generation without simulation (qubit count exceeds budget).
@@ -775,3 +775,68 @@ class TestHeightControlledCascade:
         # Both should complete without error
         r_a(h_reg, branch_regs, board_arrs, oracle_per_level, data, max_depth)
         r_b(h_reg, branch_regs, board_arrs, oracle_per_level, data, max_depth)
+
+
+class TestAllWalkQubits:
+    """WALK-07: Mega-register wrapping all walk qubits (height + branch + board)."""
+
+    def test_returns_qint_with_correct_total(self, clean_circuit):
+        """all_walk_qubits total = height + branch widths + board element counts."""
+        from chess_encoding import encode_position
+        from chess_walk import (
+            all_walk_qubits,
+            create_branch_registers,
+            create_height_register,
+            prepare_walk_data,
+        )
+
+        max_depth = 1
+        data = prepare_walk_data(wk_sq=4, bk_sq=60, wn_squares=[10], max_depth=max_depth)
+        h_reg = create_height_register(max_depth)
+        branch_regs = create_branch_registers(max_depth, data)
+        pos = encode_position(4, 60, [10])
+        board_arrs = (pos["white_king"], pos["black_king"], pos["white_knights"])
+
+        mega = all_walk_qubits(h_reg, branch_regs, board_arrs, max_depth)
+
+        # height = max_depth + 1 = 2
+        height_count = max_depth + 1
+        # branch widths
+        branch_count = sum(br.width for br in branch_regs)
+        # board = 3 qarrays * 64 elements each = 192
+        board_count = sum(len(arr) for arr in board_arrs)
+
+        expected_total = height_count + branch_count + board_count
+        assert mega.width == expected_total
+
+    def test_no_duplicate_qubit_indices(self, clean_circuit):
+        """All qubit indices in the mega-register are unique."""
+        from chess_encoding import encode_position
+        from chess_walk import (
+            all_walk_qubits,
+            create_branch_registers,
+            create_height_register,
+            prepare_walk_data,
+        )
+
+        max_depth = 1
+        data = prepare_walk_data(wk_sq=4, bk_sq=60, wn_squares=[10], max_depth=max_depth)
+        h_reg = create_height_register(max_depth)
+        branch_regs = create_branch_registers(max_depth, data)
+        pos = encode_position(4, 60, [10])
+        board_arrs = (pos["white_king"], pos["black_king"], pos["white_knights"])
+
+        mega = all_walk_qubits(h_reg, branch_regs, board_arrs, max_depth)
+
+        # Extract non-zero indices from the qint's qubits array
+        indices = []
+        w = mega.width
+        for i in range(w):
+            indices.append(int(mega.qubits[64 - w + i]))
+        assert len(indices) == len(set(indices)), f"Duplicate qubit indices found: {indices}"
+
+    def test_importable_from_chess_walk(self):
+        """all_walk_qubits is importable from chess_walk."""
+        from chess_walk import all_walk_qubits
+
+        assert callable(all_walk_qubits)
