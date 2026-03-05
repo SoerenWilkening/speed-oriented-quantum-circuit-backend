@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v6.1
 milestone_name: Quantum Chess Demo
 status: completed
-stopped_at: Completed 105-02-PLAN.md
-last_updated: "2026-03-05T14:27:12.884Z"
+stopped_at: Phase 106 context gathered
+last_updated: "2026-03-05T14:59:15.470Z"
 last_activity: 2026-03-05 -- Completed 105-02 walk step compilation
 progress:
   total_phases: 4
@@ -97,9 +97,9 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-05T14:13:30Z
-Stopped at: Completed 105-02-PLAN.md
-Resume file: Phase 106 planning
+Last session: 2026-03-05T14:59:15.462Z
+Stopped at: Phase 106 context gathered
+Resume file: .planning/phases/106-demo-scripts/106-CONTEXT.md
 Resume action: Begin Phase 106 (demo scripts) via `/gsd:plan-phase 106`
 
 ---
