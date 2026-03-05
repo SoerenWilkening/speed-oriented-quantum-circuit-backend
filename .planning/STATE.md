@@ -4,14 +4,14 @@ milestone: v6.1
 milestone_name: Quantum Chess Demo
 status: completed
 stopped_at: Phase 106 context gathered
-last_updated: "2026-03-05T14:59:15.470Z"
-last_activity: 2026-03-05 -- Completed 105-02 walk step compilation
+last_updated: "2026-03-05T16:02:31Z"
+last_activity: 2026-03-05 -- Completed 106-01 chess walk demo
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 6
-  completed_plans: 6
-  percent: 98
+  completed_plans: 7
+  percent: 99
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-03-03)
 
 ## Current Position
 
-Phase: 105 of 106 (Full Walk Operators)
-Plan: 2 of 2 in current phase (105-02 complete)
-Status: 105-02 complete -- walk step compilation (WALK-07)
-Last activity: 2026-03-05 -- Completed 105-02 walk step compilation
+Phase: 106 of 106 (Demo Scripts)
+Plan: 1 of 2 in current phase (106-01 complete)
+Status: 106-01 complete -- chess walk demo script
+Last activity: 2026-03-05 -- Completed 106-01 chess walk demo
 
-Progress: [██████████] 98%
+Progress: [██████████] 99%
 
 ## Performance Metrics
 
@@ -49,7 +49,7 @@ Progress: [██████████] 98%
 | v4.1 Quality & Efficiency | 82-89 | 21 | Complete (2026-02-24) |
 | v5.0 Advanced Arithmetic | 90-96 | 19 | Shipped (2026-02-26) |
 | v6.0 Quantum Walk | 97-102 | 11 | Shipped (2026-03-03) |
-| v6.1 Quantum Chess Demo | 103-106 | 6/8 | In progress |
+| v6.1 Quantum Chess Demo | 103-106 | 7/8 | In progress |
 | Phase 104 P01 | 3min | 1 tasks | 2 files |
 | Phase 104 P02 | 10min | 2 tasks | 2 files |
 | Phase 105 P01 | 7min | 1 tasks | 2 files |
@@ -86,6 +86,7 @@ Recent decisions affecting current work:
 - [Phase 105-02]: Board qarrays passed as separate compile args (total qubit count exceeds 64-qubit qint limit)
 - [Phase 105-02]: all_walk_qubits wraps height + branch only; walk_step passes board qarrays separately
 - [Phase 105-02]: Module-level CompiledFunc with mutable context dict for functional walk_step caching
+- [Phase 106-01]: Demo smoke test patches walk_step to avoid OOM in memory-constrained CI (8GB+ needed for real compilation)
 
 ### Blockers/Concerns
 
@@ -97,10 +98,10 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-05T14:59:15.462Z
-Stopped at: Phase 106 context gathered
-Resume file: .planning/phases/106-demo-scripts/106-CONTEXT.md
-Resume action: Begin Phase 106 (demo scripts) via `/gsd:plan-phase 106`
+Last session: 2026-03-05T16:02:31Z
+Stopped at: Completed 106-01-PLAN.md
+Resume file: .planning/phases/106-demo-scripts/106-01-SUMMARY.md
+Resume action: Execute 106-02-PLAN.md (comparison script)
 
 ---
-*State updated: 2026-03-05 -- Completed 105-02 walk step compilation (WALK-07)*
+*State updated: 2026-03-05 -- Completed 106-01 chess walk demo (DEMO-01)*
