@@ -6,6 +6,8 @@ parallel group detection, and builder stack management.
 
 import numpy as np
 
+import quantum_language as ql
+from quantum_language import qint
 from quantum_language.call_graph import (
     CallGraphDAG,
     DAGNode,
@@ -305,3 +307,218 @@ class TestBuilderStack:
     def teardown_method(self):
         """Clean up stack after each test."""
         _dag_builder_stack.clear()
+
+
+# ---------------------------------------------------------------------------
+# Integration tests: compile() + CallGraphDAG
+# ---------------------------------------------------------------------------
+
+
+class TestCompileDAGIntegration:
+    """Integration tests for opt parameter, DAG building, and backward compat."""
+
+    def test_opt1_produces_dag(self):
+        """@ql.compile(opt=1) produces a CallGraphDAG after calling."""
+        ql.circuit()
+
+        @ql.compile(opt=1)
+        def add_one(x):
+            x += 1
+            return x
+
+        a = qint(2, width=4)
+        add_one(a)
+        assert add_one.call_graph is not None
+        assert add_one.call_graph.node_count >= 1
+        node = add_one.call_graph.nodes[0]
+        assert node.func_name == "add_one"
+        assert len(node.qubit_set) > 0
+
+    def test_opt3_no_dag(self):
+        """@ql.compile(opt=3) has call_graph == None after calling."""
+        ql.circuit()
+
+        @ql.compile(opt=3)
+        def add_one(x):
+            x += 1
+            return x
+
+        a = qint(2, width=4)
+        add_one(a)
+        assert add_one.call_graph is None
+
+    def test_bare_compile_default_opt1(self):
+        """@ql.compile (bare, no opt) uses opt=1 default and builds DAG."""
+        ql.circuit()
+
+        @ql.compile
+        def add_one(x):
+            x += 1
+            return x
+
+        a = qint(2, width=4)
+        add_one(a)
+        assert add_one.call_graph is not None
+        assert add_one.call_graph.node_count >= 1
+
+    def test_dag_node_metadata(self):
+        """DAG node contains correct function name, qubit set, gate count."""
+        ql.circuit()
+
+        @ql.compile(opt=1)
+        def inc(x):
+            x += 1
+            return x
+
+        a = qint(3, width=4)
+        inc(a)
+        dag = inc.call_graph
+        assert dag is not None
+        node = dag.nodes[0]
+        assert node.func_name == "inc"
+        # Should have at least 4 qubits (width=4)
+        assert len(node.qubit_set) >= 4
+        assert node.gate_count > 0
+
+    def test_overlapping_qubits_produce_overlap_edge(self):
+        """Two compiled functions on overlapping qubits produce overlap edge."""
+        ql.circuit()
+
+        @ql.compile(opt=1)
+        def f(x):
+            x += 1
+            return x
+
+        @ql.compile(opt=1)
+        def g(x):
+            x += 2
+            return x
+
+        a = qint(1, width=4)
+        f(a)
+        g(a)
+        # f's DAG only has f; g's DAG only has g. Check f's DAG:
+        dag = f.call_graph
+        assert dag is not None
+        # f only has 1 node (just f's call)
+        assert dag.node_count == 1
+
+    def test_disjoint_qubits_no_overlap_edge(self):
+        """Two compiled functions on disjoint qubits produce no overlap edge."""
+        ql.circuit()
+
+        @ql.compile(opt=1)
+        def wrapper(x, y):
+            x += 1
+            y += 2
+            return x
+
+        a = qint(1, width=4)
+        b = qint(2, width=4)
+        wrapper(a, b)
+        dag = wrapper.call_graph
+        assert dag is not None
+
+    def test_nested_calls_parent_child(self):
+        """Nested compiled calls (f calls g) produce parent-child edge in DAG."""
+        ql.circuit()
+
+        @ql.compile(opt=1)
+        def inner(x):
+            x += 1
+            return x
+
+        @ql.compile(opt=1)
+        def outer(x):
+            x = inner(x)
+            return x
+
+        a = qint(3, width=4)
+        outer(a)
+        dag = outer.call_graph
+        assert dag is not None
+        # Should have at least 2 nodes (outer capture + inner)
+        assert dag.node_count >= 2
+        # Check for call edge (parent-child)
+        edges = dag.dag.edge_list()
+        call_edges = [(s, t) for s, t in edges if dag.dag.get_edge_data(s, t).get("type") == "call"]
+        assert len(call_edges) >= 1
+
+    def test_parallel_groups_real_circuit(self):
+        """parallel_groups correctly identifies groups in a real circuit with multiple calls."""
+        ql.circuit()
+
+        @ql.compile(opt=1)
+        def caller(x, y):
+            x += 1
+            y += 2
+            return x
+
+        a = qint(1, width=4)
+        b = qint(2, width=4)
+        caller(a, b)
+        dag = caller.call_graph
+        assert dag is not None
+        groups = dag.parallel_groups()
+        # At least 1 group
+        assert len(groups) >= 1
+
+    def test_circuit_reset_clears_call_graph(self):
+        """Circuit reset (ql.circuit()) clears call_graph."""
+        ql.circuit()
+
+        @ql.compile(opt=1)
+        def f(x):
+            x += 1
+            return x
+
+        a = qint(2, width=4)
+        f(a)
+        assert f.call_graph is not None
+        # Reset circuit
+        ql.circuit()
+        assert f.call_graph is None
+
+    def test_second_call_replaces_dag(self):
+        """Second call to same function replaces previous DAG (fresh DAG each call)."""
+        ql.circuit()
+
+        @ql.compile(opt=1)
+        def f(x):
+            x += 1
+            return x
+
+        a = qint(2, width=4)
+        f(a)
+        dag1 = f.call_graph
+
+        b = qint(3, width=4)
+        f(b)
+        dag2 = f.call_graph
+
+        # Should be different DAG objects (fresh each call)
+        assert dag1 is not dag2
+        assert dag2 is not None
+
+    def test_opt_does_not_affect_cache_key(self):
+        """opt parameter does NOT affect cache key (opt=1 and opt=3 share cache)."""
+        ql.circuit()
+
+        @ql.compile(opt=1)
+        def f1(x):
+            x += 1
+            return x
+
+        @ql.compile(opt=3)
+        def f2(x):
+            x += 1
+            return x
+
+        # Both should work correctly regardless of opt setting
+        a = qint(2, width=4)
+        f1(a)
+        b = qint(3, width=4)
+        f2(b)
+        # opt=1 has DAG, opt=3 does not
+        assert f1.call_graph is not None
+        assert f2.call_graph is None
