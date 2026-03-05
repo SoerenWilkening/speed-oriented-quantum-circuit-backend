@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v6.1
 milestone_name: Quantum Chess Demo
 status: in-progress
-stopped_at: Completed 105-01-PLAN.md
-last_updated: "2026-03-05T13:46:10Z"
-last_activity: 2026-03-05 -- Completed 105-01 R_A/R_B walk operators (WALK-04, WALK-05, WALK-06)
+stopped_at: Completed 105-02-PLAN.md
+last_updated: "2026-03-05T14:13:30Z"
+last_activity: 2026-03-05 -- Completed 105-02 walk step compilation (WALK-07)
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 6
-  completed_plans: 5
-  percent: 50
+  completed_plans: 6
+  percent: 75
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v6.1 Quantum Chess Demo -- Phase 105 Plan 02 next
+**Current focus:** v6.1 Quantum Chess Demo -- Phase 105 complete, Phase 106 next
 
 ## Current Position
 
 Phase: 105 of 106 (Full Walk Operators)
-Plan: 1 of 2 in current phase (105-01 complete)
-Status: 105-01 complete -- R_A/R_B walk operators (WALK-04, WALK-05, WALK-06)
-Last activity: 2026-03-05 -- Completed 105-01 R_A/R_B walk operators
+Plan: 2 of 2 in current phase (105-02 complete)
+Status: 105-02 complete -- walk step compilation (WALK-07)
+Last activity: 2026-03-05 -- Completed 105-02 walk step compilation
 
 Progress: [██████████] 98%
 
@@ -49,10 +49,11 @@ Progress: [██████████] 98%
 | v4.1 Quality & Efficiency | 82-89 | 21 | Complete (2026-02-24) |
 | v5.0 Advanced Arithmetic | 90-96 | 19 | Shipped (2026-02-26) |
 | v6.0 Quantum Walk | 97-102 | 11 | Shipped (2026-03-03) |
-| v6.1 Quantum Chess Demo | 103-106 | 5/8 | In progress |
+| v6.1 Quantum Chess Demo | 103-106 | 6/8 | In progress |
 | Phase 104 P01 | 3min | 1 tasks | 2 files |
 | Phase 104 P02 | 10min | 2 tasks | 2 files |
 | Phase 105 P01 | 7min | 1 tasks | 2 files |
+| Phase 105 P02 | 25min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -82,6 +83,9 @@ Recent decisions affecting current work:
 - [Phase 104-02]: S_0 via public ql.diffusion() in with h_control: context (not manual X-MCZ-X)
 - [Phase 105-01]: r_a skips depth 0 (leaves) since level_idx=max_depth exceeds oracle_per_level range
 - [Phase 105-01]: r_b explicitly adds max_depth when even to ensure root inclusion per Montanaro convention
+- [Phase 105-02]: Board qarrays passed as separate compile args (total qubit count exceeds 64-qubit qint limit)
+- [Phase 105-02]: all_walk_qubits wraps height + branch only; walk_step passes board qarrays separately
+- [Phase 105-02]: Module-level CompiledFunc with mutable context dict for functional walk_step caching
 
 ### Blockers/Concerns
 
@@ -93,10 +97,10 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-05T13:46:10Z
-Stopped at: Completed 105-01-PLAN.md
-Resume file: .planning/phases/105-full-walk-operators/105-02-PLAN.md
-Resume action: Execute Phase 105 Plan 02 (walk step compilation) via `/gsd:execute-phase 105`
+Last session: 2026-03-05T14:13:30Z
+Stopped at: Completed 105-02-PLAN.md
+Resume file: Phase 106 planning
+Resume action: Begin Phase 106 (demo scripts) via `/gsd:plan-phase 106`
 
 ---
-*State updated: 2026-03-05 -- Completed 105-01 R_A/R_B walk operators (WALK-04, WALK-05, WALK-06)*
+*State updated: 2026-03-05 -- Completed 105-02 walk step compilation (WALK-07)*

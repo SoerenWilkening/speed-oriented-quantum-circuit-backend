@@ -23,7 +23,7 @@ Requirements for Quantum Chess Demo milestone. Each maps to roadmap phases.
 - [x] **WALK-04**: Height-controlled diffusion cascade (D_x only activates at correct depth level)
 - [x] **WALK-05**: R_A operator composing diffusion at even depths (excluding root)
 - [x] **WALK-06**: R_B operator composing diffusion at odd depths plus root
-- [ ] **WALK-07**: Walk step U = R_B * R_A composed via `@ql.compile`
+- [x] **WALK-07**: Walk step U = R_B * R_A composed via `@ql.compile`
 
 ### Demo Scripts
 
@@ -73,7 +73,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | WALK-04 | Phase 105 | Complete |
 | WALK-05 | Phase 105 | Complete |
 | WALK-06 | Phase 105 | Complete |
-| WALK-07 | Phase 105 | Pending |
+| WALK-07 | Phase 105 | Complete |
 | DEMO-01 | Phase 106 | Pending |
 | DEMO-02 | Phase 106 | Pending |
 
