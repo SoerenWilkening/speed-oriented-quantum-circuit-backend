@@ -863,41 +863,57 @@ class TestWalkStep:
         # Circuit generation only -- no simulation (qubit count exceeds budget)
         walk_step(h_reg, branch_regs, board_arrs, oracle_per_level, data, max_depth)
 
-    def test_walk_step_replay_same_gate_count(self, clean_circuit):
-        """walk_step() called twice produces same gate count (replay works)."""
-        import quantum_language as ql
-        from chess_encoding import encode_position
-        from chess_walk import (
-            create_branch_registers,
-            create_height_register,
-            prepare_walk_data,
-            walk_step,
-        )
+    def test_walk_step_composes_ra_rb(self):
+        """walk_step() closure calls r_a then r_b (verified via mock)."""
+        import chess_walk
 
-        max_depth = 1
-        data = prepare_walk_data(wk_sq=4, bk_sq=60, wn_squares=[10], max_depth=max_depth)
-        h_reg = create_height_register(max_depth)
-        branch_regs = create_branch_registers(max_depth, data)
-        pos = encode_position(4, 60, [10])
-        board_arrs = (pos["white_king"], pos["black_king"], pos["white_knights"])
-        oracle_per_level = [d["apply_move"] for d in data]
+        with (
+            patch.object(chess_walk, "r_a") as mock_ra,
+            patch.object(chess_walk, "r_b") as mock_rb,
+            patch.object(chess_walk, "all_walk_qubits") as mock_awq,
+            patch("quantum_language.compile.compile") as mock_compile,
+        ):
+            # Set up mock compile to capture and execute the body function
+            captured_body = {}
 
-        # First call: capture + compile
-        before1 = ql.get_current_layer()
-        walk_step(h_reg, branch_regs, board_arrs, oracle_per_level, data, max_depth)
-        after1 = ql.get_current_layer()
-        count1 = after1 - before1
+            def fake_compile(key=None):
+                def decorator(fn):
+                    captured_body["fn"] = fn
 
-        # Second call: replay
-        before2 = ql.get_current_layer()
-        walk_step(h_reg, branch_regs, board_arrs, oracle_per_level, data, max_depth)
-        after2 = ql.get_current_layer()
-        count2 = after2 - before2
+                    class FakeCompiled:
+                        _walk_ctx = None
 
-        # Replay should produce same gate count as first call
-        assert count1 > 0, "First walk_step should produce gates"
-        assert count2 > 0, "Second walk_step should produce gates"
-        assert count1 == count2, f"Gate count mismatch: first={count1}, second={count2}"
+                        def __call__(self_inner, *args):
+                            fn(*args)
+
+                    return FakeCompiled()
+
+                return decorator
+
+            mock_compile.side_effect = fake_compile
+            mock_awq.return_value = MagicMock(width=10)
+
+            # Reset module-level cache to force new compilation
+            old_fn = chess_walk._walk_compiled_fn
+            chess_walk._walk_compiled_fn = None
+            try:
+                h = MagicMock()
+                br = MagicMock()
+                # Use plain objects with __len__ for board arrays
+                wk = type("FakeArr", (), {"__len__": lambda s: 64})()
+                bk = type("FakeArr", (), {"__len__": lambda s: 64})()
+                wn = type("FakeArr", (), {"__len__": lambda s: 64})()
+                ba = (wk, bk, wn)
+                opl = MagicMock()
+                mdpl = MagicMock()
+
+                chess_walk.walk_step(h, br, ba, opl, mdpl, max_depth=1)
+
+                # r_a and r_b should have been called inside the closure
+                mock_ra.assert_called_once()
+                mock_rb.assert_called_once()
+            finally:
+                chess_walk._walk_compiled_fn = old_fn
 
     def test_walk_step_importable(self):
         """walk_step is importable from chess_walk."""

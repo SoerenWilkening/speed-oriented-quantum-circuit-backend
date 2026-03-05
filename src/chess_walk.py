@@ -41,6 +41,7 @@ __all__ = [
     "r_a",
     "r_b",
     "all_walk_qubits",
+    "walk_step",
 ]
 
 
@@ -663,3 +664,72 @@ def r_b(h_reg, branch_regs, board_arrs, oracle_per_level, move_data_per_level, m
             move_data_per_level,
             max_depth,
         )
+
+
+# ---------------------------------------------------------------------------
+# Walk step U = R_B * R_A (compiled)
+# ---------------------------------------------------------------------------
+
+# Module-level compiled function: created once per process, re-captures per circuit.
+# The @ql.compile infrastructure handles its own per-circuit cache clearing.
+_walk_compiled_fn = None
+
+
+def walk_step(h_reg, branch_regs, board_arrs, oracle_per_level, move_data_per_level, max_depth):
+    """Apply walk step U = R_B * R_A.
+
+    On first call, the gate sequence is captured and compiled via
+    @ql.compile for caching and automatic inverse derivation.
+    Subsequent calls replay the cached gate sequence.
+
+    The height + branch qubits are wrapped in a mega-register via
+    all_walk_qubits(), and board qarrays (wk, bk, wn) are passed as
+    separate arguments so the compile infrastructure treats all walk
+    qubits as parameters (not internal ancillas).
+
+    Parameters
+    ----------
+    h_reg : qint
+        Height register.
+    branch_regs : list[qint]
+        Per-level branch registers.
+    board_arrs : tuple
+        (wk_arr, bk_arr, wn_arr) qarrays.
+    oracle_per_level : list
+        Compiled apply_move functions, one per level.
+    move_data_per_level : list[dict]
+        Move data per level.
+    max_depth : int
+        Maximum tree depth.
+    """
+    global _walk_compiled_fn
+    from quantum_language.compile import compile as ql_compile
+
+    mega_reg = all_walk_qubits(h_reg, branch_regs, max_depth)
+    total = mega_reg.width + sum(len(a) for a in board_arrs)
+
+    if _walk_compiled_fn is None:
+        # Create the compiled function once. The closure captures walk
+        # args by reference via a mutable container so they update each call.
+        _ctx = {}
+
+        def _walk_body(walk_qubits_reg, wk_arr, bk_arr, wn_arr):
+            c = _ctx
+            _board = (wk_arr, bk_arr, wn_arr)
+            r_a(c["h"], c["br"], _board, c["opl"], c["mdpl"], c["md"])
+            r_b(c["h"], c["br"], _board, c["opl"], c["mdpl"], c["md"])
+
+        _walk_compiled_fn = ql_compile(key=lambda r, w, b, n: _ctx.get("total", 0))(_walk_body)
+        _walk_compiled_fn._walk_ctx = _ctx  # stash reference
+
+    # Update context for this call
+    ctx = _walk_compiled_fn._walk_ctx
+    ctx["h"] = h_reg
+    ctx["br"] = branch_regs
+    ctx["opl"] = oracle_per_level
+    ctx["mdpl"] = move_data_per_level
+    ctx["md"] = max_depth
+    ctx["total"] = total
+
+    wk, bk, wn = board_arrs
+    _walk_compiled_fn(mega_reg, wk, bk, wn)
