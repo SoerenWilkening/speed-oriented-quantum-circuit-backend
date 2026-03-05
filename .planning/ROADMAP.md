@@ -199,11 +199,11 @@ Plans:
   2. R_A composes diffusion at even depths (excluding root) with correct height-register conditioning
   3. R_B composes diffusion at odd depths plus root with correct height-register conditioning
   4. Walk step U = R_B * R_A is composed via `@ql.compile` and produces a valid quantum circuit
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 105-01: TBD
-- [ ] 105-02: TBD
+- [ ] 105-01-PLAN.md -- R_A and R_B walk operators with height-controlled diffusion cascade (WALK-04, WALK-05, WALK-06)
+- [ ] 105-02-PLAN.md -- Mega-register construction and compiled walk step U = R_B * R_A (WALK-07)
 
 ### Phase 106: Demo Scripts
 **Goal**: Users can run demo scripts that showcase the manual quantum walk on a chess game tree and compare against the QWalkTree API
@@ -238,7 +238,7 @@ Phases execute in numeric order: 103 -> 104 -> 105 -> 106
 | 97-102 | v6.0 | 11/11 | Complete | 2026-03-03 |
 | 103. Chess Board Encoding & Legal Moves | v6.1 | Complete    | 2026-03-03 | 2026-03-03 |
 | 104. Walk Register Scaffolding & Local Diffusion | 2/2 | Complete    | 2026-03-03 | - |
-| 105. Full Walk Operators | v6.1 | 0/TBD | Not started | - |
+| 105. Full Walk Operators | v6.1 | 0/2 | Not started | - |
 | 106. Demo Scripts | v6.1 | 0/TBD | Not started | - |
 
 ---
