@@ -1,112 +1,200 @@
 #!/usr/bin/env python3
-"""Demo script showcasing quantum_language package functionality.
+"""Quantum chess walk demo -- progressive walkthrough of circuit construction.
 
-Run after compiling with: python setup.py build_ext --inplace
+Demonstrates a manual quantum walk on a simplified chess endgame position:
+white king + white knight(s) vs black king. Shows board encoding, legal move
+generation, quantum register construction, walk step compilation, and circuit
+statistics.
+
+No simulation is performed -- only circuit generation (~150 qubits exceeds
+the 17-qubit Qiskit simulation budget).
+
+Usage:
+    python demo.py [--visualize]
 """
 
-import itertools
+import argparse
 import time
 
-import numpy as np
-
+import chess_walk
 import quantum_language as ql
-from quantum_language.draw import render
+from chess_encoding import (
+    encode_position,
+    legal_moves,
+    print_moves,
+    print_position,
+)
+from chess_walk import (
+    all_walk_qubits,
+    create_branch_registers,
+    create_height_register,
+    prepare_walk_data,
+    walk_step,
+)
 
-#
-# # detect win
-# def detect_win(board: ql.qarray, step: ql.qint, player: int):
-# 	# (step == player) | (step == 3)
-# 	with (step == player) | (step == 3):
-# 		step += 1
-# 	# with (board[:, 0] == player).all() | (board[:, 1] == player).all() | (board[:, 2] == player).all():
-# 	# with (board[:, 0] == player).all():
-# 	# 	pass
-# 	# 	step += 1
-# 	#
-# 	# with (board[0, :] == player).all() | (board[1, :] == player).all() | (board[2, :] == player).all():
-# 	# 	step += 1
-# 	#
-# 	# with (board[0, 0] == player) | (board[1, 1] == player) | (board[2, 2] == player):
-# 	# 	step += 1
-# 	#
-# 	# return step != 0
-#
-# CROSS = 0
-# CIRCLE = 1
-#
-# board = ql.qarray([[2] * 3] * 3, width = 3)
-#
-# cr = ql.qint(0, width = 3)
-# ci = ql.qint(0, width = 3)
-#
-# cr_win = detect_win(board, cr, CIRCLE)
-#
-# # board[0, 0] + 3
-# # board[0, 0] += 1
-# board[0, 0].print_circuit()
+# ---------------------------------------------------------------------------
+# Position constants (configurable at module level)
+# ---------------------------------------------------------------------------
+WK_SQ = 28  # e4
+BK_SQ = 60  # e8
+WN_SQUARES = [18]  # c3
+MAX_DEPTH = 1
 
 
-def knight_moves(position):
-    file, rank = position
+def main(visualize=False):
+    """Run the quantum chess walk demo walkthrough.
 
-    # Convert chess notation to 0-based indices
-    if isinstance(file, str):
-        file = ord(file.lower()) - ord("a")
-    if isinstance(rank, int) and rank >= 1:
-        rank -= 1
+    Parameters
+    ----------
+    visualize : bool
+        If True, save a circuit diagram to chess_circuit.png.
 
-    rank = 7 - rank
-    board = np.zeros((8, 8), dtype=int)
+    Returns
+    -------
+    dict
+        Circuit statistics with keys: qubit_count, gate_count, depth, gate_counts.
+    """
+    # Reset module-level compiled function cache for clean state
+    chess_walk._walk_compiled_fn = None
 
-    knight_offsets = [(2, 1), (2, -1), (-2, 1), (-2, -1), (1, 2), (1, -2), (-1, 2), (-1, -2)]
+    print("=" * 60)
+    print("  QUANTUM CHESS WALK DEMO")
+    print("=" * 60)
+    print()
 
-    for df, dr in knight_offsets:
-        nf, nr = file + df, rank + dr
-        if 0 <= nf < 8 and 0 <= nr < 8:
-            board[nr, nf] = 1
+    # ------------------------------------------------------------------
+    # Section 1: Position
+    # ------------------------------------------------------------------
+    t0 = time.time()
+    print("--- Position ---")
+    print(f"White king: sq {WK_SQ}  |  Black king: sq {BK_SQ}")
+    print(f"White knight(s): {WN_SQUARES}")
+    print()
+    print_position(WK_SQ, BK_SQ, WN_SQUARES)
+    t_position = time.time() - t0
+    print(f"\n  [Position: {t_position:.3f}s]")
+    print()
 
-    return board
+    # ------------------------------------------------------------------
+    # Section 2: Legal Moves
+    # ------------------------------------------------------------------
+    t0 = time.time()
+    print("--- Legal Moves ---")
+    white_moves = legal_moves(WK_SQ, BK_SQ, WN_SQUARES, "white")
+    print_moves(white_moves, label="White moves")
+    print(f"\n  Move count: {len(white_moves)}")
+    t_moves = time.time() - t0
+    print(f"  [Legal moves: {t_moves:.3f}s]")
+    print()
+
+    # ------------------------------------------------------------------
+    # Section 3: Quantum Registers
+    # ------------------------------------------------------------------
+    t0 = time.time()
+    print("--- Quantum Registers ---")
+
+    # Initialize circuit before any quantum operations
+    c = ql.circuit()
+
+    # Encode board position as qarrays
+    boards = encode_position(WK_SQ, BK_SQ, WN_SQUARES)
+
+    # Prepare walk data (move oracles per level)
+    move_data = prepare_walk_data(WK_SQ, BK_SQ, WN_SQUARES, MAX_DEPTH)
+
+    # Create registers
+    h_reg = create_height_register(MAX_DEPTH)
+    branch_regs = create_branch_registers(MAX_DEPTH, move_data)
+
+    # Compute walk qubit wrapper
+    walk_reg = all_walk_qubits(h_reg, branch_regs, MAX_DEPTH)
+
+    print(f"  Height register: {h_reg.width} qubits (one-hot, max_depth={MAX_DEPTH})")
+    print(f"  Branch registers: {[br.width for br in branch_regs]} bits per level")
+    print(f"  Walk register total: {walk_reg.width} qubits (height + branches)")
+    print(f"  Board qarrays: 3 x 8x8 qbool = {3 * 64} qubits")
+    t_registers = time.time() - t0
+    print(f"\n  [Registers: {t_registers:.3f}s]")
+    print()
+
+    # ------------------------------------------------------------------
+    # Section 4: Tree Structure
+    # ------------------------------------------------------------------
+    print("--- Tree Structure ---")
+    for level, md in enumerate(move_data):
+        side = "white" if level % 2 == 0 else "black"
+        print(
+            f"  Level {level} ({side}): {md['move_count']} moves, {md['branch_width']} branch bits"
+        )
+    print()
+
+    # ------------------------------------------------------------------
+    # Section 5: Walk Step Compilation
+    # ------------------------------------------------------------------
+    t0 = time.time()
+    print("--- Walk Step Compilation ---")
+    print("  Compiling U = R_B * R_A ...")
+
+    board_arrs = (boards["white_king"], boards["black_king"], boards["white_knights"])
+    oracle_per_level = [md["apply_move"] for md in move_data]
+
+    walk_step(h_reg, branch_regs, board_arrs, oracle_per_level, move_data, MAX_DEPTH)
+
+    t_compile = time.time() - t0
+    print(f"  [Walk step compilation: {t_compile:.3f}s]")
+    print()
+
+    # ------------------------------------------------------------------
+    # Section 6: Circuit Statistics
+    # ------------------------------------------------------------------
+    print("--- Circuit Statistics ---")
+    print(f"  Qubits:     {c.qubit_count}")
+    print(f"  Gates:      {c.gate_count}")
+    print(f"  Depth:      {c.depth}")
+    print()
+
+    # Per-gate-type breakdown
+    gate_counts = c.gate_counts
+    print("  Gate breakdown:")
+    for gate_name, count in sorted(gate_counts.items()):
+        if count > 0:
+            print(f"    {gate_name:10s}: {count}")
+    print()
+
+    # Allocator stats
+    alloc_stats = ql.circuit_stats()
+    print("  Allocator info:")
+    for key, val in sorted(alloc_stats.items()):
+        print(f"    {key}: {val}")
+    print()
+
+    # ------------------------------------------------------------------
+    # Optional visualization
+    # ------------------------------------------------------------------
+    if visualize:
+        print("--- Visualization ---")
+        ql.draw_circuit(c, save="chess_circuit.png")
+        print("  Saved circuit diagram to chess_circuit.png")
+        print()
+
+    print("=" * 60)
+    print("  Demo complete.")
+    print("=" * 60)
+
+    return {
+        "qubit_count": c.qubit_count,
+        "gate_count": c.gate_count,
+        "depth": c.depth,
+        "gate_counts": gate_counts,
+    }
 
 
-# try some initialization
-N_pos = np.zeros((8, 8))
-N_pos[3, 5] = 1
-N_pos[5, 4] = 1
-N_pos[5, 3] = 1
-print(N_pos)
-
-knights = ql.qarray(N_pos, dtype=ql.qbool)
-
-# determine which squares are attacked by white
-
-
-@ql.compile(inverse=True)
-def attack():
-    arr = ql.qarray([[0] * 8] * 8, width=3)
-    for i, j in itertools.product(["a", "b", "c", "d", "e", "f", "g", "h"], range(1, 8)):
-        with knights[ord(i) - ord("a"), j]:  # knight on square
-            arr += knight_moves((i, j))
-
-    attacked = arr != 0
-
-    king = ql.qarray([[0] * 8] * 8, dtype=ql.qbool)
-
-    in_check = (king & attacked).any()
-    return in_check
-
-
-in_check = attack()
-counter = ql.qint(width=5)
-with in_check:
-    counter += 1
-attack.inverse()
-knights[0, 0].print_circuit()
-
-start = time.time()
-data = knights[0, 0].draw_data()
-img = render(data, overlap=False)
-elapsed = time.time() - start
-# Get draw data and render
-img.save("test_circuit.png")
-# img.show()
-print(f"Size: {img.size}, rendered in {elapsed:.2f}s")
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Quantum chess walk demo")
+    parser.add_argument(
+        "--visualize",
+        action="store_true",
+        help="Save circuit diagram to chess_circuit.png",
+    )
+    args = parser.parse_args()
+    main(visualize=args.visualize)
