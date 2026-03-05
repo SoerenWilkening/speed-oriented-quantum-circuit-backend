@@ -12,6 +12,8 @@ Phase 104 Plan 02: Local diffusion operator with variable branching.
 import itertools
 import math
 
+import numpy as np
+
 from chess_encoding import get_legal_moves_and_oracle
 from quantum_language._gates import emit_x
 from quantum_language.diffusion import diffusion
@@ -38,6 +40,7 @@ __all__ = [
     "apply_diffusion",
     "r_a",
     "r_b",
+    "all_walk_qubits",
 ]
 
 
@@ -535,6 +538,51 @@ def apply_diffusion(
 
     # --- Step 8: Underive board state ---
     underive_board_state(board_arrs, branch_regs, oracle_per_level, level_idx)
+
+
+# ---------------------------------------------------------------------------
+# Mega-register for compile
+# ---------------------------------------------------------------------------
+
+
+def all_walk_qubits(h_reg, branch_regs, max_depth):
+    """Create qint wrapping height + branch walk qubits.
+
+    Used as one of the arguments to the compiled walk step so these
+    qubits are treated as parameter qubits (not internal ancillas).
+    Board array qarrays are passed separately to the compiled function
+    since the total qubit count exceeds the 64-qubit qint width limit.
+
+    Parameters
+    ----------
+    h_reg : qint
+        Height register (width = max_depth + 1).
+    branch_regs : list[qint]
+        Per-level branch registers.
+    max_depth : int
+        Maximum tree depth.
+
+    Returns
+    -------
+    qint
+        Register wrapping height + branch qubits with create_new=False.
+    """
+    all_indices = []
+    # Height register qubits
+    w = max_depth + 1
+    for i in range(w):
+        all_indices.append(int(h_reg.qubits[64 - w + i]))
+    # Branch register qubits
+    for br in branch_regs:
+        bw = br.width
+        for i in range(bw):
+            all_indices.append(int(br.qubits[64 - bw + i]))
+
+    arr = np.zeros(64, dtype=np.uint32)
+    total = len(all_indices)
+    for i, idx in enumerate(all_indices):
+        arr[64 - total + i] = idx
+    return qint(0, create_new=False, bit_list=arr, width=total)
 
 
 # ---------------------------------------------------------------------------

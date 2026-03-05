@@ -778,11 +778,15 @@ class TestHeightControlledCascade:
 
 
 class TestAllWalkQubits:
-    """WALK-07: Mega-register wrapping all walk qubits (height + branch + board)."""
+    """WALK-07: Register wrapping height + branch walk qubits.
+
+    Board array qarrays are passed separately to the compiled walk step
+    since total qubit count (height + branch + 3*64 board) exceeds qint
+    max width of 64.
+    """
 
     def test_returns_qint_with_correct_total(self, clean_circuit):
-        """all_walk_qubits total = height + branch widths + board element counts."""
-        from chess_encoding import encode_position
+        """all_walk_qubits total = height + branch widths."""
         from chess_walk import (
             all_walk_qubits,
             create_branch_registers,
@@ -794,24 +798,19 @@ class TestAllWalkQubits:
         data = prepare_walk_data(wk_sq=4, bk_sq=60, wn_squares=[10], max_depth=max_depth)
         h_reg = create_height_register(max_depth)
         branch_regs = create_branch_registers(max_depth, data)
-        pos = encode_position(4, 60, [10])
-        board_arrs = (pos["white_king"], pos["black_king"], pos["white_knights"])
 
-        mega = all_walk_qubits(h_reg, branch_regs, board_arrs, max_depth)
+        mega = all_walk_qubits(h_reg, branch_regs, max_depth)
 
         # height = max_depth + 1 = 2
         height_count = max_depth + 1
         # branch widths
         branch_count = sum(br.width for br in branch_regs)
-        # board = 3 qarrays * 64 elements each = 192
-        board_count = sum(len(arr) for arr in board_arrs)
 
-        expected_total = height_count + branch_count + board_count
+        expected_total = height_count + branch_count
         assert mega.width == expected_total
 
     def test_no_duplicate_qubit_indices(self, clean_circuit):
-        """All qubit indices in the mega-register are unique."""
-        from chess_encoding import encode_position
+        """All qubit indices in the register are unique."""
         from chess_walk import (
             all_walk_qubits,
             create_branch_registers,
@@ -823,10 +822,8 @@ class TestAllWalkQubits:
         data = prepare_walk_data(wk_sq=4, bk_sq=60, wn_squares=[10], max_depth=max_depth)
         h_reg = create_height_register(max_depth)
         branch_regs = create_branch_registers(max_depth, data)
-        pos = encode_position(4, 60, [10])
-        board_arrs = (pos["white_king"], pos["black_king"], pos["white_knights"])
 
-        mega = all_walk_qubits(h_reg, branch_regs, board_arrs, max_depth)
+        mega = all_walk_qubits(h_reg, branch_regs, max_depth)
 
         # Extract non-zero indices from the qint's qubits array
         indices = []
