@@ -4,10 +4,10 @@ milestone: v7.0
 milestone_name: Compile Infrastructure
 status: active
 stopped_at: null
-last_updated: "2026-03-05T20:00:00.000Z"
-last_activity: 2026-03-05 -- Milestone v7.0 started
+last_updated: "2026-03-05T21:00:00.000Z"
+last_activity: 2026-03-05 -- Roadmap created for v7.0 (4 phases, 107-110)
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,14 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v7.0 Compile Infrastructure — defining requirements
+**Current focus:** v7.0 Compile Infrastructure -- Phase 107 ready to plan
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-03-05 — Milestone v7.0 started
+Phase: 107 of 110 (Call Graph DAG Foundation)
+Plan: --
+Status: Ready to plan
+Last activity: 2026-03-05 -- Roadmap created (4 phases, 15 requirements mapped)
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -48,7 +50,7 @@ Last activity: 2026-03-05 — Milestone v7.0 started
 | v5.0 Advanced Arithmetic | 90-96 | 19 | Shipped (2026-02-26) |
 | v6.0 Quantum Walk | 97-102 | 11 | Shipped (2026-03-03) |
 | v6.1 Quantum Chess Demo | 103-106 | 8 | Complete (2026-03-05) |
-| v7.0 Compile Infrastructure | — | — | Defining requirements |
+| v7.0 Compile Infrastructure | 107-110 | TBD | Ready to plan |
 
 ## Accumulated Context
 
@@ -58,26 +60,23 @@ See PROJECT.md Key Decisions table for full history.
 
 Recent decisions affecting current work:
 - Call graph DAG lives in Python (compile-time structure, not hot path)
-- Sequences still generated in C at all opt levels (opt_flag=1 generates but doesn't merge into shared circuit)
-- Sparse circuit arrays auto-triggered by memory monitoring during add_gate
-- opt_flag=1 as default (call graph + standalone sequences, no full circuit)
-- DOT format for call graph visualization (Graphviz-compatible)
-- Intelligent merge heuristic for opt_flag=2: overlapping-qubit sequences with minimal circuit size increase
+- opt_flag=1 builds DAG alongside normal expansion (no C backend changes)
+- rustworkx PyDAG for graph primitives, NumPy bitmasks for qubit overlap
+- Sparse circuit arrays deferred to v8.0 (independent C-level track)
 
 ### Blockers/Concerns
 
 **Carry forward (architectural):**
-- QQ Division Ancilla Leak -- DOCUMENTED (see docs/KNOWN-ISSUES.md)
 - 14-15 pre-existing test failures in test_compile.py -- unrelated to v7.0
-- Framework limitation: `with qbool:` cannot nest (quantum-quantum AND not supported)
-- Raw predicate qubit allocation: each predicate call allocates new qbools
+- Phase kickback: control qubits are NOT read-only (must track all qubits as dependencies)
+- Merge can silently corrupt quantum states -- dedicated verification phase (110) addresses this
 
 ## Session Continuity
 
-Last session: 2026-03-05T20:00:00Z
-Stopped at: Defining requirements for v7.0
-Resume file: —
-Resume action: Continue with requirements definition
+Last session: 2026-03-05T21:00:00Z
+Stopped at: Roadmap created for v7.0
+Resume file: --
+Resume action: `/gsd:plan-phase 107`
 
 ---
-*State updated: 2026-03-05 -- Milestone v7.0 started, defining requirements*
+*State updated: 2026-03-05 -- v7.0 roadmap created with 4 phases (107-110)*

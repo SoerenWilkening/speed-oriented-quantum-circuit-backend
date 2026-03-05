@@ -38,8 +38,8 @@ Requirements for multi-level compile infrastructure. Each maps to roadmap phases
 
 ### Sparse Circuit (v8.0)
 
-- **SPARSE-01**: Auto dense→sparse transition for gate_index_of_layer_and_qubits above memory threshold
-- **SPARSE-02**: Transparent to Cython layer — no changes to inject_remapped_gates or extract_gate_range
+- **SPARSE-01**: Auto dense->sparse transition for gate_index_of_layer_and_qubits above memory threshold
+- **SPARSE-02**: Transparent to Cython layer -- no changes to inject_remapped_gates or extract_gate_range
 - **SPARSE-03**: Small circuits retain dense arrays with no performance regression
 
 ### Advanced Compilation
@@ -52,8 +52,8 @@ Requirements for multi-level compile infrastructure. Each maps to roadmap phases
 
 | Feature | Reason |
 |---------|--------|
-| Sparse circuit arrays | Deferred to v8.0 — independent C-level track, needs benchmarking |
-| PIL-based graph visualization | DOT format sufficient — external Graphviz tools handle rendering |
+| Sparse circuit arrays | Deferred to v8.0 -- independent C-level track, needs benchmarking |
+| PIL-based graph visualization | DOT format sufficient -- external Graphviz tools handle rendering |
 | Automatic opt_flag selection | User controls compilation level explicitly |
 | Modifying C backend for DAG | Call graph is Python-level overlay on existing CompiledBlock objects |
 | Changing Cython boundary | inject_remapped_gates and extract_gate_range remain unchanged |
@@ -64,27 +64,27 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CAPI-01 | — | Pending |
-| CAPI-02 | — | Pending |
-| CAPI-03 | — | Pending |
-| CAPI-04 | — | Pending |
-| CGRAPH-01 | — | Pending |
-| CGRAPH-02 | — | Pending |
-| CGRAPH-03 | — | Pending |
-| CGRAPH-04 | — | Pending |
-| CGRAPH-05 | — | Pending |
-| VIS-01 | — | Pending |
-| VIS-02 | — | Pending |
-| MERGE-01 | — | Pending |
-| MERGE-02 | — | Pending |
-| MERGE-03 | — | Pending |
-| MERGE-04 | — | Pending |
+| CAPI-01 | Phase 107 | Pending |
+| CAPI-02 | Phase 109 | Pending |
+| CAPI-03 | Phase 107 | Pending |
+| CAPI-04 | Phase 107 | Pending |
+| CGRAPH-01 | Phase 107 | Pending |
+| CGRAPH-02 | Phase 107 | Pending |
+| CGRAPH-03 | Phase 107 | Pending |
+| CGRAPH-04 | Phase 108 | Pending |
+| CGRAPH-05 | Phase 108 | Pending |
+| VIS-01 | Phase 108 | Pending |
+| VIS-02 | Phase 108 | Pending |
+| MERGE-01 | Phase 109 | Pending |
+| MERGE-02 | Phase 109 | Pending |
+| MERGE-03 | Phase 109 | Pending |
+| MERGE-04 | Phase 110 | Pending |
 
 **Coverage:**
 - v7.0 requirements: 15 total
-- Mapped to phases: 0
-- Unmapped: 15 ⚠️
+- Mapped to phases: 15
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-05*
-*Last updated: 2026-03-05 after initial definition*
+*Last updated: 2026-03-05 after roadmap creation (15/15 mapped)*

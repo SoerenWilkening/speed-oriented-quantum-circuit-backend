@@ -15,6 +15,7 @@
 - v5.0 Advanced Arithmetic & Compilation -- Phases 90-96 (shipped 2026-02-26) -- See `milestones/v5.0-ROADMAP.md`
 - v6.0 Quantum Walk Primitives -- Phases 97-102 (shipped 2026-03-03) -- See `milestones/v6.0-ROADMAP.md`
 - v6.1 Quantum Chess Demo -- Phases 103-106 (shipped 2026-03-05) -- See `milestones/v6.1-ROADMAP.md`
+- v7.0 Compile Infrastructure -- Phases 107-110 (in progress)
 
 ## Phases
 
@@ -156,7 +157,81 @@
 
 </details>
 
+### v7.0 Compile Infrastructure (In Progress)
+
+**Milestone Goal:** Restructure `@ql.compile` from monolithic circuit generation to a multi-level compilation model with call graph DAG, selective sequence merging, and DOT visualization.
+
+- [ ] **Phase 107: Call Graph DAG Foundation** - opt_flag API, DAG construction with qubit overlap edges, backward compat
+- [ ] **Phase 108: Call Graph Analysis & Visualization** - Per-node stats extraction, aggregate metrics, DOT export, compilation report
+- [ ] **Phase 109: Selective Sequence Merging** - opt_flag=2 with merge candidate detection, correct merging, cross-boundary optimization
+- [ ] **Phase 110: Merge Verification & Regression** - Qiskit simulation equivalence, full test suite regression
+
+## Phase Details
+
+### Phase 107: Call Graph DAG Foundation
+**Goal**: Users can compile functions at multiple optimization levels with a call graph DAG capturing program structure
+**Depends on**: Nothing (first phase of v7.0)
+**Requirements**: CAPI-01, CAPI-03, CAPI-04, CGRAPH-01, CGRAPH-02, CGRAPH-03
+**Success Criteria** (what must be TRUE):
+  1. User can write `@ql.compile(opt=1)` and get a CallGraphDAG object alongside the compiled function
+  2. User can write `@ql.compile(opt=3)` and get identical behavior to existing `@ql.compile()` (full expansion)
+  3. All 106+ existing compile tests pass unchanged when opt=3 is the default
+  4. Call graph DAG contains nodes with qubit sets, and edges weighted by shared qubit count between dependent sequences
+  5. Parallel sequences (disjoint qubit sets) are identified as concurrent groups in the DAG
+**Plans**: TBD
+
+Plans:
+- [ ] 107-01: TBD
+- [ ] 107-02: TBD
+
+### Phase 108: Call Graph Analysis & Visualization
+**Goal**: Users can extract actionable metrics from the call graph and visualize program structure as DOT
+**Depends on**: Phase 107
+**Requirements**: CGRAPH-04, CGRAPH-05, VIS-01, VIS-02
+**Success Criteria** (what must be TRUE):
+  1. User can extract gate count, depth, qubit count, and T-count per node from the call graph without building a full circuit
+  2. User can compute aggregate totals (gates, depth, T-count) across the full call graph
+  3. User can call an API (e.g., `compiled_func.call_graph.to_dot()`) and receive a valid DOT string with labeled nodes and edges
+  4. User can view a compilation report showing per-node stats including parallel group membership
+**Plans**: TBD
+
+Plans:
+- [ ] 108-01: TBD
+- [ ] 108-02: TBD
+
+### Phase 109: Selective Sequence Merging
+**Goal**: Users can merge overlapping-qubit sequences for cross-boundary gate optimization
+**Depends on**: Phase 108
+**Requirements**: CAPI-02, MERGE-01, MERGE-02, MERGE-03
+**Success Criteria** (what must be TRUE):
+  1. User can write `@ql.compile(opt=2)` and overlapping-qubit sequences are automatically identified and merged
+  2. Merged sequences produce correct quantum states (per-qubit gate ordering preserved)
+  3. Cross-boundary optimizations fire (e.g., QFT at end of sequence A cancels IQFT at start of sequence B)
+  4. Non-overlapping sequences remain independent (no unnecessary merging)
+**Plans**: TBD
+
+Plans:
+- [ ] 109-01: TBD
+- [ ] 109-02: TBD
+
+### Phase 110: Merge Verification & Regression
+**Goal**: Merged circuits are proven correct via simulation and the full test suite passes at all opt levels
+**Depends on**: Phase 109
+**Requirements**: MERGE-04
+**Success Criteria** (what must be TRUE):
+  1. Merged circuit output verified equivalent to sequential execution via Qiskit statevector simulation for arithmetic workloads (add, mul, grover oracle)
+  2. All 106+ existing compile tests pass at opt=1, opt=2, and opt=3
+  3. Parametric compilation works correctly at each opt level (no topology corruption from merge)
+**Plans**: TBD
+
+Plans:
+- [ ] 110-01: TBD
+- [ ] 110-02: TBD
+
 ## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 107 -> 108 -> 109 -> 110
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -172,6 +247,10 @@
 | 90-96 | v5.0 | 19/19 | Complete | 2026-02-26 |
 | 97-102 | v6.0 | 11/11 | Complete | 2026-03-03 |
 | 103-106 | v6.1 | 8/8 | Complete | 2026-03-05 |
+| 107. Call Graph DAG Foundation | v7.0 | 0/TBD | Not started | - |
+| 108. Call Graph Analysis & Visualization | v7.0 | 0/TBD | Not started | - |
+| 109. Selective Sequence Merging | v7.0 | 0/TBD | Not started | - |
+| 110. Merge Verification & Regression | v7.0 | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2026-02-02*
@@ -187,3 +266,4 @@
 *Milestone v5.0 shipped: 2026-02-26*
 *Milestone v6.0 shipped: 2026-03-03*
 *Milestone v6.1 shipped: 2026-03-05*
+*v7.0 roadmap created: 2026-03-05*
