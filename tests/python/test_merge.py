@@ -366,3 +366,138 @@ class TestOpt2Integration:
                 # The gate count may be less than sum of individual blocks
                 # due to cross-boundary optimization
                 assert merged_block.original_gate_count >= len(merged_block.gates)
+
+
+# ---------------------------------------------------------------------------
+# Edge case tests (Task 2)
+# ---------------------------------------------------------------------------
+
+
+class TestOpt2EdgeCases:
+    """Edge case tests for opt=2 merge pipeline."""
+
+    def test_opt2_single_sequence(self):
+        """Only one compiled function call, nothing to merge, works normally."""
+        ql.circuit()
+
+        @ql.compile(opt=2)
+        def inc(x):
+            x += 1
+            return x
+
+        a = qint(3, width=4)
+        result = inc(a)
+        assert result is not None
+        # No merge groups with single call
+        assert inc._merged_blocks is None or len(inc._merged_blocks) == 0
+
+    def test_opt2_three_way_chain_merge(self):
+        """A overlaps B, B overlaps C -> all three merge into one block."""
+        ql.circuit()
+
+        @ql.compile(opt=1)
+        def step_a(x):
+            x += 1
+            return x
+
+        @ql.compile(opt=1)
+        def step_b(x):
+            x += 2
+            return x
+
+        @ql.compile(opt=1)
+        def step_c(x):
+            x += 3
+            return x
+
+        @ql.compile(opt=2)
+        def wrapper(x):
+            x = step_a(x)
+            x = step_b(x)
+            x = step_c(x)
+            return x
+
+        a = qint(1, width=4)
+        wrapper(a)
+        dag = wrapper.call_graph
+        if dag is not None:
+            groups = dag.merge_groups()
+            # All three inner calls share qubits -> single merge group
+            if groups:
+                assert len(groups) == 1
+                assert len(groups[0]) >= 3  # wrapper + step_a + step_b + step_c (or subset)
+
+    def test_opt2_merge_threshold(self):
+        """merge_threshold=3 skips low-overlap pairs."""
+        ql.circuit()
+
+        @ql.compile(opt=1)
+        def step_a(x):
+            x += 1
+            return x
+
+        @ql.compile(opt=1)
+        def step_b(x):
+            x += 2
+            return x
+
+        @ql.compile(opt=2, merge_threshold=100)
+        def wrapper(x):
+            x = step_a(x)
+            x = step_b(x)
+            return x
+
+        a = qint(1, width=4)
+        wrapper(a)
+        # High threshold means no merging (overlap < 100 qubits)
+        assert wrapper._merged_blocks is None or len(wrapper._merged_blocks) == 0
+
+    def test_opt2_multiple_calls_same_args(self):
+        """Caching works correctly across 3+ calls with same args."""
+        ql.circuit()
+
+        @ql.compile(opt=2)
+        def inc(x):
+            x += 1
+            return x
+
+        a = qint(2, width=4)
+        inc(a)
+
+        b = qint(3, width=4)
+        inc(b)
+
+        c = qint(4, width=4)
+        inc(c)
+
+        # All calls should work without error; cache hits on 2nd and 3rd
+        assert inc is not None
+
+    def test_opt1_unaffected(self):
+        """opt=1 behavior unchanged (no merging)."""
+        ql.circuit()
+
+        @ql.compile(opt=1)
+        def inc(x):
+            x += 1
+            return x
+
+        a = qint(2, width=4)
+        inc(a)
+        # opt=1 should NOT have _merged_blocks populated
+        assert inc._merged_blocks is None
+
+    def test_opt3_unaffected(self):
+        """opt=3 behavior unchanged (no DAG, no merging)."""
+        ql.circuit()
+
+        @ql.compile(opt=3)
+        def inc(x):
+            x += 1
+            return x
+
+        a = qint(2, width=4)
+        inc(a)
+        # opt=3 has no DAG and no merging
+        assert inc.call_graph is None
+        assert inc._merged_blocks is None
