@@ -265,6 +265,38 @@ class CallGraphDAG:
 
         return [set(comp) for comp in rx.connected_components(g)]
 
+    # -- Aggregate metrics ---------------------------------------------------
+
+    def aggregate(self) -> dict:
+        """Compute aggregate metrics across all nodes in the DAG.
+
+        Returns
+        -------
+        dict
+            Keys: gates (total gate count), depth (critical-path depth),
+            qubits (number of unique physical qubits), t_count (total T-gates).
+            Critical-path depth = sum of per-group max depths, where groups
+            are determined by parallel_groups() (qubit-disjoint components).
+        """
+        if not self._nodes:
+            return {"gates": 0, "depth": 0, "qubits": 0, "t_count": 0}
+
+        total_gates = sum(n.gate_count for n in self._nodes)
+        total_t = sum(n.t_count for n in self._nodes)
+        all_qubits: set[int] = set()
+        for n in self._nodes:
+            all_qubits.update(n.qubit_set)
+
+        groups = self.parallel_groups()
+        total_depth = sum(max(self._nodes[idx].depth for idx in group) for group in groups)
+
+        return {
+            "gates": total_gates,
+            "depth": total_depth,
+            "qubits": len(all_qubits),
+            "t_count": total_t,
+        }
+
     # -- Properties ---------------------------------------------------------
 
     @property
