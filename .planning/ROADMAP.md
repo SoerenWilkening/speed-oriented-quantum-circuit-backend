@@ -225,8 +225,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 110-01: TBD
-- [ ] 110-02: TBD
+- [ ] 110-01-PLAN.md -- Statevector equivalence tests (add, mul, grover oracle) + parametric+opt interaction
+- [ ] 110-02-PLAN.md -- Opt-level parametrization fixture + full regression across test_compile.py and test_merge.py
 
 ## Progress
 
@@ -250,7 +250,7 @@ Phases execute in numeric order: 107 -> 108 -> 109 -> 110
 | 107. Call Graph DAG Foundation | 2/2 | Complete   | 2026-03-05 | - |
 | 108. Call Graph Analysis & Visualization | 2/2 | Complete    | 2026-03-06 | - |
 | 109. Selective Sequence Merging | 2/2 | Complete    | 2026-03-06 | - |
-| 110. Merge Verification & Regression | v7.0 | 0/TBD | Not started | - |
+| 110. Merge Verification & Regression | v7.0 | 0/2 | Not started | - |
 
 ---
 *Roadmap created: 2026-02-02*
