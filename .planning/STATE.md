@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v7.0
 milestone_name: Compile Infrastructure
-status: completed
-stopped_at: Phase 109 context gathered
-last_updated: "2026-03-06T20:46:23.323Z"
-last_activity: 2026-03-06 -- Completed 108-02 DOT export & compilation report (76 tests)
+status: in-progress
+stopped_at: Completed 109-01 merge infrastructure
+last_updated: "2026-03-06T21:03:38Z"
+last_activity: 2026-03-06 -- Completed 109-01 merge_groups + _merge_and_optimize (93 tests)
 progress:
   total_phases: 4
   completed_phases: 2
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 
 ## Current Position
 
-Phase: 108 of 110 (Call Graph Analysis & Visualization)
-Plan: 2 of 2
-Status: 108-02 Complete (Phase 108 done)
-Last activity: 2026-03-06 -- Completed 108-02 DOT export & compilation report (76 tests)
+Phase: 109 of 110 (Selective Sequence Merging)
+Plan: 1 of 3
+Status: 109-01 Complete
+Last activity: 2026-03-06 -- Completed 109-01 merge_groups + _merge_and_optimize (93 tests)
 
 Progress: [██████████] 100%
 
@@ -53,6 +53,7 @@ Progress: [██████████] 100%
 | v7.0 Compile Infrastructure | 107-110 | TBD | Ready to plan |
 | Phase 108 P01 | 4min | 2 tasks | 3 files |
 | Phase 108 P02 | 4min | 2 tasks | 2 files |
+| Phase 109 P01 | 3min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -76,6 +77,9 @@ Recent decisions affecting current work:
 - Critical-path depth in aggregate: sum of per-group max depths from parallel_groups()
 - DOT cluster subgraphs only rendered when >1 parallel group
 - Fixed-width report columns: Name 20 chars left-aligned, numeric 8 chars right-aligned
+- merge_groups reuses parallel_groups pattern with threshold filter and singleton exclusion
+- _merge_and_optimize wraps _optimize_gate_list with virtual-to-physical qubit remapping
+- parametric+opt=2 guard raises ValueError immediately at construction time
 
 ### Blockers/Concerns
 
@@ -86,10 +90,10 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-06T20:46:23.309Z
-Stopped at: Phase 109 context gathered
-Resume file: .planning/phases/109-selective-sequence-merging/109-CONTEXT.md
-Resume action: Plan Phase 109
+Last session: 2026-03-06T21:03:38Z
+Stopped at: Completed 109-01 merge infrastructure
+Resume file: .planning/phases/109-selective-sequence-merging/109-01-SUMMARY.md
+Resume action: Execute 109-02
 
 ---
-*State updated: 2026-03-06 -- 108-02 DOT export & compilation report complete (76 tests)*
+*State updated: 2026-03-06 -- 109-01 merge infrastructure complete (93 tests)*

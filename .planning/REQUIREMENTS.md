@@ -29,8 +29,8 @@ Requirements for multi-level compile infrastructure. Each maps to roadmap phases
 
 ### Sequence Merging
 
-- [ ] **MERGE-01**: Overlapping-qubit sequences automatically identified as merge candidates
-- [ ] **MERGE-02**: Merged sequences preserve correct per-qubit gate ordering
+- [x] **MERGE-01**: Overlapping-qubit sequences automatically identified as merge candidates
+- [x] **MERGE-02**: Merged sequences preserve correct per-qubit gate ordering
 - [ ] **MERGE-03**: Cross-boundary optimization (e.g., QFT/IQFT cancellation between adjacent sequences)
 - [ ] **MERGE-04**: Merged result verified equivalent to sequential execution via Qiskit simulation
 
@@ -75,8 +75,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CGRAPH-05 | Phase 108 | Complete |
 | VIS-01 | Phase 108 | Complete |
 | VIS-02 | Phase 108 | Complete |
-| MERGE-01 | Phase 109 | Pending |
-| MERGE-02 | Phase 109 | Pending |
+| MERGE-01 | Phase 109 | Complete |
+| MERGE-02 | Phase 109 | Complete |
 | MERGE-03 | Phase 109 | Pending |
 | MERGE-04 | Phase 110 | Pending |
 

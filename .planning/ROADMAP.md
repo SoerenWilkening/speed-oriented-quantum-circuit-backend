@@ -249,7 +249,7 @@ Phases execute in numeric order: 107 -> 108 -> 109 -> 110
 | 103-106 | v6.1 | 8/8 | Complete | 2026-03-05 |
 | 107. Call Graph DAG Foundation | 2/2 | Complete   | 2026-03-05 | - |
 | 108. Call Graph Analysis & Visualization | 2/2 | Complete    | 2026-03-06 | - |
-| 109. Selective Sequence Merging | v7.0 | 0/2 | Planning complete | - |
+| 109. Selective Sequence Merging | 1/2 | In Progress|  | - |
 | 110. Merge Verification & Regression | v7.0 | 0/TBD | Not started | - |
 
 ---
