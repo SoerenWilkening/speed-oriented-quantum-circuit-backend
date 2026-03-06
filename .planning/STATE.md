@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 
 ## Current Position
 
-Phase: 109 of 110 (Selective Sequence Merging)
-Plan: 2 of 3
-Status: 109-02 Complete
-Last activity: 2026-03-06 -- Completed 109-02 opt=2 merge pipeline wiring (29 merge tests, 115 related tests)
+Phase: 110 of 110 (Merge Verification & Regression)
+Plan: 2 of 2
+Status: 110-02 Complete
+Last activity: 2026-03-06 -- Completed 110-02 opt-level regression (441 test invocations at opt=1/2/3)
 
 Progress: [██████████] 100%
 
@@ -84,6 +84,7 @@ Recent decisions affecting current work:
 - DAG node _block_ref/_v2r_ref for direct block access during merge (avoids cache_key placeholder issue)
 - _apply_merge runs after build_overlap_edges in __call__ finally block when opt==2
 - Merged blocks keyed by frozenset of node indices for O(1) group lookup
+- opt_level fixture patches ql.compile() function (not CompiledFunc.__init__) to distinguish user-explicit opt= from defaults
 
 ### Blockers/Concerns
 
@@ -94,10 +95,10 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-06T21:45:06.065Z
-Stopped at: Phase 110 context gathered
-Resume file: .planning/phases/110-merge-verification-regression/110-CONTEXT.md
-Resume action: Execute 109-03
+Last session: 2026-03-06T22:13:29Z
+Stopped at: Completed 110-02-PLAN.md
+Resume file: .planning/phases/110-merge-verification-regression/110-02-SUMMARY.md
+Resume action: Phase 110 complete
 
 ---
-*State updated: 2026-03-06 -- 109-02 merge pipeline wiring complete (29 merge tests, 115 related tests)*
+*State updated: 2026-03-06 -- 110-02 opt-level regression complete (441 test invocations, zero new failures)*
