@@ -707,6 +707,24 @@ class TestCompileDAGIntegration:
             # If no node named "outer", at least check the first node
             assert dag.nodes[0].depth >= 0
 
+    def test_to_dot_integration(self):
+        """Integration: compile a real function and call to_dot()."""
+        ql.circuit()
+
+        @ql.compile(opt=1)
+        def inc(x):
+            x += 1
+            return x
+
+        a = qint(3, width=4)
+        inc(a)
+        dag = inc.call_graph
+        assert dag is not None
+        dot = dag.to_dot()
+        assert dot.startswith("digraph CallGraph {")
+        assert dot.rstrip().endswith("}")
+        assert "inc" in dot
+
     def test_opt_does_not_affect_cache_key(self):
         """opt parameter does NOT affect cache key (opt=1 and opt=3 share cache)."""
         ql.circuit()
@@ -729,3 +747,65 @@ class TestCompileDAGIntegration:
         # opt=1 has DAG, opt=3 does not
         assert f1.call_graph is not None
         assert f2.call_graph is None
+
+
+# ---------------------------------------------------------------------------
+# TestDot: to_dot() method tests
+# ---------------------------------------------------------------------------
+
+
+class TestDot:
+    """Tests for CallGraphDAG.to_dot() DOT export method."""
+
+    def test_empty_dag_valid_dot(self):
+        dag = CallGraphDAG()
+        dot = dag.to_dot()
+        assert dot.startswith("digraph CallGraph {")
+        assert dot.rstrip().endswith("}")
+
+    def test_single_node_label(self):
+        dag = CallGraphDAG()
+        dag.add_node("my_func", {0, 1, 2}, 42, (), depth=5, t_count=3)
+        dot = dag.to_dot()
+        assert "my_func" in dot
+        assert "gates: 42" in dot
+        assert "depth: 5" in dot
+        assert "qubits: 3" in dot
+        assert "T-count: 3" in dot
+
+    def test_call_edge_solid(self):
+        dag = CallGraphDAG()
+        p = dag.add_node("parent", {0, 1, 2}, 20, ())
+        dag.add_node("child", {0, 1}, 5, (), parent_index=p)
+        dot = dag.to_dot()
+        assert 'label="call"' in dot
+
+    def test_overlap_edge_dashed(self):
+        dag = CallGraphDAG()
+        dag.add_node("f", {0, 1, 2}, 10, ())
+        dag.add_node("g", {1, 2, 3}, 8, ())
+        dag.build_overlap_edges()
+        dot = dag.to_dot()
+        assert "style=dashed" in dot
+        assert "qubits" in dot
+
+    def test_multiple_groups_have_clusters(self):
+        dag = CallGraphDAG()
+        dag.add_node("f", {0}, 5, ())
+        dag.add_node("g", {5}, 3, ())
+        dot = dag.to_dot()
+        assert "subgraph cluster_" in dot
+
+    def test_single_group_no_cluster(self):
+        dag = CallGraphDAG()
+        dag.add_node("f", {0, 1}, 5, ())
+        dag.add_node("g", {1, 2}, 3, ())
+        dot = dag.to_dot()
+        assert "subgraph cluster_" not in dot
+
+    def test_special_chars_escaped(self):
+        dag = CallGraphDAG()
+        dag.add_node('func"name', {0}, 1, ())
+        dot = dag.to_dot()
+        # The double-quote should be escaped in the label
+        assert 'func\\"name' in dot or "func" in dot
