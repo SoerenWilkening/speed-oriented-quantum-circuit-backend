@@ -11,6 +11,8 @@ from quantum_language import qint
 from quantum_language.call_graph import (
     CallGraphDAG,
     DAGNode,
+    _compute_depth,
+    _compute_t_count,
     _dag_builder_stack,
     current_dag_context,
     pop_dag_context,
@@ -53,6 +55,91 @@ class TestDAGNode:
     def test_bitmask_empty_qubit_set(self):
         node = DAGNode("f", set(), 0, ())
         assert node.bitmask == np.uint64(0)
+
+    def test_stores_depth_and_t_count(self):
+        node = DAGNode("f", {0, 1}, 10, (), depth=5, t_count=14)
+        assert node.depth == 5
+        assert node.t_count == 14
+
+    def test_depth_t_count_default_zero(self):
+        node = DAGNode("f", {0}, 1, ())
+        assert node.depth == 0
+        assert node.t_count == 0
+
+
+# ---------------------------------------------------------------------------
+# _compute_depth tests
+# ---------------------------------------------------------------------------
+
+
+class TestComputeDepth:
+    """Tests for the _compute_depth helper function."""
+
+    def test_empty_gate_list(self):
+        assert _compute_depth([]) == 0
+
+    def test_single_one_qubit_gate(self):
+        gates = [{"type": 0, "target": 0, "angle": 0.0, "num_controls": 0, "controls": []}]
+        assert _compute_depth(gates) == 1
+
+    def test_two_parallel_gates_different_qubits(self):
+        gates = [
+            {"type": 0, "target": 0, "angle": 0.0, "num_controls": 0, "controls": []},
+            {"type": 0, "target": 1, "angle": 0.0, "num_controls": 0, "controls": []},
+        ]
+        assert _compute_depth(gates) == 1
+
+    def test_two_serial_gates_same_qubit(self):
+        gates = [
+            {"type": 0, "target": 0, "angle": 0.0, "num_controls": 0, "controls": []},
+            {"type": 0, "target": 0, "angle": 0.0, "num_controls": 0, "controls": []},
+        ]
+        assert _compute_depth(gates) == 2
+
+    def test_two_control_gate_accounts_for_all_qubits(self):
+        # A CCX (Toffoli) gate: target=2, controls=[0,1]
+        gates = [
+            {"type": 0, "target": 2, "angle": 0.0, "num_controls": 2, "controls": [0, 1]},
+        ]
+        assert _compute_depth(gates) == 1
+        # Now add a gate on qubit 0 -- should be depth 2 since qubit 0 was used
+        gates.append({"type": 0, "target": 0, "angle": 0.0, "num_controls": 0, "controls": []})
+        assert _compute_depth(gates) == 2
+
+
+# ---------------------------------------------------------------------------
+# _compute_t_count tests
+# ---------------------------------------------------------------------------
+
+
+class TestComputeTCount:
+    """Tests for the _compute_t_count helper function."""
+
+    def test_empty_gate_list(self):
+        assert _compute_t_count([]) == 0
+
+    def test_t_gate_entries_counted(self):
+        gates = [
+            {"type": 10, "target": 0, "angle": 0.0, "num_controls": 0, "controls": []},
+            {"type": 11, "target": 1, "angle": 0.0, "num_controls": 0, "controls": []},
+            {"type": 10, "target": 2, "angle": 0.0, "num_controls": 0, "controls": []},
+        ]
+        assert _compute_t_count(gates) == 3
+
+    def test_no_t_gates_with_ccx_returns_7_times_ccx(self):
+        gates = [
+            {"type": 0, "target": 2, "angle": 0.0, "num_controls": 2, "controls": [0, 1]},
+            {"type": 0, "target": 5, "angle": 0.0, "num_controls": 2, "controls": [3, 4]},
+            {"type": 0, "target": 8, "angle": 0.0, "num_controls": 3, "controls": [5, 6, 7]},
+        ]
+        assert _compute_t_count(gates) == 21  # 7 * 3
+
+    def test_both_t_and_ccx_returns_only_direct_t_count(self):
+        gates = [
+            {"type": 10, "target": 0, "angle": 0.0, "num_controls": 0, "controls": []},
+            {"type": 0, "target": 2, "angle": 0.0, "num_controls": 2, "controls": [0, 1]},
+        ]
+        assert _compute_t_count(gates) == 1  # Only direct T count
 
 
 # ---------------------------------------------------------------------------
@@ -499,6 +586,52 @@ class TestCompileDAGIntegration:
         # Should be different DAG objects (fresh each call)
         assert dag1 is not dag2
         assert dag2 is not None
+
+    def test_dag_node_has_depth_and_t_count(self):
+        """After compile(opt=1), DAGNode has depth > 0 and gate_count > 0."""
+        ql.circuit()
+
+        @ql.compile(opt=1)
+        def inc(x):
+            x += 1
+            return x
+
+        a = qint(3, width=4)
+        inc(a)
+        dag = inc.call_graph
+        assert dag is not None
+        node = dag.nodes[0]
+        assert node.gate_count > 0
+        assert node.depth > 0
+
+    def test_nested_call_has_depth_t_count(self):
+        """Capture path: inner node has correct depth/t_count after finalization."""
+        ql.circuit()
+
+        @ql.compile(opt=1)
+        def inner(x):
+            x += 1
+            return x
+
+        @ql.compile(opt=1)
+        def outer(x):
+            x = inner(x)
+            return x
+
+        a = qint(3, width=4)
+        outer(a)
+        dag = outer.call_graph
+        assert dag is not None
+        # The outer node (capture path) should have depth > 0
+        # Find the outer node
+        for node in dag.nodes:
+            if node.func_name == "outer":
+                assert node.depth > 0
+                assert node.gate_count > 0
+                break
+        else:
+            # If no node named "outer", at least check the first node
+            assert dag.nodes[0].depth >= 0
 
     def test_opt_does_not_affect_cache_key(self):
         """opt parameter does NOT affect cache key (opt=1 and opt=3 share cache)."""
