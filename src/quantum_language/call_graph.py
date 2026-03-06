@@ -265,6 +265,41 @@ class CallGraphDAG:
 
         return [set(comp) for comp in rx.connected_components(g)]
 
+    # -- Merge group detection -----------------------------------------------
+
+    def merge_groups(self, threshold: int = 1) -> list[list[int]]:
+        """Connected components where all overlap edges >= threshold.
+
+        Returns list of sorted node-index lists. Single-node groups excluded.
+
+        Parameters
+        ----------
+        threshold : int
+            Minimum qubit overlap (popcount of bitmask AND) for two nodes
+            to be considered merge candidates. Default 1.
+
+        Returns
+        -------
+        list[list[int]]
+            Each inner list is a group of node indices sorted in temporal
+            (insertion) order. Only groups with 2+ nodes are returned.
+        """
+        n = len(self._nodes)
+        if n < 2:
+            return []
+        g = rx.PyGraph()
+        for _ in range(n):
+            g.add_node(None)
+        bitmasks = np.array([nd.bitmask for nd in self._nodes], dtype=np.uint64)
+        for i in range(n):
+            overlaps = np.bitwise_and(bitmasks[i], bitmasks[i + 1 :])
+            weights = _popcount_array(overlaps)
+            for j_off in range(len(weights)):
+                if weights[j_off] >= threshold:
+                    g.add_edge(i, i + 1 + j_off, int(weights[j_off]))
+        components = rx.connected_components(g)
+        return [sorted(comp) for comp in components if len(comp) > 1]
+
     # -- Aggregate metrics ---------------------------------------------------
 
     def aggregate(self) -> dict:
