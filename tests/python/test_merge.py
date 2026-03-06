@@ -19,6 +19,9 @@ from quantum_language.compile import (
 )
 from quantum_language.qint import qint
 
+# Run all tests in this module at opt=1, opt=2, and opt=3
+pytestmark = pytest.mark.usefixtures("opt_level")
+
 # ---------------------------------------------------------------------------
 # merge_groups tests
 # ---------------------------------------------------------------------------

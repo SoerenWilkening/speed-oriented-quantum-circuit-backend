@@ -9,13 +9,16 @@ Qiskit simulation -> result extraction and validation.
 """
 
 import gc
+import sys
 
 import pytest
 import qiskit.qasm3
 from qiskit_aer import AerSimulator
 
 import quantum_language as ql
-from quantum_language.compile import CompiledFunc
+
+# Get the actual compile module (not the function with the same name)
+_compile_mod = sys.modules["quantum_language.compile"]
 
 
 @pytest.fixture
@@ -152,24 +155,24 @@ def clean_circuit():
 def opt_level(request, monkeypatch):
     """Parametrize compile/merge tests across opt levels 1, 2, 3.
 
-    Monkeypatches CompiledFunc.__init__ so that any @ql.compile call using
-    the default opt=1 is transparently overridden to the fixture's current
-    level.  Calls that explicitly set opt to a non-default value (e.g.
-    opt=2 in merge tests) are left untouched.
+    Monkeypatches ql.compile so that any @ql.compile call that does NOT
+    explicitly pass opt= gets the fixture's current level injected.
+    Calls that explicitly set opt (e.g. opt=2 in merge tests) are left
+    untouched.
 
-    The fixture also avoids injecting opt=2 when parametric=True, since
-    that combination raises ValueError by design.
+    Also avoids injecting opt=2 when parametric=True, since that
+    combination raises ValueError by design.
     """
     level = request.param
-    original_init = CompiledFunc.__init__
+    original_compile = _compile_mod.compile
 
-    def patched_init(self, func, **kwargs):
-        # Only override the default opt=1; leave explicit opt=2/3 alone
-        if kwargs.get("opt", 1) == 1:
-            # Skip override for parametric+opt=2 (ValueError by design)
+    def patched_compile(func=None, **kwargs):
+        if "opt" not in kwargs:
+            # Don't force opt=2 on parametric functions (ValueError by design)
             if not (level == 2 and kwargs.get("parametric", False)):
                 kwargs["opt"] = level
-        original_init(self, func, **kwargs)
+        return original_compile(func=func, **kwargs)
 
-    monkeypatch.setattr(CompiledFunc, "__init__", patched_init)
+    monkeypatch.setattr(_compile_mod, "compile", patched_compile)
+    monkeypatch.setattr(ql, "compile", patched_compile)
     return level
