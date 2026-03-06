@@ -297,6 +297,75 @@ class CallGraphDAG:
             "t_count": total_t,
         }
 
+    # -- DOT export ---------------------------------------------------------
+
+    def to_dot(self) -> str:
+        """Return a DOT-language string representing the call graph.
+
+        Nodes are rendered as boxes with multi-line labels showing function
+        name, gate count, depth, qubit count, and T-count. Call edges are
+        solid arrows labeled "call"; overlap edges are dashed arrows labeled
+        with shared qubit count. When multiple parallel groups exist, each
+        group is wrapped in a ``subgraph cluster_N`` with dotted border.
+
+        Returns
+        -------
+        str
+            Valid DOT string starting with ``digraph CallGraph {``.
+        """
+        lines: list[str] = []
+        lines.append("digraph CallGraph {")
+        lines.append("  rankdir=TB;")
+        lines.append('  node [shape=box, fontname="Courier"];')
+
+        groups = self.parallel_groups()
+        # Build node -> group mapping
+        node_to_group: dict[int, int] = {}
+        for gi, group in enumerate(groups):
+            for idx in group:
+                node_to_group[idx] = gi
+
+        use_clusters = len(groups) > 1
+
+        def _node_label(idx: int) -> str:
+            nd = self._nodes[idx]
+            name = nd.func_name.replace('"', '\\"')
+            return (
+                f"{name}\\n"
+                f"gates: {nd.gate_count}\\n"
+                f"depth: {nd.depth}\\n"
+                f"qubits: {len(nd.qubit_set)}\\n"
+                f"T-count: {nd.t_count}"
+            )
+
+        def _emit_node(idx: int) -> str:
+            return f'  n{idx} [label="{_node_label(idx)}"];'
+
+        if use_clusters:
+            for gi, group in enumerate(groups):
+                lines.append(f"  subgraph cluster_{gi} {{")
+                lines.append("    style=dotted;")
+                lines.append(f'    label="Group {gi}";')
+                for idx in sorted(group):
+                    lines.append(f"  {_emit_node(idx)}")
+                lines.append("  }")
+        else:
+            for idx in range(len(self._nodes)):
+                lines.append(_emit_node(idx))
+
+        # Edges
+        for src, tgt in self._dag.edge_list():
+            edge_data = self._dag.get_edge_data(src, tgt)
+            if isinstance(edge_data, dict):
+                if edge_data.get("type") == "call":
+                    lines.append(f'  n{src} -> n{tgt} [label="call"];')
+                elif edge_data.get("type") == "overlap":
+                    w = edge_data.get("weight", 0)
+                    lines.append(f'  n{src} -> n{tgt} [style=dashed, label="{w} qubits"];')
+
+        lines.append("}")
+        return "\n".join(lines)
+
     # -- Properties ---------------------------------------------------------
 
     @property
