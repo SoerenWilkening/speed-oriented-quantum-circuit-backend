@@ -193,11 +193,11 @@ Plans:
   2. User can compute aggregate totals (gates, depth, T-count) across the full call graph
   3. User can call an API (e.g., `compiled_func.call_graph.to_dot()`) and receive a valid DOT string with labeled nodes and edges
   4. User can view a compilation report showing per-node stats including parallel group membership
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 108-01: TBD
-- [ ] 108-02: TBD
+- [ ] 108-01-PLAN.md -- Per-node stats (depth, T-count) on DAGNode + aggregate() method
+- [ ] 108-02-PLAN.md -- DOT export (to_dot) + compilation report (report) methods
 
 ### Phase 109: Selective Sequence Merging
 **Goal**: Users can merge overlapping-qubit sequences for cross-boundary gate optimization
@@ -208,7 +208,7 @@ Plans:
   2. Merged sequences produce correct quantum states (per-qubit gate ordering preserved)
   3. Cross-boundary optimizations fire (e.g., QFT at end of sequence A cancels IQFT at start of sequence B)
   4. Non-overlapping sequences remain independent (no unnecessary merging)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 109-01: TBD
@@ -222,7 +222,7 @@ Plans:
   1. Merged circuit output verified equivalent to sequential execution via Qiskit statevector simulation for arithmetic workloads (add, mul, grover oracle)
   2. All 106+ existing compile tests pass at opt=1, opt=2, and opt=3
   3. Parametric compilation works correctly at each opt level (no topology corruption from merge)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
 - [ ] 110-01: TBD
