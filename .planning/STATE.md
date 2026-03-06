@@ -84,6 +84,8 @@ Recent decisions affecting current work:
 - DAG node _block_ref/_v2r_ref for direct block access during merge (avoids cache_key placeholder issue)
 - _apply_merge runs after build_overlap_edges in __call__ finally block when opt==2
 - Merged blocks keyed by frozenset of node indices for O(1) group lookup
+- Statevector.from_instruction() for exact equivalence (no AerSimulator overhead)
+- Global phase normalization via first non-zero amplitude alignment (atol=1e-10)
 - opt_level fixture patches ql.compile() function (not CompiledFunc.__init__) to distinguish user-explicit opt= from defaults
 
 ### Blockers/Concerns
@@ -95,10 +97,10 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-06T22:13:29Z
-Stopped at: Completed 110-02-PLAN.md
-Resume file: .planning/phases/110-merge-verification-regression/110-02-SUMMARY.md
+Last session: 2026-03-06T22:15:00Z
+Stopped at: Completed 110-01-PLAN.md (re-executed)
+Resume file: .planning/phases/110-merge-verification-regression/110-01-SUMMARY.md
 Resume action: Phase 110 complete
 
 ---
-*State updated: 2026-03-06 -- 110-02 opt-level regression complete (441 test invocations, zero new failures)*
+*State updated: 2026-03-06 -- 110-01 statevector equivalence tests complete (15 tests, add/mul/grover + parametric interaction)*
