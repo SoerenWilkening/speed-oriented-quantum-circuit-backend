@@ -15,7 +15,7 @@
 - v5.0 Advanced Arithmetic & Compilation -- Phases 90-96 (shipped 2026-02-26) -- See `milestones/v5.0-ROADMAP.md`
 - v6.0 Quantum Walk Primitives -- Phases 97-102 (shipped 2026-03-03) -- See `milestones/v6.0-ROADMAP.md`
 - v6.1 Quantum Chess Demo -- Phases 103-106 (shipped 2026-03-05) -- See `milestones/v6.1-ROADMAP.md`
-- v7.0 Compile Infrastructure -- Phases 107-110 (in progress)
+- v7.0 Compile Infrastructure -- Phases 107-111 (in progress)
 
 ## Phases
 
@@ -165,6 +165,7 @@
 - [x] **Phase 108: Call Graph Analysis & Visualization** - Per-node stats extraction, aggregate metrics, DOT export, compilation report (completed 2026-03-06)
 - [x] **Phase 109: Selective Sequence Merging** - opt_flag=2 with merge candidate detection, correct merging, cross-boundary optimization (completed 2026-03-06)
 - [x] **Phase 110: Merge Verification & Regression** - Qiskit simulation equivalence, full test suite regression (completed 2026-03-06)
+- [ ] **Phase 111: Phase 107 Verification Closure** - Formal verification of 6 orphaned Phase 107 requirements (CAPI-01, CAPI-03, CAPI-04, CGRAPH-01, CGRAPH-02, CGRAPH-03)
 
 ## Phase Details
 
@@ -229,6 +230,20 @@ Plans:
 - [ ] 110-02-PLAN.md -- Opt-level parametrization fixture + full regression across test_compile.py and test_merge.py
 - [ ] 110-03-PLAN.md -- Gap closure: fix OOM and selective opt_level application in test_compile.py
 
+### Phase 111: Phase 107 Verification Closure
+**Goal**: Formally verify 6 orphaned Phase 107 requirements by creating missing VERIFICATION.md
+**Depends on**: Phase 110
+**Requirements**: CAPI-01, CAPI-03, CAPI-04, CGRAPH-01, CGRAPH-02, CGRAPH-03
+**Gap Closure**: Closes all 6 orphaned gaps from v7.0 milestone audit
+**Success Criteria** (what must be TRUE):
+  1. VERIFICATION.md exists for Phase 107 with formal pass/fail for each of the 6 requirements
+  2. Each requirement verified against actual code and test evidence
+  3. All 6 requirements verified as satisfied
+**Plans**: 1 plan
+
+Plans:
+- [ ] 111-01-PLAN.md -- Verify Phase 107 requirements and create VERIFICATION.md
+
 ## Progress
 
 **Execution Order:**
@@ -252,6 +267,7 @@ Phases execute in numeric order: 107 -> 108 -> 109 -> 110
 | 108. Call Graph Analysis & Visualization | 2/2 | Complete    | 2026-03-06 | - |
 | 109. Selective Sequence Merging | 2/2 | Complete    | 2026-03-06 | - |
 | 110. Merge Verification & Regression | 3/3 | Complete    | 2026-03-07 | - |
+| 111. Phase 107 Verification Closure | 0/1 | Pending | - | - |
 
 ---
 *Roadmap created: 2026-02-02*

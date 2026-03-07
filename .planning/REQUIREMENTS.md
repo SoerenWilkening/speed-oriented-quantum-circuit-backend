@@ -9,16 +9,16 @@ Requirements for multi-level compile infrastructure. Each maps to roadmap phases
 
 ### Compilation API
 
-- [x] **CAPI-01**: User can set `@ql.compile(opt=1)` to generate standalone sequences with call graph DAG (default)
+- [ ] **CAPI-01**: User can set `@ql.compile(opt=1)` to generate standalone sequences with call graph DAG (default)
 - [x] **CAPI-02**: User can set `@ql.compile(opt=2)` to selectively merge overlapping-qubit sequences
-- [x] **CAPI-03**: User can set `@ql.compile(opt=3)` for full circuit expansion (current behavior, backward compatible)
-- [x] **CAPI-04**: Existing 106+ compile tests pass unchanged when opt=3 is used
+- [ ] **CAPI-03**: User can set `@ql.compile(opt=3)` for full circuit expansion (current behavior, backward compatible)
+- [ ] **CAPI-04**: Existing 106+ compile tests pass unchanged when opt=3 is used
 
 ### Call Graph
 
-- [x] **CGRAPH-01**: Call graph DAG built from sequence calls with qubit sets per node
-- [x] **CGRAPH-02**: Parallel sequences (disjoint qubit sets) identified as concurrent groups
-- [x] **CGRAPH-03**: Weighted qubit overlap edges between dependent sequences
+- [ ] **CGRAPH-01**: Call graph DAG built from sequence calls with qubit sets per node
+- [ ] **CGRAPH-02**: Parallel sequences (disjoint qubit sets) identified as concurrent groups
+- [ ] **CGRAPH-03**: Weighted qubit overlap edges between dependent sequences
 - [x] **CGRAPH-04**: Precise gate count, depth, qubit count, and T-count extractable per node from call graph
 - [x] **CGRAPH-05**: Aggregate totals (gates, depth, T-count) computed across full call graph without building circuit
 
@@ -64,13 +64,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CAPI-01 | Phase 107 | Complete |
+| CAPI-01 | Phase 107 (verify: 111) | Pending |
 | CAPI-02 | Phase 109 | Complete |
-| CAPI-03 | Phase 107 | Complete |
-| CAPI-04 | Phase 107 | Complete |
-| CGRAPH-01 | Phase 107 | Complete |
-| CGRAPH-02 | Phase 107 | Complete |
-| CGRAPH-03 | Phase 107 | Complete |
+| CAPI-03 | Phase 107 (verify: 111) | Pending |
+| CAPI-04 | Phase 107 (verify: 111) | Pending |
+| CGRAPH-01 | Phase 107 (verify: 111) | Pending |
+| CGRAPH-02 | Phase 107 (verify: 111) | Pending |
+| CGRAPH-03 | Phase 107 (verify: 111) | Pending |
 | CGRAPH-04 | Phase 108 | Complete |
 | CGRAPH-05 | Phase 108 | Complete |
 | VIS-01 | Phase 108 | Complete |
@@ -87,4 +87,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-05*
-*Last updated: 2026-03-05 after roadmap creation (15/15 mapped)*
+*Last updated: 2026-03-07 after gap closure planning (9/15 verified, 6 pending Phase 111)*
