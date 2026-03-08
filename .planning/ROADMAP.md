@@ -189,7 +189,7 @@
   2. call_graph.py DAGNode overlap computation uses numpy arrays (np.intersect1d) for pairwise qubit overlap detection
   3. All existing compile tests (186+ invocations) pass with zero regressions after numpy migration
   4. Profiling data shows measurable improvement (or documents that overhead is negligible for current workload sizes)
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 112-01-PLAN.md — Profiling baseline and call_graph.py numpy overlap migration
@@ -277,7 +277,7 @@ Phases execute in numeric order: 112 -> 113 -> 114 -> 115 -> 116
 | 97-102 | v6.0 | 11/11 | Complete | 2026-03-03 |
 | 103-106 | v6.1 | 8/8 | Complete | 2026-03-05 |
 | 107-111 | v7.0 | 10/10 | Complete | 2026-03-08 |
-| 112. Compile Infra Opt | v8.0 | 0/2 | Not started | - |
+| 112. Compile Infra Opt | 1/2 | In Progress|  | - |
 | 113. Diffusion & Enum | v8.0 | 0/TBD | Not started | - |
 | 114. Core Predicates | v8.0 | 0/TBD | Not started | - |
 | 115. Check & Combined | v8.0 | 0/TBD | Not started | - |

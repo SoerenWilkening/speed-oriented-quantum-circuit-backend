@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: Quantum Chess Walk Rewrite
-status: ready_to_plan
+status: in_progress
 stopped_at: null
 last_updated: "2026-03-08"
-last_activity: 2026-03-08 -- Roadmap created for v8.0 (5 phases, 112-116)
+last_activity: 2026-03-08 -- Completed 112-01 (profiling baseline + numpy overlap migration)
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_plans: 1
+  percent: 10
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-08)
 ## Current Position
 
 Phase: 112 of 116 (Compile Infrastructure Optimization)
-Plan: --
-Status: Ready to plan
-Last activity: 2026-03-08 -- Roadmap created
+Plan: 1 of 2 complete
+Status: In progress
+Last activity: 2026-03-08 -- Completed 112-01 (profiling baseline + numpy overlap migration)
 
-Progress: [..........] 0%
+Progress: [#####.....] 50%
 
 ## Performance Metrics
 
@@ -65,6 +65,8 @@ Recent decisions affecting current work:
 - All predicates must use standard ql constructs -- no raw gate emission for application logic
 - Diffusion must use arithmetic counting circuit (not O(2^d_max) enumeration)
 - Compile infrastructure qubit_set operations to use numpy
+- DAGNode dual-storage: frozenset qubit_set for API compat, numpy _qubit_array for fast overlap
+- Bitmask stays Python int (>64 qubit arbitrary precision), only overlap uses numpy
 
 ### Blockers/Concerns
 
@@ -77,9 +79,9 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-03-08
-Stopped at: Roadmap created for v8.0
+Stopped at: Completed 112-01-PLAN.md
 Resume file: None
-Resume action: Plan Phase 112 via /gsd:plan-phase 112
+Resume action: Execute 112-02-PLAN.md via /gsd:execute-phase 112
 
 ---
-*State updated: 2026-03-08 -- v8.0 roadmap created*
+*State updated: 2026-03-08 -- 112-01 complete (numpy overlap migration)*
