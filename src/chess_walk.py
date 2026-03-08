@@ -9,20 +9,17 @@ Phase 104 Plan 01: Walk register infrastructure.
 Phase 104 Plan 02: Local diffusion operator with variable branching.
 """
 
-import itertools
 import math
 
 import numpy as np
 
 from chess_encoding import get_legal_moves_and_oracle
 from quantum_language._gates import emit_x
-from quantum_language.diffusion import diffusion
 from quantum_language.qint import qint
 from quantum_language.walk import (
-    _emit_cascade_multi_controlled,
-    _emit_multi_controlled_ry,
     _make_qbool_wrapper,
     _plan_cascade_ops,
+    counting_diffusion_core,
 )
 
 __all__ = [
@@ -405,11 +402,12 @@ def apply_diffusion(
 ):
     """Apply local diffusion D_x at a given depth.
 
-    Follows walk.py _variable_diffusion (lines 771-886) closely:
+    Uses the shared counting_diffusion_core from walk.py for O(d_max)
+    gate complexity:
     1. Derive board state at current node (replay oracles 0..depth-1).
     2. Allocate validity ancillae.
     3. Evaluate children (quantum predicate per child).
-    4. Conditional U_dagger * S_0 * U for each possible d(x) value.
+    4. Precompute angles, delegate to counting_diffusion_core.
     5. Uncompute validity.
     6. Underive board state.
 
@@ -468,61 +466,17 @@ def apply_diffusion(
         for d_val in range(1, d_max + 1):
             root_angles[d_val] = montanaro_root_phi(d_val, max_depth)
 
-    validity_qubits = [int(validity[j].qubits[63]) for j in range(d_max)]
-
-    # --- Step 6a: U_dagger (inverse state preparation) conditional on d(x) ---
-    for d_val in range(1, d_max + 1):
-        phi_d = angles[d_val]["phi"]
-        if is_root:
-            phi_d = root_angles.get(d_val, phi_d)
-        cascade_ops_d = angles[d_val]["cascade_ops"]
-
-        for pattern in itertools.combinations(range(d_max), d_val):
-            # Flip zeros so all validity qubits read |1> when pattern matches
-            zeros = [j for j in range(d_max) if j not in pattern]
-            for z in zeros:
-                emit_x(validity_qubits[z])
-
-            ctrl_qubits = [h_qubit_idx] + validity_qubits
-
-            # U_dagger: inverse cascade then inverse parent-child split
-            if d_val > 1 and cascade_ops_d:
-                _emit_cascade_multi_controlled(branch_reg, cascade_ops_d, ctrl_qubits, sign=-1)
-            _emit_multi_controlled_ry(h_child_idx, -phi_d, ctrl_qubits)
-
-            # Undo X flips
-            for z in zeros:
-                emit_x(validity_qubits[z])
-
-    # --- Step 6b: S_0 reflection ---
-    # Use public ql.diffusion() on local subspace (h_child + branch_reg),
-    # controlled on h[depth]. Per user decision: public API for S_0.
-    h_control = _make_qbool_wrapper(h_qubit_idx)
-    h_child_wrapper = _make_qbool_wrapper(h_child_idx)
-    with h_control:
-        diffusion(h_child_wrapper, branch_reg)
-
-    # --- Step 6c: U forward conditional on d(x) ---
-    for d_val in range(1, d_max + 1):
-        phi_d = angles[d_val]["phi"]
-        if is_root:
-            phi_d = root_angles.get(d_val, phi_d)
-        cascade_ops_d = angles[d_val]["cascade_ops"]
-
-        for pattern in itertools.combinations(range(d_max), d_val):
-            zeros = [j for j in range(d_max) if j not in pattern]
-            for z in zeros:
-                emit_x(validity_qubits[z])
-
-            ctrl_qubits = [h_qubit_idx] + validity_qubits
-
-            # U forward: parent-child Ry then cascade
-            _emit_multi_controlled_ry(h_child_idx, phi_d, ctrl_qubits)
-            if d_val > 1 and cascade_ops_d:
-                _emit_cascade_multi_controlled(branch_reg, cascade_ops_d, ctrl_qubits, sign=1)
-
-            for z in zeros:
-                emit_x(validity_qubits[z])
+    # --- Step 6: Counting diffusion core (shared with walk.py) ---
+    counting_diffusion_core(
+        validity,
+        d_max,
+        branch_reg,
+        h_qubit_idx,
+        h_child_idx,
+        angles,
+        root_angles,
+        is_root,
+    )
 
     # --- Step 7: Uncompute validity ---
     uncompute_children(

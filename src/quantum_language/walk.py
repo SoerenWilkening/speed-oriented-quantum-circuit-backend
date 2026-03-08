@@ -461,6 +461,140 @@ def _emit_cascade_validity_gated(branch_reg, ops, ctrl_qubits, validity_qubits, 
     _emit_cascade_multi_controlled(branch_reg, ops, ctrl_qubits, sign=sign)
 
 
+def counting_diffusion_core(
+    validity,
+    d_max,
+    branch_reg,
+    h_qubit_idx,
+    h_child_idx,
+    variable_angles,
+    variable_root_angles,
+    is_root,
+):
+    """Core counting-based diffusion -- shared by QWalkTree and chess_walk.
+
+    Implements the counting+rotation+S_0 core of variable-branching diffusion
+    with O(d_max) gate complexity. The caller is responsible for:
+    - Allocating and evaluating validity ancillae (passed in)
+    - Uncomputing validity ancillae after this function returns
+
+    Steps performed:
+    1. Sum validity bits into count register via sequential addition
+    2. Compare count == d_val for each d_val in 1..d_max
+    3. U_dagger (inverse state prep) controlled on count comparisons
+    4. S_0 reflection on h_child + branch_reg subspace
+    5. U forward (state prep) controlled on count comparisons
+    6. Uncompute count register
+
+    Parameters
+    ----------
+    validity : list[qbool]
+        Validity ancillae, one per potential child (already evaluated).
+    d_max : int
+        Maximum branching factor.
+    branch_reg : qint
+        Branch register for this level.
+    h_qubit_idx : int
+        Physical qubit index for h[depth].
+    h_child_idx : int
+        Physical qubit index for h[depth-1].
+    variable_angles : dict
+        Pre-computed angles: maps d_val -> {"phi": float, "cascade_ops": list}.
+    variable_root_angles : dict
+        Root-level angle overrides. Empty dict if not root.
+    is_root : bool
+        Whether this is the root depth.
+    """
+
+    validity_qubits = [int(validity[j].qubits[63]) for j in range(d_max)]
+    h_control = _make_qbool_wrapper(h_qubit_idx)
+
+    # --- Step 1: Compute count register (popcount of validity bits) ---
+    count_width = max(1, math.ceil(math.log2(d_max + 1)))
+    count = qint(0, width=count_width)
+    for v in validity:
+        count += v
+
+    # --- Step 2: Pre-compute count comparisons ---
+    cond_qubits_map = {}
+    for d_val in range(1, d_max + 1):
+        angle_data = variable_angles.get(d_val)
+        if angle_data is None:
+            continue
+        cond = count == d_val
+        cond_qubits_map[d_val] = int(cond.qubits[63])
+
+    # --- Step 3: U_dagger (inverse state prep) conditional on count ---
+    for d_val in range(1, d_max + 1):
+        angle_data = variable_angles.get(d_val)
+        if angle_data is None:
+            continue
+        phi_d = angle_data["phi"]
+        if is_root:
+            phi_d = variable_root_angles.get(d_val, phi_d)
+        cascade_ops_d = angle_data["cascade_ops"]
+
+        cond_qubit = cond_qubits_map[d_val]
+        ctrl_qubits = [h_qubit_idx, cond_qubit]
+
+        if d_val > 1 and cascade_ops_d:
+            _emit_cascade_validity_gated(
+                branch_reg,
+                cascade_ops_d,
+                ctrl_qubits,
+                validity_qubits,
+                d_max,
+                sign=-1,
+            )
+        _emit_multi_controlled_ry(h_child_idx, -phi_d, ctrl_qubits)
+
+    # --- Step 4: S_0 reflection ---
+    from ._gates import emit_mcz, emit_z
+    from .diffusion import _collect_qubits
+
+    h_child = _make_qbool_wrapper(h_child_idx)
+    s0_qubits = _collect_qubits(h_child, branch_reg)
+    with h_control:
+        for q in s0_qubits:
+            emit_x(q)
+    all_s0_with_h = [h_qubit_idx] + s0_qubits
+    if len(all_s0_with_h) == 1:
+        emit_z(all_s0_with_h[0])
+    else:
+        emit_mcz(all_s0_with_h[-1], all_s0_with_h[:-1])
+    with h_control:
+        for q in s0_qubits:
+            emit_x(q)
+
+    # --- Step 5: U forward conditional on count ---
+    for d_val in range(1, d_max + 1):
+        angle_data = variable_angles.get(d_val)
+        if angle_data is None:
+            continue
+        phi_d = angle_data["phi"]
+        if is_root:
+            phi_d = variable_root_angles.get(d_val, phi_d)
+        cascade_ops_d = angle_data["cascade_ops"]
+
+        cond_qubit = cond_qubits_map[d_val]
+        ctrl_qubits = [h_qubit_idx, cond_qubit]
+
+        _emit_multi_controlled_ry(h_child_idx, phi_d, ctrl_qubits)
+        if d_val > 1 and cascade_ops_d:
+            _emit_cascade_validity_gated(
+                branch_reg,
+                cascade_ops_d,
+                ctrl_qubits,
+                validity_qubits,
+                d_max,
+                sign=1,
+            )
+
+    # --- Step 6: Uncompute count register ---
+    for v in reversed(validity):
+        count -= v
+
+
 class TreeNode:
     """Wraps tree registers for predicate evaluation.
 
@@ -832,14 +966,9 @@ class QWalkTree:
     def _counting_diffusion(self, depth):
         """Counting-based variable diffusion -- O(d_max) gate complexity.
 
-        Replaces itertools.combinations enumeration with:
-        1. Allocate validity ancillae and evaluate children
-        2. Sum validity bits into count register via qarray.sum()
-        3. For each d_val in 1..d_max: compare count==d_val, controlled rotations
-        4. S_0 reflection (unchanged)
-        5. Forward rotations (mirror of step 3)
-        6. Uncompute count register (reverse of sum)
-        7. Uncompute validity ancillae
+        Delegates to the shared ``counting_diffusion_core`` standalone function
+        for the counting+rotation+S_0 core, handling validity allocation and
+        evaluation/uncomputation at the QWalkTree level.
 
         Parameters
         ----------
@@ -852,7 +981,7 @@ class QWalkTree:
         d_max = self.branching[level_idx]
         branch_reg = self.branch_registers[level_idx]
         h_qubit_idx = self._height_qubit(depth)
-        h_control = _make_qbool_wrapper(h_qubit_idx)
+        h_child_qubit = self._height_qubit(depth - 1)
         is_root = depth == self.max_depth
 
         # --- Step 1: Allocate validity ancillae ---
@@ -861,104 +990,17 @@ class QWalkTree:
         # --- Step 2: Evaluate predicate on each child ---
         self._evaluate_children(depth, level_idx, d_max, validity)
 
-        validity_qubits = [int(validity[j].qubits[63]) for j in range(d_max)]
-
-        # --- Step 3: Compute count register (popcount of validity bits) ---
-        # Accumulate validity bits into a count register using sequential
-        # addition. Each validity[i] is a qbool (width=1). We add them
-        # one by one to a count qint with sufficient width to avoid overflow.
-        count_width = max(1, math.ceil(math.log2(d_max + 1)))
-        count = qint(0, width=count_width)
-        for v in validity:
-            count += v
-
-        # --- Step 4: Pre-compute count comparisons ---
-        # Each count == d_val creates a fresh qbool ancilla. We compute
-        # all comparisons ONCE and reuse the same condition qubits for
-        # both U_dagger and U forward passes.
-        h_child_qubit = self._height_qubit(depth - 1)
-
-        cond_qubits_map = {}  # d_val -> physical qubit index of (count == d_val)
-        for d_val in range(1, d_max + 1):
-            angle_data = self._variable_angles.get(d_val)
-            if angle_data is None:
-                continue
-            cond = count == d_val
-            cond_qubits_map[d_val] = int(cond.qubits[63])
-
-        # --- Step 5: U_dagger (inverse state prep) conditional on count ---
-        for d_val in range(1, d_max + 1):
-            angle_data = self._variable_angles.get(d_val)
-            if angle_data is None:
-                continue
-            phi_d = angle_data["phi"]
-            if is_root:
-                phi_d = self._variable_root_angles.get(d_val, phi_d)
-            cascade_ops_d = angle_data["cascade_ops"]
-
-            cond_qubit = cond_qubits_map[d_val]
-            ctrl_qubits = [h_qubit_idx, cond_qubit]
-
-            # U_dagger: inverse cascade then inverse parent-child split
-            if d_val > 1 and cascade_ops_d:
-                _emit_cascade_validity_gated(
-                    branch_reg,
-                    cascade_ops_d,
-                    ctrl_qubits,
-                    validity_qubits,
-                    d_max,
-                    sign=-1,
-                )
-            _emit_multi_controlled_ry(h_child_qubit, -phi_d, ctrl_qubits)
-
-        # --- Step 6: S_0 reflection (independent of d(x)) ---
-        from ._gates import emit_mcz, emit_z
-        from .diffusion import _collect_qubits
-
-        h_child = _make_qbool_wrapper(self._height_qubit(depth - 1))
-        s0_qubits = _collect_qubits(h_child, branch_reg)
-        with h_control:
-            for q in s0_qubits:
-                emit_x(q)
-        all_s0_with_h = [h_qubit_idx] + s0_qubits
-        if len(all_s0_with_h) == 1:
-            emit_z(all_s0_with_h[0])
-        else:
-            emit_mcz(all_s0_with_h[-1], all_s0_with_h[:-1])
-        with h_control:
-            for q in s0_qubits:
-                emit_x(q)
-
-        # --- Step 7: U forward conditional on count ---
-        for d_val in range(1, d_max + 1):
-            angle_data = self._variable_angles.get(d_val)
-            if angle_data is None:
-                continue
-            phi_d = angle_data["phi"]
-            if is_root:
-                phi_d = self._variable_root_angles.get(d_val, phi_d)
-            cascade_ops_d = angle_data["cascade_ops"]
-
-            cond_qubit = cond_qubits_map[d_val]
-            ctrl_qubits = [h_qubit_idx, cond_qubit]
-
-            # U forward: parent-child Ry then cascade
-            _emit_multi_controlled_ry(h_child_qubit, phi_d, ctrl_qubits)
-            if d_val > 1 and cascade_ops_d:
-                _emit_cascade_validity_gated(
-                    branch_reg,
-                    cascade_ops_d,
-                    ctrl_qubits,
-                    validity_qubits,
-                    d_max,
-                    sign=1,
-                )
-
-        # --- Step 8: Uncompute count register ---
-        # The count register depends on validity bits. Uncompute by
-        # subtracting validity bits in reverse order (reverse of step 3).
-        for v in reversed(validity):
-            count -= v
+        # --- Steps 3-8: Counting diffusion core (shared) ---
+        counting_diffusion_core(
+            validity,
+            d_max,
+            branch_reg,
+            h_qubit_idx,
+            h_child_qubit,
+            self._variable_angles,
+            self._variable_root_angles,
+            is_root,
+        )
 
         # --- Step 9: Uncompute validity ancillae (reverse of step 2) ---
         self._uncompute_children(depth, level_idx, d_max, validity)
