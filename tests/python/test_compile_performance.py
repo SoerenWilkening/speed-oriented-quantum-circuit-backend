@@ -10,10 +10,12 @@ Usage:
 import statistics
 import time
 
+import numpy as np
 import pytest
 
 import quantum_language as ql
 from quantum_language._core import extract_gate_range, get_current_layer
+from quantum_language.call_graph import CallGraphDAG
 
 NUM_REPLAYS = 50
 
@@ -200,3 +202,89 @@ def test_inject_vs_total_breakdown():
     print(f"  inject fraction:       {inject_pct:>8.1f}%")
     print(f"  python overhead:       {100 - inject_pct:>8.1f}%")
     print(f"  gate count:            {len(gates)}")
+
+
+# ---------------------------------------------------------------------------
+# Qubit set & overlap baseline benchmarks (COMP-03)
+# ---------------------------------------------------------------------------
+
+
+def _bench_qubit_set_construction(n_functions, qubits_per_func, qubit_range):
+    """Simulate qubit_set construction as done in compile.py.
+
+    For each function, builds a set() from multiple quantum arg qubit index
+    lists using set.update(), then converts to frozenset.
+
+    Returns median time in microseconds over 20 iterations.
+    """
+    rng = np.random.default_rng(42)
+    # Pre-generate qubit index lists (simulating quantum_args)
+    arg_lists = []
+    for _ in range(n_functions):
+        indices = rng.integers(0, qubit_range, size=qubits_per_func).tolist()
+        arg_lists.append(indices)
+
+    timings_ns = []
+    for _ in range(20):
+        start = time.perf_counter_ns()
+        for indices in arg_lists:
+            qubit_set = set()
+            qubit_set.update(indices)
+            _ = frozenset(qubit_set)
+        end = time.perf_counter_ns()
+        timings_ns.append(end - start)
+
+    return statistics.median(timings_ns) / 1000  # microseconds
+
+
+def _bench_overlap_detection(n_nodes, qubit_range):
+    """Benchmark build_overlap_edges on a CallGraphDAG with random qubit sets.
+
+    Returns median time in microseconds over 10 iterations.
+    """
+    rng = np.random.default_rng(42)
+
+    timings_ns = []
+    for _ in range(10):
+        dag = CallGraphDAG()
+        for i in range(n_nodes):
+            n_qubits = rng.integers(2, 8)
+            qubits = set(rng.choice(qubit_range, size=n_qubits, replace=False).tolist())
+            dag.add_node(f"func_{i}", qubits, rng.integers(10, 100), (i,))
+
+        start = time.perf_counter_ns()
+        dag.build_overlap_edges()
+        end = time.perf_counter_ns()
+        timings_ns.append(end - start)
+
+    return statistics.median(timings_ns) / 1000  # microseconds
+
+
+@pytest.mark.benchmark
+def test_qubit_set_construction_benchmark():
+    """BASELINE: Profile qubit_set construction (frozenset path)."""
+    print("\n--- BASELINE: Qubit Set Construction ---")
+
+    small_us = _bench_qubit_set_construction(n_functions=10, qubits_per_func=3, qubit_range=20)
+    print(f"  BASELINE small  (10 funcs, 3 qubits):   {small_us:>8.1f} us (median)")
+
+    large_us = _bench_qubit_set_construction(n_functions=50, qubits_per_func=10, qubit_range=100)
+    print(f"  BASELINE large  (50 funcs, 10 qubits):  {large_us:>8.1f} us (median)")
+
+    assert small_us >= 0, "timing should be non-negative"
+    assert large_us >= 0, "timing should be non-negative"
+
+
+@pytest.mark.benchmark
+def test_overlap_detection_benchmark():
+    """BASELINE: Profile overlap detection (build_overlap_edges)."""
+    print("\n--- BASELINE: Overlap Detection ---")
+
+    medium_us = _bench_overlap_detection(n_nodes=20, qubit_range=50)
+    print(f"  BASELINE medium (20 nodes, range 50):   {medium_us:>8.1f} us (median)")
+
+    large_us = _bench_overlap_detection(n_nodes=50, qubit_range=100)
+    print(f"  BASELINE large  (50 nodes, range 100):  {large_us:>8.1f} us (median)")
+
+    assert medium_us >= 0, "timing should be non-negative"
+    assert large_us >= 0, "timing should be non-negative"
