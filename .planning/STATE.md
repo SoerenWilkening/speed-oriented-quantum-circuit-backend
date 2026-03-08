@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: Quantum Chess Walk Rewrite
 status: completed
-stopped_at: Phase 113 context gathered
-last_updated: "2026-03-08T14:39:56.116Z"
-last_activity: 2026-03-08 -- Completed 112-02 (numpy qubit_set migration + post-migration profiling)
+stopped_at: Completed 113-01-PLAN.md
+last_updated: "2026-03-08T14:59:36.613Z"
+last_activity: 2026-03-08 -- Completed 113-01 (build_move_table for position-independent move enumeration)
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
-  percent: 100
+  total_plans: 5
+  completed_plans: 3
+  percent: 96
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-08)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v8.0 Quantum Chess Walk Rewrite -- Phase 112
+**Current focus:** v8.0 Quantum Chess Walk Rewrite -- Phase 113
 
 ## Current Position
 
-Phase: 112 of 116 (Compile Infrastructure Optimization)
-Plan: 2 of 2 complete
+Phase: 113 of 116 (Diffusion Redesign Move Enumeration)
+Plan: 1 of 1 complete
 Status: Phase complete
-Last activity: 2026-03-08 -- Completed 112-02 (numpy qubit_set migration + post-migration profiling)
+Last activity: 2026-03-08 -- Completed 113-01 (build_move_table for position-independent move enumeration)
 
-Progress: [##########] 100%
+Progress: [##########] 96%
 
 ## Performance Metrics
 
@@ -52,6 +52,7 @@ Progress: [##########] 100%
 | v6.1 Quantum Chess Demo | 103-106 | 8 | Complete (2026-03-05) |
 | v7.0 Compile Infrastructure | 107-111 | 10 | Complete (2026-03-08) |
 | v8.0 Chess Walk Rewrite | 112-116 | TBD | Ready to plan |
+| Phase 113 P01 | 4min | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -69,6 +70,9 @@ Recent decisions affecting current work:
 - Bitmask stays Python int (>64 qubit arbitrary precision), only overlap uses numpy
 - Numpy qubit_set construction shows negligible perf difference at current sizes, justified by architectural consistency
 - _build_qubit_set_numpy centralizes all qubit set construction in compile.py
+- No edge-of-board filtering in move table -- quantum predicate handles legality
+- 8 entries per piece in move table (knights and kings both have 8 offsets)
+- [Phase 113]: No edge-of-board filtering in move table -- quantum predicate handles legality
 
 ### Blockers/Concerns
 
@@ -80,10 +84,10 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-08T14:39:56.108Z
-Stopped at: Phase 113 context gathered
-Resume file: .planning/phases/113-diffusion-redesign-move-enumeration/113-CONTEXT.md
-Resume action: Plan Phase 113 via /gsd:plan-phase 113
+Last session: 2026-03-08T14:59:36.604Z
+Stopped at: Completed 113-01-PLAN.md
+Resume file: None
+Resume action: Execute next plan in phase 113
 
 ---
-*State updated: 2026-03-08 -- 112-02 complete (numpy qubit_set migration, phase 112 complete)*
+*State updated: 2026-03-08 -- 113-01 complete (build_move_table for position-independent move enumeration)*
