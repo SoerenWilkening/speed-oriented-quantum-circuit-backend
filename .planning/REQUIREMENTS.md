@@ -25,7 +25,7 @@ Requirements for the Quantum Chess Walk Rewrite milestone. The chess walk serves
 
 ### Compile Infrastructure
 
-- [ ] **COMP-01**: compile.py qubit_set construction uses numpy operations (np.unique/np.concatenate) replacing Python set.update() loops
+- [x] **COMP-01**: compile.py qubit_set construction uses numpy operations (np.unique/np.concatenate) replacing Python set.update() loops
 - [x] **COMP-02**: call_graph.py DAGNode overlap computation uses numpy arrays (np.intersect1d) alongside frozenset for backward compatibility
 - [x] **COMP-03**: Profiling baseline established measuring compile performance before/after numpy migration on real workloads
 
@@ -67,7 +67,7 @@ Deferred to future milestones.
 | WALK-03 | Phase 113 | Pending |
 | WALK-04 | Phase 116 | Pending |
 | WALK-05 | Phase 116 | Pending |
-| COMP-01 | Phase 112 | Pending |
+| COMP-01 | Phase 112 | Complete |
 | COMP-02 | Phase 112 | Complete |
 | COMP-03 | Phase 112 | Complete |
 

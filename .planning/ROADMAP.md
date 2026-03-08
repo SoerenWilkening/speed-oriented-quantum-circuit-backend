@@ -172,7 +172,7 @@
 
 **Milestone Goal:** Rewrite the chess quantum walk to evaluate move legality in superposition using quantum predicates built from standard ql constructs, replace classical pre-filtering with all-moves enumeration and quantum validity checking, redesign diffusion for large branching factors, and optimize compile infrastructure with numpy-based qubit set operations.
 
-- [ ] **Phase 112: Compile Infrastructure Optimization** - Numpy-based qubit set operations in compile.py and call_graph.py with profiled before/after validation
+- [x] **Phase 112: Compile Infrastructure Optimization** - Numpy-based qubit set operations in compile.py and call_graph.py with profiled before/after validation (completed 2026-03-08)
 - [ ] **Phase 113: Diffusion Redesign & Move Enumeration** - Arithmetic counting circuit replacing combinatorial diffusion explosion, plus all-moves enumeration table
 - [ ] **Phase 114: Core Quantum Predicates** - Piece-exists and no-friendly-capture predicates using standard ql constructs with @ql.compile(inverse=True)
 - [ ] **Phase 115: Check Detection & Combined Predicate** - King-safety predicate via attack tables and combined move legality predicate composing all conditions
@@ -189,7 +189,7 @@
   2. call_graph.py DAGNode overlap computation uses numpy arrays (np.intersect1d) for pairwise qubit overlap detection
   3. All existing compile tests (186+ invocations) pass with zero regressions after numpy migration
   4. Profiling data shows measurable improvement (or documents that overhead is negligible for current workload sizes)
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 112-01-PLAN.md — Profiling baseline and call_graph.py numpy overlap migration
@@ -277,7 +277,7 @@ Phases execute in numeric order: 112 -> 113 -> 114 -> 115 -> 116
 | 97-102 | v6.0 | 11/11 | Complete | 2026-03-03 |
 | 103-106 | v6.1 | 8/8 | Complete | 2026-03-05 |
 | 107-111 | v7.0 | 10/10 | Complete | 2026-03-08 |
-| 112. Compile Infra Opt | 1/2 | In Progress|  | - |
+| 112. Compile Infra Opt | 2/2 | Complete   | 2026-03-08 | - |
 | 113. Diffusion & Enum | v8.0 | 0/TBD | Not started | - |
 | 114. Core Predicates | v8.0 | 0/TBD | Not started | - |
 | 115. Check & Combined | v8.0 | 0/TBD | Not started | - |
