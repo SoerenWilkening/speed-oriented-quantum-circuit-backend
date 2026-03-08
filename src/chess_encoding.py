@@ -35,6 +35,7 @@ __all__ = [
     "print_position",
     "print_moves",
     "sq_to_algebraic",
+    "build_move_table",
 ]
 
 # Knight L-shaped move offsets (rank_delta, file_delta)
@@ -60,6 +61,37 @@ _KING_OFFSETS = [
     (1, 0),
     (1, 1),
 ]
+
+
+def build_move_table(
+    pieces: list[tuple[str, str]],
+) -> list[tuple[str, int, int]]:
+    """Build a position-independent move enumeration table.
+
+    Creates a fixed mapping from branch register index to (piece_id, dr, df)
+    triples. Each piece contributes exactly 8 entries (all geometric offsets
+    for its type), regardless of board position. Edge-of-board filtering is
+    handled later by the quantum legality predicate.
+
+    Parameters
+    ----------
+    pieces : list[tuple[str, str]]
+        List of (piece_id, piece_type) tuples. piece_type must be
+        ``"knight"`` or ``"king"``.
+
+    Returns
+    -------
+    list[tuple[str, int, int]]
+        Table of (piece_id, rank_delta, file_delta) triples.
+        Length is always ``8 * len(pieces)``.
+        Index in list corresponds to branch register value.
+    """
+    table: list[tuple[str, int, int]] = []
+    for piece_id, piece_type in pieces:
+        offsets = _KNIGHT_OFFSETS if piece_type == "knight" else _KING_OFFSETS
+        for dr, df in offsets:
+            table.append((piece_id, dr, df))
+    return table
 
 
 def encode_position(wk_sq, bk_sq, wn_squares):
