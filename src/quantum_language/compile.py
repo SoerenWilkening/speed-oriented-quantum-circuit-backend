@@ -1158,6 +1158,7 @@ class CompiledFunc:
                     qubit_set.update(capture_vtr.values())
                 node.func_name = self._func.__name__
                 node.qubit_set = frozenset(qubit_set)
+                node._qubit_array = np.array(sorted(node.qubit_set), dtype=np.intp)
                 node.gate_count = len(virtual_gates)
                 node.depth = _compute_depth(virtual_gates)
                 node.t_count = _compute_t_count(virtual_gates)
@@ -1165,10 +1166,10 @@ class CompiledFunc:
                 # Store block ref for merge support (opt=2)
                 node._block_ref = block
                 node._v2r_ref = capture_vtr
-                # Recompute bitmask
-                bitmask = np.uint64(0)
+                # Recompute bitmask (Python int for >64 qubit support)
+                bitmask = 0
                 for q in qubit_set:
-                    bitmask |= np.uint64(1 << q)
+                    bitmask |= 1 << q
                 node.bitmask = bitmask
 
         return block

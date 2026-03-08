@@ -4,41 +4,13 @@ Provides CallGraphDAG (rustworkx-backed directed graph), DAGNode (per-invocation
 metadata with pre-computed qubit bitmask), and a module-level builder stack for
 nested call tracking during @ql.compile execution.
 
-The overlap computation uses NumPy bitmask intersection with a byte-level
-popcount LUT for fast pairwise qubit overlap detection.
+The overlap computation uses numpy intersect1d on sorted arrays for arbitrary qubit counts.
 """
 
 from __future__ import annotations
 
 import numpy as np
 import rustworkx as rx
-
-# ---------------------------------------------------------------------------
-# Popcount lookup table (module-level, computed once)
-# ---------------------------------------------------------------------------
-
-_POPCOUNT_LUT: np.ndarray = np.array([bin(i).count("1") for i in range(256)], dtype=np.uint8)
-
-
-def _popcount_array(arr: np.ndarray) -> np.ndarray:
-    """Vectorized popcount using byte LUT.
-
-    Parameters
-    ----------
-    arr : np.ndarray of uint64
-        Array of bitmask values.
-
-    Returns
-    -------
-    np.ndarray of int32
-        Popcount for each element.
-    """
-    result = np.zeros(len(arr), dtype=np.int32)
-    for shift in range(0, 64, 8):
-        byte_vals = ((arr >> np.uint64(shift)) & np.uint64(0xFF)).astype(np.uint8)
-        result += _POPCOUNT_LUT[byte_vals].astype(np.int32)
-    return result
-
 
 # ---------------------------------------------------------------------------
 # Per-node stat helpers
@@ -106,8 +78,8 @@ class DAGNode:
         Number of gates in the compiled block.
     cache_key : tuple
         Cache key identifying this compiled variant.
-    bitmask : np.uint64
-        Pre-computed bitmask encoding qubit_set for fast overlap.
+    bitmask : int
+        Pre-computed bitmask encoding qubit_set (Python int for >64 qubit support).
     """
 
     __slots__ = (
@@ -120,6 +92,7 @@ class DAGNode:
         "t_count",
         "_block_ref",
         "_v2r_ref",
+        "_qubit_array",
     )
 
     def __init__(
@@ -134,16 +107,17 @@ class DAGNode:
     ):
         self.func_name = func_name
         self.qubit_set = frozenset(qubit_set)
+        self._qubit_array = np.array(sorted(self.qubit_set), dtype=np.intp)
         self.gate_count = gate_count
         self.cache_key = cache_key
         self.depth = depth
         self.t_count = t_count
         self._block_ref = None  # CompiledBlock ref for merge (opt=2)
         self._v2r_ref = None  # virtual-to-real mapping for merge (opt=2)
-        # Pre-compute bitmask from qubit_set
-        bitmask = np.uint64(0)
+        # Pre-compute bitmask from qubit_set (Python int for >64 qubit support)
+        bitmask = 0
         for q in qubit_set:
-            bitmask |= np.uint64(1 << q)
+            bitmask |= 1 << q
         self.bitmask = bitmask
 
     def __repr__(self) -> str:
@@ -233,15 +207,11 @@ class CallGraphDAG:
             if isinstance(edge_data, dict) and edge_data.get("type") == "call":
                 call_pairs.add((min(src, tgt), max(src, tgt)))
 
-        bitmasks = np.array([nd.bitmask for nd in self._nodes], dtype=np.uint64)
-
         for i in range(n):
-            overlaps = np.bitwise_and(bitmasks[i], bitmasks[i + 1 :])
-            weights = _popcount_array(overlaps)
-            for j_off in range(len(weights)):
-                w = int(weights[j_off])
+            arr_i = self._nodes[i]._qubit_array
+            for j in range(i + 1, n):
+                w = len(np.intersect1d(arr_i, self._nodes[j]._qubit_array))
                 if w > 0:
-                    j = i + 1 + j_off
                     pair = (i, j)
                     if pair not in call_pairs:
                         self._dag.add_edge(i, j, {"type": "overlap", "weight": w})
@@ -266,14 +236,12 @@ class CallGraphDAG:
         if n < 2:
             return [set(comp) for comp in rx.connected_components(g)]
 
-        bitmasks = np.array([nd.bitmask for nd in self._nodes], dtype=np.uint64)
-
         for i in range(n):
-            overlaps = np.bitwise_and(bitmasks[i], bitmasks[i + 1 :])
-            weights = _popcount_array(overlaps)
-            for j_off in range(len(weights)):
-                if weights[j_off] > 0:
-                    g.add_edge(i, i + 1 + j_off, int(weights[j_off]))
+            arr_i = self._nodes[i]._qubit_array
+            for j in range(i + 1, n):
+                w = len(np.intersect1d(arr_i, self._nodes[j]._qubit_array))
+                if w > 0:
+                    g.add_edge(i, j, w)
 
         return [set(comp) for comp in rx.connected_components(g)]
 
@@ -302,13 +270,12 @@ class CallGraphDAG:
         g = rx.PyGraph()
         for _ in range(n):
             g.add_node(None)
-        bitmasks = np.array([nd.bitmask for nd in self._nodes], dtype=np.uint64)
         for i in range(n):
-            overlaps = np.bitwise_and(bitmasks[i], bitmasks[i + 1 :])
-            weights = _popcount_array(overlaps)
-            for j_off in range(len(weights)):
-                if weights[j_off] >= threshold:
-                    g.add_edge(i, i + 1 + j_off, int(weights[j_off]))
+            arr_i = self._nodes[i]._qubit_array
+            for j in range(i + 1, n):
+                w = len(np.intersect1d(arr_i, self._nodes[j]._qubit_array))
+                if w >= threshold:
+                    g.add_edge(i, j, w)
         components = rx.connected_components(g)
         return [sorted(comp) for comp in components if len(comp) > 1]
 
