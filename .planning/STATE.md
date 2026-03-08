@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: Quantum Chess Walk Rewrite
 status: executing
-stopped_at: Completed 114-01-PLAN.md (piece-exists predicate)
-last_updated: "2026-03-08T20:41:17.285Z"
-last_activity: 2026-03-08 -- Completed 113-03 (chess_walk.py wired to shared counting_diffusion_core)
+stopped_at: Completed 114-02-PLAN.md (no-friendly-capture predicate)
+last_updated: "2026-03-08T20:50:31.000Z"
+last_activity: 2026-03-08 -- Completed 114-02 (no-friendly-capture predicate factory)
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 7
-  completed_plans: 6
-  percent: 96
+  completed_plans: 7
+  percent: 100
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-08)
 ## Current Position
 
 Phase: 114 of 116 (Core Quantum Predicates)
-Plan: 1 of 2 complete
-Status: In progress
-Last activity: 2026-03-08 -- Completed 114-01 (piece-exists predicate factory)
+Plan: 2 of 2 complete
+Status: Phase 114 complete
+Last activity: 2026-03-08 -- Completed 114-02 (no-friendly-capture predicate factory)
 
-Progress: [##########] 98%
+Progress: [##########] 100%
 
 ## Performance Metrics
 
@@ -55,6 +55,7 @@ Progress: [##########] 98%
 | Phase 113 P01 | 4min | 1 tasks | 2 files |
 | Phase 113 P03 | 7min | 2 tasks | 3 files |
 | Phase 114 P01 | 15min | 1 tasks | 2 files |
+| Phase 114 P02 | 8min | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -78,6 +79,8 @@ Recent decisions affecting current work:
 - [Phase 113]: counting_diffusion_core extracted as shared module-level function in walk.py
 - [Phase 113]: counting_diffusion_core extracted as shared module-level function in walk.py for chess_walk.py integration
 - [Phase 114]: Used .adjoint() instead of .inverse() for ancilla-free predicate reversal
+- [Phase 114]: Nested with qbool raises NotImplementedError; use & operator for Toffoli AND instead
+- [Phase 114]: Per-source friendly_flag ancilla avoids & operator ancilla-reuse interference in loops
 
 ### Blockers/Concerns
 
@@ -89,10 +92,10 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-08T20:41:17.276Z
-Stopped at: Completed 114-01-PLAN.md (piece-exists predicate)
+Last session: 2026-03-08T20:50:31Z
+Stopped at: Completed 114-02-PLAN.md (no-friendly-capture predicate)
 Resume file: None
-Resume action: Execute next plan in phase 113 (113-04)
+Resume action: Plan Phase 115 (check detection)
 
 ---
 *State updated: 2026-03-08 -- 113-03 complete (chess_walk.py shared counting diffusion)*

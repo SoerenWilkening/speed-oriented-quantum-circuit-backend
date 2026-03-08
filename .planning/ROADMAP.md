@@ -174,7 +174,7 @@
 
 - [x] **Phase 112: Compile Infrastructure Optimization** - Numpy-based qubit set operations in compile.py and call_graph.py with profiled before/after validation (completed 2026-03-08)
 - [x] **Phase 113: Diffusion Redesign & Move Enumeration** - Arithmetic counting circuit replacing combinatorial diffusion explosion, plus all-moves enumeration table (completed 2026-03-08)
-- [ ] **Phase 114: Core Quantum Predicates** - Piece-exists and no-friendly-capture predicates using standard ql constructs with @ql.compile(inverse=True)
+- [x] **Phase 114: Core Quantum Predicates** - Piece-exists and no-friendly-capture predicates using standard ql constructs with @ql.compile(inverse=True) (completed 2026-03-08)
 - [ ] **Phase 115: Check Detection & Combined Predicate** - King-safety predicate via attack tables and combined move legality predicate composing all conditions
 - [ ] **Phase 116: Walk Integration & Demo** - Full walk rewrite replacing classical pre-filtering with quantum predicates, end-to-end demo as framework showcase
 
@@ -280,7 +280,7 @@ Phases execute in numeric order: 112 -> 113 -> 114 -> 115 -> 116
 | 107-111 | v7.0 | 10/10 | Complete | 2026-03-08 |
 | 112. Compile Infra Opt | 2/2 | Complete    | 2026-03-08 | - |
 | 113. Diffusion & Enum | 3/3 | Complete    | 2026-03-08 | - |
-| 114. Core Predicates | 1/2 | In Progress|  | - |
+| 114. Core Predicates | 2/2 | Complete   | 2026-03-08 | - |
 | 115. Check & Combined | v8.0 | 0/TBD | Not started | - |
 | 116. Walk Integration | v8.0 | 0/TBD | Not started | - |
 
