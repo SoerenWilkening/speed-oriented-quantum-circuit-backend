@@ -184,7 +184,7 @@
 
 **Milestone Goal:** Enable arbitrary-depth nested `with qbool:` blocks via Toffoli AND control composition, fix 2D qarray support, and rewrite the chess engine in readable natural-programming style.
 
-- [ ] **Phase 117: Control Stack Infrastructure** - Replace flat control globals with stack and add Toffoli AND helpers
+- [x] **Phase 117: Control Stack Infrastructure** - Replace flat control globals with stack and add Toffoli AND helpers (completed 2026-03-09)
 - [ ] **Phase 118: Nested With-Block Rewrite** - Rewrite `__enter__`/`__exit__` with push/pop semantics and AND-ancilla lifecycle
 - [ ] **Phase 119: Compile Compatibility** - Verify and fix `@ql.compile` with nested control contexts
 - [ ] **Phase 120: 2D Qarray Support** - Fix 2D qarray construction and indexing
@@ -282,7 +282,7 @@ Phases execute in numeric order: 117 -> 118 -> 119 -> 120 -> 121
 | 103-106 | v6.1 | 8/8 | Complete | 2026-03-05 |
 | 107-111 | v7.0 | 10/10 | Complete | 2026-03-08 |
 | 112-116 | v8.0 | 11/11 | Complete | 2026-03-09 |
-| 117. Control Stack Infrastructure | 1/2 | In Progress|  | - |
+| 117. Control Stack Infrastructure | 2/2 | Complete   | 2026-03-09 | - |
 | 118. Nested With-Block Rewrite | v9.0 | 0/? | Not started | - |
 | 119. Compile Compatibility | v9.0 | 0/? | Not started | - |
 | 120. 2D Qarray Support | v9.0 | 0/? | Not started | - |

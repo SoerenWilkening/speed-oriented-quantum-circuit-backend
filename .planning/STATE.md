@@ -4,14 +4,14 @@ milestone: v9.0
 milestone_name: Nested Controls & Chess Engine
 current_plan: 2
 status: executing
-stopped_at: Completed 117-01-PLAN.md
-last_updated: "2026-03-09T18:31:28.253Z"
+stopped_at: Completed 117-02-PLAN.md
+last_updated: "2026-03-09T18:58:13.663Z"
 last_activity: 2026-03-09
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
   percent: 10
 ---
 
@@ -56,6 +56,7 @@ Progress: [#.........] 10%
 | v8.0 Chess Walk Rewrite | 112-116 | 11 | Complete (2026-03-09) |
 | v9.0 Nested Controls | 117-121 | ? | Planning |
 | Phase 117 P01 | 14min | 2 tasks | 7 files |
+| Phase 117 P02 | 23min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -64,6 +65,7 @@ Progress: [#.........] 10%
 See PROJECT.md Key Decisions table for full history.
 - [Phase 117]: Replaced _controlled/_control_bool/_list_of_controls flat globals with single _control_stack list
 - [Phase 117]: Updated __enter__/__exit__ and compile.py to use stack push/pop instead of set_controlled/set_control_bool
+- [Phase 117]: Removed unused backward-compat imports from oracle.py after switching to stack-based save/restore
 
 ### Blockers/Concerns
 
@@ -77,8 +79,8 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-03-09T18:31:28.246Z
-Stopped at: Completed 117-01-PLAN.md
+Last session: 2026-03-09T18:58:13.656Z
+Stopped at: Completed 117-02-PLAN.md
 Resume file: None
 Resume action: /gsd:plan-phase 117
 
