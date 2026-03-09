@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: Quantum Chess Walk Rewrite
 status: in-progress
-stopped_at: Completed 116-01-PLAN.md
-last_updated: "2026-03-09T13:28:21Z"
+stopped_at: Completed 116-02-PLAN.md
+last_updated: "2026-03-09T13:33:40.896Z"
 last_activity: 2026-03-09 -- Completed 116-01 (walk integration quantum predicates)
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 11
-  completed_plans: 10
-  percent: 100
+  completed_plans: 11
+  percent: 98
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-08)
 ## Current Position
 
 Phase: 116 of 116 (Walk Integration & Demo)
-Plan: 1 of 2 complete
-Status: in-progress
-Last activity: 2026-03-09 -- Completed 116-01 (walk integration quantum predicates)
+Plan: 2 of 2 complete
+Status: complete
+Last activity: 2026-03-09 -- Completed 116-02 (demo rewrite and tests)
 
-Progress: [##########] 98%
+Progress: [##########] 100%
 
 ## Performance Metrics
 
@@ -57,6 +57,7 @@ Progress: [##########] 98%
 | Phase 114 P01 | 15min | 1 tasks | 2 files |
 | Phase 114 P02 | 8min | 1 tasks | 2 files |
 | Phase 116 P01 | 4min | 2 tasks | 2 files |
+| Phase 116 P02 | 2min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -88,6 +89,7 @@ Recent decisions affecting current work:
 - [Phase 116]: One combined predicate per move table entry, not per level (piece_type varies within white levels)
 - [Phase 116]: Offset-based oracle enumerates all 64 source squares per branch value with classical off-board filtering
 - [Phase 116]: walk_step uses inline @ql_compile with explicit args, no closure/mutable-dict pattern
+- [Phase 116]: MAX_DEPTH=2 for depth-2 walk (white move + black response)
 
 ### Blockers/Concerns
 
@@ -99,10 +101,10 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-09T13:28:21Z
-Stopped at: Completed 116-01-PLAN.md
-Resume file: .planning/phases/116-walk-integration-demo/116-02-PLAN.md
-Resume action: Execute 116-02 (demo rewrite and tests)
+Last session: 2026-03-09T13:33:40.863Z
+Stopped at: Completed 116-02-PLAN.md
+Resume file: None
+Resume action: v8.0 milestone complete
 
 ---
 *State updated: 2026-03-08 -- 113-03 complete (chess_walk.py shared counting diffusion)*

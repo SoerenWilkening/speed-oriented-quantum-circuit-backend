@@ -176,7 +176,7 @@
 - [x] **Phase 113: Diffusion Redesign & Move Enumeration** - Arithmetic counting circuit replacing combinatorial diffusion explosion, plus all-moves enumeration table (completed 2026-03-08)
 - [x] **Phase 114: Core Quantum Predicates** - Piece-exists and no-friendly-capture predicates using standard ql constructs with @ql.compile(inverse=True) (completed 2026-03-08)
 - [x] **Phase 115: Check Detection & Combined Predicate** - King-safety predicate via attack tables and combined move legality predicate composing all conditions (completed 2026-03-09)
-- [ ] **Phase 116: Walk Integration & Demo** - Full walk rewrite replacing classical pre-filtering with quantum predicates, end-to-end demo as framework showcase
+- [x] **Phase 116: Walk Integration & Demo** - Full walk rewrite replacing classical pre-filtering with quantum predicates, end-to-end demo as framework showcase (completed 2026-03-09)
 
 ## Phase Details
 
@@ -252,7 +252,7 @@ Plans:
   3. End-to-end demo generates a valid quantum circuit for the chess walk on a KNK (king-knight-king) position with quantum legality evaluation
   4. All quantum logic in the demo uses standard ql constructs (with qbool:, operator overloading, @ql.compile, ql.array) -- no raw gate emission for application logic
   5. Demo produces circuit statistics (qubit count, gate count, depth) demonstrating the walk circuit is constructible
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 116-01-PLAN.md — Chess_walk.py rewrite: quantum predicates, offset-based oracle, simplified walk_step
@@ -282,7 +282,7 @@ Phases execute in numeric order: 112 -> 113 -> 114 -> 115 -> 116
 | 113. Diffusion & Enum | 3/3 | Complete    | 2026-03-08 | - |
 | 114. Core Predicates | 2/2 | Complete    | 2026-03-08 | - |
 | 115. Check & Combined | 2/2 | Complete    | 2026-03-09 | - |
-| 116. Walk Integration | 1/2 | In Progress|  | - |
+| 116. Walk Integration | 2/2 | Complete   | 2026-03-09 | - |
 
 ---
 *Roadmap created: 2026-02-02*
