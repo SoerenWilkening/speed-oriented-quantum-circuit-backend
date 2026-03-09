@@ -18,8 +18,8 @@ Requirements for v9.0 Nested Controls & Chess Engine. Each maps to roadmap phase
 
 ### 2D Qarray
 
-- [ ] **ARR-01**: User can create 2D qarrays via `ql.qarray(dim=(rows, cols), dtype=ql.qbool)`
-- [ ] **ARR-02**: User can index 2D qarrays with `arr[r, c]` for read and in-place mutation
+- [x] **ARR-01**: User can create 2D qarrays via `ql.qarray(dim=(rows, cols), dtype=ql.qbool)`
+- [x] **ARR-02**: User can index 2D qarrays with `arr[r, c]` for read and in-place mutation
 
 ### Chess Engine
 
@@ -68,8 +68,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CTRL-04 | Phase 118 | Complete |
 | CTRL-05 | Phase 118 | Complete |
 | CTRL-06 | Phase 119 | Complete |
-| ARR-01 | Phase 120 | Pending |
-| ARR-02 | Phase 120 | Pending |
+| ARR-01 | Phase 120 | Complete |
+| ARR-02 | Phase 120 | Complete |
 | CHESS-01 | Phase 121 | Pending |
 | CHESS-02 | Phase 121 | Pending |
 | CHESS-03 | Phase 121 | Pending |
