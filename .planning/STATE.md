@@ -4,14 +4,14 @@ milestone: v9.0
 milestone_name: Nested Controls & Chess Engine
 current_plan: 2
 status: executing
-stopped_at: Phase 119 context gathered
-last_updated: "2026-03-09T21:49:25.019Z"
+stopped_at: Completed 119-01-PLAN.md
+last_updated: "2026-03-09T22:15:40.947Z"
 last_activity: 2026-03-09
 progress:
   total_phases: 5
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  completed_phases: 3
+  total_plans: 5
+  completed_plans: 5
   percent: 15
 ---
 
@@ -59,6 +59,7 @@ Progress: [##........] 15%
 | Phase 117 P02 | 23min | 3 tasks | 3 files |
 | Phase 118 P01 | 7min | 2 tasks | 3 files |
 | Phase 118 P02 | 5min | 2 tasks | 1 files |
+| Phase 119 P01 | 7min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,8 @@ See PROJECT.md Key Decisions table for full history.
 - [Phase 118]: Tests rewritten to use qbool(True/False) instead of comparisons (5-6 qubits vs 38)
 - [Phase 118]: Used separate TestThreeLevelNesting class for 3+ level tests to organize by nesting depth
 - [Phase 118]: Used 2-bit result registers for 3+ level tests (max value 3, keeps qubit count at 7-9)
+- [Phase 119]: Tests-only phase: compile replay correctly controls via AND-ancilla in nested with-blocks, no code changes needed
+- [Phase 119]: Pre-existing inverse and compiled-calling-compiled issues documented with skipped tests, not Phase 119 scope
 
 ### Blockers/Concerns
 
@@ -85,9 +88,9 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-03-09T21:49:25.011Z
-Stopped at: Phase 119 context gathered
-Resume file: .planning/phases/119-compile-compatibility/119-CONTEXT.md
+Last session: 2026-03-09T22:15:40.938Z
+Stopped at: Completed 119-01-PLAN.md
+Resume file: None
 Resume action: /gsd:plan-phase 117
 
 ---

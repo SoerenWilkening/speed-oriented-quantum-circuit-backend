@@ -14,7 +14,7 @@ Requirements for v9.0 Nested Controls & Chess Engine. Each maps to roadmap phase
 - [x] **CTRL-03**: Framework uncomputes AND-ancilla and restores previous control on `__exit__`
 - [x] **CTRL-04**: Controlled XOR (`~qbool`) works inside `with` blocks without NotImplementedError
 - [x] **CTRL-05**: Existing single-level `with` blocks work identically (zero regression)
-- [ ] **CTRL-06**: Nested controls work inside `@ql.compile` captured functions
+- [x] **CTRL-06**: Nested controls work inside `@ql.compile` captured functions
 
 ### 2D Qarray
 
@@ -67,7 +67,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CTRL-03 | Phase 117 | Complete |
 | CTRL-04 | Phase 118 | Complete |
 | CTRL-05 | Phase 118 | Complete |
-| CTRL-06 | Phase 119 | Pending |
+| CTRL-06 | Phase 119 | Complete |
 | ARR-01 | Phase 120 | Pending |
 | ARR-02 | Phase 120 | Pending |
 | CHESS-01 | Phase 121 | Pending |
