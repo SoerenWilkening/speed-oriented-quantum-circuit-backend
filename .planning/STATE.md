@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: Quantum Chess Walk Rewrite
-status: completed
-stopped_at: Phase 116 context gathered
-last_updated: "2026-03-09T13:10:01.134Z"
-last_activity: 2026-03-09 -- Completed 115-02 (combined move legality predicate)
+status: in-progress
+stopped_at: Completed 116-01-PLAN.md
+last_updated: "2026-03-09T13:28:21Z"
+last_activity: 2026-03-09 -- Completed 116-01 (walk integration quantum predicates)
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 11
+  completed_plans: 10
   percent: 100
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-08)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** v8.0 Quantum Chess Walk Rewrite -- Phase 115
+**Current focus:** v8.0 Quantum Chess Walk Rewrite -- Phase 116
 
 ## Current Position
 
-Phase: 115 of 116 (Check Detection & Combined Predicate)
-Plan: 2 of 2 complete
-Status: completed
-Last activity: 2026-03-09 -- Completed 115-02 (combined move legality predicate)
+Phase: 116 of 116 (Walk Integration & Demo)
+Plan: 1 of 2 complete
+Status: in-progress
+Last activity: 2026-03-09 -- Completed 116-01 (walk integration quantum predicates)
 
-Progress: [##########] 100%
+Progress: [##########] 98%
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Progress: [##########] 100%
 | Phase 113 P03 | 7min | 2 tasks | 3 files |
 | Phase 114 P01 | 15min | 1 tasks | 2 files |
 | Phase 114 P02 | 8min | 1 tasks | 2 files |
+| Phase 116 P01 | 4min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -84,6 +85,9 @@ Recent decisions affecting current work:
 - [Phase 115]: Per-position attack_flag accumulation instead of per-attacker enemy_flag to avoid & operator ancilla overflow on large attack tables
 - [Phase 115]: Nested @ql.compile calls work for sub-predicate composition -- no need to inline sub-predicate logic
 - [Phase 115]: Combined 2x2 predicate uses 34 qubits -- circuit-build-only testing + separate AND composition verification
+- [Phase 116]: One combined predicate per move table entry, not per level (piece_type varies within white levels)
+- [Phase 116]: Offset-based oracle enumerates all 64 source squares per branch value with classical off-board filtering
+- [Phase 116]: walk_step uses inline @ql_compile with explicit args, no closure/mutable-dict pattern
 
 ### Blockers/Concerns
 
@@ -95,10 +99,10 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-09T13:10:01.105Z
-Stopped at: Phase 116 context gathered
-Resume file: .planning/phases/116-walk-integration-demo/116-CONTEXT.md
-Resume action: Execute Phase 116 (walk integration)
+Last session: 2026-03-09T13:28:21Z
+Stopped at: Completed 116-01-PLAN.md
+Resume file: .planning/phases/116-walk-integration-demo/116-02-PLAN.md
+Resume action: Execute 116-02 (demo rewrite and tests)
 
 ---
 *State updated: 2026-03-08 -- 113-03 complete (chess_walk.py shared counting diffusion)*

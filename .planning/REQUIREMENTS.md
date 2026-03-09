@@ -18,9 +18,9 @@ Requirements for the Quantum Chess Walk Rewrite milestone. The chess walk serves
 ### Walk Infrastructure
 
 - [x] **WALK-01**: All-moves enumeration table precomputes every geometrically possible (piece_type, src, dst) triple for knights (8 per square) and kings (8 per square)
-- [ ] **WALK-02**: Rewritten evaluate_children calls quantum legality predicate per move candidate instead of trivial always-valid check
+- [x] **WALK-02**: Rewritten evaluate_children calls quantum legality predicate per move candidate instead of trivial always-valid check
 - [x] **WALK-03**: Diffusion operator redesigned with arithmetic counting circuit (sum validity bits into count register) replacing O(2^d_max) itertools.combinations enumeration
-- [ ] **WALK-04**: Rewritten chess_walk.py integrates quantum predicates, all-moves enumeration, and redesigned diffusion into end-to-end walk step U = R_B * R_A
+- [x] **WALK-04**: Rewritten chess_walk.py integrates quantum predicates, all-moves enumeration, and redesigned diffusion into end-to-end walk step U = R_B * R_A
 - [ ] **WALK-05**: Demo serves as showcase of the framework — all quantum logic expressed via standard ql constructs (with, operators, @ql.compile), no raw gate emission for application logic
 
 ### Compile Infrastructure
@@ -63,9 +63,9 @@ Deferred to future milestones.
 | PRED-04 | Phase 115 | Complete |
 | PRED-05 | Phase 114 | Complete |
 | WALK-01 | Phase 113 | Complete |
-| WALK-02 | Phase 116 | Pending |
+| WALK-02 | Phase 116 | Complete |
 | WALK-03 | Phase 113 | Complete |
-| WALK-04 | Phase 116 | Pending |
+| WALK-04 | Phase 116 | Complete |
 | WALK-05 | Phase 116 | Pending |
 | COMP-01 | Phase 112 | Complete |
 | COMP-02 | Phase 112 | Complete |
