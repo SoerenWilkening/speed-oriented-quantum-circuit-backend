@@ -234,7 +234,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 119-01-PLAN.md -- Compile + nested with tests (replay, inverse, adjoint, compiled-calling-compiled, regression)
+- [x] 119-01-PLAN.md -- Compile + nested with tests (replay, inverse, adjoint, compiled-calling-compiled, regression)
 
 ### Phase 120: 2D Qarray Support
 **Goal**: Users can create and index 2D quantum arrays for board-like data structures
@@ -244,10 +244,10 @@ Plans:
   1. `ql.qarray(dim=(8, 8), dtype=ql.qbool)` creates a 64-element qarray accessible as a 2D grid without TypeError
   2. `arr[r, c]` reads the correct element and `arr[r, c] |= flag` mutates it in place
   3. Existing 1D qarray tests pass with zero regressions
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 120-01: TBD
+- [ ] 120-01-PLAN.md -- Fix __setitem__ bug, add 2D tests, update CLAUDE.md to ql.qarray()
 
 ### Phase 121: Chess Engine Rewrite
 **Goal**: A readable chess engine example demonstrates the full v9.0 feature set in natural-programming style
@@ -285,7 +285,7 @@ Phases execute in numeric order: 117 -> 118 -> 119 -> 120 -> 121
 | 117. Control Stack Infrastructure | 2/2 | Complete    | 2026-03-09 | - |
 | 118. Nested With-Block Rewrite | 2/2 | Complete    | 2026-03-09 | - |
 | 119. Compile Compatibility | 1/1 | Complete    | 2026-03-09 | - |
-| 120. 2D Qarray Support | v9.0 | 0/? | Not started | - |
+| 120. 2D Qarray Support | v9.0 | 0/1 | Not started | - |
 | 121. Chess Engine Rewrite | v9.0 | 0/? | Not started | - |
 
 ---
