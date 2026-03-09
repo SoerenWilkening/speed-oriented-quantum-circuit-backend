@@ -9,11 +9,11 @@ Requirements for v9.0 Nested Controls & Chess Engine. Each maps to roadmap phase
 
 ### Nested Controls
 
-- [ ] **CTRL-01**: User can nest `with qbool:` blocks at arbitrary depth with correct controlled gate emission
+- [x] **CTRL-01**: User can nest `with qbool:` blocks at arbitrary depth with correct controlled gate emission
 - [x] **CTRL-02**: Framework composes control qubits via Toffoli AND on `__enter__`, producing a combined control ancilla
 - [x] **CTRL-03**: Framework uncomputes AND-ancilla and restores previous control on `__exit__`
-- [ ] **CTRL-04**: Controlled XOR (`~qbool`) works inside `with` blocks without NotImplementedError
-- [ ] **CTRL-05**: Existing single-level `with` blocks work identically (zero regression)
+- [x] **CTRL-04**: Controlled XOR (`~qbool`) works inside `with` blocks without NotImplementedError
+- [x] **CTRL-05**: Existing single-level `with` blocks work identically (zero regression)
 - [ ] **CTRL-06**: Nested controls work inside `@ql.compile` captured functions
 
 ### 2D Qarray
@@ -62,11 +62,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CTRL-01 | Phase 118 | Pending |
+| CTRL-01 | Phase 118 | Complete |
 | CTRL-02 | Phase 117 | Complete |
 | CTRL-03 | Phase 117 | Complete |
-| CTRL-04 | Phase 118 | Pending |
-| CTRL-05 | Phase 118 | Pending |
+| CTRL-04 | Phase 118 | Complete |
+| CTRL-05 | Phase 118 | Complete |
 | CTRL-06 | Phase 119 | Pending |
 | ARR-01 | Phase 120 | Pending |
 | ARR-02 | Phase 120 | Pending |

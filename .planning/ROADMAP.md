@@ -283,7 +283,7 @@ Phases execute in numeric order: 117 -> 118 -> 119 -> 120 -> 121
 | 107-111 | v7.0 | 10/10 | Complete | 2026-03-08 |
 | 112-116 | v8.0 | 11/11 | Complete | 2026-03-09 |
 | 117. Control Stack Infrastructure | 2/2 | Complete    | 2026-03-09 | - |
-| 118. Nested With-Block Rewrite | v9.0 | 0/2 | Not started | - |
+| 118. Nested With-Block Rewrite | 1/2 | In Progress|  | - |
 | 119. Compile Compatibility | v9.0 | 0/? | Not started | - |
 | 120. 2D Qarray Support | v9.0 | 0/? | Not started | - |
 | 121. Chess Engine Rewrite | v9.0 | 0/? | Not started | - |

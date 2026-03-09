@@ -4,14 +4,14 @@ milestone: v9.0
 milestone_name: Nested Controls & Chess Engine
 current_plan: 2
 status: executing
-stopped_at: Phase 118 context gathered
-last_updated: "2026-03-09T19:26:21.976Z"
+stopped_at: Completed 118-01-PLAN.md
+last_updated: "2026-03-09T19:52:22.647Z"
 last_activity: 2026-03-09
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 4
+  completed_plans: 3
   percent: 10
 ---
 
@@ -22,17 +22,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-09)
 
 **Core value:** Write quantum algorithms in natural programming style that compiles to efficient, memory-optimized quantum circuits.
-**Current focus:** Phase 117 -- Control Stack Infrastructure
+**Current focus:** Phase 118 -- Nested With-Block Rewrite
 
 ## Current Position
 
-Phase: 117 of 121 (Control Stack Infrastructure)
-Current Plan: 2
+Phase: 118 of 121 (Nested With-Block Rewrite)
+Current Plan: 1 of 2 (Plan 01 complete)
 Total Plans in Phase: 2
 Status: Executing
 Last Activity: 2026-03-09
 
-Progress: [#.........] 10%
+Progress: [##........] 15%
 
 ## Performance Metrics
 
@@ -57,6 +57,7 @@ Progress: [#.........] 10%
 | v9.0 Nested Controls | 117-121 | ? | Planning |
 | Phase 117 P01 | 14min | 2 tasks | 7 files |
 | Phase 117 P02 | 23min | 3 tasks | 3 files |
+| Phase 118 P01 | 7min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -66,6 +67,8 @@ See PROJECT.md Key Decisions table for full history.
 - [Phase 117]: Replaced _controlled/_control_bool/_list_of_controls flat globals with single _control_stack list
 - [Phase 117]: Updated __enter__/__exit__ and compile.py to use stack push/pop instead of set_controlled/set_control_bool
 - [Phase 117]: Removed unused backward-compat imports from oracle.py after switching to stack-based save/restore
+- [Phase 118]: AND-ancilla uncomputed after scope qbool cleanup but before scope depth decrement and control pop
+- [Phase 118]: Tests rewritten to use qbool(True/False) instead of comparisons (5-6 qubits vs 38)
 
 ### Blockers/Concerns
 
@@ -79,9 +82,9 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-03-09T19:26:21.950Z
-Stopped at: Phase 118 context gathered
-Resume file: .planning/phases/118-nested-with-block-rewrite/118-CONTEXT.md
+Last session: 2026-03-09T19:52:22.636Z
+Stopped at: Completed 118-01-PLAN.md
+Resume file: None
 Resume action: /gsd:plan-phase 117
 
 ---
