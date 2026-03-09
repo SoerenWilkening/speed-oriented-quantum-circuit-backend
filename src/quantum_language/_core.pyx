@@ -25,10 +25,8 @@ cdef circuit_t *_circuit
 cdef bint _circuit_initialized = False
 cdef int _num_qubits = 0
 
-cdef bint _controlled = False
-cdef object _control_bool = None
+cdef list _control_stack = []
 cdef int _int_counter = 0
-cdef object _list_of_controls = []
 
 cdef unsigned int _smallest_allocated_qubit = 0
 
@@ -89,31 +87,71 @@ def _increment_int_counter():
 	return _int_counter
 
 def _get_controlled():
-	"""Check if in controlled context."""
-	return _controlled
+	"""Check if in controlled context (stack-based)."""
+	return len(_control_stack) > 0
 
 def _set_controlled(bint value):
-	"""Set controlled context flag."""
-	global _controlled
-	_controlled = value
+	"""No-op for backward compatibility. Controlled state is implicit from stack depth."""
+	pass
 
 def _get_control_bool():
-	"""Get current control boolean."""
-	return _control_bool
+	"""Get current control boolean from stack top."""
+	if not _control_stack:
+		return None
+	entry = _control_stack[-1]
+	return entry[1] if entry[1] is not None else entry[0]
 
 def _set_control_bool(value):
-	"""Set control boolean."""
-	global _control_bool
-	_control_bool = value
+	"""No-op for backward compatibility. Control bool is managed by push/pop."""
+	pass
 
 def _get_list_of_controls():
-	"""Get list of control qubits."""
-	return _list_of_controls
+	"""Return empty list (backward compatibility stub)."""
+	return []
 
 def _set_list_of_controls(value):
-	"""Set list of control qubits."""
-	global _list_of_controls
-	_list_of_controls = value
+	"""No-op for backward compatibility."""
+	pass
+
+def _get_control_stack():
+	"""Get control stack reference."""
+	return _control_stack
+
+def _set_control_stack(value):
+	"""Replace the control stack."""
+	global _control_stack
+	_control_stack = value
+
+def _push_control(qbool_ref, and_ancilla):
+	"""Push a control entry onto the stack.
+
+	Parameters
+	----------
+	qbool_ref : qbool
+		The qbool being used as the control condition.
+	and_ancilla : qbool or None
+		AND-ancilla qubit (for multi-level), or None for single-level.
+	"""
+	global _control_stack
+	_control_stack.append((qbool_ref, and_ancilla))
+
+def _pop_control():
+	"""Pop the top control entry from the stack.
+
+	Returns
+	-------
+	tuple
+		(qbool_ref, and_ancilla) that was pushed.
+
+	Raises
+	------
+	RuntimeError
+		If the control stack is empty.
+	"""
+	global _control_stack
+	if not _control_stack:
+		raise RuntimeError("Cannot pop from empty control stack")
+	return _control_stack.pop()
 
 def _get_smallest_allocated_qubit():
 	"""Get smallest allocated qubit index."""
@@ -384,7 +422,7 @@ cdef class circuit:
 		>>> b = qint(3)
 		>>> result = a + b
 		"""
-		global _circuit_initialized, _circuit, _num_qubits, _int_counter, _smallest_allocated_qubit, _controlled, _control_bool, _list_of_controls, _global_creation_counter, _scope_stack, _tradeoff_policy, _arithmetic_ops_performed
+		global _circuit_initialized, _circuit, _num_qubits, _int_counter, _smallest_allocated_qubit, _control_stack, _global_creation_counter, _scope_stack, _tradeoff_policy, _arithmetic_ops_performed
 		# Only reset circuit when called directly as circuit(), not from subclass super().__init__()
 		if type(self) is circuit:
 			if _circuit_initialized:
@@ -396,9 +434,7 @@ cdef class circuit:
 			_num_qubits = 0
 			_int_counter = 0
 			_smallest_allocated_qubit = 0
-			_controlled = False
-			_control_bool = None
-			_list_of_controls = []
+			_control_stack = []
 			_global_creation_counter = 0
 			_scope_stack = []
 			# Phase 93: Reset tradeoff state

@@ -30,15 +30,13 @@ import numpy as np
 from ._core import (
     _allocate_qubit,
     _get_control_bool,
+    _get_control_stack,
     _get_controlled,
     _get_layer_floor,
-    _get_list_of_controls,
     _get_qubit_saving_mode,
     _register_cache_clear_hook,
-    _set_control_bool,
-    _set_controlled,
+    _set_control_stack,
     _set_layer_floor,
-    _set_list_of_controls,
     extract_gate_range,
     get_current_layer,
     inject_remapped_gates,
@@ -1213,18 +1211,12 @@ class CompiledFunc:
         """
         # Always capture in uncontrolled mode
         if is_controlled:
-            saved_controlled = _get_controlled()
-            saved_control_bool = _get_control_bool()
-            saved_list_of_controls = list(_get_list_of_controls())
-            _set_controlled(False)
-            _set_control_bool(None)
-            _set_list_of_controls([])
+            saved_stack = list(_get_control_stack())
+            _set_control_stack([])
             try:
                 block = self._capture(args, kwargs, quantum_args)
             finally:
-                _set_controlled(saved_controlled)
-                _set_control_bool(saved_control_bool)
-                _set_list_of_controls(saved_list_of_controls)
+                _set_control_stack(saved_stack)
         else:
             block = self._capture(args, kwargs, quantum_args)
 

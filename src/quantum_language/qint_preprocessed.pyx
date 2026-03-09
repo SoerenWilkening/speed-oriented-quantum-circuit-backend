@@ -39,6 +39,7 @@ from ._core import (
     _get_controlled, _set_controlled,
     _get_control_bool, _set_control_bool,
     _get_list_of_controls, _set_list_of_controls,
+    _push_control, _pop_control,
     _get_smallest_allocated_qubit, _set_smallest_allocated_qubit,
     _get_qubit_saving_mode, _set_qubit_saving_mode,
     _get_global_creation_counter, _increment_global_creation_counter,
@@ -803,19 +804,10 @@ cdef class qint(circuit):
 		Creates controlled quantum gates where this qint acts as control.
 		"""
 		self._check_not_uncomputed()
-		_controlled = _get_controlled()
-		_control_bool = _get_control_bool()
-		_list_of_controls = _get_list_of_controls()
 		_scope_stack = _get_scope_stack()
 
-		if not _controlled:
-			_set_control_bool(self)
-		else:
-			# TODO: and operation of self and qint._control_bool
-			_list_of_controls.append(_control_bool)
-			_control_bool &= self
-			pass
-		_set_controlled(True)
+		# Phase 117: Push control entry onto stack (single-level, no AND-ancilla)
+		_push_control(self, None)
 
 		# Phase 19: Scope management - push new scope frame
 		current_scope_depth.set(current_scope_depth.get() + 1)
@@ -874,11 +866,9 @@ cdef class qint(circuit):
 		# Phase 19: Decrement scope depth
 		current_scope_depth.set(current_scope_depth.get() - 1)
 
-		# THEN restore control state (existing logic)
-		_set_controlled(False)
-		_set_control_bool(None)
+		# Phase 117: Pop control entry from stack
+		_pop_control()
 
-		# undo logical and operations (TODO from original)
 		return False  # do not suppress exceptions
 
 	def measure(self):

@@ -32,6 +32,7 @@ cdef extern from "gate.h":
     void mcz(gate_t *g, unsigned int target, unsigned int *controls, int n_controls)
     void p(gate_t *g, unsigned int target, double angle)
     void cp(gate_t *g, unsigned int target, unsigned int control, double angle)
+    void ccx(gate_t *g, unsigned int target, unsigned int control1, unsigned int control2)
 
 
 cpdef void emit_ry(unsigned int target, double angle):
@@ -205,3 +206,69 @@ cpdef void emit_p(unsigned int target, double angle):
         p(&g, target, angle)
 
     add_gate(circ, &g)
+
+
+cpdef void emit_ccx(unsigned int target, unsigned int ctrl1, unsigned int ctrl2):
+    """Emit Toffoli (CCX) gate directly to circuit.
+
+    Does NOT check controlled context -- raw gate for internal control stack use.
+
+    Parameters
+    ----------
+    target : unsigned int
+        Target qubit index
+    ctrl1 : unsigned int
+        First control qubit index
+    ctrl2 : unsigned int
+        Second control qubit index
+    """
+    cdef gate_t g
+    cdef circuit_t *circ = <circuit_t*><unsigned long long>_get_circuit()
+    memset(&g, 0, sizeof(gate_t))
+    ccx(&g, target, ctrl1, ctrl2)
+    add_gate(circ, &g)
+
+
+def _toffoli_and(ctrl1_qubit, ctrl2_qubit):
+    """Compute AND of two control qubits into a fresh ancilla.
+
+    Allocates a qbool for the AND result and applies CCX(ctrl1, ctrl2, ancilla).
+    Returns the qbool ancilla.
+
+    Parameters
+    ----------
+    ctrl1_qubit : int
+        First control qubit index
+    ctrl2_qubit : int
+        Second control qubit index
+
+    Returns
+    -------
+    qbool
+        Freshly allocated AND-ancilla qbool with CCX applied.
+    """
+    from .qbool import qbool as _qbool
+    ancilla = _qbool()
+    ancilla_qubit = ancilla.qubits[63]
+    emit_ccx(ancilla_qubit, ctrl1_qubit, ctrl2_qubit)
+    return ancilla
+
+
+def _uncompute_toffoli_and(ancilla, ctrl1_qubit, ctrl2_qubit):
+    """Uncompute AND-ancilla via reverse CCX and deallocate.
+
+    Parameters
+    ----------
+    ancilla : qbool
+        The AND-ancilla to uncompute (from _toffoli_and).
+    ctrl1_qubit : int
+        First control qubit index
+    ctrl2_qubit : int
+        Second control qubit index
+    """
+    ancilla_qubit = ancilla.qubits[63]
+    emit_ccx(ancilla_qubit, ctrl1_qubit, ctrl2_qubit)  # CCX is self-adjoint
+    ancilla._is_uncomputed = True  # Prevent __del__ double-uncomputation
+    from ._core import _deallocate_qubits
+    _deallocate_qubits(ancilla.allocated_start, 1)
+    ancilla.allocated_qubits = False
