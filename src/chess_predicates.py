@@ -23,6 +23,7 @@ __all__ = [
     "make_piece_exists_predicate",
     "make_no_friendly_capture_predicate",
     "make_check_detection_predicate",
+    "make_combined_predicate",
 ]
 
 
@@ -316,3 +317,86 @@ def make_check_detection_predicate(
                     ~attack_flag  # noqa: B018 -- uncompute
 
     return check_safe
+
+
+def make_combined_predicate(
+    piece_type, dr, df, board_rows, board_cols, enemy_attacks, n_friendly, n_enemy
+):
+    """Create a compiled predicate that ANDs piece-exists, no-friendly-capture, and check-safe.
+
+    Returns a @ql.compile(inverse=True) function that flips result qbool
+    to |1> only when ALL three conditions pass:
+      1. Piece exists at a valid source square for move (dr, df)
+      2. No friendly piece occupies the target square
+      3. King is not in check after the move
+
+    The three sub-predicates are built at construction time and called
+    inside the compiled function. Intermediate qbool results are allocated,
+    ANDed via the ``&`` operator, and then uncomputed.
+
+    Parameters
+    ----------
+    piece_type : str
+        "king" or "knight" -- determines check detection behavior.
+    dr, df : int
+        Move offset (rank delta, file delta).
+    board_rows, board_cols : int
+        Board dimensions.
+    enemy_attacks : list[tuple[list[tuple[int,int]], str]]
+        Attack offset tables per enemy type.
+    n_friendly : int
+        Number of friendly board qarrays (known at construction time).
+    n_enemy : int
+        Number of enemy board qarrays (known at construction time).
+
+    Returns
+    -------
+    CompiledFunc
+        A @ql.compile(inverse=True) function with signature
+        ``is_legal(piece_qarray, *friendly_qarrays, king_qarray, *enemy_qarrays, result)``
+        where result is a qbool that gets flipped to |1> if all conditions hold.
+    """
+    pe_pred = make_piece_exists_predicate(piece_type, dr, df, board_rows, board_cols)
+    nfc_pred = make_no_friendly_capture_predicate(dr, df, board_rows, board_cols)
+    cd_pred = make_check_detection_predicate(
+        piece_type, dr, df, board_rows, board_cols, enemy_attacks
+    )
+
+    @ql.compile(inverse=True)
+    def is_legal(piece_qarray, *args):
+        """Flip result to |1> if all three legality conditions pass.
+
+        Arguments after piece_qarray are:
+          friendly_qarrays[0..n_friendly-1], king_qarray,
+          enemy_qarrays[0..n_enemy-1], result
+
+        Allocates 3 intermediate qbools for sub-predicate results,
+        then ANDs them with chained ``&`` operator.
+        """
+        friendly_qarrays = args[:n_friendly]
+        king_qarray = args[n_friendly]
+        enemy_qarrays = args[n_friendly + 1 : n_friendly + 1 + n_enemy]
+        result = args[-1]
+
+        # Allocate intermediate result qbools
+        pe_result = ql.qbool()
+        nfc_result = ql.qbool()
+        cd_result = ql.qbool()
+
+        # Call sub-predicates
+        pe_pred(piece_qarray, pe_result)
+        nfc_pred(piece_qarray, *friendly_qarrays, nfc_result)
+        cd_pred(king_qarray, *enemy_qarrays, cd_result)
+
+        # Three-way AND via chained & operator
+        ab = pe_result & nfc_result
+        abc = ab & cd_result
+        with abc:
+            ~result  # noqa: B018 -- quantum NOT (flip result if all pass)
+
+        # Uncompute sub-predicate results (reverse order)
+        cd_pred.adjoint(king_qarray, *enemy_qarrays, cd_result)
+        nfc_pred.adjoint(piece_qarray, *friendly_qarrays, nfc_result)
+        pe_pred.adjoint(piece_qarray, pe_result)
+
+    return is_legal
