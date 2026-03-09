@@ -18,8 +18,6 @@ Piece types supported:
     - White knights (configurable, typically 1-2)
 """
 
-import math
-
 import numpy as np
 
 import quantum_language as ql
@@ -31,7 +29,6 @@ __all__ = [
     "legal_moves_white",
     "legal_moves_black",
     "legal_moves",
-    "get_legal_moves_and_oracle",
     "print_position",
     "print_moves",
     "sq_to_algebraic",
@@ -361,148 +358,3 @@ def print_moves(moves, label=""):
         src_alg = sq_to_algebraic(src)
         dst_alg = sq_to_algebraic(dst)
         print(f"  [{i:2d}] {src_alg}-{dst_alg}  ({src:2d} -> {dst:2d})")
-
-
-def _classify_move(piece_sq, wk_sq, wn_squares):
-    """Determine which piece type a move belongs to.
-
-    Parameters
-    ----------
-    piece_sq : int
-        Source square of the moving piece.
-    wk_sq : int
-        White king square.
-    wn_squares : list[int]
-        White knight squares.
-
-    Returns
-    -------
-    str
-        'white_king', 'white_knights', or 'black_king'.
-    """
-    if piece_sq == wk_sq:
-        return "white_king"
-    if piece_sq in wn_squares:
-        return "white_knights"
-    return "black_king"
-
-
-def _make_apply_move(move_list, wk_sq, bk_sq, wn_squares, side_to_move):
-    """Factory that creates a compiled apply_move function for a specific position.
-
-    Classical precomputation (move classification, square coordinates) happens
-    here, outside the @ql.compile body. The returned function only performs
-    reversible quantum operations.
-
-    Parameters
-    ----------
-    move_list : list[tuple[int, int]]
-        Precomputed legal moves as (piece_sq, dest_sq) pairs.
-    wk_sq : int
-        White king square.
-    bk_sq : int
-        Black king square.
-    wn_squares : list[int]
-        White knight squares.
-    side_to_move : str
-        'white' or 'black'.
-
-    Returns
-    -------
-    CompiledFunc
-        A @ql.compile(inverse=True) function that applies moves conditionally.
-    """
-    # Precompute: for each move index, determine piece type and coordinates
-    # This is classical data that the compiled function closes over
-    move_specs = []
-    for piece_sq, dest_sq in move_list:
-        if side_to_move == "white":
-            piece_type = _classify_move(piece_sq, wk_sq, wn_squares)
-        else:
-            piece_type = "black_king"
-        src_rank, src_file = divmod(piece_sq, 8)
-        dst_rank, dst_file = divmod(dest_sq, 8)
-        move_specs.append((piece_type, src_rank, src_file, dst_rank, dst_file))
-
-    # Build a flat list of (qarray_key, src_rank, src_file, dst_rank, dst_file)
-    # mapping each move to which qarray to operate on (by index 0=wk, 1=bk, 2=wn)
-    _BOARD_KEY_MAP = {"white_king": 0, "black_king": 1, "white_knights": 2}
-    flat_specs = []
-    for piece_type, src_rank, src_file, dst_rank, dst_file in move_specs:
-        flat_specs.append((_BOARD_KEY_MAP[piece_type], src_rank, src_file, dst_rank, dst_file))
-
-    @ql.compile(inverse=True)
-    def apply_move(wk_arr, bk_arr, wn_arr, branch):
-        """Apply the i-th move to the board, conditioned on branch register value.
-
-        For each move index i in the precomputed move list:
-        - When branch == i, flip the source square qbool off
-          and flip the destination square qbool on in the
-          appropriate piece-type qarray.
-
-        Parameters
-        ----------
-        wk_arr : qarray
-            White king qarray (8x8 qbool).
-        bk_arr : qarray
-            Black king qarray (8x8 qbool).
-        wn_arr : qarray
-            White knights qarray (8x8 qbool).
-        branch : qint
-            Branch register holding the move index.
-        """
-        boards = [wk_arr, bk_arr, wn_arr]
-        for i, (board_idx, src_rank, src_file, dst_rank, dst_file) in enumerate(flat_specs):
-            # Condition on branch register value == i
-            cond = branch == i
-            with cond:
-                # Flip source square off (piece leaves) -- uses controlled NOT
-                ~boards[board_idx][src_rank, src_file]
-                # Flip destination square on (piece arrives) -- uses controlled NOT
-                ~boards[board_idx][dst_rank, dst_file]
-
-    return apply_move
-
-
-def get_legal_moves_and_oracle(wk_sq, bk_sq, wn_squares, side_to_move="white"):
-    """Get legal moves and a compiled oracle for applying them to board qarrays.
-
-    This is the main entry point for Phase 104. It precomputes the legal move
-    list classically, then creates a @ql.compile(inverse=True) function that
-    can conditionally apply any move based on a branch register value.
-
-    Parameters
-    ----------
-    wk_sq : int
-        White king square (0-63).
-    bk_sq : int
-        Black king square (0-63).
-    wn_squares : list[int]
-        White knight square(s).
-    side_to_move : str
-        'white' or 'black'.
-
-    Returns
-    -------
-    dict
-        Keys:
-        - 'moves': list[tuple[int, int]] -- the legal move list
-        - 'move_count': int -- number of legal moves (d)
-        - 'branch_width': int -- minimum qint width to index all moves
-        - 'apply_move': CompiledFunc -- @ql.compile(inverse=True) function
-          that takes (wk_arr, bk_arr, wn_arr, branch_qint) and conditionally
-          applies move[branch] to the board qarrays. Can also be called with
-          (board_dict, branch_qint) via the convenience wrapper.
-    """
-    moves = legal_moves(wk_sq, bk_sq, wn_squares, side_to_move)
-    move_count = len(moves)
-    branch_width = max(1, math.ceil(math.log2(max(move_count, 1))))
-
-    apply_move = _make_apply_move(moves, wk_sq, bk_sq, wn_squares, side_to_move)
-
-    return {
-        "moves": moves,
-        "move_count": move_count,
-        "branch_width": branch_width,
-        "apply_move": apply_move,
-    }

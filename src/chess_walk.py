@@ -355,15 +355,27 @@ def precompute_diffusion_angles(d_max, branch_width):
 
 
 def evaluate_children(
-    depth, level_idx, d_max, branch_reg, h_reg, max_depth, oracle, board_arrs, validity
+    depth,
+    level_idx,
+    d_max,
+    branch_reg,
+    h_reg,
+    max_depth,
+    oracle,
+    board_arrs,
+    validity,
+    predicates,
+    entry_qarray_keys,
 ):
     """Evaluate each child's validity and store in validity ancillae.
 
     For each child i (0..d_max-1): encode child index in branch register,
-    flip height, apply oracle to get child board state, check validity via
-    quantum predicate, store result, then undo everything.
+    flip height, apply oracle to get child board state, evaluate combined
+    legality predicate (piece-exists AND no-friendly-capture AND check-safe),
+    then undo navigation.
 
-    Follows walk.py _evaluate_children pattern exactly.
+    The predicate result stays in validity[i]; the adjoint is called in
+    uncompute_children.
 
     Parameters
     ----------
@@ -385,11 +397,13 @@ def evaluate_children(
         (wk_arr, bk_arr, wn_arr) qarrays.
     validity : list[qbool]
         Validity ancillae to store results (one per child).
+    predicates : list[CompiledFunc]
+        One combined predicate per move table entry.
+    entry_qarray_keys : list[dict]
+        Per-entry qarray key mappings for argument resolution.
     """
-    from quantum_language.qbool import qbool as alloc_qbool
-
     wk, bk, wn = board_arrs
-    height_mask = 3 << (max_depth - depth)  # bits for depth and depth-1
+    height_mask = 3 << (max_depth - depth)
 
     for i in range(d_max):
         # (a) Encode child index i in branch register
@@ -401,18 +415,15 @@ def evaluate_children(
         # (c) Apply oracle to derive child board state
         oracle(wk, bk, wn, branch_reg)
 
-        # (d) Quantum validity predicate: validity[i] = NOT reject.
-        # For the KNK endgame with precomputed structurally valid moves,
-        # all children in the oracle are valid. The predicate is trivially
-        # satisfied (reject = |0>, validity = |1>). The quantum predicate
-        # is still necessary to support the variable-branching D_x pattern
-        # where d(x) counts valid children via these ancillae.
-        reject = alloc_qbool()
-        with reject:
-            validity[i] ^= 1
-        validity[i] ^= 1  # Flip: validity=|1> means valid
+        # (d) Evaluate combined legality predicate on child board state
+        keys = entry_qarray_keys[i]
+        piece_arr = board_arrs[BOARD_KEYS[keys["piece"]]]
+        friendly_arrs = [board_arrs[BOARD_KEYS[k]] for k in keys["friendly"]]
+        king_arr = board_arrs[BOARD_KEYS[keys["king"]]]
+        enemy_arrs = [board_arrs[BOARD_KEYS[k]] for k in keys["enemy"]]
+        predicates[i](piece_arr, *friendly_arrs, king_arr, *enemy_arrs, validity[i])
 
-        # (e) Uncompute predicate (adjoint of trivial predicate is identity)
+        # (e) Predicate result stays in validity[i]; adjoint in uncompute_children
 
         # (f) Uncompute oracle
         oracle.inverse(wk, bk, wn, branch_reg)
@@ -425,11 +436,23 @@ def evaluate_children(
 
 
 def uncompute_children(
-    depth, level_idx, d_max, branch_reg, h_reg, max_depth, oracle, board_arrs, validity
+    depth,
+    level_idx,
+    d_max,
+    branch_reg,
+    h_reg,
+    max_depth,
+    oracle,
+    board_arrs,
+    validity,
+    predicates,
+    entry_qarray_keys,
 ):
     """Uncompute validity ancillae (reverse of evaluate_children).
 
-    Iterates children in reversed order and undoes the validity store.
+    Iterates children in reversed order. For each child, navigates to the
+    child board state, calls predicate.adjoint() to uncompute the validity
+    result, then undoes navigation.
 
     Parameters
     ----------
@@ -451,32 +474,30 @@ def uncompute_children(
         (wk_arr, bk_arr, wn_arr) qarrays.
     validity : list[qbool]
         Validity ancillae to uncompute.
+    predicates : list[CompiledFunc]
+        One combined predicate per move table entry.
+    entry_qarray_keys : list[dict]
+        Per-entry qarray key mappings for argument resolution.
     """
-    from quantum_language.qbool import qbool as alloc_qbool
-
     wk, bk, wn = board_arrs
-    height_mask = 3 << (max_depth - depth)  # bits for depth and depth-1
+    height_mask = 3 << (max_depth - depth)
 
     for i in reversed(range(d_max)):
         # Navigate to child i
         branch_reg ^= i
         h_reg ^= height_mask
-
-        # Re-apply oracle
         oracle(wk, bk, wn, branch_reg)
 
-        # Re-evaluate predicate (trivial)
-        reject = alloc_qbool()
-
-        # Undo validity store (reverse order: X then CNOT)
-        validity[i] ^= 1
-        with reject:
-            validity[i] ^= 1
-
-        # Uncompute oracle
-        oracle.inverse(wk, bk, wn, branch_reg)
+        # Uncompute predicate via adjoint
+        keys = entry_qarray_keys[i]
+        piece_arr = board_arrs[BOARD_KEYS[keys["piece"]]]
+        friendly_arrs = [board_arrs[BOARD_KEYS[k]] for k in keys["friendly"]]
+        king_arr = board_arrs[BOARD_KEYS[keys["king"]]]
+        enemy_arrs = [board_arrs[BOARD_KEYS[k]] for k in keys["enemy"]]
+        predicates[i].adjoint(piece_arr, *friendly_arrs, king_arr, *enemy_arrs, validity[i])
 
         # Undo navigation
+        oracle.inverse(wk, bk, wn, branch_reg)
         h_reg ^= height_mask
         branch_reg ^= i
 
@@ -536,6 +557,7 @@ def apply_diffusion(
     validity = [qbool() for _ in range(d_max)]
 
     # --- Step 4: Evaluate children ---
+    level_data = move_data_per_level[level_idx]
     evaluate_children(
         depth,
         level_idx,
@@ -546,6 +568,8 @@ def apply_diffusion(
         oracle_per_level[level_idx],
         board_arrs,
         validity,
+        level_data["predicates"],
+        level_data["entry_qarray_keys"],
     )
 
     # --- Step 5: Precompute angles ---
@@ -578,6 +602,8 @@ def apply_diffusion(
         oracle_per_level[level_idx],
         board_arrs,
         validity,
+        level_data["predicates"],
+        level_data["entry_qarray_keys"],
     )
 
     # --- Step 8: Underive board state ---
@@ -713,22 +739,21 @@ def r_b(h_reg, branch_regs, board_arrs, oracle_per_level, move_data_per_level, m
 # Walk step U = R_B * R_A (compiled)
 # ---------------------------------------------------------------------------
 
-# Module-level compiled function: created once per process, re-captures per circuit.
-# The @ql.compile infrastructure handles its own per-circuit cache clearing.
-_walk_compiled_fn = None
-
 
 def walk_step(h_reg, branch_regs, board_arrs, oracle_per_level, move_data_per_level, max_depth):
     """Apply walk step U = R_B * R_A.
 
-    On first call, the gate sequence is captured and compiled via
-    @ql.compile for caching and automatic inverse derivation.
-    Subsequent calls replay the cached gate sequence.
+    Creates a compiled walk body inline with explicit arguments. The
+    @ql.compile decorator captures the gate sequence for caching and
+    automatic inverse derivation.
 
     The height + branch qubits are wrapped in a mega-register via
-    all_walk_qubits(), and board qarrays (wk, bk, wn) are passed as
-    separate arguments so the compile infrastructure treats all walk
-    qubits as parameters (not internal ancillas).
+    all_walk_qubits() so the compile infrastructure treats them as
+    parameter qubits rather than internal ancillas. Without this,
+    @ql.compile would allocate fresh qubits for the walk registers
+    and the circuit would operate on the wrong qubits. Board qarrays
+    (wk, bk, wn) are passed separately since the total qubit count
+    exceeds the 64-qubit qint width limit.
 
     Parameters
     ----------
@@ -745,34 +770,15 @@ def walk_step(h_reg, branch_regs, board_arrs, oracle_per_level, move_data_per_le
     max_depth : int
         Maximum tree depth.
     """
-    global _walk_compiled_fn
     from quantum_language.compile import compile as ql_compile
 
     mega_reg = all_walk_qubits(h_reg, branch_regs, max_depth)
-    total = mega_reg.width + sum(len(a) for a in board_arrs)
 
-    if _walk_compiled_fn is None:
-        # Create the compiled function once. The closure captures walk
-        # args by reference via a mutable container so they update each call.
-        _ctx = {}
-
-        def _walk_body(walk_qubits_reg, wk_arr, bk_arr, wn_arr):
-            c = _ctx
-            _board = (wk_arr, bk_arr, wn_arr)
-            r_a(c["h"], c["br"], _board, c["opl"], c["mdpl"], c["md"])
-            r_b(c["h"], c["br"], _board, c["opl"], c["mdpl"], c["md"])
-
-        _walk_compiled_fn = ql_compile(key=lambda r, w, b, n: _ctx.get("total", 0))(_walk_body)
-        _walk_compiled_fn._walk_ctx = _ctx  # stash reference
-
-    # Update context for this call
-    ctx = _walk_compiled_fn._walk_ctx
-    ctx["h"] = h_reg
-    ctx["br"] = branch_regs
-    ctx["opl"] = oracle_per_level
-    ctx["mdpl"] = move_data_per_level
-    ctx["md"] = max_depth
-    ctx["total"] = total
+    @ql_compile(key=lambda *args: mega_reg.width + sum(len(a) for a in board_arrs))
+    def _walk_body(walk_qubits_reg, wk_arr, bk_arr, wn_arr):
+        _board = (wk_arr, bk_arr, wn_arr)
+        r_a(h_reg, branch_regs, _board, oracle_per_level, move_data_per_level, max_depth)
+        r_b(h_reg, branch_regs, _board, oracle_per_level, move_data_per_level, max_depth)
 
     wk, bk, wn = board_arrs
-    _walk_compiled_fn(mega_reg, wk, bk, wn)
+    _walk_body(mega_reg, wk, bk, wn)
