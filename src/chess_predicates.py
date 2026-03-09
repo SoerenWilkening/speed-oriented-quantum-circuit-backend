@@ -19,7 +19,11 @@ Piece types supported:
 
 import quantum_language as ql
 
-__all__ = ["make_piece_exists_predicate", "make_no_friendly_capture_predicate"]
+__all__ = [
+    "make_piece_exists_predicate",
+    "make_no_friendly_capture_predicate",
+    "make_check_detection_predicate",
+]
 
 
 def make_piece_exists_predicate(piece_id, dr, df, board_rows, board_cols):
@@ -187,3 +191,128 @@ def make_no_friendly_capture_predicate(dr, df, board_rows, board_cols):
                     ~friendly_flag  # noqa: B018 -- uncompute
 
     return no_friendly_capture
+
+
+def _compute_attack_table(moving_piece_type, dr, df, board_rows, board_cols, enemy_attacks):
+    """Precompute attack table: for each king position, list all attacker squares.
+
+    For king moves, the check-square is the destination (kr+dr, kf+df).
+    For non-king moves, the check-square is the king's current position (kr, kf).
+
+    Parameters
+    ----------
+    moving_piece_type : str
+        "king" or "knight" -- determines which square to check for attacks.
+    dr, df : int
+        Move offset (rank delta, file delta).
+    board_rows, board_cols : int
+        Board dimensions.
+    enemy_attacks : list[tuple[list[tuple[int,int]], str]]
+        Each element is (offset_list, piece_type_label). offset_list contains
+        (row_delta, file_delta) pairs representing attack patterns.
+
+    Returns
+    -------
+    list[tuple[int, int, list[tuple[int, int, int]]]]
+        Each entry is (king_r, king_f, [(attacker_r, attacker_f, enemy_idx), ...]).
+    """
+    table = []
+    for kr in range(board_rows):
+        for kf in range(board_cols):
+            if moving_piece_type == "king":
+                check_r, check_f = kr + dr, kf + df
+                if not (0 <= check_r < board_rows and 0 <= check_f < board_cols):
+                    continue  # destination off-board -> skip
+            else:
+                check_r, check_f = kr, kf
+
+            attackers = []
+            for enemy_idx, (offsets, _label) in enumerate(enemy_attacks):
+                for adr, adf in offsets:
+                    ar, af = check_r + adr, check_f + adf
+                    if 0 <= ar < board_rows and 0 <= af < board_cols:
+                        attackers.append((ar, af, enemy_idx))
+
+            table.append((kr, kf, attackers))
+    return table
+
+
+def make_check_detection_predicate(
+    moving_piece_type, dr, df, board_rows, board_cols, enemy_attacks
+):
+    """Create a compiled predicate that checks if the king is NOT in check.
+
+    Returns a @ql.compile(inverse=True) function that flips result qbool
+    to |1> if no enemy piece attacks the relevant king square. For king
+    moves, the relevant square is the destination (kr+dr, kf+df). For
+    non-king moves, the relevant square is the king's current position.
+
+    The predicate uses the flip-and-unflip pattern: optimistically flip
+    result to |1> (safe) for each possible king position, then un-flip
+    if an enemy attacker is found at an attacking square.
+
+    Parameters
+    ----------
+    moving_piece_type : str
+        "king" or "knight".
+    dr, df : int
+        Move offset.
+    board_rows, board_cols : int
+        Board dimensions.
+    enemy_attacks : list[tuple[list[tuple[int,int]], str]]
+        Attack offset tables per enemy type.
+
+    Returns
+    -------
+    CompiledFunc
+        A @ql.compile(inverse=True) function with signature
+        ``check_safe(king_qarray, *enemy_qarrays, result)`` where result
+        is a qbool that gets flipped to |1> if king is safe.
+    """
+    attack_table = _compute_attack_table(
+        moving_piece_type, dr, df, board_rows, board_cols, enemy_attacks
+    )
+
+    @ql.compile(inverse=True)
+    def check_safe(king_qarray, *args):
+        """Flip result to |1> if king is safe (not in check).
+
+        Arguments after king_qarray are enemy board qarrays followed by
+        the result qbool as the last argument.
+
+        For each possible king position (kr, kf):
+          1. Accumulate attack_flag: set to |1> if ANY enemy occupies an
+             attacking square (XOR = OR since one piece per square).
+          2. Optimistic flip: if king at (kr, kf), flip result to |1>.
+          3. Un-flip if king here AND attack_flag (Toffoli via & operator).
+          4. Uncompute attack_flag (mirror the accumulation).
+
+        Uses per-position attack_flag accumulation (like no-friendly-capture's
+        friendly_flag) instead of per-attacker enemy_flag to minimize ancilla
+        count: one attack_flag + one cond per king position, not per attacker.
+        """
+        enemy_qarrays = args[:-1]
+        result = args[-1]
+
+        for kr, kf, attackers in attack_table:
+            # Accumulate: is any enemy at an attacking square?
+            attack_flag = ql.qbool()
+            for ar, af, enemy_idx in attackers:
+                with enemy_qarrays[enemy_idx][ar, af]:
+                    ~attack_flag  # noqa: B018 -- XOR = OR (1 piece/square)
+
+            # Optimistic: flip to |1> if king is at this position
+            with king_qarray[kr, kf]:
+                ~result  # noqa: B018 -- quantum NOT
+
+            # Un-flip if king here AND any attacker found
+            cond = king_qarray[kr, kf] & attack_flag
+            with cond:
+                ~result  # noqa: B018 -- un-flip: king in check
+
+            # Uncompute attack_flag (mirror the accumulation)
+            for ar, af, enemy_idx in attackers:
+                with enemy_qarrays[enemy_idx][ar, af]:
+                    ~attack_flag  # noqa: B018 -- uncompute
+
+    return check_safe
