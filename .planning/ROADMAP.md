@@ -180,7 +180,96 @@
 
 </details>
 
+### v9.0 Nested Controls & Chess Engine (In Progress)
+
+**Milestone Goal:** Enable arbitrary-depth nested `with qbool:` blocks via Toffoli AND control composition, fix 2D qarray support, and rewrite the chess engine in readable natural-programming style.
+
+- [ ] **Phase 117: Control Stack Infrastructure** - Replace flat control globals with stack and add Toffoli AND helpers
+- [ ] **Phase 118: Nested With-Block Rewrite** - Rewrite `__enter__`/`__exit__` with push/pop semantics and AND-ancilla lifecycle
+- [ ] **Phase 119: Compile Compatibility** - Verify and fix `@ql.compile` with nested control contexts
+- [ ] **Phase 120: 2D Qarray Support** - Fix 2D qarray construction and indexing
+- [ ] **Phase 121: Chess Engine Rewrite** - Rewrite chess engine in readable natural-programming style with nested `with` blocks
+
+## Phase Details
+
+### Phase 117: Control Stack Infrastructure
+**Goal**: Framework has a control stack data structure and Toffoli AND emission primitives that all downstream features depend on
+**Depends on**: Nothing (first phase in v9.0)
+**Requirements**: CTRL-02, CTRL-03
+**Success Criteria** (what must be TRUE):
+  1. `_control_stack` list replaces flat `_controlled`/`_control_bool` globals with backward-compatible accessor wrappers (`_get_controlled()` and `_get_control_bool()` work identically for single-level use)
+  2. `emit_ccx` function emits a Toffoli gate directly without going through the heavyweight `&` operator
+  3. `_toffoli_and` / `_uncompute_toffoli_and` helpers allocate an AND-ancilla qubit and clean it up via reverse Toffoli
+  4. Existing single-level `with` blocks still produce correct circuits (stack depth 0 and 1 behave identically to old globals)
+**Plans**: TBD
+
+Plans:
+- [ ] 117-01: TBD
+- [ ] 117-02: TBD
+
+### Phase 118: Nested With-Block Rewrite
+**Goal**: Users can nest `with qbool:` blocks at arbitrary depth with correct multi-controlled gate emission and automatic ancilla cleanup
+**Depends on**: Phase 117
+**Requirements**: CTRL-01, CTRL-04, CTRL-05
+**Success Criteria** (what must be TRUE):
+  1. `with a: with b: x += 1` produces a doubly-controlled addition (two control qubits composed via Toffoli AND into a combined control ancilla)
+  2. Controlled XOR (`~qbool`) works inside `with` blocks without raising NotImplementedError
+  3. All existing single-level `with` block tests pass with zero regressions
+  4. The 6 xfail tests in `test_nested_with_blocks.py` pass (xfail markers removed)
+  5. 3+ level nesting produces correct multi-controlled circuits (each level adds one AND-ancilla)
+**Plans**: TBD
+
+Plans:
+- [ ] 118-01: TBD
+- [ ] 118-02: TBD
+
+### Phase 119: Compile Compatibility
+**Goal**: `@ql.compile` captured functions work correctly inside nested `with` blocks
+**Depends on**: Phase 118
+**Requirements**: CTRL-06
+**Success Criteria** (what must be TRUE):
+  1. A compiled function called inside a 2-level nested `with` block emits all gates with the correct combined control qubit
+  2. Controlled variant derivation handles the AND-ancilla as control qubit during both capture and replay
+  3. Compile save/restore correctly preserves and restores the full control stack (not just top entry)
+**Plans**: TBD
+
+Plans:
+- [ ] 119-01: TBD
+
+### Phase 120: 2D Qarray Support
+**Goal**: Users can create and index 2D quantum arrays for board-like data structures
+**Depends on**: Nothing (independent of Phases 117-119, must complete before Phase 121)
+**Requirements**: ARR-01, ARR-02
+**Success Criteria** (what must be TRUE):
+  1. `ql.qarray(dim=(8, 8), dtype=ql.qbool)` creates a 64-element qarray accessible as a 2D grid without TypeError
+  2. `arr[r, c]` reads the correct element and `arr[r, c] |= flag` mutates it in place
+  3. Existing 1D qarray tests pass with zero regressions
+**Plans**: TBD
+
+Plans:
+- [ ] 120-01: TBD
+
+### Phase 121: Chess Engine Rewrite
+**Goal**: A readable chess engine example demonstrates the full v9.0 feature set in natural-programming style
+**Depends on**: Phase 118, Phase 119, Phase 120
+**Requirements**: CHESS-01, CHESS-02, CHESS-03, CHESS-04, CHESS-05
+**Success Criteria** (what must be TRUE):
+  1. `examples/chess_engine.py` reads like pseudocode -- nested `with` blocks for conditionals, 2D qarrays for the board, arithmetic operators for move logic
+  2. The engine compiles with `@ql.compile(opt=1)` without OOM errors
+  3. Move legality checking (piece-exists, no-friendly-capture, check detection) is implemented using nested `with` blocks and compiled sub-predicates
+  4. Walk operators (R_A, R_B) and diffusion are present in readable style matching the framework's natural-programming paradigm
+  5. Running the script produces circuit statistics (gate count, depth, qubit count) without requiring quantum simulation
+**Plans**: TBD
+
+Plans:
+- [ ] 121-01: TBD
+- [ ] 121-02: TBD
+
 ## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 117 -> 118 -> 119 -> 120 -> 121
+(Phase 120 is independent and can execute in parallel with 117-119 if desired)
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -193,7 +282,12 @@
 | 103-106 | v6.1 | 8/8 | Complete | 2026-03-05 |
 | 107-111 | v7.0 | 10/10 | Complete | 2026-03-08 |
 | 112-116 | v8.0 | 11/11 | Complete | 2026-03-09 |
+| 117. Control Stack Infrastructure | v9.0 | 0/? | Not started | - |
+| 118. Nested With-Block Rewrite | v9.0 | 0/? | Not started | - |
+| 119. Compile Compatibility | v9.0 | 0/? | Not started | - |
+| 120. 2D Qarray Support | v9.0 | 0/? | Not started | - |
+| 121. Chess Engine Rewrite | v9.0 | 0/? | Not started | - |
 
 ---
 *Roadmap created: 2026-02-02*
-*Milestone v8.0 shipped: 2026-03-09*
+*Milestone v9.0 roadmap added: 2026-03-09*

@@ -62,25 +62,25 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CTRL-01 | — | Pending |
-| CTRL-02 | — | Pending |
-| CTRL-03 | — | Pending |
-| CTRL-04 | — | Pending |
-| CTRL-05 | — | Pending |
-| CTRL-06 | — | Pending |
-| ARR-01 | — | Pending |
-| ARR-02 | — | Pending |
-| CHESS-01 | — | Pending |
-| CHESS-02 | — | Pending |
-| CHESS-03 | — | Pending |
-| CHESS-04 | — | Pending |
-| CHESS-05 | — | Pending |
+| CTRL-01 | Phase 118 | Pending |
+| CTRL-02 | Phase 117 | Pending |
+| CTRL-03 | Phase 117 | Pending |
+| CTRL-04 | Phase 118 | Pending |
+| CTRL-05 | Phase 118 | Pending |
+| CTRL-06 | Phase 119 | Pending |
+| ARR-01 | Phase 120 | Pending |
+| ARR-02 | Phase 120 | Pending |
+| CHESS-01 | Phase 121 | Pending |
+| CHESS-02 | Phase 121 | Pending |
+| CHESS-03 | Phase 121 | Pending |
+| CHESS-04 | Phase 121 | Pending |
+| CHESS-05 | Phase 121 | Pending |
 
 **Coverage:**
 - v9.0 requirements: 13 total
-- Mapped to phases: 0
-- Unmapped: 13 ⚠️
+- Mapped to phases: 13
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-09*
-*Last updated: 2026-03-09 after initial definition*
+*Last updated: 2026-03-09 after roadmap creation*
