@@ -1,7 +1,7 @@
-"""Tests for chess quantum predicates: piece-exists, no-friendly-capture, check detection, and classical equivalence.
+"""Tests for chess quantum predicates: piece-exists, no-friendly-capture, check detection, combined, and classical equivalence.
 
 Unit tests for Phase 114 requirements PRED-01, PRED-02, PRED-05
-and Phase 115 requirement PRED-03.
+and Phase 115 requirements PRED-03, PRED-04.
 Statevector tests use 2x2 boards to stay within 17-qubit simulation budget.
 """
 
@@ -651,3 +651,142 @@ class TestScalingPhase115:
         pred = make_check_detection_predicate("knight", 2, 1, 8, 8, enemy_attacks)
         # Should not raise -- just building the circuit, no simulation
         pred(king, enemy, result)
+
+    def test_8x8_combined_predicate_builds(self, clean_circuit):
+        """8x8 combined predicate for knight move builds without error (no simulation)."""
+        from chess_encoding import _KING_OFFSETS
+        from chess_predicates import make_combined_predicate
+
+        piece = make_small_board(8, 8, [(4, 4)])  # knight
+        friendly = make_small_board(8, 8, [(0, 0)])  # white king
+        king = friendly  # same object -- shared reference
+        enemy = make_small_board(8, 8, [(7, 7)])  # black king
+        result = ql.qbool()
+
+        enemy_attacks = [(_KING_OFFSETS, "king")]
+        pred = make_combined_predicate("knight", 2, 1, 8, 8, enemy_attacks, n_friendly=1, n_enemy=1)
+        # Should not raise -- just building the circuit, no simulation
+        pred(piece, friendly, king, enemy, result)
+
+
+# ---------------------------------------------------------------------------
+# Phase 115 Plan 02 -- Combined Predicate (PRED-04)
+# ---------------------------------------------------------------------------
+
+
+class TestCombinedPredicate:
+    """PRED-04: Combined predicate ANDs piece-exists, no-friendly-capture, check-safe."""
+
+    def test_all_conditions_pass(self, clean_circuit):
+        """Knight at (0,0), king at (1,1), no friendly at target, king safe -> |1>.
+
+        Setup on 2x2 board:
+        - piece (knight) at (0,0), move offset (1,0) -> target (1,0)
+        - friendly (king) at (1,1) -- NOT at target (1,0)
+        - king at (1,1) (same object as friendly)
+        - enemy (black king) at (0,1) -- check if attacks white king at (1,1):
+          offset (0,1)->(-1,0) from (1,1) is (0,1) -- enemy IS there. But wait,
+          king offsets include (-1,0), so (1,1) + (-1,0) = (0,1) where enemy is.
+          That means king IS in check. Use enemy at position that doesn't attack.
+          Put enemy at (0,1) with only knight attack offsets (none valid on 2x2).
+          Actually: use no enemy attacks to keep it simple. Empty enemy list.
+
+        Revised: enemy board empty, enemy_attacks empty -> king always safe.
+        """
+        from chess_predicates import make_combined_predicate
+
+        piece = make_small_board(2, 2, [(0, 0)])  # knight at (0,0)
+        friendly_king = make_small_board(2, 2, [(1, 1)])  # white king at (1,1)
+        king = friendly_king  # shared reference
+        enemy = make_small_board(2, 2, [])  # no enemies
+        result = ql.qbool()
+
+        enemy_attacks = []  # no attack patterns -> king always safe
+        pred = make_combined_predicate("knight", 1, 0, 2, 2, enemy_attacks, n_friendly=1, n_enemy=1)
+        pred(piece, friendly_king, king, enemy, result)
+
+        qasm_str = ql.to_openqasm()
+        result_qubit = int(result.qubits[63])
+        prob_one = _get_result_probability(qasm_str, result_qubit, target_value=1)
+        assert prob_one > 0.99, f"Expected result |1> (all pass), got P(1)={prob_one:.4f}"
+
+    def test_piece_missing(self, clean_circuit):
+        """No knight on board -> result |0> (piece-exists fails)."""
+        from chess_predicates import make_combined_predicate
+
+        piece = make_small_board(2, 2, [])  # no knight
+        friendly_king = make_small_board(2, 2, [(1, 1)])
+        king = friendly_king
+        enemy = make_small_board(2, 2, [])
+        result = ql.qbool()
+
+        enemy_attacks = []
+        pred = make_combined_predicate("knight", 1, 0, 2, 2, enemy_attacks, n_friendly=1, n_enemy=1)
+        pred(piece, friendly_king, king, enemy, result)
+
+        qasm_str = ql.to_openqasm()
+        result_qubit = int(result.qubits[63])
+        prob_zero = _get_result_probability(qasm_str, result_qubit, target_value=0)
+        assert prob_zero > 0.99, f"Expected result |0> (no piece), got P(0)={prob_zero:.4f}"
+
+    def test_friendly_at_target(self, clean_circuit):
+        """Knight at (0,0), friendly king at (1,0) = target -> result |0>."""
+        from chess_predicates import make_combined_predicate
+
+        piece = make_small_board(2, 2, [(0, 0)])  # knight at (0,0)
+        friendly_king = make_small_board(2, 2, [(1, 0)])  # king at target!
+        king = friendly_king
+        enemy = make_small_board(2, 2, [])
+        result = ql.qbool()
+
+        enemy_attacks = []
+        pred = make_combined_predicate("knight", 1, 0, 2, 2, enemy_attacks, n_friendly=1, n_enemy=1)
+        pred(piece, friendly_king, king, enemy, result)
+
+        qasm_str = ql.to_openqasm()
+        result_qubit = int(result.qubits[63])
+        prob_zero = _get_result_probability(qasm_str, result_qubit, target_value=0)
+        assert prob_zero > 0.99, (
+            f"Expected result |0> (friendly at target), got P(0)={prob_zero:.4f}"
+        )
+
+    def test_king_in_check(self, clean_circuit):
+        """Knight at (0,0), king at (0,1), enemy king at (1,1) attacking -> result |0>."""
+        from chess_encoding import _KING_OFFSETS
+        from chess_predicates import make_combined_predicate
+
+        piece = make_small_board(2, 2, [(0, 0)])  # knight at (0,0)
+        friendly_king = make_small_board(2, 2, [(0, 1)])  # white king at (0,1)
+        king = friendly_king
+        enemy = make_small_board(2, 2, [(1, 1)])  # black king at (1,1)
+        result = ql.qbool()
+
+        # King adjacency offsets: (1,1) attacks (0,1) via offset (-1,0) which is
+        # check_r + adr = 0 + 1 = 1, check_f + adf = 1 + 0 = 1 -> enemy at (1,1).
+        # Actually: attack table checks from king pos outward. For knight move,
+        # check_r, check_f = king pos = (0,1). Offset (1,0) from (0,1) = (1,1)
+        # where enemy IS -> in check.
+        enemy_attacks = [(_KING_OFFSETS, "king")]
+        pred = make_combined_predicate("knight", 1, 0, 2, 2, enemy_attacks, n_friendly=1, n_enemy=1)
+        pred(piece, friendly_king, king, enemy, result)
+
+        qasm_str = ql.to_openqasm()
+        result_qubit = int(result.qubits[63])
+        prob_zero = _get_result_probability(qasm_str, result_qubit, target_value=0)
+        assert prob_zero > 0.99, f"Expected result |0> (king in check), got P(0)={prob_zero:.4f}"
+
+    def test_circuit_builds_only(self, clean_circuit):
+        """Combined predicate with 2x2 board builds without error (circuit construction only)."""
+        from chess_encoding import _KING_OFFSETS
+        from chess_predicates import make_combined_predicate
+
+        piece = make_small_board(2, 2, [(0, 0)])
+        friendly_king = make_small_board(2, 2, [(1, 1)])
+        king = friendly_king
+        enemy = make_small_board(2, 2, [(0, 1)])
+        result = ql.qbool()
+
+        enemy_attacks = [(_KING_OFFSETS, "king")]
+        pred = make_combined_predicate("knight", 1, 0, 2, 2, enemy_attacks, n_friendly=1, n_enemy=1)
+        # Should not raise
+        pred(piece, friendly_king, king, enemy, result)
