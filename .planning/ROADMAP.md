@@ -220,8 +220,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 118-01-PLAN.md -- AND-composition in __enter__/__exit__, width validation, rewrite xfail tests
-- [ ] 118-02-PLAN.md -- 3+ level nesting tests and full regression verification
+- [x] 118-01-PLAN.md -- AND-composition in __enter__/__exit__, width validation, rewrite xfail tests
+- [x] 118-02-PLAN.md -- 3+ level nesting tests and full regression verification
 
 ### Phase 119: Compile Compatibility
 **Goal**: `@ql.compile` captured functions work correctly inside nested `with` blocks
@@ -231,10 +231,10 @@ Plans:
   1. A compiled function called inside a 2-level nested `with` block emits all gates with the correct combined control qubit
   2. Controlled variant derivation handles the AND-ancilla as control qubit during both capture and replay
   3. Compile save/restore correctly preserves and restores the full control stack (not just top entry)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 119-01: TBD
+- [ ] 119-01-PLAN.md -- Compile + nested with tests (replay, inverse, adjoint, compiled-calling-compiled, regression)
 
 ### Phase 120: 2D Qarray Support
 **Goal**: Users can create and index 2D quantum arrays for board-like data structures
@@ -284,7 +284,7 @@ Phases execute in numeric order: 117 -> 118 -> 119 -> 120 -> 121
 | 112-116 | v8.0 | 11/11 | Complete | 2026-03-09 |
 | 117. Control Stack Infrastructure | 2/2 | Complete    | 2026-03-09 | - |
 | 118. Nested With-Block Rewrite | 2/2 | Complete    | 2026-03-09 | - |
-| 119. Compile Compatibility | v9.0 | 0/? | Not started | - |
+| 119. Compile Compatibility | v9.0 | 0/1 | Not started | - |
 | 120. 2D Qarray Support | v9.0 | 0/? | Not started | - |
 | 121. Chess Engine Rewrite | v9.0 | 0/? | Not started | - |
 
