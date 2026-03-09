@@ -2,16 +2,17 @@
 gsd_state_version: 1.0
 milestone: v9.0
 milestone_name: Nested Controls & Chess Engine
-status: planning
-stopped_at: Phase 117 context gathered
-last_updated: "2026-03-09T17:58:25.964Z"
-last_activity: 2026-03-09 -- Roadmap created for v9.0 (5 phases, 13 requirements)
+current_plan: 2
+status: executing
+stopped_at: Completed 117-01-PLAN.md
+last_updated: "2026-03-09T18:31:28.253Z"
+last_activity: 2026-03-09
 progress:
   total_phases: 5
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 2
+  completed_plans: 1
+  percent: 10
 ---
 
 # Project State
@@ -26,11 +27,12 @@ See: .planning/PROJECT.md (updated 2026-03-09)
 ## Current Position
 
 Phase: 117 of 121 (Control Stack Infrastructure)
-Plan: Ready to plan Phase 117
-Status: Ready to plan
-Last activity: 2026-03-09 -- Roadmap created for v9.0 (5 phases, 13 requirements)
+Current Plan: 2
+Total Plans in Phase: 2
+Status: Executing
+Last Activity: 2026-03-09
 
-Progress: [..........] 0%
+Progress: [#.........] 10%
 
 ## Performance Metrics
 
@@ -53,12 +55,15 @@ Progress: [..........] 0%
 | v7.0 Compile Infrastructure | 107-111 | 10 | Complete (2026-03-08) |
 | v8.0 Chess Walk Rewrite | 112-116 | 11 | Complete (2026-03-09) |
 | v9.0 Nested Controls | 117-121 | ? | Planning |
+| Phase 117 P01 | 14min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
 ### Decisions
 
 See PROJECT.md Key Decisions table for full history.
+- [Phase 117]: Replaced _controlled/_control_bool/_list_of_controls flat globals with single _control_stack list
+- [Phase 117]: Updated __enter__/__exit__ and compile.py to use stack push/pop instead of set_controlled/set_control_bool
 
 ### Blockers/Concerns
 
@@ -72,9 +77,9 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-03-09T17:58:25.956Z
-Stopped at: Phase 117 context gathered
-Resume file: .planning/phases/117-control-stack-infrastructure/117-CONTEXT.md
+Last session: 2026-03-09T18:31:28.246Z
+Stopped at: Completed 117-01-PLAN.md
+Resume file: None
 Resume action: /gsd:plan-phase 117
 
 ---
