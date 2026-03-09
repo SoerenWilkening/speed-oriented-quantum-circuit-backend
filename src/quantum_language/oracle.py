@@ -36,12 +36,8 @@ import math
 from ._core import (
     _allocate_qubit,
     _deallocate_qubits,
-    _get_control_bool,
-    _get_controlled,
-    _get_list_of_controls,
-    _set_control_bool,
-    _set_controlled,
-    _set_list_of_controls,
+    _get_control_stack,
+    _set_control_stack,
     circuit_stats,
     extract_gate_range,
     get_current_layer,
@@ -336,41 +332,29 @@ def _wrap_bitflip_oracle(oracle_callable, search_register):
 
     # Save and clear controlled context -- X and H on ancilla must be
     # unconditional even if called inside `with qbool:`
-    saved_controlled = _get_controlled()
-    saved_control_bool = _get_control_bool()
-    saved_list_of_controls = list(_get_list_of_controls())
-    _set_controlled(False)
-    _set_control_bool(None)
-    _set_list_of_controls([])
+    saved_stack = list(_get_control_stack())
+    _set_control_stack([])
 
     # Prepare |-> state: X then H
     emit_x(ancilla_q)
     emit_h(ancilla_q)
 
     # Restore controlled context for oracle execution
-    _set_controlled(saved_controlled)
-    _set_control_bool(saved_control_bool)
-    _set_list_of_controls(saved_list_of_controls)
+    _set_control_stack(saved_stack)
 
     # Run the user oracle
     oracle_callable(search_register)
 
     # Save and clear controlled context again for cleanup
-    saved_controlled = _get_controlled()
-    saved_control_bool = _get_control_bool()
-    saved_list_of_controls = list(_get_list_of_controls())
-    _set_controlled(False)
-    _set_control_bool(None)
-    _set_list_of_controls([])
+    saved_stack = list(_get_control_stack())
+    _set_control_stack([])
 
     # Undo |-> preparation: H then X
     emit_h(ancilla_q)
     emit_x(ancilla_q)
 
     # Restore controlled context
-    _set_controlled(saved_controlled)
-    _set_control_bool(saved_control_bool)
-    _set_list_of_controls(saved_list_of_controls)
+    _set_control_stack(saved_stack)
 
     # Deallocate ancilla (back to |0>, delta = 0)
     _deallocate_qubits(ancilla_q, 1)
