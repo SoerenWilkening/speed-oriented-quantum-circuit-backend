@@ -896,7 +896,8 @@ class CompiledFunc:
         if is_hit:
             # Move to end (most recently used)
             self._cache.move_to_end(cache_key)
-            result = self._replay(self._cache[cache_key], quantum_args)
+            _track_fwd = self._inverse_func is not None
+            result = self._replay(self._cache[cache_key], quantum_args, track_forward=_track_fwd)
             # Record DAG node for replay path (no nesting -- body not re-executed)
             if _building_dag:
                 ctx = current_dag_context()
