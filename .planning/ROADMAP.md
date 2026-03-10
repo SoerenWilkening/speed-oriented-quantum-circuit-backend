@@ -188,7 +188,7 @@
 - [x] **Phase 118: Nested With-Block Rewrite** - Rewrite `__enter__`/`__exit__` with push/pop semantics and AND-ancilla lifecycle (completed 2026-03-09)
 - [x] **Phase 119: Compile Compatibility** - Verify and fix `@ql.compile` with nested control contexts (completed 2026-03-09)
 - [x] **Phase 120: 2D Qarray Support** - Fix 2D qarray construction and indexing (completed 2026-03-09)
-- [ ] **Phase 121: Chess Engine Rewrite** - Rewrite chess engine in readable natural-programming style with nested `with` blocks
+- [x] **Phase 121: Chess Engine Rewrite** - Rewrite chess engine in readable natural-programming style with nested `with` blocks (completed 2026-03-10)
 
 ## Phase Details
 
@@ -286,7 +286,7 @@ Phases execute in numeric order: 117 -> 118 -> 119 -> 120 -> 121
 | 118. Nested With-Block Rewrite | 2/2 | Complete    | 2026-03-09 | - |
 | 119. Compile Compatibility | 1/1 | Complete    | 2026-03-09 | - |
 | 120. 2D Qarray Support | 1/1 | Complete    | 2026-03-09 | - |
-| 121. Chess Engine Rewrite | 1/2 | In Progress|  | - |
+| 121. Chess Engine Rewrite | 2/2 | Complete   | 2026-03-10 | - |
 
 ---
 *Roadmap created: 2026-02-02*

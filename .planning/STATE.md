@@ -4,14 +4,14 @@ milestone: v9.0
 milestone_name: Nested Controls & Chess Engine
 current_plan: 2
 status: executing
-stopped_at: Completed 121-01-PLAN.md
-last_updated: "2026-03-10T00:19:55.349Z"
+stopped_at: Completed 121-02-PLAN.md
+last_updated: "2026-03-10T00:29:52.659Z"
 last_activity: 2026-03-10
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 8
-  completed_plans: 7
+  completed_plans: 8
   percent: 15
 ---
 
@@ -62,6 +62,7 @@ Progress: [##........] 15%
 | Phase 119 P01 | 7min | 2 tasks | 1 files |
 | Phase 120 P01 | 16min | 2 tasks | 3 files |
 | Phase 121 P01 | 5min | 2 tasks | 3 files |
+| Phase 121 P02 | 7min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -81,6 +82,9 @@ See PROJECT.md Key Decisions table for full history.
 - [Phase 120]: Row assignment in __setitem__: copies elements from value qarray to flat index range, broadcasts scalar to all row positions
 - [Phase 121]: opt=1 replay skips inject_remapped_gates() but keeps ancilla allocation for correct qubit tracking
 - [Phase 121]: opt=1 DAG accumulates across calls (same CallGraphDAG reused) unlike opt=0/opt=2 which reset each call
+- [Phase 121]: Use += 1 for qbool toggles inside with blocks (controlled XOR not yet supported)
+- [Phase 121]: Self-inverse XOR uncomputation via double-call replaces .inverse() for compiled attack predicates
+- [Phase 121]: Forward-call tracking skipped for non-inverse compiled functions to allow repeated replay
 
 ### Blockers/Concerns
 
@@ -94,8 +98,8 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-03-10T00:19:55.340Z
-Stopped at: Completed 121-01-PLAN.md
+Last session: 2026-03-10T00:29:52.646Z
+Stopped at: Completed 121-02-PLAN.md
 Resume file: None
 Resume action: /gsd:plan-phase 117
 
