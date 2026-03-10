@@ -24,10 +24,10 @@ Requirements for v9.0 Nested Controls & Chess Engine. Each maps to roadmap phase
 ### Chess Engine
 
 - [ ] **CHESS-01**: Chess engine in `examples/chess_engine.py` follows the readable natural-programming format
-- [ ] **CHESS-02**: Engine compiles successfully with `@ql.compile(opt=1)` without OOM
+- [x] **CHESS-02**: Engine compiles successfully with `@ql.compile(opt=1)` without OOM
 - [ ] **CHESS-03**: Engine includes move legality checking (piece-exists, no-friendly-capture, check detection)
 - [ ] **CHESS-04**: Engine includes walk operators (R_A/R_B) and diffusion in readable style
-- [ ] **CHESS-05**: Engine is circuit-build-only (no simulation required)
+- [x] **CHESS-05**: Engine is circuit-build-only (no simulation required)
 
 ## Future Requirements
 
@@ -71,10 +71,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ARR-01 | Phase 120 | Complete |
 | ARR-02 | Phase 120 | Complete |
 | CHESS-01 | Phase 121 | Pending |
-| CHESS-02 | Phase 121 | Pending |
+| CHESS-02 | Phase 121 | Complete |
 | CHESS-03 | Phase 121 | Pending |
 | CHESS-04 | Phase 121 | Pending |
-| CHESS-05 | Phase 121 | Pending |
+| CHESS-05 | Phase 121 | Complete |
 
 **Coverage:**
 - v9.0 requirements: 13 total
