@@ -640,8 +640,8 @@ class TestCompileDAGIntegration:
         ql.circuit()
         assert f.call_graph is None
 
-    def test_second_call_replaces_dag(self):
-        """Second call to same function replaces previous DAG (fresh DAG each call)."""
+    def test_second_call_accumulates_dag(self):
+        """opt=1: second call accumulates into same DAG (DAG-only replay mode)."""
         ql.circuit()
 
         @ql.compile(opt=1)
@@ -657,9 +657,10 @@ class TestCompileDAGIntegration:
         f(b)
         dag2 = f.call_graph
 
-        # Should be different DAG objects (fresh each call)
-        assert dag1 is not dag2
+        # opt=1 accumulates nodes into the same DAG across calls
+        assert dag1 is dag2
         assert dag2 is not None
+        assert dag2.node_count == 2
 
     def test_dag_node_has_depth_and_t_count(self):
         """After compile(opt=1), DAGNode has depth > 0 and gate_count > 0."""
