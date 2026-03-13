@@ -90,6 +90,10 @@ class DAGNode:
         "bitmask",
         "depth",
         "t_count",
+        "sequence_ptr",
+        "qubit_mapping",
+        "operation_type",
+        "invert",
         "_block_ref",
         "_v2r_ref",
         "_qubit_array",
@@ -104,6 +108,10 @@ class DAGNode:
         *,
         depth: int = 0,
         t_count: int = 0,
+        sequence_ptr: int = 0,
+        qubit_mapping: tuple = (),
+        operation_type: str = "",
+        invert: bool = False,
     ):
         self.func_name = func_name
         self.qubit_set = frozenset(qubit_set)
@@ -112,6 +120,10 @@ class DAGNode:
         self.cache_key = cache_key
         self.depth = depth
         self.t_count = t_count
+        self.sequence_ptr = sequence_ptr
+        self.qubit_mapping = qubit_mapping
+        self.operation_type = operation_type
+        self.invert = invert
         self._block_ref = None  # CompiledBlock ref for merge (opt=2)
         self._v2r_ref = None  # virtual-to-real mapping for merge (opt=2)
         # Pre-compute bitmask from qubit_set (Python int for >64 qubit support)
@@ -121,10 +133,16 @@ class DAGNode:
         self.bitmask = bitmask
 
     def __repr__(self) -> str:
-        return (
+        parts = [
             f"DAGNode({self.func_name!r}, qubits={set(self.qubit_set)}, "
-            f"gates={self.gate_count}, depth={self.depth}, t_count={self.t_count})"
-        )
+            f"gates={self.gate_count}, depth={self.depth}, t_count={self.t_count}"
+        ]
+        if self.operation_type:
+            parts.append(f", op={self.operation_type!r}")
+        if self.invert:
+            parts.append(", invert=True")
+        parts.append(")")
+        return "".join(parts)
 
 
 # ---------------------------------------------------------------------------
@@ -155,6 +173,10 @@ class CallGraphDAG:
         *,
         depth: int = 0,
         t_count: int = 0,
+        sequence_ptr: int = 0,
+        qubit_mapping: tuple = (),
+        operation_type: str = "",
+        invert: bool = False,
     ) -> int:
         """Add a node to the DAG.
 
@@ -174,13 +196,26 @@ class CallGraphDAG:
             Circuit depth for this node.
         t_count : int
             T-gate count for this node.
+        sequence_ptr : int
+            C pointer to ``sequence_t`` (cast to Python int).
+        qubit_mapping : tuple of int
+            Physical qubit indices for ``run_instruction``.
+        operation_type : str
+            Operation identifier (e.g. ``"add"``, ``"mul"``, ``"xor"``).
+        invert : bool
+            Whether this is an inverse operation.
 
         Returns
         -------
         int
             Index of the newly added node.
         """
-        node = DAGNode(func_name, qubit_set, gate_count, cache_key, depth=depth, t_count=t_count)
+        node = DAGNode(
+            func_name, qubit_set, gate_count, cache_key,
+            depth=depth, t_count=t_count,
+            sequence_ptr=sequence_ptr, qubit_mapping=qubit_mapping,
+            operation_type=operation_type, invert=invert,
+        )
         idx = self._dag.add_node(node)
         self._nodes.append(node)
         if parent_index is not None:
