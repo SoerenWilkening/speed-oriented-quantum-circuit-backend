@@ -80,6 +80,19 @@ class DAGNode:
         Cache key identifying this compiled variant.
     bitmask : int
         Pre-computed bitmask encoding qubit_set (Python int for >64 qubit support).
+    depth : int
+        Circuit depth for this node.
+    t_count : int
+        T-gate count for this node.
+    sequence_ptr : int
+        C pointer to ``sequence_t`` (cast to Python int). Used for call-graph
+        replay without re-executing the function body.
+    qubit_mapping : tuple[int, ...]
+        Physical qubit indices for ``run_instruction``.
+    operation_type : str
+        Operation identifier (e.g. ``"add"``, ``"mul"``, ``"xor"``, ``"eq"``).
+    invert : bool
+        Whether this is an inverse (uncomputation) operation.
     """
 
     __slots__ = (
