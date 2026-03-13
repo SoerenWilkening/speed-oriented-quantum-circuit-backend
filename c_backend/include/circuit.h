@@ -86,7 +86,8 @@ typedef struct circuit_s {
     int tradeoff_min_depth;      // 1 = min_depth mode active (enables CLA subtraction via two's
                                  // complement)
 
-    size_t gate_count; // Running count of gates (incremented by add_gate and tracking_only path)
+    size_t gate_count; // Running count of gates (incremented by run_instruction in both tracking_only
+                       // and normal paths)
 
     // Legacy fields (deprecated, kept for backward compatibility)
     qubit_t qubit_indices[MAXQUBITS];

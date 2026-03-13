@@ -8,7 +8,9 @@
  * 3. tracking_only=0 builds the circuit and increments gate_count
  * 4. tracking_only=1 does not modify circuit structure
  * 5. gate_count is cumulative across multiple run_instruction calls
- * 6. tracking_only works correctly with inverted sequences
+ * 6. tracking_only with NULL sequence is a no-op
+ * 7. validated_run_instruction passes tracking_only correctly
+ * 8. tracking_only=1 with invert=1 counts gates without building circuit
  */
 
 #include <assert.h>
@@ -277,6 +279,40 @@ static void test_validated_run_instruction_tracking(void) {
     free_circuit(circ);
 }
 
+/* ------------------------------------------------------------------ */
+/* Test 8: tracking_only=1 with invert=1 counts without building      */
+/* ------------------------------------------------------------------ */
+static void test_tracking_only_with_invert(void) {
+    printf("test_tracking_only_with_invert... ");
+    fflush(stdout);
+
+    circuit_t *circ = init_circuit();
+    assert(circ != NULL);
+
+    sequence_t *seq = make_cx_sequence();
+    assert(seq != NULL);
+
+    qubit_t qa[2] = {0, 1};
+
+    /* Run with tracking_only=1 and invert=1 */
+    run_instruction(seq, qa, 1, circ, 1);
+
+    /* gate_count should match the non-inverted tracking_only case */
+    assert(circ->gate_count == 2 &&
+           "tracking_only with invert should count same number of gates");
+
+    /* Circuit structure should remain empty */
+    int actual_gates = total_gate_count(circ);
+    assert(actual_gates == 0 &&
+           "tracking_only with invert should not add gates to circuit");
+    assert(circ->used_layer == 0 &&
+           "tracking_only with invert should not create layers");
+
+    printf("PASS\n");
+    free_test_sequence(seq);
+    free_circuit(circ);
+}
+
 int main(void) {
     printf("=== tracking_only C unit tests (Module 1) ===\n\n");
 
@@ -287,7 +323,8 @@ int main(void) {
     test_gate_count_cumulative();
     test_tracking_only_null_sequence();
     test_validated_run_instruction_tracking();
+    test_tracking_only_with_invert();
 
-    printf("\n=== ALL 7 TESTS PASSED ===\n");
+    printf("\n=== ALL 8 TESTS PASSED ===\n");
     return 0;
 }
