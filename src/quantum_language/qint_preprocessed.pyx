@@ -69,6 +69,7 @@ from ._core import (
 import math
 from ._gates import emit_p, emit_p_raw, _toffoli_and, _uncompute_toffoli_and
 from ._core import _get_control_stack
+from .call_graph import record_operation as _record_operation
 
 
 cpdef void _set_layer_floor_to_used():
@@ -1621,6 +1622,12 @@ cdef class qint(circuit):
 				_toffoli_dispatch_cq(_circ, self_qa, self_bits,
 				                     classical_value, invert,
 				                     _controlled, control_qubit)
+				_record_operation(
+					"add_cq",
+					tuple(self_qa[i] for i in range(self_bits))
+					+ ((control_qubit,) if _controlled else ()),
+					invert=bool(invert),
+				)
 				return self
 
 			# QFT path: build qubit array and call sequence generator
@@ -1637,6 +1644,12 @@ cdef class qint(circuit):
 			if seq == NULL:
 				return self
 			run_instruction(seq, qa, invert, <circuit_t*>_circ, 0)
+			_record_operation(
+				"add_cq",
+				tuple(qa[i] for i in range(pos)),
+				sequence_ptr=<unsigned long long>seq,
+				invert=bool(invert),
+			)
 			return self
 
 		if not isinstance(other, qint):
@@ -1656,6 +1669,13 @@ cdef class qint(circuit):
 			_toffoli_dispatch_qq(_circ, self_qa, self_bits,
 			                     other_qa, other_bits, invert,
 			                     _controlled, control_qubit, result_bits)
+			_record_operation(
+				"add_qq",
+				tuple(self_qa[i] for i in range(self_bits))
+				+ tuple(other_qa[i] for i in range(other_bits))
+				+ ((control_qubit,) if _controlled else ()),
+				invert=bool(invert),
+			)
 			return self
 
 		# QFT path: build qubit array and call sequence generator
@@ -1674,6 +1694,12 @@ cdef class qint(circuit):
 		if seq == NULL:
 			return self
 		run_instruction(seq, qa, invert, <circuit_t*>_circ, 0)
+		_record_operation(
+			"add_qq",
+			tuple(qa[i] for i in range(pos + (1 if _controlled else 0))),
+			sequence_ptr=<unsigned long long>seq,
+			invert=bool(invert),
+		)
 		return self
 
 	def __add__(self, other: qint | int):
@@ -2167,6 +2193,12 @@ cdef class qint(circuit):
 				else:
 					toffoli_mul_cq(<circuit_t*>_circ, ret_qa, result_bits,
 					               self_qa, self_bits, classical_value)
+				_record_operation(
+					"mul_cq",
+					tuple(ret_qa[i] for i in range(result_bits))
+					+ tuple(self_qa[i] for i in range(self_bits))
+					+ ((control_qubit,) if _controlled else ()),
+				)
 				return ret
 
 			# QFT path: build qubit array and call sequence generator
@@ -2186,6 +2218,11 @@ cdef class qint(circuit):
 			if seq == NULL:
 				return ret
 			run_instruction(seq, qa, 0, <circuit_t*>_circ, 0)
+			_record_operation(
+				"mul_cq",
+				tuple(qa[i] for i in range(pos)),
+				sequence_ptr=<unsigned long long>seq,
+			)
 			return ret
 
 		if not isinstance(other, qint):
@@ -2207,6 +2244,13 @@ cdef class qint(circuit):
 			else:
 				toffoli_mul_qq(<circuit_t*>_circ, ret_qa, result_bits,
 				               self_qa, self_bits, other_qa, other_bits)
+			_record_operation(
+				"mul_qq",
+				tuple(ret_qa[i] for i in range(result_bits))
+				+ tuple(self_qa[i] for i in range(self_bits))
+				+ tuple(other_qa[i] for i in range(other_bits))
+				+ ((control_qubit,) if _controlled else ()),
+			)
 			return ret
 
 		# QFT path: build qubit array and call sequence generator
@@ -2229,6 +2273,11 @@ cdef class qint(circuit):
 		if seq == NULL:
 			return ret
 		run_instruction(seq, qa, 0, <circuit_t*>_circ, 0)
+		_record_operation(
+			"mul_qq",
+			tuple(qa[i] for i in range(pos)),
+			sequence_ptr=<unsigned long long>seq,
+		)
 		return ret
 
 	def __mul__(self, other):
@@ -2547,6 +2596,11 @@ cdef class qint(circuit):
 
 		arr = qubit_array
 		run_instruction(seq, &arr[0], False, _circuit, 0)
+		_record_operation(
+			"and",
+			tuple(qubit_array[i] for i in range(3 * result_bits if type(other) != int else 2 * result_bits)),
+			sequence_ptr=<unsigned long long>seq,
+		)
 
 		# Capture end layer
 		result._start_layer = start_layer
@@ -2704,6 +2758,11 @@ cdef class qint(circuit):
 
 		arr = qubit_array
 		run_instruction(seq, &arr[0], False, _circuit, 0)
+		_record_operation(
+			"or",
+			tuple(qubit_array[i] for i in range(3 * result_bits if type(other) != int else 2 * result_bits)),
+			sequence_ptr=<unsigned long long>seq,
+		)
 
 		# Capture end layer
 		result._start_layer = start_layer
@@ -2865,6 +2924,16 @@ cdef class qint(circuit):
 			arr = qubit_array
 			run_instruction(seq, &arr[0], False, _circuit, 0)
 
+		# Record XOR operation on the DAG
+		_record_operation(
+			"xor",
+			tuple(result_qubits[result_offset + i] for i in range(result_bits))
+			+ tuple(self.qubits[self_offset + i] for i in range(self.bits))
+			+ (tuple((<qint>other).qubits[64 - (<qint>other).bits + i]
+			         for i in range((<qint>other).bits))
+			   if type(other) != int else ()),
+		)
+
 		# Capture end layer
 		result._start_layer = start_layer
 		result._end_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
@@ -2921,6 +2990,10 @@ cdef class qint(circuit):
 					arr = qubit_array
 					seq = Q_not(1)
 					run_instruction(seq, &arr[0], False, _circuit, 0)
+			_record_operation(
+				"ixor_cq",
+				tuple(self.qubits[self_offset + i] for i in range(self_bits)),
+			)
 			return self
 
 		if not isinstance(other, qint):
@@ -2947,6 +3020,11 @@ cdef class qint(circuit):
 		arr = qubit_array
 		seq = Q_xor(xor_bits)
 		run_instruction(seq, &arr[0], False, _circuit, 0)
+		_record_operation(
+			"ixor_qq",
+			tuple(qubit_array[i] for i in range(2 * xor_bits)),
+			sequence_ptr=<unsigned long long>seq,
+		)
 		return self
 
 	def __rxor__(self, other):
@@ -3002,6 +3080,11 @@ cdef class qint(circuit):
 
 		arr = qubit_array
 		run_instruction(seq, &arr[0], False, _circuit, 0)
+		_record_operation(
+			"not",
+			tuple(qubit_array[i] for i in range(self.bits + (1 if _controlled else 0))),
+			sequence_ptr=<unsigned long long>seq,
+		)
 
 		return self
 
@@ -3344,6 +3427,11 @@ cdef class qint(circuit):
 
 			arr = qubit_array
 			run_instruction(seq, &arr[0], False, _circuit, 0)
+			_record_operation(
+				"eq_cq",
+				tuple(qubit_array[i] for i in range(start)),
+				sequence_ptr=<unsigned long long>seq,
+			)
 
 			# Free AND-ancilla after use
 			if num_and_anc > 0 and _circuit_initialized and and_anc_start != <unsigned int>(-1):
@@ -3804,6 +3892,12 @@ cdef class qint(circuit):
 			toffoli_divmod_cq(_circ, dividend_qa, n,
 			                  <int64_t>divisor,
 			                  quotient_qa, remainder_qa)
+			_record_operation(
+				"divmod_cq",
+				tuple(dividend_qa[i] for i in range(n))
+				+ tuple(quotient_qa[i] for i in range(n))
+				+ tuple(remainder_qa[i] for i in range(n)),
+			)
 		elif type(divisor) == qint:
 			div_bits = (<qint>divisor).bits
 			d_offset = 64 - div_bits
@@ -3813,6 +3907,13 @@ cdef class qint(circuit):
 			toffoli_divmod_qq(_circ, dividend_qa, n,
 			                  divisor_qa, div_bits,
 			                  quotient_qa, remainder_qa)
+			_record_operation(
+				"divmod_qq",
+				tuple(dividend_qa[i] for i in range(n))
+				+ tuple(divisor_qa[i] for i in range(div_bits))
+				+ tuple(quotient_qa[i] for i in range(n))
+				+ tuple(remainder_qa[i] for i in range(n)),
+			)
 		else:
 			raise TypeError("Divisor must be int or qint")
 

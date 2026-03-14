@@ -165,6 +165,11 @@
 
 			arr = qubit_array
 			run_instruction(seq, &arr[0], False, _circuit, 0)
+			_record_operation(
+				"eq_cq",
+				tuple(qubit_array[i] for i in range(start)),
+				sequence_ptr=<unsigned long long>seq,
+			)
 
 			# Free AND-ancilla after use
 			if num_and_anc > 0 and _circuit_initialized and and_anc_start != <unsigned int>(-1):

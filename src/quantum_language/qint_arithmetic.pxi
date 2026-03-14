@@ -42,6 +42,12 @@
 				_toffoli_dispatch_cq(_circ, self_qa, self_bits,
 				                     classical_value, invert,
 				                     _controlled, control_qubit)
+				_record_operation(
+					"add_cq",
+					tuple(self_qa[i] for i in range(self_bits))
+					+ ((control_qubit,) if _controlled else ()),
+					invert=bool(invert),
+				)
 				return self
 
 			# QFT path: build qubit array and call sequence generator
@@ -58,6 +64,12 @@
 			if seq == NULL:
 				return self
 			run_instruction(seq, qa, invert, <circuit_t*>_circ, 0)
+			_record_operation(
+				"add_cq",
+				tuple(qa[i] for i in range(pos)),
+				sequence_ptr=<unsigned long long>seq,
+				invert=bool(invert),
+			)
 			return self
 
 		if not isinstance(other, qint):
@@ -77,6 +89,13 @@
 			_toffoli_dispatch_qq(_circ, self_qa, self_bits,
 			                     other_qa, other_bits, invert,
 			                     _controlled, control_qubit, result_bits)
+			_record_operation(
+				"add_qq",
+				tuple(self_qa[i] for i in range(self_bits))
+				+ tuple(other_qa[i] for i in range(other_bits))
+				+ ((control_qubit,) if _controlled else ()),
+				invert=bool(invert),
+			)
 			return self
 
 		# QFT path: build qubit array and call sequence generator
@@ -95,6 +114,12 @@
 		if seq == NULL:
 			return self
 		run_instruction(seq, qa, invert, <circuit_t*>_circ, 0)
+		_record_operation(
+			"add_qq",
+			tuple(qa[i] for i in range(pos + (1 if _controlled else 0))),
+			sequence_ptr=<unsigned long long>seq,
+			invert=bool(invert),
+		)
 		return self
 
 	def __add__(self, other: qint | int):
@@ -588,6 +613,12 @@
 				else:
 					toffoli_mul_cq(<circuit_t*>_circ, ret_qa, result_bits,
 					               self_qa, self_bits, classical_value)
+				_record_operation(
+					"mul_cq",
+					tuple(ret_qa[i] for i in range(result_bits))
+					+ tuple(self_qa[i] for i in range(self_bits))
+					+ ((control_qubit,) if _controlled else ()),
+				)
 				return ret
 
 			# QFT path: build qubit array and call sequence generator
@@ -607,6 +638,11 @@
 			if seq == NULL:
 				return ret
 			run_instruction(seq, qa, 0, <circuit_t*>_circ, 0)
+			_record_operation(
+				"mul_cq",
+				tuple(qa[i] for i in range(pos)),
+				sequence_ptr=<unsigned long long>seq,
+			)
 			return ret
 
 		if not isinstance(other, qint):
@@ -628,6 +664,13 @@
 			else:
 				toffoli_mul_qq(<circuit_t*>_circ, ret_qa, result_bits,
 				               self_qa, self_bits, other_qa, other_bits)
+			_record_operation(
+				"mul_qq",
+				tuple(ret_qa[i] for i in range(result_bits))
+				+ tuple(self_qa[i] for i in range(self_bits))
+				+ tuple(other_qa[i] for i in range(other_bits))
+				+ ((control_qubit,) if _controlled else ()),
+			)
 			return ret
 
 		# QFT path: build qubit array and call sequence generator
@@ -650,6 +693,11 @@
 		if seq == NULL:
 			return ret
 		run_instruction(seq, qa, 0, <circuit_t*>_circ, 0)
+		_record_operation(
+			"mul_qq",
+			tuple(qa[i] for i in range(pos)),
+			sequence_ptr=<unsigned long long>seq,
+		)
 		return ret
 
 	def __mul__(self, other):

@@ -136,6 +136,11 @@
 
 		arr = qubit_array
 		run_instruction(seq, &arr[0], False, _circuit, 0)
+		_record_operation(
+			"and",
+			tuple(qubit_array[i] for i in range(3 * result_bits if type(other) != int else 2 * result_bits)),
+			sequence_ptr=<unsigned long long>seq,
+		)
 
 		# Capture end layer
 		result._start_layer = start_layer
@@ -293,6 +298,11 @@
 
 		arr = qubit_array
 		run_instruction(seq, &arr[0], False, _circuit, 0)
+		_record_operation(
+			"or",
+			tuple(qubit_array[i] for i in range(3 * result_bits if type(other) != int else 2 * result_bits)),
+			sequence_ptr=<unsigned long long>seq,
+		)
 
 		# Capture end layer
 		result._start_layer = start_layer
@@ -454,6 +464,16 @@
 			arr = qubit_array
 			run_instruction(seq, &arr[0], False, _circuit, 0)
 
+		# Record XOR operation on the DAG
+		_record_operation(
+			"xor",
+			tuple(result_qubits[result_offset + i] for i in range(result_bits))
+			+ tuple(self.qubits[self_offset + i] for i in range(self.bits))
+			+ (tuple((<qint>other).qubits[64 - (<qint>other).bits + i]
+			         for i in range((<qint>other).bits))
+			   if type(other) != int else ()),
+		)
+
 		# Capture end layer
 		result._start_layer = start_layer
 		result._end_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
@@ -510,6 +530,10 @@
 					arr = qubit_array
 					seq = Q_not(1)
 					run_instruction(seq, &arr[0], False, _circuit, 0)
+			_record_operation(
+				"ixor_cq",
+				tuple(self.qubits[self_offset + i] for i in range(self_bits)),
+			)
 			return self
 
 		if not isinstance(other, qint):
@@ -536,6 +560,11 @@
 		arr = qubit_array
 		seq = Q_xor(xor_bits)
 		run_instruction(seq, &arr[0], False, _circuit, 0)
+		_record_operation(
+			"ixor_qq",
+			tuple(qubit_array[i] for i in range(2 * xor_bits)),
+			sequence_ptr=<unsigned long long>seq,
+		)
 		return self
 
 	def __rxor__(self, other):
@@ -591,6 +620,11 @@
 
 		arr = qubit_array
 		run_instruction(seq, &arr[0], False, _circuit, 0)
+		_record_operation(
+			"not",
+			tuple(qubit_array[i] for i in range(self.bits + (1 if _controlled else 0))),
+			sequence_ptr=<unsigned long long>seq,
+		)
 
 		return self
 

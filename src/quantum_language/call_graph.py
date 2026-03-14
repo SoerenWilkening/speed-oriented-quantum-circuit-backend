@@ -557,3 +557,62 @@ def current_dag_context() -> tuple[CallGraphDAG, int | None] | None:
     if not _dag_builder_stack:
         return None
     return _dag_builder_stack[-1]
+
+
+# ---------------------------------------------------------------------------
+# Operation recording helper (Module 7)
+# ---------------------------------------------------------------------------
+
+
+def record_operation(
+    operation_type: str,
+    qubit_indices: tuple | list,
+    *,
+    sequence_ptr: int = 0,
+    invert: bool = False,
+) -> int | None:
+    """Record a primitive operation (arithmetic/bitwise/comparison) on the DAG.
+
+    Called from Cython-level operations during ``@ql.compile`` capture to
+    log each ``run_instruction`` call as a DAG node with sequence metadata.
+
+    This is a fast no-op when no DAG context is active (i.e., outside
+    ``@ql.compile`` execution), so it is safe to call unconditionally.
+
+    Parameters
+    ----------
+    operation_type : str
+        Short identifier for the operation (e.g. ``"add_cq"``, ``"mul_qq"``,
+        ``"xor"``, ``"eq"``).
+    qubit_indices : tuple or list of int
+        Physical qubit indices passed to ``run_instruction``.
+    sequence_ptr : int
+        C pointer to the ``sequence_t`` (cast to Python int via
+        ``<unsigned long long>``).  Default 0 means pointer not captured.
+    invert : bool
+        Whether this is an inverse (adjoint) operation.
+
+    Returns
+    -------
+    int or None
+        Node index in the DAG if a node was added, None otherwise.
+    """
+    if not _dag_builder_stack:
+        return None
+
+    dag, parent_idx = _dag_builder_stack[-1]
+
+    qubit_mapping = tuple(qubit_indices)
+    qubit_set = frozenset(qubit_mapping)
+
+    return dag.add_node(
+        operation_type,
+        qubit_set,
+        0,  # gate_count -- not known at primitive level
+        (),  # cache_key -- not applicable for primitives
+        parent_index=parent_idx,
+        sequence_ptr=sequence_ptr,
+        qubit_mapping=qubit_mapping,
+        operation_type=operation_type,
+        invert=invert,
+    )

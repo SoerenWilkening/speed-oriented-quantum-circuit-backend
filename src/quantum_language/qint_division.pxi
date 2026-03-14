@@ -61,6 +61,12 @@
 			toffoli_divmod_cq(_circ, dividend_qa, n,
 			                  <int64_t>divisor,
 			                  quotient_qa, remainder_qa)
+			_record_operation(
+				"divmod_cq",
+				tuple(dividend_qa[i] for i in range(n))
+				+ tuple(quotient_qa[i] for i in range(n))
+				+ tuple(remainder_qa[i] for i in range(n)),
+			)
 		elif type(divisor) == qint:
 			div_bits = (<qint>divisor).bits
 			d_offset = 64 - div_bits
@@ -70,6 +76,13 @@
 			toffoli_divmod_qq(_circ, dividend_qa, n,
 			                  divisor_qa, div_bits,
 			                  quotient_qa, remainder_qa)
+			_record_operation(
+				"divmod_qq",
+				tuple(dividend_qa[i] for i in range(n))
+				+ tuple(divisor_qa[i] for i in range(div_bits))
+				+ tuple(quotient_qa[i] for i in range(n))
+				+ tuple(remainder_qa[i] for i in range(n)),
+			)
 		else:
 			raise TypeError("Divisor must be int or qint")
 
