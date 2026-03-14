@@ -46,6 +46,7 @@
 		cdef bint _controlled = _get_controlled()
 		cdef object _control_bool = _get_control_bool()
 		cdef qubit_allocator_t *alloc
+		cdef size_t gc_before_eq, gc_delta_eq
 
 		# Phase 18: Check for use-after-uncompute
 		self._check_not_uncomputed()
@@ -164,11 +165,14 @@
 							qubit_array[start + i] = and_anc_start + i
 
 			arr = qubit_array
-			run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
+			gc_before_eq = (<circuit_s*>_circuit).gate_count
+			run_instruction(seq, &arr[0], False, _circuit)
+			gc_delta_eq = (<circuit_s*>_circuit).gate_count - gc_before_eq
 			_record_operation(
 				"eq_cq",
 				tuple(qubit_array[i] for i in range(start)),
 				sequence_ptr=<unsigned long long>seq,
+				gate_count=gc_delta_eq,
 			)
 
 			# Free AND-ancilla after use
@@ -297,7 +301,7 @@
 				qubit_array[1] = self.qubits[64 - operand_bits + i_bit]
 				arr = qubit_array
 				seq = Q_xor(1)
-				run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
+				run_instruction(seq, &arr[0], False, _circuit)
 
 			# Copy other's bits to temp_other (LSB-aligned)
 			operand_bits = (<qint>other).bits
@@ -306,7 +310,7 @@
 				qubit_array[1] = (<qint>other).qubits[64 - operand_bits + i_bit]
 				arr = qubit_array
 				seq = Q_xor(1)
-				run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
+				run_instruction(seq, &arr[0], False, _circuit)
 
 			# Subtract: temp_self -= temp_other
 			temp_self -= temp_other
@@ -420,7 +424,7 @@
 				qubit_array[1] = (<qint>other).qubits[64 - operand_bits + i_bit]
 				arr = qubit_array
 				seq = Q_xor(1)
-				run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
+				run_instruction(seq, &arr[0], False, _circuit)
 
 			# Copy self's bits to temp_self (LSB-aligned)
 			operand_bits = self.bits
@@ -429,7 +433,7 @@
 				qubit_array[1] = self.qubits[64 - operand_bits + i_bit]
 				arr = qubit_array
 				seq = Q_xor(1)
-				run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
+				run_instruction(seq, &arr[0], False, _circuit)
 
 			# Subtract: temp_other -= temp_self
 			temp_other -= temp_self

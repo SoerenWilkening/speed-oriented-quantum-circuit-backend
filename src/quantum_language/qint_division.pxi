@@ -37,6 +37,7 @@
 		cdef unsigned int divisor_qa[64]
 		cdef int div_bits = 0
 		cdef int d_offset = 0
+		cdef size_t gc_before_div, gc_delta_div
 
 		# Extract dividend qubits (LSB-first for C convention)
 		# Python qint right-aligned layout: qubits[64-bits] = LSB (bit 0), qubits[63] = MSB
@@ -58,14 +59,17 @@
 			remainder_qa[i] = (<qint>remainder).qubits[r_offset + i]
 
 		if type(divisor) == int:
+			gc_before_div = (<circuit_s*>_circ).gate_count
 			toffoli_divmod_cq(_circ, dividend_qa, n,
 			                  <int64_t>divisor,
 			                  quotient_qa, remainder_qa)
+			gc_delta_div = (<circuit_s*>_circ).gate_count - gc_before_div
 			_record_operation(
 				"divmod_cq",
 				tuple(dividend_qa[i] for i in range(n))
 				+ tuple(quotient_qa[i] for i in range(n))
 				+ tuple(remainder_qa[i] for i in range(n)),
+				gate_count=gc_delta_div,
 			)
 		elif type(divisor) == qint:
 			div_bits = (<qint>divisor).bits
@@ -73,15 +77,18 @@
 			for i in range(div_bits):
 				divisor_qa[i] = (<qint>divisor).qubits[d_offset + i]
 
+			gc_before_div = (<circuit_s*>_circ).gate_count
 			toffoli_divmod_qq(_circ, dividend_qa, n,
 			                  divisor_qa, div_bits,
 			                  quotient_qa, remainder_qa)
+			gc_delta_div = (<circuit_s*>_circ).gate_count - gc_before_div
 			_record_operation(
 				"divmod_qq",
 				tuple(dividend_qa[i] for i in range(n))
 				+ tuple(divisor_qa[i] for i in range(div_bits))
 				+ tuple(quotient_qa[i] for i in range(n))
 				+ tuple(remainder_qa[i] for i in range(n)),
+				gate_count=gc_delta_div,
 			)
 		else:
 			raise TypeError("Divisor must be int or qint")

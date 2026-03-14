@@ -40,6 +40,7 @@
 		cdef unsigned int[:] result_qubits
 		cdef unsigned int[:] other_qubits
 		cdef unsigned int[:] pad_qubits
+		cdef size_t gc_before_and, gc_delta_and
 
 		# Phase 18: Check for use-after-uncompute
 		self._check_not_uncomputed()
@@ -135,11 +136,14 @@
 				seq = Q_and(result_bits)
 
 		arr = qubit_array
-		run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
+		gc_before_and = (<circuit_s*>_circuit).gate_count
+		run_instruction(seq, &arr[0], False, _circuit)
+		gc_delta_and = (<circuit_s*>_circuit).gate_count - gc_before_and
 		_record_operation(
 			"and",
 			tuple(qubit_array[i] for i in range(3 * result_bits if type(other) != int else 2 * result_bits)),
 			sequence_ptr=<unsigned long long>seq,
+			gate_count=gc_delta_and,
 		)
 
 		# Capture end layer
@@ -213,6 +217,7 @@
 		cdef circuit_t *_circuit = <circuit_t*><unsigned long long>_get_circuit()
 		cdef bint _circuit_initialized = _get_circuit_initialized()
 		cdef bint _controlled = _get_controlled()
+		cdef size_t gc_before_or, gc_delta_or
 
 		# Phase 18: Check for use-after-uncompute
 		self._check_not_uncomputed()
@@ -297,11 +302,14 @@
 				seq = Q_or(result_bits)
 
 		arr = qubit_array
-		run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
+		gc_before_or = (<circuit_s*>_circuit).gate_count
+		run_instruction(seq, &arr[0], False, _circuit)
+		gc_delta_or = (<circuit_s*>_circuit).gate_count - gc_before_or
 		_record_operation(
 			"or",
 			tuple(qubit_array[i] for i in range(3 * result_bits if type(other) != int else 2 * result_bits)),
 			sequence_ptr=<unsigned long long>seq,
+			gate_count=gc_delta_or,
 		)
 
 		# Capture end layer
@@ -380,6 +388,7 @@
 		cdef bint _controlled = _get_controlled()
 		cdef unsigned int[:] result_qubits
 		cdef unsigned int[:] other_qubits
+		cdef size_t gc_before_xor, gc_delta_xor
 
 		# Phase 18: Check for use-after-uncompute
 		self._check_not_uncomputed()
@@ -426,6 +435,9 @@
 		self_offset = 64 - self.bits
 		result_offset = 64 - result_bits
 
+		# Capture gate_count before multi-step XOR
+		gc_before_xor = (<circuit_s*>_circuit).gate_count
+
 		# First, copy self to result by XORing self into result (result starts at 0)
 		# CYT-03: Replace slice with explicit loop for memory view optimization
 		result_qubits = result.qubits
@@ -435,7 +447,7 @@
 			qubit_array[self.bits + i] = self.qubits[self_offset + i]
 		arr = qubit_array
 		seq = Q_xor(self.bits)  # XOR self into result (copying self to result)
-		run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
+		run_instruction(seq, &arr[0], False, _circuit)
 
 		# Now XOR other into result
 		if type(other) == int:
@@ -447,7 +459,7 @@
 						qubit_array[0] = result_qubits[64 - result_bits + i]
 						arr = qubit_array
 						seq = Q_not(1)
-						run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
+						run_instruction(seq, &arr[0], False, _circuit)
 		else:
 			other_offset = 64 - (<qint>other).bits
 			for i in range((<qint>other).bits):
@@ -462,9 +474,10 @@
 				seq = Q_xor((<qint>other).bits)
 
 			arr = qubit_array
-			run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
+			run_instruction(seq, &arr[0], False, _circuit)
 
 		# Record XOR operation on the DAG
+		gc_delta_xor = (<circuit_s*>_circuit).gate_count - gc_before_xor
 		_record_operation(
 			"xor",
 			tuple(result_qubits[result_offset + i] for i in range(result_bits))
@@ -472,6 +485,7 @@
 			+ (tuple((<qint>other).qubits[64 - (<qint>other).bits + i]
 			         for i in range((<qint>other).bits))
 			   if type(other) != int else ()),
+			gate_count=gc_delta_xor,
 		)
 
 		# Capture end layer
@@ -513,6 +527,7 @@
 		cdef int self_offset = 64 - self_bits
 		cdef int i
 		cdef int xor_bits
+		cdef size_t gc_before_ixor, gc_delta_ixor
 
 		# Phase 18: Check for use-after-uncompute
 		self._check_not_uncomputed()
@@ -524,15 +539,18 @@
 				raise NotImplementedError("Controlled classical-quantum XOR not yet supported")
 
 			# CQ path: for each set bit in classical value, apply Q_not(1)
+			gc_before_ixor = (<circuit_s*>_circuit).gate_count
 			for i in range(self_bits):
 				if ((<int64_t>other) >> i) & 1:
 					qubit_array[0] = self.qubits[self_offset + i]
 					arr = qubit_array
 					seq = Q_not(1)
-					run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
+					run_instruction(seq, &arr[0], False, _circuit)
+			gc_delta_ixor = (<circuit_s*>_circuit).gate_count - gc_before_ixor
 			_record_operation(
 				"ixor_cq",
 				tuple(self.qubits[self_offset + i] for i in range(self_bits)),
+				gate_count=gc_delta_ixor,
 			)
 			return self
 
@@ -559,11 +577,14 @@
 
 		arr = qubit_array
 		seq = Q_xor(xor_bits)
-		run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
+		gc_before_ixor = (<circuit_s*>_circuit).gate_count
+		run_instruction(seq, &arr[0], False, _circuit)
+		gc_delta_ixor = (<circuit_s*>_circuit).gate_count - gc_before_ixor
 		_record_operation(
 			"ixor_qq",
 			tuple(qubit_array[i] for i in range(2 * xor_bits)),
 			sequence_ptr=<unsigned long long>seq,
+			gate_count=gc_delta_ixor,
 		)
 		return self
 
@@ -597,6 +618,7 @@
 		cdef circuit_t *_circuit = <circuit_t*><unsigned long long>_get_circuit()
 		cdef bint _controlled = _get_controlled()
 		cdef object _control_bool = _get_control_bool()
+		cdef size_t gc_before_not, gc_delta_not
 
 		# Phase 18: Check for use-after-uncompute
 		self._check_not_uncomputed()
@@ -619,11 +641,14 @@
 			seq = Q_not(self.bits)
 
 		arr = qubit_array
-		run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
+		gc_before_not = (<circuit_s*>_circuit).gate_count
+		run_instruction(seq, &arr[0], False, _circuit)
+		gc_delta_not = (<circuit_s*>_circuit).gate_count - gc_before_not
 		_record_operation(
 			"not",
 			tuple(qubit_array[i] for i in range(self.bits + (1 if _controlled else 0))),
 			sequence_ptr=<unsigned long long>seq,
+			gate_count=gc_delta_not,
 		)
 
 		return self
@@ -694,7 +719,7 @@
 		qubit_array[self.bits:2*self.bits] = self.qubits[self_offset:64]
 		arr = qubit_array
 		seq = Q_xor(self.bits)
-		run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
+		run_instruction(seq, &arr[0], False, _circuit)
 
 		# Layer tracking for uncomputation
 		result._start_layer = start_layer
@@ -768,7 +793,7 @@
 		qubit_array[self.bits:2*self.bits] = self.qubits[self_offset:64]
 		arr = qubit_array
 		seq = Q_xor(self.bits)
-		run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
+		run_instruction(seq, &arr[0], False, _circuit)
 
 	def __getitem__(self, item: int):
 		"""Access individual qubit as qbool: self[index]

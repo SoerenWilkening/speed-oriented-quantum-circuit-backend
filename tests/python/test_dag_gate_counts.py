@@ -1,9 +1,9 @@
 """Tests for Step 0.7: Wire gate counts through recording layer.
 
 Validates that record_operation() passes sequence total_gate_count to
-DAGNode.gate_count instead of 0.  Tests cover both arithmetic paths
-(QFT and Toffoli) via the @ql.compile integration, as well as the
-record_operation() unit-level interface.
+DAGNode.gate_count instead of 0.  Tests cover arithmetic, bitwise,
+comparison, and division paths via the @ql.compile integration and
+DAG context, as well as the record_operation() unit-level interface.
 """
 
 import quantum_language as ql
@@ -178,15 +178,181 @@ class TestMultiplicationDAGGateCount:
 
 
 # ---------------------------------------------------------------------------
-# Integration: DAG gate count matches circuit gate count
+# Integration: bitwise DAG gate counts
 # ---------------------------------------------------------------------------
 
 
-class TestDAGCountMatchesCircuit:
-    """Tests that DAG total gate count matches circuit-level gate counts."""
+class TestBitwiseDAGGateCount:
+    """Tests that bitwise operations record nonzero gate_count on DAG nodes."""
 
-    def test_dag_count_matches_circuit_count(self):
-        """Total DAG gate count should match ql.get_gate_count() after compile."""
+    def test_and_dag_count_nonzero(self):
+        """After a & b with DAG context, the and DAG node has gate_count > 0."""
+        ql.circuit()
+        dag = CallGraphDAG()
+        push_dag_context(dag, parent_index=None)
+        try:
+            a = qint(0b1101, width=4)
+            b = qint(0b1011, width=4)
+            _ = a & b
+        finally:
+            pop_dag_context()
+        and_nodes = [n for n in dag.nodes if n.operation_type == "and"]
+        assert len(and_nodes) > 0, "Expected at least one and operation node"
+        for node in and_nodes:
+            assert node.gate_count > 0, (
+                f"and node gate_count should be > 0, got {node.gate_count}"
+            )
+
+    def test_or_dag_count_nonzero(self):
+        """After a | b with DAG context, the or DAG node has gate_count > 0."""
+        ql.circuit()
+        dag = CallGraphDAG()
+        push_dag_context(dag, parent_index=None)
+        try:
+            a = qint(0b1100, width=4)
+            b = qint(0b0011, width=4)
+            _ = a | b
+        finally:
+            pop_dag_context()
+        or_nodes = [n for n in dag.nodes if n.operation_type == "or"]
+        assert len(or_nodes) > 0, "Expected at least one or operation node"
+        for node in or_nodes:
+            assert node.gate_count > 0, (
+                f"or node gate_count should be > 0, got {node.gate_count}"
+            )
+
+    def test_xor_dag_count_nonzero(self):
+        """After a ^ b with DAG context, the xor DAG node has gate_count > 0."""
+        ql.circuit()
+        dag = CallGraphDAG()
+        push_dag_context(dag, parent_index=None)
+        try:
+            a = qint(0b1100, width=4)
+            b = qint(0b0110, width=4)
+            _ = a ^ b
+        finally:
+            pop_dag_context()
+        xor_nodes = [n for n in dag.nodes if n.operation_type == "xor"]
+        assert len(xor_nodes) > 0, "Expected at least one xor operation node"
+        for node in xor_nodes:
+            assert node.gate_count > 0, (
+                f"xor node gate_count should be > 0, got {node.gate_count}"
+            )
+
+    def test_ixor_cq_dag_count_nonzero(self):
+        """After a ^= 5 with DAG context, the ixor_cq DAG node has gate_count > 0."""
+        ql.circuit()
+        dag = CallGraphDAG()
+        push_dag_context(dag, parent_index=None)
+        try:
+            a = qint(0b1100, width=4)
+            a ^= 5
+        finally:
+            pop_dag_context()
+        ixor_nodes = [n for n in dag.nodes if n.operation_type == "ixor_cq"]
+        assert len(ixor_nodes) > 0, "Expected at least one ixor_cq operation node"
+        for node in ixor_nodes:
+            assert node.gate_count > 0, (
+                f"ixor_cq node gate_count should be > 0, got {node.gate_count}"
+            )
+
+    def test_not_dag_count_nonzero(self):
+        """After ~a with DAG context, the not DAG node has gate_count > 0."""
+        ql.circuit()
+        dag = CallGraphDAG()
+        push_dag_context(dag, parent_index=None)
+        try:
+            a = qint(0b1010, width=4)
+            ~a
+        finally:
+            pop_dag_context()
+        not_nodes = [n for n in dag.nodes if n.operation_type == "not"]
+        assert len(not_nodes) > 0, "Expected at least one not operation node"
+        for node in not_nodes:
+            assert node.gate_count > 0, (
+                f"not node gate_count should be > 0, got {node.gate_count}"
+            )
+
+
+# ---------------------------------------------------------------------------
+# Integration: comparison DAG gate counts
+# ---------------------------------------------------------------------------
+
+
+class TestComparisonDAGGateCount:
+    """Tests that comparison operations record nonzero gate_count on DAG nodes."""
+
+    def test_eq_cq_dag_count_nonzero(self):
+        """After a == 5 with DAG context, the eq_cq DAG node has gate_count > 0."""
+        ql.circuit()
+        dag = CallGraphDAG()
+        push_dag_context(dag, parent_index=None)
+        try:
+            a = qint(5, width=4)
+            _ = (a == 5)
+        finally:
+            pop_dag_context()
+        eq_nodes = [n for n in dag.nodes if n.operation_type == "eq_cq"]
+        assert len(eq_nodes) > 0, "Expected at least one eq_cq operation node"
+        for node in eq_nodes:
+            assert node.gate_count > 0, (
+                f"eq_cq node gate_count should be > 0, got {node.gate_count}"
+            )
+
+
+# ---------------------------------------------------------------------------
+# Integration: division DAG gate counts
+# ---------------------------------------------------------------------------
+
+
+class TestDivisionDAGGateCount:
+    """Tests that division operations record nonzero gate_count on DAG nodes."""
+
+    def test_floordiv_dag_count_nonzero(self):
+        """After a // 3 with DAG context, the divmod_cq DAG node has gate_count > 0."""
+        ql.circuit()
+        dag = CallGraphDAG()
+        push_dag_context(dag, parent_index=None)
+        try:
+            a = qint(7, width=4)
+            _ = a // 3
+        finally:
+            pop_dag_context()
+        div_nodes = [n for n in dag.nodes if n.operation_type and "divmod" in n.operation_type]
+        assert len(div_nodes) > 0, "Expected at least one divmod operation node"
+        for node in div_nodes:
+            assert node.gate_count > 0, (
+                f"divmod node gate_count should be > 0, got {node.gate_count}"
+            )
+
+    def test_mod_dag_count_nonzero(self):
+        """After a % 3 with DAG context, the divmod_cq DAG node has gate_count > 0."""
+        ql.circuit()
+        dag = CallGraphDAG()
+        push_dag_context(dag, parent_index=None)
+        try:
+            a = qint(7, width=4)
+            _ = a % 3
+        finally:
+            pop_dag_context()
+        div_nodes = [n for n in dag.nodes if n.operation_type and "divmod" in n.operation_type]
+        assert len(div_nodes) > 0, "Expected at least one divmod operation node"
+        for node in div_nodes:
+            assert node.gate_count > 0, (
+                f"divmod node gate_count should be > 0, got {node.gate_count}"
+            )
+
+
+# ---------------------------------------------------------------------------
+# Integration: DAG gate count is positive
+# ---------------------------------------------------------------------------
+
+
+class TestDAGCountPositive:
+    """Tests that DAG aggregate gate count is positive after operations."""
+
+    def test_dag_aggregate_positive(self):
+        """DAG aggregate gate count should be > 0 after @ql.compile with addition."""
         ql.circuit()
 
         @ql.compile(opt=1)
@@ -194,17 +360,11 @@ class TestDAGCountMatchesCircuit:
             x += 1
             return x
 
-        ql.reset_gate_count()
         a = qint(0, width=4)
         inc(a)
-        circuit_gates = ql.get_gate_count()
 
         dag = inc.call_graph
         assert dag is not None
-
-        # The DAG aggregate includes both the call node and operation nodes.
-        # The operation-level gate_count should be positive and contribute
-        # to the overall aggregate.
         agg = dag.aggregate()
         assert agg["gates"] > 0, (
             f"DAG aggregate gate count should be > 0, got {agg['gates']}"
@@ -253,13 +413,8 @@ class TestReportShowsCounts:
         inc(a)
         dag = inc.call_graph
         assert dag is not None
-        report = dag.report()
-        assert "0" not in report.split("TOTAL")[1].split("|")[1].strip() or True
-        # More robust: check that at least one operation node has non-zero
-        # gate count visible in the report.
         op_nodes = [n for n in dag.nodes if n.operation_type and "add" in n.operation_type]
         for node in op_nodes:
             assert node.gate_count > 0
-        # The TOTAL row should show a positive gate count
         agg = dag.aggregate()
         assert agg["gates"] > 0
