@@ -23,7 +23,7 @@
 		cdef unsigned int[:] control_qubits
 		cdef sequence_t *seq
 		cdef int result_bits
-		cdef unsigned int[:] arr
+		cdef int pos
 
 		# Extract self qubits (right-aligned in 64-element array)
 		for i in range(self_bits):

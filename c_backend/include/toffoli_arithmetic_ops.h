@@ -120,7 +120,7 @@ sequence_t *toffoli_cCQ_add(int bits, int64_t value);
  * @brief Compute ancilla count for Brent-Kung CLA adder.
  *
  * Returns the total number of ancilla qubits needed: 2*(n-1) + tree_merges.
- * Used by hot_path_add.c to allocate the correct ancilla block.
+ * Used by the Toffoli dispatch logic to allocate the correct ancilla block.
  *
  * @param bits Width of operands (>= 2)
  * @return Number of ancilla qubits needed (0 for bits < 2)

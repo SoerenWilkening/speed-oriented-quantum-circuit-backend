@@ -830,11 +830,12 @@ def get_gate_count():
 
 	.. note::
 
-	   Gates emitted by hot-path functions (``hot_path_add``,
-	   ``hot_path_mul``, etc.) call ``add_gate()`` directly without going
-	   through ``run_instruction`` and are **not** included in this count.
-	   Conversely, in tracking-only mode this counter accumulates gates
-	   that are never physically stored in the circuit.
+	   Gates emitted by hot-path functions (``hot_path_mul``, etc.) or
+	   Toffoli dispatch (``toffoli_dispatch``) that call ``add_gate()``
+	   directly without going through ``run_instruction`` are **not**
+	   included in this count.  Conversely, in tracking-only mode this
+	   counter accumulates gates that are never physically stored in the
+	   circuit.
 
 	Returns
 	-------

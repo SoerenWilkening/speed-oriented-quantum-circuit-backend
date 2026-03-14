@@ -338,7 +338,7 @@ void toffoli_mul_cq(circuit_t *circ, const unsigned int *ret_qubits, int ret_bit
                 return;
             }
 
-            /* CDKM convention (matching hot_path_add.c):
+            /* CDKM convention:
              *   a-register [0..width-1]       = source (preserved)
              *   b-register [width..2*width-1]  = target (gets sum)
              *   [2*width]                      = carry ancilla

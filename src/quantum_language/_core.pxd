@@ -70,6 +70,7 @@ cdef extern from "gate.h":
 	void x(gate_t *g, qubit_t target)
 	void cx(gate_t *g, qubit_t target, qubit_t control)
 
+cdef extern from "toffoli_arithmetic_ops.h":
 	# Toffoli Division (Phase 91)
 	void toffoli_divmod_cq(circuit_t *circ, const unsigned int *dividend_qubits,
 	                       int dividend_bits, int64_t divisor,
