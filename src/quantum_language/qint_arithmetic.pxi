@@ -63,7 +63,7 @@
 				seq = CQ_add(self_bits, classical_value)
 			if seq == NULL:
 				return self
-			run_instruction(seq, qa, invert, <circuit_t*>_circ, 0)
+			run_instruction(seq, qa, invert, <circuit_t*>_circ, _get_tracking_only())
 			_record_operation(
 				"add_cq",
 				tuple(qa[i] for i in range(pos)),
@@ -113,7 +113,7 @@
 			seq = QQ_add(result_bits)
 		if seq == NULL:
 			return self
-		run_instruction(seq, qa, invert, <circuit_t*>_circ, 0)
+		run_instruction(seq, qa, invert, <circuit_t*>_circ, _get_tracking_only())
 		_record_operation(
 			"add_qq",
 			tuple(qa[i] for i in range(pos + (1 if _controlled else 0))),
@@ -637,7 +637,7 @@
 				seq = CQ_mul(result_bits, classical_value)
 			if seq == NULL:
 				return ret
-			run_instruction(seq, qa, 0, <circuit_t*>_circ, 0)
+			run_instruction(seq, qa, 0, <circuit_t*>_circ, _get_tracking_only())
 			_record_operation(
 				"mul_cq",
 				tuple(qa[i] for i in range(pos)),
@@ -692,7 +692,7 @@
 			seq = QQ_mul(result_bits)
 		if seq == NULL:
 			return ret
-		run_instruction(seq, qa, 0, <circuit_t*>_circ, 0)
+		run_instruction(seq, qa, 0, <circuit_t*>_circ, _get_tracking_only())
 		_record_operation(
 			"mul_qq",
 			tuple(qa[i] for i in range(pos)),

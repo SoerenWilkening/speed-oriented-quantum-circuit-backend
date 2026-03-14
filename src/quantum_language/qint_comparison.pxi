@@ -164,7 +164,7 @@
 							qubit_array[start + i] = and_anc_start + i
 
 			arr = qubit_array
-			run_instruction(seq, &arr[0], False, _circuit, 0)
+			run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
 			_record_operation(
 				"eq_cq",
 				tuple(qubit_array[i] for i in range(start)),
@@ -297,7 +297,7 @@
 				qubit_array[1] = self.qubits[64 - operand_bits + i_bit]
 				arr = qubit_array
 				seq = Q_xor(1)
-				run_instruction(seq, &arr[0], False, _circuit, 0)
+				run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
 
 			# Copy other's bits to temp_other (LSB-aligned)
 			operand_bits = (<qint>other).bits
@@ -306,7 +306,7 @@
 				qubit_array[1] = (<qint>other).qubits[64 - operand_bits + i_bit]
 				arr = qubit_array
 				seq = Q_xor(1)
-				run_instruction(seq, &arr[0], False, _circuit, 0)
+				run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
 
 			# Subtract: temp_self -= temp_other
 			temp_self -= temp_other
@@ -420,7 +420,7 @@
 				qubit_array[1] = (<qint>other).qubits[64 - operand_bits + i_bit]
 				arr = qubit_array
 				seq = Q_xor(1)
-				run_instruction(seq, &arr[0], False, _circuit, 0)
+				run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
 
 			# Copy self's bits to temp_self (LSB-aligned)
 			operand_bits = self.bits
@@ -429,7 +429,7 @@
 				qubit_array[1] = self.qubits[64 - operand_bits + i_bit]
 				arr = qubit_array
 				seq = Q_xor(1)
-				run_instruction(seq, &arr[0], False, _circuit, 0)
+				run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
 
 			# Subtract: temp_other -= temp_self
 			temp_other -= temp_self

@@ -519,6 +519,25 @@ Used during @ql.compile execution to track the active DAG and current
 parent node for nested call recording.
 """
 
+_tracking_only: int = 0
+"""Module-level flag controlling tracking-only mode.
+
+When non-zero, ``run_instruction()`` counts gates without storing them
+in the global circuit.  Set by ``@ql.compile(simulate=False)`` during
+capture to enable call-graph-only execution (PRD R7.1).
+"""
+
+
+def get_tracking_only() -> int:
+    """Return current tracking_only flag value."""
+    return _tracking_only
+
+
+def set_tracking_only(value: int) -> None:
+    """Set the tracking_only flag."""
+    global _tracking_only
+    _tracking_only = value
+
 
 def push_dag_context(dag: CallGraphDAG, parent_index: int | None = None) -> None:
     """Push a DAG context onto the builder stack.

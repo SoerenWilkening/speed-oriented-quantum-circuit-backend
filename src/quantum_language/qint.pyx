@@ -70,6 +70,7 @@ import math
 from ._gates import emit_p, emit_p_raw, _toffoli_and, _uncompute_toffoli_and
 from ._core import _get_control_stack
 from .call_graph import record_operation as _record_operation
+from .call_graph import get_tracking_only as _get_tracking_only
 
 
 cpdef void _set_layer_floor_to_used():
@@ -369,7 +370,7 @@ cdef class qint(circuit):
 						qubit_array[0] = self.qubits[qubit_idx]
 						arr = qubit_array
 						seq = Q_not(1)
-						run_instruction(seq, &arr[0], False, _circuit, 0)
+						run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
 
 			# Keep backward compat tracking (deprecated, remove later)
 			# Note: _smallest_allocated_qubit and ancilla numpy array still updated
