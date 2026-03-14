@@ -277,32 +277,19 @@ cdef extern from "optimizer.h":
 	void add_gate(circuit_t *circ, gate_t *g)
 
 
-cdef extern from "hot_path_mul.h":
-	void hot_path_mul_qq(
-		circuit_t *circ,
-		const unsigned int *ret_qubits,
-		int ret_bits,
-		const unsigned int *self_qubits,
-		int self_bits,
-		const unsigned int *other_qubits,
-		int other_bits,
-		int controlled,
-		unsigned int control_qubit,
-		const unsigned int *ancilla,
-		int num_ancilla
-	) nogil
-	void hot_path_mul_cq(
-		circuit_t *circ,
-		const unsigned int *ret_qubits,
-		int ret_bits,
-		const unsigned int *self_qubits,
-		int self_bits,
-		int64_t classical_value,
-		int controlled,
-		unsigned int control_qubit,
-		const unsigned int *ancilla,
-		int num_ancilla
-	) nogil
+cdef extern from "toffoli_arithmetic_ops.h":
+	# Toffoli Multiplication (Phase 68/69)
+	void toffoli_mul_qq(circuit_t *circ, const unsigned int *ret_qubits, int ret_bits,
+	                    const unsigned int *self_qubits, int self_bits,
+	                    const unsigned int *other_qubits, int other_bits)
+	void toffoli_mul_cq(circuit_t *circ, const unsigned int *ret_qubits, int ret_bits,
+	                    const unsigned int *self_qubits, int self_bits, int64_t classical_value)
+	void toffoli_cmul_qq(circuit_t *circ, const unsigned int *ret_qubits, int ret_bits,
+	                     const unsigned int *self_qubits, int self_bits,
+	                     const unsigned int *other_qubits, int other_bits, unsigned int ext_ctrl)
+	void toffoli_cmul_cq(circuit_t *circ, const unsigned int *ret_qubits, int ret_bits,
+	                     const unsigned int *self_qubits, int self_bits, int64_t classical_value,
+	                     unsigned int ext_ctrl)
 
 cdef extern from "circuit_optimizer.h":
 	ctypedef enum opt_pass_t:

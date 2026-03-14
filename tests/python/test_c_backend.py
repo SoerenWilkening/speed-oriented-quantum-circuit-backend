@@ -8,7 +8,6 @@ Test targets correspond to the Makefile in tests/c/:
 - test_allocator_block: Block-based qubit allocator (alloc, free, coalesce, split)
 - test_reverse_circuit: Gate value preservation during circuit reversal
 - test_comparison: Integer comparison operations
-- test_hot_path_mul: Hot-path multiplication (C-level fast multiplication sequences)
 """
 
 import os
@@ -118,15 +117,5 @@ class TestCBackend:
         """
         _compile_and_run("test_comparison")
 
-    @pytest.mark.xfail(
-        reason="Pre-existing: test_cq_mul_zero assertion failure (CQ mul value=0 gate check)",
-        strict=False,
-    )
-    def test_c_hot_path_mul(self):
-        """Hot-path multiplication sequences (C-level fast multiplication).
 
-        Tests the optimized C-level multiplication sequences including
-        QQ and CQ multiplication paths.
-        """
-        _compile_and_run("test_hot_path_mul")
 

@@ -540,27 +540,28 @@
 	@cython.boundscheck(False)
 	@cython.wraparound(False)
 	cdef multiplication_inplace(self, other, qint ret):
-		# Phase 60-02: Thin Cython wrapper -- all hot-path logic moved to C
-		# (hot_path_mul.c). We only extract qubit indices from Python objects
-		# here, then call the C function with nogil.
-		cdef circuit_t *_circuit = <circuit_t*><unsigned long long>_get_circuit()
+		# Cython-level multiplication: calls sequence generators directly,
+		# with Toffoli path calling toffoli_mul_qq/cq directly.
+		# No C hot path -- all logic in Cython.
+		_mark_arithmetic_performed()
+		cdef circuit_s *_circ = <circuit_s*><unsigned long long>_get_circuit()
 		cdef bint _controlled = _get_controlled()
 		cdef object _control_bool = _get_control_bool()
 		cdef unsigned int self_qa[64]
 		cdef unsigned int ret_qa[64]
 		cdef unsigned int other_qa[64]
-		cdef unsigned int ancilla_qa[128]
+		cdef unsigned int qa[256]
 		cdef int self_bits = self.bits
 		cdef int self_offset = 64 - self_bits
 		cdef int ret_offset = 64 - (<qint>ret).bits
 		cdef int i
 		cdef int64_t classical_value = 0
 		cdef unsigned int control_qubit = 0
-		cdef int num_ancilla = NUMANCILLY
-		cdef unsigned int[:] ancilla_arr
 		cdef unsigned int[:] control_qubits
 		cdef unsigned int[:] ret_qubits_mv = (<qint>ret).qubits
 		cdef int result_bits = (<qint>ret).bits
+		cdef sequence_t *seq
+		cdef int pos
 
 		# Extract ret qubits (right-aligned in 64-element array)
 		for i in range(result_bits):
@@ -575,19 +576,37 @@
 			control_qubits = (<qint>_control_bool).qubits
 			control_qubit = control_qubits[63]
 
-		# Extract ancilla qubits
-		ancilla_arr = _get_ancilla()
-		for i in range(num_ancilla):
-			ancilla_qa[i] = ancilla_arr[i]
-
 		if type(other) == int:
 			classical_value = <int64_t>other
-			with nogil:
-				hot_path_mul_cq(_circuit, ret_qa, result_bits,
-								self_qa, self_bits,
-								classical_value,
-								_controlled, control_qubit,
-								ancilla_qa, num_ancilla)
+
+			# Toffoli dispatch for CQ
+			if _circ.arithmetic_mode == 1:  # ARITH_TOFFOLI
+				if _controlled:
+					toffoli_cmul_cq(<circuit_t*>_circ, ret_qa, result_bits,
+					                self_qa, self_bits, classical_value,
+					                control_qubit)
+				else:
+					toffoli_mul_cq(<circuit_t*>_circ, ret_qa, result_bits,
+					               self_qa, self_bits, classical_value)
+				return ret
+
+			# QFT path: build qubit array and call sequence generator
+			pos = 0
+			for i in range(result_bits):
+				qa[pos] = ret_qa[i]
+				pos += 1
+			for i in range(self_bits):
+				qa[pos] = self_qa[i]
+				pos += 1
+			if _controlled:
+				qa[pos] = control_qubit
+				pos += 1
+				seq = cCQ_mul(result_bits, classical_value)
+			else:
+				seq = CQ_mul(result_bits, classical_value)
+			if seq == NULL:
+				return ret
+			run_instruction(seq, qa, 0, <circuit_t*>_circ, 0)
 			return ret
 
 		if not isinstance(other, qint):
@@ -600,12 +619,37 @@
 		for i in range(other_bits):
 			other_qa[i] = other_qubits_mv[other_offset + i]
 
-		with nogil:
-			hot_path_mul_qq(_circuit, ret_qa, result_bits,
-							self_qa, self_bits,
-							other_qa, other_bits,
-							_controlled, control_qubit,
-							ancilla_qa, num_ancilla)
+		# Toffoli dispatch for QQ
+		if _circ.arithmetic_mode == 1:  # ARITH_TOFFOLI
+			if _controlled:
+				toffoli_cmul_qq(<circuit_t*>_circ, ret_qa, result_bits,
+				                self_qa, self_bits, other_qa, other_bits,
+				                control_qubit)
+			else:
+				toffoli_mul_qq(<circuit_t*>_circ, ret_qa, result_bits,
+				               self_qa, self_bits, other_qa, other_bits)
+			return ret
+
+		# QFT path: build qubit array and call sequence generator
+		pos = 0
+		for i in range(result_bits):
+			qa[pos] = ret_qa[i]
+			pos += 1
+		for i in range(self_bits):
+			qa[pos] = self_qa[i]
+			pos += 1
+		for i in range(other_bits):
+			qa[pos] = other_qa[i]
+			pos += 1
+		if _controlled:
+			qa[pos] = control_qubit
+			pos += 1
+			seq = cQQ_mul(result_bits)
+		else:
+			seq = QQ_mul(result_bits)
+		if seq == NULL:
+			return ret
+		run_instruction(seq, qa, 0, <circuit_t*>_circ, 0)
 		return ret
 
 	def __mul__(self, other):
