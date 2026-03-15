@@ -930,6 +930,8 @@ cdef class qint(circuit):
 		-----
 		Measurement collapses quantum superposition to classical state.
 		Currently returns initialization value (simulation placeholder).
+		Discards the history graph since qubits have collapsed and
+		uncomputation is physically meaningless.
 
 		Examples
 		--------
@@ -938,6 +940,7 @@ cdef class qint(circuit):
 		>>> result
 		5
 		"""
+		self.history.discard()
 		return self.value
 
 	# --- Operation sections (inlined by build_preprocessor.py) ---
