@@ -820,8 +820,10 @@ class CompiledFunc:
         finally:
             if _is_top_level_dag:
                 pop_dag_context()
-                if self._call_graph is not None and self._opt == 2:
-                    self._apply_merge()
+                if self._call_graph is not None:
+                    if self._opt == 2:
+                        self._apply_merge()
+                    self._call_graph.freeze()
 
         return result
 

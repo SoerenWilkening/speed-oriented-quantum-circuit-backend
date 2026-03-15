@@ -175,6 +175,7 @@ class CallGraphDAG:
         self._dag: rx.PyDAG = rx.PyDAG()
         self._nodes: list[DAGNode] = []
         self._qubit_last_node: dict[int, int] = {}
+        self._frozen: bool = False
 
     # -- Node management ----------------------------------------------------
 
@@ -221,7 +222,17 @@ class CallGraphDAG:
         -------
         int
             Index of the newly added node.
+
+        Raises
+        ------
+        RuntimeError
+            If the DAG has been frozen via ``freeze()``.
         """
+        if self._frozen:
+            raise RuntimeError(
+                "Cannot add node to frozen CallGraphDAG. "
+                "The graph is immutable after capture."
+            )
         node = DAGNode(
             func_name, qubit_set, gate_count, cache_key,
             depth=depth, t_count=t_count,
@@ -258,6 +269,22 @@ class CallGraphDAG:
 
         for q in qubit_set:
             self._qubit_last_node[q] = node_idx
+
+    # -- Freeze control -----------------------------------------------------
+
+    def freeze(self) -> None:
+        """Freeze the DAG, making it immutable.
+
+        After calling this method, ``add_node()`` will raise
+        ``RuntimeError``.  Read-only methods (``report()``, ``to_dot()``,
+        ``parallel_groups()``, etc.) continue to work normally.
+        """
+        self._frozen = True
+
+    @property
+    def frozen(self) -> bool:
+        """Return whether the DAG has been frozen."""
+        return self._frozen
 
     # -- Parallel group detection -------------------------------------------
 
