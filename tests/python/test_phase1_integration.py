@@ -18,7 +18,6 @@ import gc
 
 import quantum_language as ql
 from quantum_language._core import _get_circuit_active
-from quantum_language.history_graph import HistoryGraph
 
 
 # ---------------------------------------------------------------------------
@@ -584,9 +583,9 @@ class TestCircuitGateCountIntegration:
         assert outer_inv == outer_fwd
 
         # Total gates: init(a) + init(b) + outer_fwd + inner_fwd + inner_inv + outer_inv
-        total = gc5
-        expected = ql.get_gate_count()
-        assert total == expected
+        init_gates = gc0
+        expected = init_gates + outer_fwd + inner_fwd + inner_inv + outer_inv
+        assert gc5 == expected
 
     def test_del_gate_count_matches_forward(self):
         """__del__ inverse gate count equals forward comparison count."""
