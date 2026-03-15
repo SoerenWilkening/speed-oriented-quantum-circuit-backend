@@ -21,6 +21,9 @@ reports/
 .coverage
 htmlcov/
 
+# Local scratch/examples
+examples/
+
 # Build artifacts
 build/
 *.egg-info/
