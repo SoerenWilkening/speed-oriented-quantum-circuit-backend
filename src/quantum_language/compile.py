@@ -450,55 +450,6 @@ class AncillaRecord:
 
 
 # ---------------------------------------------------------------------------
-# Input side-effect detection
-# ---------------------------------------------------------------------------
-def _function_modifies_inputs(block):
-    """Check if any gate in block targets a parameter (input) qubit.
-
-    Returns True if the compiled function modifies its inputs, which means
-    auto-uncompute should be skipped (uncomputing temp ancillas would also
-    undo the input modifications).  Result is cached on the block.
-    """
-    if block._modifies_inputs is not None:
-        return block._modifies_inputs
-    param_count = sum(w for _, w in block.param_qubit_ranges)
-    result = any(g["target"] < param_count for g in block.gates)
-    block._modifies_inputs = result
-    return result
-
-
-# ---------------------------------------------------------------------------
-# Ancilla partitioning (return vs temp) for auto-uncompute
-# ---------------------------------------------------------------------------
-def _partition_ancillas(block, virtual_to_real, ancilla_qubits):
-    """Split ancilla physical qubits into return qubits and temp qubits.
-
-    Returns (return_physical, temp_physical) where each is a list of
-    physical qubit indices.
-    """
-    if block.return_qubit_range is None or block.return_is_param_index is not None:
-        # No ancilla-based return value -- all ancillas are temp
-        return [], list(ancilla_qubits)
-
-    ret_start, ret_width = block.return_qubit_range
-    return_virtual_set = set(range(ret_start, ret_start + ret_width))
-
-    # Build reverse mapping: real -> virtual
-    real_to_virt = {real: virt for virt, real in virtual_to_real.items()}
-
-    return_physical = []
-    temp_physical = []
-    for real_q in ancilla_qubits:
-        virt_q = real_to_virt.get(real_q)
-        if virt_q is not None and virt_q in return_virtual_set:
-            return_physical.append(real_q)
-        else:
-            temp_physical.append(real_q)
-
-    return return_physical, temp_physical
-
-
-# ---------------------------------------------------------------------------
 # Virtual qubit mapping helpers
 # ---------------------------------------------------------------------------
 def _build_virtual_mapping(gates, param_qubit_indices):
@@ -617,7 +568,7 @@ def _build_qubit_set_numpy(quantum_args, extra_values=None):
 # ---------------------------------------------------------------------------
 # Return value construction for replay
 # ---------------------------------------------------------------------------
-def _build_return_qint(block, virtual_to_real, start_layer, end_layer):
+def _build_return_qint(block, virtual_to_real):
     """Construct a usable qint from replay-mapped qubits.
 
     Uses the qint(create_new=False, bit_list=...) pattern from qbool.copy().
@@ -647,7 +598,7 @@ def _build_return_qint(block, virtual_to_real, start_layer, end_layer):
     return result
 
 
-def _build_return_qarray(block, virtual_to_real, start_layer, end_layer):
+def _build_return_qarray(block, virtual_to_real):
     """Construct a qarray return value from replay-mapped qubits.
 
     Creates new qint elements with qubits mapped from virtual space,
@@ -1470,9 +1421,9 @@ class CompiledFunc:
                 # Return value IS one of the input params -- return caller's qint/qarray
                 result = quantum_args[block.return_is_param_index]
             elif block.return_type == "qarray":
-                result = _build_return_qarray(block, virtual_to_real, start_layer, end_layer)
+                result = _build_return_qarray(block, virtual_to_real)
             else:
-                result = _build_return_qint(block, virtual_to_real, start_layer, end_layer)
+                result = _build_return_qint(block, virtual_to_real)
 
         # Record forward call for inverse support (only when ancillas were allocated)
         if track_forward and ancilla_qubits:

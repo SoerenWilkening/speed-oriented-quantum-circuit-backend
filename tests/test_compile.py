@@ -2398,7 +2398,7 @@ def test_auto_uncompute_preserves_return_value():
 
 
 def test_auto_uncompute_qubit_reuse():
-    """Deallocated temp qubits are reusable by subsequent allocations."""
+    """Compiled function with qubit_saving does not prevent subsequent allocations."""
     ql.circuit()
     ql.option("qubit_saving", True)
 
@@ -2411,11 +2411,23 @@ def test_auto_uncompute_qubit_reuse():
         return result
 
     a = ql.qint(1, width=4)
-    _result = complex_fn(a)
+    stats_before = ql.circuit_stats()
+    result1 = complex_fn(a)
+    stats_after_first = ql.circuit_stats()
 
-    # Allocate a new qint
+    # The compiled function should have allocated ancilla qubits
+    assert stats_after_first["total_allocations"] > stats_before["total_allocations"], (
+        "Compiled function should allocate ancilla qubits"
+    )
+
+    # Return value should be live and usable
+    assert result1.width == 4
+    assert not result1._is_uncomputed
+
+    # Allocate a new qint -- circuit should still accept allocations
     b = ql.qint(2, width=4)
     assert b.width == 4
+    assert not b._is_uncomputed
 
 
 def test_auto_uncompute_inverse_after():
@@ -2458,9 +2470,18 @@ def test_auto_uncompute_none_return():
         # No return -- returns None
 
     a = ql.qint(3, width=4)
+    gc_before = ql.get_gate_count()
     result = side_effect_fn(a)
 
     assert result is None, "Function returning None should return None"
+
+    # The compiled function should have emitted gates (temp += x generates addition gates)
+    gc_after = ql.get_gate_count()
+    assert gc_after > gc_before, "Compiled function should emit gates even with None return"
+
+    # Input qint should still be usable after the call
+    assert not a._is_uncomputed, "Input qint should remain live after None-returning call"
+    assert a.width == 4
 
 
 def test_auto_uncompute_inplace_skips():
@@ -2561,14 +2582,28 @@ def test_auto_uncompute_replay_path():
 
     # First call (capture path)
     a = ql.qint(3, width=4)
-    _result1 = complex_fn(a)
+    gc_before_capture = ql.get_gate_count()
+    result1 = complex_fn(a)
+    gc_after_capture = ql.get_gate_count()
+
+    # Capture should emit gates
+    assert gc_after_capture > gc_before_capture, "Capture path should emit gates"
+    assert result1.width == 4
+    assert not result1._is_uncomputed
 
     # Record should exist after capture
     assert len(complex_fn._forward_calls) == 1
 
     # Second call (replay path) with different qubits
     b = ql.qint(5, width=4)
-    _result2 = complex_fn(b)
+    gc_before_replay = ql.get_gate_count()
+    result2 = complex_fn(b)
+    gc_after_replay = ql.get_gate_count()
+
+    # Replay should also emit gates (same count as capture)
+    assert gc_after_replay > gc_before_replay, "Replay path should emit gates"
+    assert result2.width == 4
+    assert not result2._is_uncomputed
 
     assert len(complex_fn._forward_calls) == 2, "Both forward calls should be tracked"
 
