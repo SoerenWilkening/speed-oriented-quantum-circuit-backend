@@ -73,6 +73,29 @@ from .call_graph import record_operation as _record_operation
 from .history_graph import HistoryGraph
 
 
+def _run_inverted_on_circuit(seq_ptr, qubit_mapping):
+	"""Run a sequence inverted on the active circuit.
+
+	Called by ``HistoryGraph.uncompute()`` to replay a single operation
+	in reverse.  Takes Python int arguments and casts internally to
+	C pointers.
+
+	Parameters
+	----------
+	seq_ptr : int
+		Pointer to ``sequence_t`` as a Python int.
+	qubit_mapping : tuple[int, ...]
+		Qubit indices to pass to ``run_instruction``.
+	"""
+	cdef sequence_t *_seq = <sequence_t*><unsigned long long>seq_ptr
+	cdef circuit_t *_circ = <circuit_t*><unsigned long long>_get_circuit()
+	cdef unsigned int _qa[256]
+	cdef int _i
+	for _i in range(len(qubit_mapping)):
+		_qa[_i] = qubit_mapping[_i]
+	run_instruction(_seq, _qa, True, _circ)
+
+
 cpdef void _set_layer_floor_to_used():
 	"""Set circuit layer_floor to used_layer (force next gate into new layer).
 
@@ -915,6 +938,14 @@ cdef class qint(circuit):
 
 		# Phase 117: Pop control entry from stack
 		_pop_control()
+
+		# Step 1.3: Uncompute the condition qbool's history graph
+		# After restoring control context, reverse the operations that
+		# produced this qbool (e.g., the comparison gates).  This must
+		# happen AFTER popping the control so the inverse gates are not
+		# controlled by the condition itself.
+		if self.history:
+			self.history.uncompute(_run_inverted_on_circuit)
 
 		return False  # do not suppress exceptions
 

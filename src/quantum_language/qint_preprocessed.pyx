@@ -73,6 +73,29 @@ from .call_graph import record_operation as _record_operation
 from .history_graph import HistoryGraph
 
 
+def _run_inverted_on_circuit(seq_ptr, qubit_mapping):
+	"""Run a sequence inverted on the active circuit.
+
+	Called by ``HistoryGraph.uncompute()`` to replay a single operation
+	in reverse.  Takes Python int arguments and casts internally to
+	C pointers.
+
+	Parameters
+	----------
+	seq_ptr : int
+		Pointer to ``sequence_t`` as a Python int.
+	qubit_mapping : tuple[int, ...]
+		Qubit indices to pass to ``run_instruction``.
+	"""
+	cdef sequence_t *_seq = <sequence_t*><unsigned long long>seq_ptr
+	cdef circuit_t *_circ = <circuit_t*><unsigned long long>_get_circuit()
+	cdef unsigned int _qa[256]
+	cdef int _i
+	for _i in range(len(qubit_mapping)):
+		_qa[_i] = qubit_mapping[_i]
+	run_instruction(_seq, _qa, True, _circ)
+
+
 cpdef void _set_layer_floor_to_used():
 	"""Set circuit layer_floor to used_layer (force next gate into new layer).
 
@@ -1577,6 +1600,14 @@ cdef class qint(circuit):
 		# Phase 117: Pop control entry from stack
 		_pop_control()
 
+		# Step 1.3: Uncompute the condition qbool's history graph
+		# After restoring control context, reverse the operations that
+		# produced this qbool (e.g., the comparison gates).  This must
+		# happen AFTER popping the control so the inverse gates are not
+		# controlled by the condition itself.
+		if self.history:
+			self.history.uncompute(_run_inverted_on_circuit)
+
 		return False  # do not suppress exceptions
 
 	def measure(self):
@@ -1798,6 +1829,18 @@ cdef class qint(circuit):
 		if type(other) == qint:
 			a.add_dependency(other)
 
+		# Step 1.2: Record operation into result's per-variable history
+		_self_offset_h = 64 - self.bits
+		_a_offset_h = 64 - (<qint>a).bits
+		_qm = tuple((<qint>a).qubits[_a_offset_h + i] for i in range((<qint>a).bits)) \
+			+ tuple(self.qubits[_self_offset_h + i] for i in range(self.bits))
+		if type(other) == qint:
+			_other_offset_h = 64 - (<qint>other).bits
+			_qm = _qm + tuple((<qint>other).qubits[_other_offset_h + i] for i in range((<qint>other).bits))
+		(<qint>a).history.append(0, _qm)
+		if type(other) == qint and (<qint>other).bits < result_width:
+			(<qint>a).history.add_child(padded_other)
+
 		if _circ_init:
 			(<circuit_s*>_circ).layer_floor = _saved_floor_add
 		return a
@@ -1857,6 +1900,18 @@ cdef class qint(circuit):
 		a.add_dependency(self)
 		if type(other) == qint:
 			a.add_dependency(other)
+
+		# Step 1.2: Record operation into result's per-variable history
+		_self_offset_h = 64 - self.bits
+		_a_offset_h = 64 - (<qint>a).bits
+		_qm = tuple((<qint>a).qubits[_a_offset_h + i] for i in range((<qint>a).bits)) \
+			+ tuple(self.qubits[_self_offset_h + i] for i in range(self.bits))
+		if type(other) == qint:
+			_other_offset_h = 64 - (<qint>other).bits
+			_qm = _qm + tuple((<qint>other).qubits[_other_offset_h + i] for i in range((<qint>other).bits))
+		(<qint>a).history.append(0, _qm)
+		if type(other) == qint and (<qint>other).bits < result_width:
+			(<qint>a).history.add_child(padded_other)
 
 		if _circ_init:
 			(<circuit_s*>_circ).layer_floor = _saved_floor_radd
@@ -1943,6 +1998,18 @@ cdef class qint(circuit):
 		if type(other) == qint:
 			a.add_dependency(other)
 
+		# Step 1.2: Record operation into result's per-variable history
+		_self_offset_h = 64 - self.bits
+		_a_offset_h = 64 - (<qint>a).bits
+		_qm = tuple((<qint>a).qubits[_a_offset_h + i] for i in range((<qint>a).bits)) \
+			+ tuple(self.qubits[_self_offset_h + i] for i in range(self.bits))
+		if type(other) == qint:
+			_other_offset_h = 64 - (<qint>other).bits
+			_qm = _qm + tuple((<qint>other).qubits[_other_offset_h + i] for i in range((<qint>other).bits))
+		(<qint>a).history.append(0, _qm)
+		if type(other) == qint and (<qint>other).bits < result_width:
+			(<qint>a).history.add_child(padded_other)
+
 		if _circ_init:
 			(<circuit_s*>_circ).layer_floor = _saved_floor_sub
 		return a
@@ -2003,6 +2070,13 @@ cdef class qint(circuit):
 		result.operation_type = 'NEG'
 		result.add_dependency(self)
 
+		# Step 1.2: Record operation into result's per-variable history
+		_self_offset_h = 64 - self.bits
+		_r_offset_h = 64 - (<qint>result).bits
+		_qm = tuple((<qint>result).qubits[_r_offset_h + i] for i in range((<qint>result).bits)) \
+			+ tuple(self.qubits[_self_offset_h + i] for i in range(self.bits))
+		(<qint>result).history.append(0, _qm)
+
 		if _circ_init:
 			(<circuit_s*>_circ).layer_floor = _saved_floor_neg
 		return result
@@ -2051,6 +2125,16 @@ cdef class qint(circuit):
 		result.add_dependency(self)
 		if type(other) == qint:
 			result.add_dependency(other)
+
+		# Step 1.2: Record operation into result's per-variable history
+		_self_offset_h = 64 - self.bits
+		_r_offset_h = 64 - (<qint>result).bits
+		_qm = tuple((<qint>result).qubits[_r_offset_h + i] for i in range((<qint>result).bits)) \
+			+ tuple(self.qubits[_self_offset_h + i] for i in range(self.bits))
+		if type(other) == qint:
+			_other_offset_h = 64 - (<qint>other).bits
+			_qm = _qm + tuple((<qint>other).qubits[_other_offset_h + i] for i in range((<qint>other).bits))
+		(<qint>result).history.append(0, _qm)
 
 		if _circ_init:
 			(<circuit_s*>_circ).layer_floor = _saved_floor_rsub
@@ -2103,6 +2187,13 @@ cdef class qint(circuit):
 		result._end_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
 		result.operation_type = 'LSHIFT'
 		result.add_dependency(self)
+
+		# Step 1.2: Record operation into result's per-variable history
+		_self_offset_h = 64 - self.bits
+		_r_offset_h = 64 - (<qint>result).bits
+		_qm = tuple((<qint>result).qubits[_r_offset_h + i] for i in range((<qint>result).bits)) \
+			+ tuple(self.qubits[_self_offset_h + i] for i in range(self.bits))
+		(<qint>result).history.append(0, _qm)
 
 		if _circ_init:
 			(<circuit_s*>_circ).layer_floor = _saved_floor_lsh
@@ -2164,6 +2255,13 @@ cdef class qint(circuit):
 		result._end_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
 		result.operation_type = 'RSHIFT'
 		result.add_dependency(self)
+
+		# Step 1.2: Record operation into result's per-variable history
+		_self_offset_h = 64 - self.bits
+		_r_offset_h = 64 - (<qint>result).bits
+		_qm = tuple((<qint>result).qubits[_r_offset_h + i] for i in range((<qint>result).bits)) \
+			+ tuple(self.qubits[_self_offset_h + i] for i in range(self.bits))
+		(<qint>result).history.append(0, _qm)
 
 		if _circ_init:
 			(<circuit_s*>_circ).layer_floor = _saved_floor_rsh
@@ -2395,6 +2493,16 @@ cdef class qint(circuit):
 		if isinstance(other, qint):
 			result.add_dependency(other)
 
+		# Step 1.2: Record operation into result's per-variable history
+		_self_offset_h = 64 - self.bits
+		_r_offset_h = 64 - (<qint>result).bits
+		_qm = tuple((<qint>result).qubits[_r_offset_h + i] for i in range((<qint>result).bits)) \
+			+ tuple(self.qubits[_self_offset_h + i] for i in range(self.bits))
+		if isinstance(other, qint):
+			_other_offset_h = 64 - (<qint>other).bits
+			_qm = _qm + tuple((<qint>other).qubits[_other_offset_h + i] for i in range((<qint>other).bits))
+		(<qint>result).history.append(0, _qm)
+
 		if _circ_init:
 			(<circuit_s*>_circ).layer_floor = _saved_floor_mul
 		return result
@@ -2455,6 +2563,16 @@ cdef class qint(circuit):
 		result.add_dependency(self)
 		if isinstance(other, qint):
 			result.add_dependency(other)
+
+		# Step 1.2: Record operation into result's per-variable history
+		_self_offset_h = 64 - self.bits
+		_r_offset_h = 64 - (<qint>result).bits
+		_qm = tuple((<qint>result).qubits[_r_offset_h + i] for i in range((<qint>result).bits)) \
+			+ tuple(self.qubits[_self_offset_h + i] for i in range(self.bits))
+		if isinstance(other, qint):
+			_other_offset_h = 64 - (<qint>other).bits
+			_qm = _qm + tuple((<qint>other).qubits[_other_offset_h + i] for i in range((<qint>other).bits))
+		(<qint>result).history.append(0, _qm)
 
 		if _circ_init:
 			(<circuit_s*>_circ).layer_floor = _saved_floor_rmul
@@ -2656,6 +2774,16 @@ cdef class qint(circuit):
 		result._start_layer = start_layer
 		result._end_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
 
+		# Step 1.2: Record operation into result's per-variable history
+		_r_offset_h = 64 - result_bits
+		_self_offset_h = 64 - self.bits
+		_qm = tuple(result_qubits[_r_offset_h + i] for i in range(result_bits)) \
+			+ tuple(self.qubits[_self_offset_h + i] for i in range(self.bits))
+		if type(other) != int and isinstance(other, qint):
+			_other_offset_h = 64 - (<qint>other).bits
+			_qm = _qm + tuple((<qint>other).qubits[_other_offset_h + i] for i in range((<qint>other).bits))
+		result.history.append(<unsigned long long>seq, _qm)
+
 		if _circuit_initialized:
 			(<circuit_s*>_circuit).layer_floor = _saved_floor_and
 		return result
@@ -2821,6 +2949,16 @@ cdef class qint(circuit):
 		# Capture end layer
 		result._start_layer = start_layer
 		result._end_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
+
+		# Step 1.2: Record operation into result's per-variable history
+		_r_offset_h = 64 - result_bits
+		_self_offset_h = 64 - self.bits
+		_qm = tuple(result.qubits[_r_offset_h + i] for i in range(result_bits)) \
+			+ tuple(self.qubits[_self_offset_h + i] for i in range(self.bits))
+		if type(other) != int and isinstance(other, qint):
+			_other_offset_h = 64 - (<qint>other).bits
+			_qm = _qm + tuple((<qint>other).qubits[_other_offset_h + i] for i in range((<qint>other).bits))
+		result.history.append(<unsigned long long>seq, _qm)
 
 		if _circuit_initialized:
 			(<circuit_s*>_circuit).layer_floor = _saved_floor_or
@@ -2997,6 +3135,15 @@ cdef class qint(circuit):
 		# Capture end layer
 		result._start_layer = start_layer
 		result._end_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
+
+		# Step 1.2: Record operation into result's per-variable history
+		_self_offset_h = 64 - self.bits
+		_qm = tuple(result_qubits[result_offset + i] for i in range(result_bits)) \
+			+ tuple(self.qubits[_self_offset_h + i] for i in range(self.bits))
+		if type(other) != int and isinstance(other, qint):
+			_other_offset_h = 64 - (<qint>other).bits
+			_qm = _qm + tuple((<qint>other).qubits[_other_offset_h + i] for i in range((<qint>other).bits))
+		result.history.append(0, _qm)
 
 		if _circuit_initialized:
 			(<circuit_s*>_circuit).layer_floor = _saved_floor_xor
@@ -3423,6 +3570,15 @@ cdef class qint(circuit):
 			result._start_layer = start_layer
 			result._end_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
 
+			# Step 1.2: Record operation into result's per-variable history
+			_r_offset_h = 64 - (<qint>result).bits
+			_self_offset_h = 64 - self.bits
+			_other_offset_h = 64 - (<qint>other).bits
+			_qm = tuple((<qint>result).qubits[_r_offset_h + i] for i in range((<qint>result).bits)) \
+				+ tuple(self.qubits[_self_offset_h + i] for i in range(self.bits)) \
+				+ tuple((<qint>other).qubits[_other_offset_h + i] for i in range((<qint>other).bits))
+			result.history.append(0, _qm)
+
 			if _circuit_initialized:
 				(<circuit_s*>_circuit).layer_floor = _saved_floor
 			return result
@@ -3521,6 +3677,13 @@ cdef class qint(circuit):
 			# Phase 41: Layer tracking for uncomputation
 			result._start_layer = start_layer
 			result._end_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
+
+			# Step 1.2: Record operation into result's per-variable history
+			_r_offset_h = 64 - (<qint>result).bits
+			_self_offset_h = 64 - self.bits
+			_qm = tuple((<qint>result).qubits[_r_offset_h + i] for i in range((<qint>result).bits)) \
+				+ tuple(self.qubits[_self_offset_h + i] for i in range(self.bits))
+			result.history.append(<unsigned long long>seq, _qm)
 
 			if _circuit_initialized:
 				(<circuit_s*>_circuit).layer_floor = _saved_floor
@@ -3660,6 +3823,19 @@ cdef class qint(circuit):
 			# no layer tracking, so there is no double-reversal risk.
 			result._start_layer = start_layer
 			result._end_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
+
+			# Step 1.2: Record operation into result's per-variable history
+			_r_offset_h = 64 - (<qint>result).bits
+			_self_offset_h = 64 - self.bits
+			_other_offset_h = 64 - (<qint>other).bits
+			_qm = tuple((<qint>result).qubits[_r_offset_h + i] for i in range((<qint>result).bits)) \
+				+ tuple(self.qubits[_self_offset_h + i] for i in range(self.bits)) \
+				+ tuple((<qint>other).qubits[_other_offset_h + i] for i in range((<qint>other).bits))
+			result.history.append(0, _qm)
+			# Add widened temporaries as weakref children
+			result.history.add_child(temp_self)
+			result.history.add_child(temp_other)
+
 			if _circuit_initialized:
 				(<circuit_s*>_circuit).layer_floor = _saved_floor_lt
 			return result
@@ -3783,6 +3959,19 @@ cdef class qint(circuit):
 			# no layer tracking, so there is no double-reversal risk.
 			result._start_layer = start_layer
 			result._end_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
+
+			# Step 1.2: Record operation into result's per-variable history
+			_r_offset_h = 64 - (<qint>result).bits
+			_self_offset_h = 64 - self.bits
+			_other_offset_h = 64 - (<qint>other).bits
+			_qm = tuple((<qint>result).qubits[_r_offset_h + i] for i in range((<qint>result).bits)) \
+				+ tuple(self.qubits[_self_offset_h + i] for i in range(self.bits)) \
+				+ tuple((<qint>other).qubits[_other_offset_h + i] for i in range((<qint>other).bits))
+			result.history.append(0, _qm)
+			# Add widened temporaries as weakref children
+			result.history.add_child(temp_other)
+			result.history.add_child(temp_self)
+
 			if _circuit_initialized:
 				(<circuit_s*>_circuit).layer_floor = _saved_floor_gt
 			return result

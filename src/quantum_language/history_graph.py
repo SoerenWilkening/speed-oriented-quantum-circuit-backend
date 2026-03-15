@@ -92,6 +92,45 @@ class HistoryGraph:
         return alive
 
     # ------------------------------------------------------------------
+    # Uncomputation
+    # ------------------------------------------------------------------
+
+    def uncompute(self, run_fn):
+        """Uncompute all entries in reverse order, then cascade to children.
+
+        Iterates entries newest-to-oldest, calling *run_fn* for each entry
+        that has a real sequence pointer (non-zero).  After all entries are
+        processed, cascades to orphaned children (alive weakrefs whose
+        referent has a history with entries).
+
+        Parameters
+        ----------
+        run_fn : callable(sequence_ptr, qubit_mapping)
+            Callback that executes ``run_instruction(seq, mapping,
+            invert=True)`` on the active circuit.  Provided by the
+            Cython caller.
+        """
+        # 1. Reverse-iterate entries and invoke inverted run_instruction
+        for seq_ptr, qubit_mapping in self.reversed_entries():
+            if seq_ptr != 0:
+                run_fn(seq_ptr, qubit_mapping)
+
+        # 2. Clear own entries (idempotent: prevents double-uncompute)
+        self.entries.clear()
+
+        # 3. Cascade to orphaned children via weakrefs
+        for ref in self.children:
+            child = ref()
+            if child is None:
+                continue
+            child_history = getattr(child, "history", None)
+            if child_history is not None and child_history:
+                child_history.uncompute(run_fn)
+
+        # 4. Clear children list
+        self.children.clear()
+
+    # ------------------------------------------------------------------
     # Lifecycle
     # ------------------------------------------------------------------
 
