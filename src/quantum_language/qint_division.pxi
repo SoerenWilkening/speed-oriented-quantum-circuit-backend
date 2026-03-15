@@ -130,46 +130,24 @@
 		Quantum divisor: O(2^width) circuit via repeated subtraction.
 		"""
 		from quantum_language.qbool import qbool
-		cdef int start_layer
-		cdef circuit_t *_circ = <circuit_t*><unsigned long long>_get_circuit()
-		cdef bint _circ_init = _get_circuit_initialized()
-
-		# Phase 41: Capture start layer
-		start_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
-
-		# Quick-013: Save and set layer floor
-		cdef unsigned int _saved_floor_div = (<circuit_s*>_circ).layer_floor if _circ_init else 0
-		if _circ_init:
-			(<circuit_s*>_circ).layer_floor = start_layer
 
 		# Validation
 		if type(divisor) == int:
 			if divisor == 0:
-				if _circ_init:
-					(<circuit_s*>_circ).layer_floor = _saved_floor_div
 				raise ZeroDivisionError("Division by zero")
 			if divisor < 0:
-				if _circ_init:
-					(<circuit_s*>_circ).layer_floor = _saved_floor_div
 				raise NotImplementedError("Negative divisor not yet supported")
 		elif type(divisor) != qint:
-			if _circ_init:
-				(<circuit_s*>_circ).layer_floor = _saved_floor_div
 			raise TypeError("Divisor must be int or qint")
 
 		# Call C-level divmod
 		quotient, remainder = self._divmod_c(divisor, True, False)
 
-		# Phase 41: Layer tracking for uncomputation
-		quotient._start_layer = start_layer
-		quotient._end_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
 		quotient.operation_type = 'DIV'
 		quotient.add_dependency(self)
 		if type(divisor) == qint:
 			quotient.add_dependency(divisor)
 
-		if _circ_init:
-			(<circuit_s*>_circ).layer_floor = _saved_floor_div
 		return quotient
 
 	def __ifloordiv__(self, other):
@@ -209,46 +187,23 @@
 		>>> r = a % 5
 		>>> # r represents |2>
 		"""
-		cdef int start_layer
-		cdef circuit_t *_circ = <circuit_t*><unsigned long long>_get_circuit()
-		cdef bint _circ_init = _get_circuit_initialized()
-
-		# Phase 41: Capture start layer
-		start_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
-
-		# Quick-013: Save and set layer floor
-		cdef unsigned int _saved_floor_mod = (<circuit_s*>_circ).layer_floor if _circ_init else 0
-		if _circ_init:
-			(<circuit_s*>_circ).layer_floor = start_layer
-
 		# Validation
 		if type(divisor) == int:
 			if divisor == 0:
-				if _circ_init:
-					(<circuit_s*>_circ).layer_floor = _saved_floor_mod
 				raise ZeroDivisionError("Modulo by zero")
 			if divisor < 0:
-				if _circ_init:
-					(<circuit_s*>_circ).layer_floor = _saved_floor_mod
 				raise NotImplementedError("Negative divisor not yet supported")
 		elif type(divisor) != qint:
-			if _circ_init:
-				(<circuit_s*>_circ).layer_floor = _saved_floor_mod
 			raise TypeError("Divisor must be int or qint")
 
 		# Call C-level divmod
 		quotient, remainder = self._divmod_c(divisor, False, True)
 
-		# Phase 41: Layer tracking for uncomputation
-		remainder._start_layer = start_layer
-		remainder._end_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
 		remainder.operation_type = 'MOD'
 		remainder.add_dependency(self)
 		if type(divisor) == qint:
 			remainder.add_dependency(divisor)
 
-		if _circ_init:
-			(<circuit_s*>_circ).layer_floor = _saved_floor_mod
 		return remainder
 
 	def __divmod__(self, divisor):
@@ -280,52 +235,26 @@
 		>>> q, r = divmod(a, 5)
 		>>> # q represents |3>, r represents |2>
 		"""
-		cdef int start_layer
-		cdef circuit_t *_circ = <circuit_t*><unsigned long long>_get_circuit()
-		cdef bint _circ_init = _get_circuit_initialized()
-
-		# Phase 41: Capture start layer
-		start_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
-
-		# Quick-013: Save and set layer floor
-		cdef unsigned int _saved_floor_dm = (<circuit_s*>_circ).layer_floor if _circ_init else 0
-		if _circ_init:
-			(<circuit_s*>_circ).layer_floor = start_layer
-
 		# Validation
 		if type(divisor) == int:
 			if divisor == 0:
-				if _circ_init:
-					(<circuit_s*>_circ).layer_floor = _saved_floor_dm
 				raise ZeroDivisionError("Divmod by zero")
 			if divisor < 0:
-				if _circ_init:
-					(<circuit_s*>_circ).layer_floor = _saved_floor_dm
 				raise NotImplementedError("Negative divisor not yet supported")
 		elif type(divisor) != qint:
-			if _circ_init:
-				(<circuit_s*>_circ).layer_floor = _saved_floor_dm
 			raise TypeError("Divisor must be int or qint")
 
 		# Call C-level divmod
 		quotient, remainder = self._divmod_c(divisor, True, True)
 
-		# Phase 41: Layer tracking for uncomputation
-		end_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
-		quotient._start_layer = start_layer
-		quotient._end_layer = end_layer
 		quotient.operation_type = 'DIVMOD'
 		quotient.add_dependency(self)
-		remainder._start_layer = start_layer
-		remainder._end_layer = end_layer
 		remainder.operation_type = 'DIVMOD'
 		remainder.add_dependency(self)
 		if type(divisor) == qint:
 			quotient.add_dependency(divisor)
 			remainder.add_dependency(divisor)
 
-		if _circ_init:
-			(<circuit_s*>_circ).layer_floor = _saved_floor_dm
 		return (quotient, remainder)
 
 	def __rfloordiv__(self, other):

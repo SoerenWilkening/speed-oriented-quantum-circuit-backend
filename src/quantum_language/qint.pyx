@@ -18,7 +18,6 @@ from ._core cimport (
     INTEGERSIZE, NUMANCILLY,
     init_circuit, Q_not, run_instruction,
     circuit_get_allocator, allocator_alloc, allocator_free,
-    reverse_circuit_range,
     qubit_allocator_t,
     CQ_add, QQ_add, cCQ_add, cQQ_add,
     CQ_mul, QQ_mul, cCQ_mul, cQQ_mul,
@@ -139,38 +138,6 @@ def _run_inverted_on_circuit(seq_ptr, qubit_mapping, int num_ancilla=0):
 			allocator_free(_alloc, _anc_start, num_ancilla)
 
 
-cpdef void _set_layer_floor_to_used():
-	"""Set circuit layer_floor to used_layer (force next gate into new layer).
-
-	This ensures the next gate added via add_gate() is placed in a new layer
-	at or after used_layer, preventing the optimizer from sharing a layer with
-	preceding gates. Used by _PhaseProxy.__iadd__ to keep the P gate outside
-	the comparison's layer range during phase kickback.
-	"""
-	cdef circuit_t *_circuit
-	cdef bint _circuit_initialized = _get_circuit_initialized()
-	if _circuit_initialized:
-		_circuit = <circuit_t*><unsigned long long>_get_circuit()
-		(<circuit_s*>_circuit).layer_floor = (<circuit_s*>_circuit).used_layer
-
-cpdef void _restore_layer_floor(unsigned int floor):
-	"""Restore layer_floor to a saved value."""
-	cdef circuit_t *_circuit
-	cdef bint _circuit_initialized = _get_circuit_initialized()
-	if _circuit_initialized:
-		_circuit = <circuit_t*><unsigned long long>_get_circuit()
-		(<circuit_s*>_circuit).layer_floor = floor
-
-cpdef unsigned int _get_layer_floor():
-	"""Get current layer_floor value."""
-	cdef circuit_t *_circuit
-	cdef bint _circuit_initialized = _get_circuit_initialized()
-	if _circuit_initialized:
-		_circuit = <circuit_t*><unsigned long long>_get_circuit()
-		return (<circuit_s*>_circuit).layer_floor
-	return 0
-
-
 class _PhaseProxy:
 	"""Proxy object returned by qint.phase / qarray.phase property.
 
@@ -193,17 +160,7 @@ class _PhaseProxy:
 			# qubit. P(theta) on a qubit in |1> adds phase e^{i*theta}
 			# to all basis states where that qubit is |1>, which is
 			# exactly the controlled global phase we want.
-			#
-			# Set layer_floor to used_layer before emitting P to force it
-			# into a NEW layer after the comparison gates. Without this,
-			# the optimizer may share a layer with comparison gates,
-			# causing the P gate to be inside the comparison's
-			# [_start_layer, _end_layer) range and incorrectly reversed
-			# during uncomputation.
-			saved_floor = _get_layer_floor()
-			_set_layer_floor_to_used()
 			emit_p_raw(ctrl.qubits[63], theta)
-			_restore_layer_floor(saved_floor)
 		# Uncontrolled: no gate (global phase is unobservable)
 		return self
 
@@ -414,11 +371,6 @@ cdef class qint(circuit):
 
 			# Phase 18: Initialize uncomputation tracking
 			self._is_uncomputed = False
-			self._start_layer = 0
-			self._end_layer = 0
-
-			# Phase 20: Capture uncomputation mode at creation
-			self._uncompute_mode = _get_qubit_saving_mode()
 			self._keep_flag = False
 
 			# Per-variable history graph for automatic uncomputation
@@ -470,11 +422,6 @@ cdef class qint(circuit):
 
 			# Phase 18: Initialize uncomputation tracking
 			self._is_uncomputed = False
-			self._start_layer = 0
-			self._end_layer = 0
-
-			# Phase 20: Capture uncomputation mode at creation
-			self._uncompute_mode = _get_qubit_saving_mode()
 			self._keep_flag = False
 
 			# Per-variable history graph for automatic uncomputation
@@ -590,12 +537,7 @@ cdef class qint(circuit):
 			return
 
 		try:
-			# 1. REVERSE GATES: Undo this operation first, while inputs still exist.
-			# Must happen before cascading to parents — our gates reference parent qubits.
-			if _circuit_initialized and self._end_layer > self._start_layer:
-				reverse_circuit_range(_circuit, self._start_layer, self._end_layer)
-
-			# 2. CASCADE: Get live parents and sort by creation order (descending = LIFO)
+			# 1. CASCADE: Get live parents and sort by creation order (descending = LIFO)
 			live_parents = self.get_live_parents()
 			live_parents.sort(key=lambda p: p._creation_order, reverse=True)
 
@@ -606,13 +548,13 @@ cdef class qint(circuit):
 				if not parent._is_uncomputed and parent.operation_type is not None:
 					parent._do_uncompute(from_del=from_del)
 
-			# 3. FREE QUBITS: Return to allocator
+			# 2. FREE QUBITS: Return to allocator
 			if _circuit_initialized:
 				alloc = circuit_get_allocator(<circuit_s*>_circuit)
 				if alloc != NULL:
 					allocator_free(alloc, self.allocated_start, self.bits)
 
-			# 4. Mark as uncomputed, clear ownership and release parent refs
+			# 3. Mark as uncomputed, clear ownership and release parent refs
 			self._is_uncomputed = True
 			self.allocated_qubits = False
 			self.dependency_parents = []
@@ -756,12 +698,9 @@ cdef class qint(circuit):
 		- Works inside `with qbool:` blocks (emits CRy gates)
 		- Supports uncomputation via scope exit (inverse is Ry(-theta))
 		"""
-		cdef circuit_t *_circuit
-		cdef bint _circuit_initialized
 		cdef int self_offset
 		cdef int i
 		cdef double theta
-		cdef int start_layer
 
 		import math
 
@@ -780,30 +719,10 @@ cdef class qint(circuit):
 		# Import emit_ry from _gates module
 		from quantum_language._gates import emit_ry
 
-		# Get circuit for layer tracking
-		_circuit = <circuit_t*><unsigned long long>_get_circuit()
-		_circuit_initialized = _get_circuit_initialized()
-
-		# Capture start layer for uncomputation
-		start_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
-
 		# Apply Ry to each qubit (right-aligned storage)
 		self_offset = 64 - self.bits
 		for i in range(self.bits):
 			emit_ry(self.qubits[self_offset + i], theta)
-
-		# Capture end layer for uncomputation support
-		# Accumulate range across multiple branch() calls so _do_uncompute()
-		# reverses ALL rotation gates, not just the last call.
-		end_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
-		if self._start_layer == 0 and self._end_layer == 0:
-			# First branch() call on this qint
-			self._start_layer = start_layer
-			self._end_layer = end_layer
-		else:
-			# Subsequent calls: expand tracked range
-			self._start_layer = min(self._start_layer, start_layer)
-			self._end_layer = max(self._end_layer, end_layer)
 
 		# Return None per user decision (mutation, no chaining)
 		return None
@@ -827,12 +746,6 @@ cdef class qint(circuit):
 		A circuit-active guard prevents firing during Python shutdown
 		or after circuit finalization.
 
-		Mode behavior:
-		- EAGER mode (qubit_saving=True): Always uncompute immediately when GC runs.
-		  This minimizes peak qubit count by freeing qubits as soon as possible.
-		- LAZY mode (qubit_saving=False, default): Only uncompute when scope has exited.
-		  This minimizes gate count by keeping intermediates alive longer (shared gates).
-
 		Notes
 		-----
 		Follows Python best practice: exceptions in __del__ print warnings only.
@@ -849,23 +762,17 @@ cdef class qint(circuit):
 
 		# Step 1.4: History-based uncomputation via __del__
 		# If this variable has history entries, uncompute them in reverse
-		# and cascade to orphaned children.  After successful history
-		# uncomputation, clear the layer range so the legacy
-		# _do_uncompute() path does not double-reverse the same gates.
+		# and cascade to orphaned children.
 		if hasattr(self, 'history') and self.history:
 			try:
 				self.history.uncompute(_run_inverted_on_circuit)
-				# Prevent _do_uncompute from also calling
-				# reverse_circuit_range for the same operation.
-				self._start_layer = 0
-				self._end_layer = 0
 			except Exception as e:
 				import sys
 				print(f"Warning: __del__ history uncomputation failed: {e}",
 				      file=sys.stderr)
 
-		# Phase 20: Mode-based decision - EAGER vs LAZY have different behavior
-		if self._uncompute_mode:
+		# Mode-based decision - EAGER vs LAZY have different behavior
+		if _get_qubit_saving_mode():
 			# EAGER mode (qubit_saving=True): Always uncompute immediately when GC runs.
 			# This minimizes peak qubit count by freeing qubits as soon as possible.
 			self._do_uncompute(from_del=True)
@@ -1011,10 +918,6 @@ cdef class qint(circuit):
 		# controlled by the condition itself.
 		if self.history:
 			self.history.uncompute(_run_inverted_on_circuit)
-			# Clear layer range so __del__ does not double-uncompute
-			# via the legacy reverse_circuit_range path.
-			self._start_layer = 0
-			self._end_layer = 0
 
 		return False  # do not suppress exceptions
 

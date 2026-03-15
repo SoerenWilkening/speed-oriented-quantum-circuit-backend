@@ -154,17 +154,8 @@
 		>>> c.width
 		8
 		"""
-		cdef int start_layer
 		cdef circuit_t *_circ = <circuit_t*><unsigned long long>_get_circuit()
 		cdef bint _circ_init = _get_circuit_initialized()
-
-		# Phase 41: Capture start layer before any gates
-		start_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
-
-		# Quick-013: Save and set layer floor
-		cdef unsigned int _saved_floor_add = (<circuit_s*>_circ).layer_floor if _circ_init else 0
-		if _circ_init:
-			(<circuit_s*>_circ).layer_floor = start_layer
 
 		# out of place addition - result width is max of operands
 		if type(other) == qint:
@@ -182,9 +173,6 @@
 		else:
 			a += other
 
-		# Phase 41: Layer tracking for uncomputation
-		a._start_layer = start_layer
-		a._end_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
 		a.operation_type = 'ADD'
 		a.add_dependency(self)
 		if type(other) == qint:
@@ -202,8 +190,6 @@
 		if type(other) == qint and (<qint>other).bits < result_width:
 			(<qint>a).history.add_child(padded_other)
 
-		if _circ_init:
-			(<circuit_s*>_circ).layer_floor = _saved_floor_add
 		return a
 
 	def __radd__(self, other: qint | int):
@@ -226,17 +212,8 @@
 		>>> b.width
 		8
 		"""
-		cdef int start_layer
 		cdef circuit_t *_circ = <circuit_t*><unsigned long long>_get_circuit()
 		cdef bint _circ_init = _get_circuit_initialized()
-
-		# Phase 41: Capture start layer before any gates
-		start_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
-
-		# Quick-013: Save and set layer floor
-		cdef unsigned int _saved_floor_radd = (<circuit_s*>_circ).layer_floor if _circ_init else 0
-		if _circ_init:
-			(<circuit_s*>_circ).layer_floor = start_layer
 
 		# out of place addition - result width is max of operands
 		if type(other) == qint:
@@ -254,9 +231,6 @@
 		else:
 			a += other
 
-		# Phase 41: Layer tracking for uncomputation
-		a._start_layer = start_layer
-		a._end_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
 		a.operation_type = 'ADD'
 		a.add_dependency(self)
 		if type(other) == qint:
@@ -274,8 +248,6 @@
 		if type(other) == qint and (<qint>other).bits < result_width:
 			(<qint>a).history.add_child(padded_other)
 
-		if _circ_init:
-			(<circuit_s*>_circ).layer_floor = _saved_floor_radd
 		return a
 
 	def __iadd__(self, other: qint | int):
@@ -323,17 +295,8 @@
 		>>> c.width
 		8
 		"""
-		cdef int start_layer
 		cdef circuit_t *_circ = <circuit_t*><unsigned long long>_get_circuit()
 		cdef bint _circ_init = _get_circuit_initialized()
-
-		# Phase 41: Capture start layer before any gates
-		start_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
-
-		# Quick-013: Save and set layer floor
-		cdef unsigned int _saved_floor_sub = (<circuit_s*>_circ).layer_floor if _circ_init else 0
-		if _circ_init:
-			(<circuit_s*>_circ).layer_floor = start_layer
 
 		# out of place subtraction - result width is max of operands
 		if type(other) == qint:
@@ -351,9 +314,6 @@
 		else:
 			a -= other
 
-		# Phase 41: Layer tracking for uncomputation
-		a._start_layer = start_layer
-		a._end_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
 		a.operation_type = 'SUB'
 		a.add_dependency(self)
 		if type(other) == qint:
@@ -371,8 +331,6 @@
 		if type(other) == qint and (<qint>other).bits < result_width:
 			(<qint>a).history.add_child(padded_other)
 
-		if _circ_init:
-			(<circuit_s*>_circ).layer_floor = _saved_floor_sub
 		return a
 
 	def __isub__(self, other: qint | int):
@@ -413,21 +371,11 @@
 		>>> b = -a
 		>>> # b represents |(-5) % 16> = |11>
 		"""
-		cdef int start_layer
 		cdef circuit_t *_circ = <circuit_t*><unsigned long long>_get_circuit()
 		cdef bint _circ_init = _get_circuit_initialized()
-		start_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
-
-		# Quick-013: Save and set layer floor
-		cdef unsigned int _saved_floor_neg = (<circuit_s*>_circ).layer_floor if _circ_init else 0
-		if _circ_init:
-			(<circuit_s*>_circ).layer_floor = start_layer
-
 		result = qint(width=self.bits)
 		result -= self  # 0 - self = two's complement negation
 
-		result._start_layer = start_layer
-		result._end_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
 		result.operation_type = 'NEG'
 		result.add_dependency(self)
 
@@ -438,8 +386,6 @@
 			+ tuple(self.qubits[_self_offset_h + i] for i in range(self.bits))
 		(<qint>result).history.append(0, _qm)
 
-		if _circ_init:
-			(<circuit_s*>_circ).layer_floor = _saved_floor_neg
 		return result
 
 	def __rsub__(self, other):
@@ -463,16 +409,8 @@
 		>>> b = 10 - a
 		>>> # b represents |7>
 		"""
-		cdef int start_layer
 		cdef circuit_t *_circ = <circuit_t*><unsigned long long>_get_circuit()
 		cdef bint _circ_init = _get_circuit_initialized()
-		start_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
-
-		# Quick-013: Save and set layer floor
-		cdef unsigned int _saved_floor_rsub = (<circuit_s*>_circ).layer_floor if _circ_init else 0
-		if _circ_init:
-			(<circuit_s*>_circ).layer_floor = start_layer
-
 		result = qint(width=self.bits)
 		if type(other) == int:
 			result += other   # classical add into zero-init (OK, other is classical)
@@ -480,8 +418,6 @@
 			result ^= other   # quantum copy other
 		result -= self         # result = other - self
 
-		result._start_layer = start_layer
-		result._end_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
 		result.operation_type = 'SUB'
 		result.add_dependency(self)
 		if type(other) == qint:
@@ -497,8 +433,6 @@
 			_qm = _qm + tuple((<qint>other).qubits[_other_offset_h + i] for i in range((<qint>other).bits))
 		(<qint>result).history.append(0, _qm)
 
-		if _circ_init:
-			(<circuit_s*>_circ).layer_floor = _saved_floor_rsub
 		return result
 
 	def __lshift__(self, int other):
@@ -529,23 +463,13 @@
 		"""
 		if other < 0:
 			raise ValueError("Negative shift count")
-		cdef int start_layer
 		cdef circuit_t *_circ = <circuit_t*><unsigned long long>_get_circuit()
 		cdef bint _circ_init = _get_circuit_initialized()
-		start_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
-
-		# Quick-013: Save and set layer floor
-		cdef unsigned int _saved_floor_lsh = (<circuit_s*>_circ).layer_floor if _circ_init else 0
-		if _circ_init:
-			(<circuit_s*>_circ).layer_floor = start_layer
-
 		result = qint(width=self.bits)
 		result ^= self  # quantum copy
 		if other > 0:
 			result *= (1 << other)
 
-		result._start_layer = start_layer
-		result._end_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
 		result.operation_type = 'LSHIFT'
 		result.add_dependency(self)
 
@@ -556,8 +480,6 @@
 			+ tuple(self.qubits[_self_offset_h + i] for i in range(self.bits))
 		(<qint>result).history.append(0, _qm)
 
-		if _circ_init:
-			(<circuit_s*>_circ).layer_floor = _saved_floor_lsh
 		return result
 
 	def __ilshift__(self, int other):
@@ -597,23 +519,13 @@
 		"""
 		if other < 0:
 			raise ValueError("Negative shift count")
-		cdef int start_layer
 		cdef circuit_t *_circ = <circuit_t*><unsigned long long>_get_circuit()
 		cdef bint _circ_init = _get_circuit_initialized()
-		start_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
-
-		# Quick-013: Save and set layer floor
-		cdef unsigned int _saved_floor_rsh = (<circuit_s*>_circ).layer_floor if _circ_init else 0
-		if _circ_init:
-			(<circuit_s*>_circ).layer_floor = start_layer
-
 		result = qint(width=self.bits)
 		result ^= self  # quantum copy
 		if other > 0:
 			result //= (1 << other)
 
-		result._start_layer = start_layer
-		result._end_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
 		result.operation_type = 'RSHIFT'
 		result.add_dependency(self)
 
@@ -624,8 +536,6 @@
 			+ tuple(self.qubits[_self_offset_h + i] for i in range(self.bits))
 		(<qint>result).history.append(0, _qm)
 
-		if _circ_init:
-			(<circuit_s*>_circ).layer_floor = _saved_floor_rsh
 		return result
 
 	def __irshift__(self, int other):
@@ -809,17 +719,8 @@
 		>>> c.width
 		16
 		"""
-		cdef int start_layer
 		cdef circuit_t *_circ = <circuit_t*><unsigned long long>_get_circuit()
 		cdef bint _circ_init = _get_circuit_initialized()
-
-		# Phase 41: Capture start layer before any gates
-		start_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
-
-		# Quick-013: Save and set layer floor
-		cdef unsigned int _saved_floor_mul = (<circuit_s*>_circ).layer_floor if _circ_init else 0
-		if _circ_init:
-			(<circuit_s*>_circ).layer_floor = start_layer
 
 		# Determine result width
 		if isinstance(other, qint):  # Includes qint subclasses like qint_mod
@@ -827,8 +728,6 @@
 		elif type(other) == int:
 			result_width = self.bits
 		else:
-			if _circ_init:
-				(<circuit_s*>_circ).layer_floor = _saved_floor_mul
 			raise TypeError("Multiplication requires qint or int")
 
 		# BUG-COND-MUL-01 fix: prevent result registration in scope frame.
@@ -846,9 +745,6 @@
 		# Perform multiplication into result
 		self.multiplication_inplace(other, result)
 
-		# Phase 41: Layer tracking for uncomputation
-		result._start_layer = start_layer
-		result._end_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
 		result.operation_type = 'MUL'
 		result.add_dependency(self)
 		if isinstance(other, qint):
@@ -864,8 +760,6 @@
 			_qm = _qm + tuple((<qint>other).qubits[_other_offset_h + i] for i in range((<qint>other).bits))
 		(<qint>result).history.append(0, _qm)
 
-		if _circ_init:
-			(<circuit_s*>_circ).layer_floor = _saved_floor_mul
 		return result
 
 	def __rmul__(self, other):
@@ -888,17 +782,8 @@
 		>>> b.width
 		8
 		"""
-		cdef int start_layer
 		cdef circuit_t *_circ = <circuit_t*><unsigned long long>_get_circuit()
 		cdef bint _circ_init = _get_circuit_initialized()
-
-		# Phase 41: Capture start layer before any gates
-		start_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
-
-		# Quick-013: Save and set layer floor
-		cdef unsigned int _saved_floor_rmul = (<circuit_s*>_circ).layer_floor if _circ_init else 0
-		if _circ_init:
-			(<circuit_s*>_circ).layer_floor = start_layer
 
 		# For int * qint, result width is qint's width
 		if type(other) == int:
@@ -917,9 +802,6 @@
 
 		self.multiplication_inplace(other, result)
 
-		# Phase 41: Layer tracking for uncomputation
-		result._start_layer = start_layer
-		result._end_layer = (<circuit_s*>_circ).used_layer if _circ_init else 0
 		result.operation_type = 'MUL'
 		result.add_dependency(self)
 		if isinstance(other, qint):
@@ -935,8 +817,6 @@
 			_qm = _qm + tuple((<qint>other).qubits[_other_offset_h + i] for i in range((<qint>other).bits))
 		(<qint>result).history.append(0, _qm)
 
-		if _circ_init:
-			(<circuit_s*>_circ).layer_floor = _saved_floor_rmul
 		return result
 
 	def __imul__(self, other):

@@ -47,8 +47,7 @@ class TestDelUncomputesWhenCircuitActive:
         """After __del__ uncomputes history, a second GC pass emits no gates.
 
         Verifies there is no double-uncomputation: history.uncompute()
-        clears entries so a repeat is a no-op, and _start_layer/_end_layer
-        are cleared so _do_uncompute does not reverse via the legacy path.
+        clears entries so a repeat is a no-op.
         """
         ql.circuit()
         a = ql.qint(5, width=4)
@@ -294,7 +293,7 @@ class TestDelEagerMode:
         inverse_gates = gc_after_del - gc_after_compare
         # Inverse should emit exactly the same number of gates as the
         # forward comparison.  Double uncomputation (history.uncompute
-        # + reverse_circuit_range) would emit 2x.
+        # + history uncompute) would emit 2x.
         assert inverse_gates == forward_compare_gates, (
             f"Possible double uncomputation: forward={forward_compare_gates}, "
             f"inverse={inverse_gates}"

@@ -77,9 +77,6 @@ cdef class qbool(qint):
 		# Wrap in qbool using existing qubit (no new allocation)
 		# Access qubits via cdef-level (qubits is cdef object, not public)
 		result = qbool(create_new=False, bit_list=result_qint.qubits[63:64])
-		# Carry over layer tracking metadata from the intermediate result
-		result._start_layer = result_qint._start_layer
-		result._end_layer = result_qint._end_layer
 		result.operation_type = result_qint.operation_type
 		result.dependency_parents = result_qint.dependency_parents
 		# Transfer qubit ownership so uncomputation works correctly

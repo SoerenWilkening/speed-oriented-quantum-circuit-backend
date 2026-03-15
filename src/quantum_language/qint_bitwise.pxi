@@ -31,7 +31,6 @@
 		cdef int result_bits
 		cdef int self_offset, result_offset, other_offset
 		cdef int classical_width
-		cdef int start_layer
 		cdef int i
 		cdef int _self_pad, _other_pad
 		cdef circuit_t *_circuit = <circuit_t*><unsigned long long>_get_circuit()
@@ -47,14 +46,6 @@
 		if isinstance(other, qint):
 			(<qint>other)._check_not_uncomputed()
 
-		# Capture start layer
-		start_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
-
-		# Quick-013: Save and set layer floor to prevent optimizer from placing gates before start_layer
-		cdef unsigned int _saved_floor_and = (<circuit_s*>_circuit).layer_floor if _circuit_initialized else 0
-		if _circuit_initialized:
-			(<circuit_s*>_circuit).layer_floor = start_layer
-
 		# Determine result width
 		if type(other) == int:
 			classical_width = other.bit_length() if other > 0 else 1
@@ -62,8 +53,6 @@
 		elif isinstance(other, qint):
 			result_bits = max(self.bits, (<qint>other).bits)
 		else:
-			if _circuit_initialized:
-				(<circuit_s*>_circuit).layer_floor = _saved_floor_and
 			raise TypeError("Operand must be qint or int")
 
 		# Phase 84: Validate qubit_array bounds before writes
@@ -146,10 +135,6 @@
 			gate_count=gc_delta_and,
 		)
 
-		# Capture end layer
-		result._start_layer = start_layer
-		result._end_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
-
 		# Step 1.2: Record operation into result's per-variable history
 		# Must match the exact qubit_array layout passed to run_instruction,
 		# including zero-extension padding qubits for narrower operands.
@@ -157,8 +142,6 @@
 		_qm = tuple(qubit_array[i] for i in range(_total_and))
 		result.history.append(<unsigned long long>seq, _qm)
 
-		if _circuit_initialized:
-			(<circuit_s*>_circuit).layer_floor = _saved_floor_and
 		return result
 
 	def __iand__(self, other):
@@ -220,7 +203,6 @@
 		cdef int result_bits
 		cdef int self_offset, result_offset, other_offset
 		cdef int classical_width
-		cdef int start_layer
 		cdef circuit_t *_circuit = <circuit_t*><unsigned long long>_get_circuit()
 		cdef bint _circuit_initialized = _get_circuit_initialized()
 		cdef bint _controlled = _get_controlled()
@@ -231,14 +213,6 @@
 		if isinstance(other, qint):
 			(<qint>other)._check_not_uncomputed()
 
-		# Capture start layer
-		start_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
-
-		# Quick-013: Save and set layer floor
-		cdef unsigned int _saved_floor_or = (<circuit_s*>_circuit).layer_floor if _circuit_initialized else 0
-		if _circuit_initialized:
-			(<circuit_s*>_circuit).layer_floor = start_layer
-
 		# Determine result width
 		if type(other) == int:
 			classical_width = other.bit_length() if other > 0 else 1
@@ -246,8 +220,6 @@
 		elif isinstance(other, qint):
 			result_bits = max(self.bits, (<qint>other).bits)
 		else:
-			if _circuit_initialized:
-				(<circuit_s*>_circuit).layer_floor = _saved_floor_or
 			raise TypeError("Operand must be qint or int")
 
 		# Phase 84: Validate qubit_array bounds before writes
@@ -319,10 +291,6 @@
 			gate_count=gc_delta_or,
 		)
 
-		# Capture end layer
-		result._start_layer = start_layer
-		result._end_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
-
 		# Step 1.2: Record operation into result's per-variable history
 		# Must match the exact qubit_array layout passed to run_instruction,
 		# including zero-extension padding qubits for narrower operands.
@@ -330,8 +298,6 @@
 		_qm = tuple(qubit_array[i] for i in range(_total_or))
 		result.history.append(<unsigned long long>seq, _qm)
 
-		if _circuit_initialized:
-			(<circuit_s*>_circuit).layer_floor = _saved_floor_or
 		return result
 
 	def __ior__(self, other):
@@ -395,7 +361,6 @@
 		cdef int result_bits
 		cdef int self_offset, result_offset, other_offset
 		cdef int classical_width
-		cdef int start_layer
 		cdef int i
 		cdef circuit_t *_circuit = <circuit_t*><unsigned long long>_get_circuit()
 		cdef bint _circuit_initialized = _get_circuit_initialized()
@@ -409,14 +374,6 @@
 		if isinstance(other, qint):
 			(<qint>other)._check_not_uncomputed()
 
-		# Capture start layer
-		start_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
-
-		# Quick-013: Save and set layer floor
-		cdef unsigned int _saved_floor_xor = (<circuit_s*>_circuit).layer_floor if _circuit_initialized else 0
-		if _circuit_initialized:
-			(<circuit_s*>_circuit).layer_floor = start_layer
-
 		# Determine result width
 		if type(other) == int:
 			classical_width = other.bit_length() if other > 0 else 1
@@ -424,8 +381,6 @@
 		elif isinstance(other, qint):
 			result_bits = max(self.bits, (<qint>other).bits)
 		else:
-			if _circuit_initialized:
-				(<circuit_s*>_circuit).layer_floor = _saved_floor_xor
 			raise TypeError("Operand must be qint or int")
 
 		# Phase 84: Validate qubit_array bounds before writes
@@ -502,10 +457,6 @@
 			gate_count=gc_delta_xor,
 		)
 
-		# Capture end layer
-		result._start_layer = start_layer
-		result._end_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
-
 		# Step 1.2: Record operation into result's per-variable history
 		_self_offset_h = 64 - self.bits
 		_qm = tuple(result_qubits[result_offset + i] for i in range(result_bits)) \
@@ -515,8 +466,6 @@
 			_qm = _qm + tuple((<qint>other).qubits[_other_offset_h + i] for i in range((<qint>other).bits))
 		result.history.append(0, _qm)
 
-		if _circuit_initialized:
-			(<circuit_s*>_circuit).layer_floor = _saved_floor_xor
 		return result
 
 	@cython.boundscheck(False)
@@ -714,7 +663,6 @@
 		cdef sequence_t *seq
 		cdef unsigned int[:] arr
 		cdef int self_offset, result_offset
-		cdef int start_layer
 		cdef circuit_t *_circuit = <circuit_t*><unsigned long long>_get_circuit()
 		cdef bint _circuit_initialized = _get_circuit_initialized()
 
@@ -723,14 +671,6 @@
 		# Phase 84: Validate qubit_array bounds before writes
 		# copy uses 2*self.bits slots: [target:N], [source:N]
 		validate_qubit_slots(2 * self.bits, "copy")
-
-		# Capture start layer before any gates
-		start_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
-
-		# Quick-013: Save and set layer floor
-		cdef unsigned int _saved_floor_copy = (<circuit_s*>_circuit).layer_floor if _circuit_initialized else 0
-		if _circuit_initialized:
-			(<circuit_s*>_circuit).layer_floor = start_layer
 
 		# Allocate fresh result qint with |0> qubits
 		result = qint(width=self.bits)
@@ -744,14 +684,9 @@
 		seq = Q_xor(self.bits)
 		run_instruction(seq, &arr[0], False, _circuit)
 
-		# Layer tracking for uncomputation
-		result._start_layer = start_layer
-		result._end_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
 		result.operation_type = 'COPY'
 		result.add_dependency(self)
 
-		if _circuit_initialized:
-			(<circuit_s*>_circuit).layer_floor = _saved_floor_copy
 		return result
 
 	def copy_onto(self, target):

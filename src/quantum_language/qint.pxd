@@ -14,9 +14,6 @@ cdef class qint(circuit):
 	cdef public int creation_scope
 	cdef public object control_context
 	cdef public bint _is_uncomputed
-	cdef public int _start_layer
-	cdef public int _end_layer
-	cdef public bint _uncompute_mode
 	cdef bint _keep_flag
 	cdef public object history
 
