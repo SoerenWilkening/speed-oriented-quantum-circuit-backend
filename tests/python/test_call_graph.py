@@ -1,6 +1,6 @@
 """Unit tests for the CallGraphDAG module (call_graph.py).
 
-Tests DAGNode metadata, bitmask computation, overlap edge construction,
+Tests DAGNode metadata, bitmask computation, execution-order edges,
 parallel group detection, and builder stack management.
 """
 

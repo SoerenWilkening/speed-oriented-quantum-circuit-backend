@@ -167,8 +167,8 @@ class DAGNode:
 class CallGraphDAG:
     """Call graph DAG capturing program structure from @ql.compile calls.
 
-    Wraps a rustworkx PyDAG with convenience methods for overlap edge
-    computation and parallel group detection.
+    Wraps a rustworkx PyDAG with convenience methods for execution-order
+    edge construction, parallel group detection, and graph immutability.
     """
 
     def __init__(self):
