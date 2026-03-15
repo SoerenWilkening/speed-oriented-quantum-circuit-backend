@@ -70,7 +70,6 @@ import math
 from ._gates import emit_p, emit_p_raw, _toffoli_and, _uncompute_toffoli_and
 from ._core import _get_control_stack
 from .call_graph import record_operation as _record_operation
-from .call_graph import get_tracking_only as _get_tracking_only
 
 
 cpdef void _set_layer_floor_to_used():
@@ -208,7 +207,7 @@ cdef _toffoli_qq_uncont(circuit_s *circ, const unsigned int *self_qubits,
 		toff_seq = toffoli_QQ_add(result_bits)
 		if toff_seq == NULL:
 			return
-		run_instruction(toff_seq, tqa, invert, <circuit_t*>circ, _get_tracking_only())
+		run_instruction(toff_seq, tqa, invert, <circuit_t*>circ)
 		return
 
 	# n >= 2: swap register positions for CDKM adder layout
@@ -232,7 +231,7 @@ cdef _toffoli_qq_uncont(circuit_s *circ, const unsigned int *self_qubits,
 						_clifft_cache_cla_qq[result_bits] = <unsigned long long>cached_seq
 				if result_bits in _clifft_cache_cla_qq:
 					cached_seq = <const sequence_t*><unsigned long long>_clifft_cache_cla_qq[result_bits]
-					run_instruction(<sequence_t*>cached_seq, tqa, invert, <circuit_t*>circ, _get_tracking_only())
+					run_instruction(<sequence_t*>cached_seq, tqa, invert, <circuit_t*>circ)
 					allocator_free(alloc, cla_ancilla, cla_ancilla_count)
 					return
 				allocator_free(alloc, cla_ancilla, cla_ancilla_count)
@@ -246,7 +245,7 @@ cdef _toffoli_qq_uncont(circuit_s *circ, const unsigned int *self_qubits,
 					_clifft_cache_qq[result_bits] = <unsigned long long>cached_seq
 			if result_bits in _clifft_cache_qq:
 				cached_seq = <const sequence_t*><unsigned long long>_clifft_cache_qq[result_bits]
-				run_instruction(<sequence_t*>cached_seq, tqa, invert, <circuit_t*>circ, _get_tracking_only())
+				run_instruction(<sequence_t*>cached_seq, tqa, invert, <circuit_t*>circ)
 				allocator_free(alloc, ct_ancilla, 1)
 				return
 			allocator_free(alloc, ct_ancilla, 1)
@@ -259,7 +258,7 @@ cdef _toffoli_qq_uncont(circuit_s *circ, const unsigned int *self_qubits,
 			for i in range(other_bits):
 				memset(&xg, 0, sizeof(gate_t))
 				gate_x(&xg, other_qubits[i])
-				if _get_tracking_only():
+				if not circ.simulate:
 					circ.gate_count += 1
 				else:
 					add_gate(<circuit_t*>circ, &xg)
@@ -270,7 +269,7 @@ cdef _toffoli_qq_uncont(circuit_s *circ, const unsigned int *self_qubits,
 			else:
 				toff_seq = toffoli_QQ_add_ks(result_bits)
 			if toff_seq != NULL:
-				run_instruction(toff_seq, tqa, 0, <circuit_t*>circ, _get_tracking_only())
+				run_instruction(toff_seq, tqa, 0, <circuit_t*>circ)
 				allocator_free(alloc, cla_ancilla, cla_ancilla_count)
 				inc_ancilla = allocator_alloc(alloc, self_bits + 1, True)
 				if inc_ancilla != <unsigned int>(-1):
@@ -281,13 +280,13 @@ cdef _toffoli_qq_uncont(circuit_s *circ, const unsigned int *self_qubits,
 					inc_qa[2 * self_bits] = inc_ancilla + self_bits
 					inc_seq = toffoli_CQ_add(self_bits, 1)
 					if inc_seq != NULL:
-						run_instruction(inc_seq, inc_qa, 0, <circuit_t*>circ, _get_tracking_only())
+						run_instruction(inc_seq, inc_qa, 0, <circuit_t*>circ)
 						toffoli_sequence_free(inc_seq)
 					allocator_free(alloc, inc_ancilla, self_bits + 1)
 				for i in range(other_bits):
 					memset(&xg, 0, sizeof(gate_t))
 					gate_x(&xg, other_qubits[i])
-					if _get_tracking_only():
+					if not circ.simulate:
 						circ.gate_count += 1
 					else:
 						add_gate(<circuit_t*>circ, &xg)
@@ -296,7 +295,7 @@ cdef _toffoli_qq_uncont(circuit_s *circ, const unsigned int *self_qubits,
 			for i in range(other_bits):
 				memset(&xg, 0, sizeof(gate_t))
 				gate_x(&xg, other_qubits[i])
-				if _get_tracking_only():
+				if not circ.simulate:
 					circ.gate_count += 1
 				else:
 					add_gate(<circuit_t*>circ, &xg)
@@ -313,7 +312,7 @@ cdef _toffoli_qq_uncont(circuit_s *circ, const unsigned int *self_qubits,
 			else:
 				toff_seq = toffoli_QQ_add_ks(result_bits)
 			if toff_seq != NULL:
-				run_instruction(toff_seq, tqa, invert, <circuit_t*>circ, _get_tracking_only())
+				run_instruction(toff_seq, tqa, invert, <circuit_t*>circ)
 				allocator_free(alloc, cla_ancilla, cla_ancilla_count)
 				return
 			allocator_free(alloc, cla_ancilla, cla_ancilla_count)
@@ -327,7 +326,7 @@ cdef _toffoli_qq_uncont(circuit_s *circ, const unsigned int *self_qubits,
 	if toff_seq == NULL:
 		allocator_free(alloc, ancilla_qubit, 1)
 		return
-	run_instruction(toff_seq, tqa, invert, <circuit_t*>circ, _get_tracking_only())
+	run_instruction(toff_seq, tqa, invert, <circuit_t*>circ)
 	allocator_free(alloc, ancilla_qubit, 1)
 
 @cython.boundscheck(False)
@@ -361,13 +360,13 @@ cdef _toffoli_qq_cont(circuit_s *circ, const unsigned int *self_qubits,
 					_clifft_cache_cqq[1] = <unsigned long long>cached_seq
 			if 1 in _clifft_cache_cqq:
 				cached_seq = <const sequence_t*><unsigned long long>_clifft_cache_cqq[1]
-				run_instruction(<sequence_t*>cached_seq, tqa, invert, <circuit_t*>circ, _get_tracking_only())
+				run_instruction(<sequence_t*>cached_seq, tqa, invert, <circuit_t*>circ)
 				return
 
 		toff_seq = toffoli_cQQ_add(result_bits)
 		if toff_seq == NULL:
 			return
-		run_instruction(toff_seq, tqa, invert, <circuit_t*>circ, _get_tracking_only())
+		run_instruction(toff_seq, tqa, invert, <circuit_t*>circ)
 		return
 
 	# n >= 2: swap registers + ancilla + control
@@ -393,7 +392,7 @@ cdef _toffoli_qq_cont(circuit_s *circ, const unsigned int *self_qubits,
 						_clifft_cache_cla_cqq[result_bits] = <unsigned long long>cached_seq
 				if result_bits in _clifft_cache_cla_cqq:
 					cached_seq = <const sequence_t*><unsigned long long>_clifft_cache_cla_cqq[result_bits]
-					run_instruction(<sequence_t*>cached_seq, tqa, invert, <circuit_t*>circ, _get_tracking_only())
+					run_instruction(<sequence_t*>cached_seq, tqa, invert, <circuit_t*>circ)
 					allocator_free(alloc, cla_ancilla, cla_ancilla_count + 1)
 					return
 				allocator_free(alloc, cla_ancilla, cla_ancilla_count + 1)
@@ -409,7 +408,7 @@ cdef _toffoli_qq_cont(circuit_s *circ, const unsigned int *self_qubits,
 					_clifft_cache_cqq[result_bits] = <unsigned long long>cached_seq
 			if result_bits in _clifft_cache_cqq:
 				cached_seq = <const sequence_t*><unsigned long long>_clifft_cache_cqq[result_bits]
-				run_instruction(<sequence_t*>cached_seq, tqa, invert, <circuit_t*>circ, _get_tracking_only())
+				run_instruction(<sequence_t*>cached_seq, tqa, invert, <circuit_t*>circ)
 				allocator_free(alloc, ct_ancilla, 2)
 				return
 			allocator_free(alloc, ct_ancilla, 2)
@@ -422,7 +421,7 @@ cdef _toffoli_qq_cont(circuit_s *circ, const unsigned int *self_qubits,
 			for i in range(other_bits):
 				memset(&cxg, 0, sizeof(gate_t))
 				gate_cx(&cxg, other_qubits[i], control_qubit)
-				if _get_tracking_only():
+				if not circ.simulate:
 					circ.gate_count += 1
 				else:
 					add_gate(<circuit_t*>circ, &cxg)
@@ -435,7 +434,7 @@ cdef _toffoli_qq_cont(circuit_s *circ, const unsigned int *self_qubits,
 			else:
 				toff_seq = toffoli_cQQ_add_ks(result_bits)
 			if toff_seq != NULL:
-				run_instruction(toff_seq, tqa, 0, <circuit_t*>circ, _get_tracking_only())
+				run_instruction(toff_seq, tqa, 0, <circuit_t*>circ)
 				allocator_free(alloc, cla_ancilla, cla_ancilla_count + 1)
 				inc_ancilla = allocator_alloc(alloc, self_bits + 2, True)
 				if inc_ancilla != <unsigned int>(-1):
@@ -448,13 +447,13 @@ cdef _toffoli_qq_cont(circuit_s *circ, const unsigned int *self_qubits,
 					inc_qa[2 * self_bits + 2] = inc_ancilla + self_bits + 1
 					inc_seq = toffoli_cCQ_add(self_bits, 1)
 					if inc_seq != NULL:
-						run_instruction(inc_seq, inc_qa, 0, <circuit_t*>circ, _get_tracking_only())
+						run_instruction(inc_seq, inc_qa, 0, <circuit_t*>circ)
 						toffoli_sequence_free(inc_seq)
 					allocator_free(alloc, inc_ancilla, self_bits + 2)
 				for i in range(other_bits):
 					memset(&cxg, 0, sizeof(gate_t))
 					gate_cx(&cxg, other_qubits[i], control_qubit)
-					if _get_tracking_only():
+					if not circ.simulate:
 						circ.gate_count += 1
 					else:
 						add_gate(<circuit_t*>circ, &cxg)
@@ -463,7 +462,7 @@ cdef _toffoli_qq_cont(circuit_s *circ, const unsigned int *self_qubits,
 			for i in range(other_bits):
 				memset(&cxg, 0, sizeof(gate_t))
 				gate_cx(&cxg, other_qubits[i], control_qubit)
-				if _get_tracking_only():
+				if not circ.simulate:
 					circ.gate_count += 1
 				else:
 					add_gate(<circuit_t*>circ, &cxg)
@@ -482,7 +481,7 @@ cdef _toffoli_qq_cont(circuit_s *circ, const unsigned int *self_qubits,
 			else:
 				toff_seq = toffoli_cQQ_add_ks(result_bits)
 			if toff_seq != NULL:
-				run_instruction(toff_seq, tqa, invert, <circuit_t*>circ, _get_tracking_only())
+				run_instruction(toff_seq, tqa, invert, <circuit_t*>circ)
 				allocator_free(alloc, cla_ancilla, cla_ancilla_count + 1)
 				return
 			allocator_free(alloc, cla_ancilla, cla_ancilla_count + 1)
@@ -498,7 +497,7 @@ cdef _toffoli_qq_cont(circuit_s *circ, const unsigned int *self_qubits,
 	if toff_seq == NULL:
 		allocator_free(alloc, ancilla_qubit, 2)
 		return
-	run_instruction(toff_seq, tqa, invert, <circuit_t*>circ, _get_tracking_only())
+	run_instruction(toff_seq, tqa, invert, <circuit_t*>circ)
 	allocator_free(alloc, ancilla_qubit, 2)
 
 @cython.boundscheck(False)
@@ -533,7 +532,7 @@ cdef _toffoli_cq_uncont(circuit_s *circ, const unsigned int *self_qubits,
 		toff_seq = toffoli_CQ_add(self_bits, classical_value)
 		if toff_seq == NULL:
 			return
-		run_instruction(toff_seq, tqa, invert, <circuit_t*>circ, _get_tracking_only())
+		run_instruction(toff_seq, tqa, invert, <circuit_t*>circ)
 		toffoli_sequence_free(toff_seq)
 		return
 
@@ -559,7 +558,7 @@ cdef _toffoli_cq_uncont(circuit_s *circ, const unsigned int *self_qubits,
 					cached_seq = <const sequence_t*><unsigned long long>_clifft_cache_cla_cq_inc[self_bits]
 					copy_seq = copy_hardcoded_sequence(cached_seq)
 					if copy_seq != NULL:
-						run_instruction(copy_seq, tqa, invert, <circuit_t*>circ, _get_tracking_only())
+						run_instruction(copy_seq, tqa, invert, <circuit_t*>circ)
 						toffoli_sequence_free(copy_seq)
 						allocator_free(alloc, cq_cla_ancilla, total_ancilla)
 						return
@@ -580,7 +579,7 @@ cdef _toffoli_cq_uncont(circuit_s *circ, const unsigned int *self_qubits,
 				cached_seq = <const sequence_t*><unsigned long long>_clifft_cache_cq_inc[self_bits]
 				copy_seq = copy_hardcoded_sequence(cached_seq)
 				if copy_seq != NULL:
-					run_instruction(copy_seq, tqa, invert, <circuit_t*>circ, _get_tracking_only())
+					run_instruction(copy_seq, tqa, invert, <circuit_t*>circ)
 					toffoli_sequence_free(copy_seq)
 					allocator_free(alloc, ct_temp, self_bits + 1)
 					return
@@ -604,7 +603,7 @@ cdef _toffoli_cq_uncont(circuit_s *circ, const unsigned int *self_qubits,
 			else:
 				toff_seq = toffoli_CQ_add_ks(self_bits, negated)
 			if toff_seq != NULL:
-				run_instruction(toff_seq, tqa, 0, <circuit_t*>circ, _get_tracking_only())
+				run_instruction(toff_seq, tqa, 0, <circuit_t*>circ)
 				toffoli_sequence_free(toff_seq)
 				allocator_free(alloc, cq_cla_ancilla, total_ancilla)
 				return
@@ -627,7 +626,7 @@ cdef _toffoli_cq_uncont(circuit_s *circ, const unsigned int *self_qubits,
 			else:
 				toff_seq = toffoli_CQ_add_ks(self_bits, classical_value)
 			if toff_seq != NULL:
-				run_instruction(toff_seq, tqa, invert, <circuit_t*>circ, _get_tracking_only())
+				run_instruction(toff_seq, tqa, invert, <circuit_t*>circ)
 				toffoli_sequence_free(toff_seq)
 				allocator_free(alloc, cq_cla_ancilla, total_ancilla)
 				return
@@ -646,7 +645,7 @@ cdef _toffoli_cq_uncont(circuit_s *circ, const unsigned int *self_qubits,
 	if toff_seq == NULL:
 		allocator_free(alloc, temp_start, self_bits + 1)
 		return
-	run_instruction(toff_seq, tqa, invert, <circuit_t*>circ, _get_tracking_only())
+	run_instruction(toff_seq, tqa, invert, <circuit_t*>circ)
 	toffoli_sequence_free(toff_seq)
 	allocator_free(alloc, temp_start, self_bits + 1)
 
@@ -672,7 +671,7 @@ cdef _toffoli_cq_cont(circuit_s *circ, const unsigned int *self_qubits,
 		toff_seq = toffoli_cCQ_add(self_bits, classical_value)
 		if toff_seq == NULL:
 			return
-		run_instruction(toff_seq, tqa, invert, <circuit_t*>circ, _get_tracking_only())
+		run_instruction(toff_seq, tqa, invert, <circuit_t*>circ)
 		toffoli_sequence_free(toff_seq)
 		return
 
@@ -700,7 +699,7 @@ cdef _toffoli_cq_cont(circuit_s *circ, const unsigned int *self_qubits,
 					cached_seq = <const sequence_t*><unsigned long long>_clifft_cache_cla_ccq_inc[self_bits]
 					copy_seq = copy_hardcoded_sequence(cached_seq)
 					if copy_seq != NULL:
-						run_instruction(copy_seq, cla_qa, invert, <circuit_t*>circ, _get_tracking_only())
+						run_instruction(copy_seq, cla_qa, invert, <circuit_t*>circ)
 						toffoli_sequence_free(copy_seq)
 						allocator_free(alloc, cla_start, total_cla_ancilla)
 						return
@@ -723,7 +722,7 @@ cdef _toffoli_cq_cont(circuit_s *circ, const unsigned int *self_qubits,
 				cached_seq = <const sequence_t*><unsigned long long>_clifft_cache_ccq_inc[self_bits]
 				copy_seq = copy_hardcoded_sequence(cached_seq)
 				if copy_seq != NULL:
-					run_instruction(copy_seq, tqa, invert, <circuit_t*>circ, _get_tracking_only())
+					run_instruction(copy_seq, tqa, invert, <circuit_t*>circ)
 					toffoli_sequence_free(copy_seq)
 					allocator_free(alloc, ct_temp, self_bits + 2)
 					return
@@ -749,7 +748,7 @@ cdef _toffoli_cq_cont(circuit_s *circ, const unsigned int *self_qubits,
 			else:
 				toff_seq = toffoli_cCQ_add_ks(self_bits, negated)
 			if toff_seq != NULL:
-				run_instruction(toff_seq, cla_qa, 0, <circuit_t*>circ, _get_tracking_only())
+				run_instruction(toff_seq, cla_qa, 0, <circuit_t*>circ)
 				toffoli_sequence_free(toff_seq)
 				allocator_free(alloc, cla_start, total_cla_ancilla)
 				return
@@ -774,7 +773,7 @@ cdef _toffoli_cq_cont(circuit_s *circ, const unsigned int *self_qubits,
 			else:
 				toff_seq = toffoli_cCQ_add_ks(self_bits, classical_value)
 			if toff_seq != NULL:
-				run_instruction(toff_seq, cla_qa, invert, <circuit_t*>circ, _get_tracking_only())
+				run_instruction(toff_seq, cla_qa, invert, <circuit_t*>circ)
 				toffoli_sequence_free(toff_seq)
 				allocator_free(alloc, cla_start, total_cla_ancilla)
 				return
@@ -795,7 +794,7 @@ cdef _toffoli_cq_cont(circuit_s *circ, const unsigned int *self_qubits,
 	if toff_seq == NULL:
 		allocator_free(alloc, temp_start, self_bits + 2)
 		return
-	run_instruction(toff_seq, tqa, invert, <circuit_t*>circ, _get_tracking_only())
+	run_instruction(toff_seq, tqa, invert, <circuit_t*>circ)
 	toffoli_sequence_free(toff_seq)
 	allocator_free(alloc, temp_start, self_bits + 2)
 
@@ -1031,7 +1030,7 @@ cdef class qint(circuit):
 						qubit_array[0] = self.qubits[qubit_idx]
 						arr = qubit_array
 						seq = Q_not(1)
-						run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
+						run_instruction(seq, &arr[0], False, _circuit)
 
 			# Keep backward compat tracking (deprecated, remove later)
 			# Note: _smallest_allocated_qubit and ancilla numpy array still updated
@@ -1623,6 +1622,7 @@ cdef class qint(circuit):
 		cdef sequence_t *seq
 		cdef int result_bits
 		cdef int pos
+		cdef size_t gc_before, gc_delta
 
 		# Extract self qubits (right-aligned in 64-element array)
 		for i in range(self_bits):
@@ -1638,13 +1638,16 @@ cdef class qint(circuit):
 
 			# Toffoli dispatch for CQ
 			if _circ.arithmetic_mode == 1:  # ARITH_TOFFOLI
+				gc_before = _circ.gate_count
 				_toffoli_dispatch_cq(_circ, self_qa, self_bits,
 				                     classical_value, invert,
 				                     _controlled, control_qubit)
+				gc_delta = _circ.gate_count - gc_before
 				_record_operation(
 					"add_cq",
 					tuple(self_qa[i] for i in range(self_bits))
 					+ ((control_qubit,) if _controlled else ()),
+					gate_count=gc_delta,
 					invert=bool(invert),
 				)
 				return self
@@ -1662,10 +1665,11 @@ cdef class qint(circuit):
 				seq = CQ_add(self_bits, classical_value)
 			if seq == NULL:
 				return self
-			run_instruction(seq, qa, invert, <circuit_t*>_circ, _get_tracking_only())
+			run_instruction(seq, qa, invert, <circuit_t*>_circ)
 			_record_operation(
 				"add_cq",
 				tuple(qa[i] for i in range(pos)),
+				gate_count=seq.total_gate_count,
 				sequence_ptr=<unsigned long long>seq,
 				invert=bool(invert),
 			)
@@ -1685,14 +1689,17 @@ cdef class qint(circuit):
 
 		# Toffoli dispatch for QQ
 		if _circ.arithmetic_mode == 1:  # ARITH_TOFFOLI
+			gc_before = _circ.gate_count
 			_toffoli_dispatch_qq(_circ, self_qa, self_bits,
 			                     other_qa, other_bits, invert,
 			                     _controlled, control_qubit, result_bits)
+			gc_delta = _circ.gate_count - gc_before
 			_record_operation(
 				"add_qq",
 				tuple(self_qa[i] for i in range(self_bits))
 				+ tuple(other_qa[i] for i in range(other_bits))
 				+ ((control_qubit,) if _controlled else ()),
+				gate_count=gc_delta,
 				invert=bool(invert),
 			)
 			return self
@@ -1712,10 +1719,11 @@ cdef class qint(circuit):
 			seq = QQ_add(result_bits)
 		if seq == NULL:
 			return self
-		run_instruction(seq, qa, invert, <circuit_t*>_circ, _get_tracking_only())
+		run_instruction(seq, qa, invert, <circuit_t*>_circ)
 		_record_operation(
 			"add_qq",
 			tuple(qa[i] for i in range(pos + (1 if _controlled else 0))),
+			gate_count=seq.total_gate_count,
 			sequence_ptr=<unsigned long long>seq,
 			invert=bool(invert),
 		)
@@ -2186,6 +2194,7 @@ cdef class qint(circuit):
 		cdef int result_bits = (<qint>ret).bits
 		cdef sequence_t *seq
 		cdef int pos
+		cdef size_t gc_before, gc_delta
 
 		# Extract ret qubits (right-aligned in 64-element array)
 		for i in range(result_bits):
@@ -2205,6 +2214,7 @@ cdef class qint(circuit):
 
 			# Toffoli dispatch for CQ
 			if _circ.arithmetic_mode == 1:  # ARITH_TOFFOLI
+				gc_before = _circ.gate_count
 				if _controlled:
 					toffoli_cmul_cq(<circuit_t*>_circ, ret_qa, result_bits,
 					                self_qa, self_bits, classical_value,
@@ -2212,11 +2222,13 @@ cdef class qint(circuit):
 				else:
 					toffoli_mul_cq(<circuit_t*>_circ, ret_qa, result_bits,
 					               self_qa, self_bits, classical_value)
+				gc_delta = _circ.gate_count - gc_before
 				_record_operation(
 					"mul_cq",
 					tuple(ret_qa[i] for i in range(result_bits))
 					+ tuple(self_qa[i] for i in range(self_bits))
 					+ ((control_qubit,) if _controlled else ()),
+					gate_count=gc_delta,
 				)
 				return ret
 
@@ -2236,10 +2248,11 @@ cdef class qint(circuit):
 				seq = CQ_mul(result_bits, classical_value)
 			if seq == NULL:
 				return ret
-			run_instruction(seq, qa, 0, <circuit_t*>_circ, _get_tracking_only())
+			run_instruction(seq, qa, 0, <circuit_t*>_circ)
 			_record_operation(
 				"mul_cq",
 				tuple(qa[i] for i in range(pos)),
+				gate_count=seq.total_gate_count,
 				sequence_ptr=<unsigned long long>seq,
 			)
 			return ret
@@ -2256,6 +2269,7 @@ cdef class qint(circuit):
 
 		# Toffoli dispatch for QQ
 		if _circ.arithmetic_mode == 1:  # ARITH_TOFFOLI
+			gc_before = _circ.gate_count
 			if _controlled:
 				toffoli_cmul_qq(<circuit_t*>_circ, ret_qa, result_bits,
 				                self_qa, self_bits, other_qa, other_bits,
@@ -2263,12 +2277,14 @@ cdef class qint(circuit):
 			else:
 				toffoli_mul_qq(<circuit_t*>_circ, ret_qa, result_bits,
 				               self_qa, self_bits, other_qa, other_bits)
+			gc_delta = _circ.gate_count - gc_before
 			_record_operation(
 				"mul_qq",
 				tuple(ret_qa[i] for i in range(result_bits))
 				+ tuple(self_qa[i] for i in range(self_bits))
 				+ tuple(other_qa[i] for i in range(other_bits))
 				+ ((control_qubit,) if _controlled else ()),
+				gate_count=gc_delta,
 			)
 			return ret
 
@@ -2291,10 +2307,11 @@ cdef class qint(circuit):
 			seq = QQ_mul(result_bits)
 		if seq == NULL:
 			return ret
-		run_instruction(seq, qa, 0, <circuit_t*>_circ, _get_tracking_only())
+		run_instruction(seq, qa, 0, <circuit_t*>_circ)
 		_record_operation(
 			"mul_qq",
 			tuple(qa[i] for i in range(pos)),
+			gate_count=seq.total_gate_count,
 			sequence_ptr=<unsigned long long>seq,
 		)
 		return ret
@@ -2519,6 +2536,7 @@ cdef class qint(circuit):
 		cdef unsigned int[:] result_qubits
 		cdef unsigned int[:] other_qubits
 		cdef unsigned int[:] pad_qubits
+		cdef size_t gc_before_and, gc_delta_and
 
 		# Phase 18: Check for use-after-uncompute
 		self._check_not_uncomputed()
@@ -2614,11 +2632,14 @@ cdef class qint(circuit):
 				seq = Q_and(result_bits)
 
 		arr = qubit_array
-		run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
+		gc_before_and = (<circuit_s*>_circuit).gate_count
+		run_instruction(seq, &arr[0], False, _circuit)
+		gc_delta_and = (<circuit_s*>_circuit).gate_count - gc_before_and
 		_record_operation(
 			"and",
 			tuple(qubit_array[i] for i in range(3 * result_bits if type(other) != int else 2 * result_bits)),
 			sequence_ptr=<unsigned long long>seq,
+			gate_count=gc_delta_and,
 		)
 
 		# Capture end layer
@@ -2692,6 +2713,7 @@ cdef class qint(circuit):
 		cdef circuit_t *_circuit = <circuit_t*><unsigned long long>_get_circuit()
 		cdef bint _circuit_initialized = _get_circuit_initialized()
 		cdef bint _controlled = _get_controlled()
+		cdef size_t gc_before_or, gc_delta_or
 
 		# Phase 18: Check for use-after-uncompute
 		self._check_not_uncomputed()
@@ -2776,11 +2798,14 @@ cdef class qint(circuit):
 				seq = Q_or(result_bits)
 
 		arr = qubit_array
-		run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
+		gc_before_or = (<circuit_s*>_circuit).gate_count
+		run_instruction(seq, &arr[0], False, _circuit)
+		gc_delta_or = (<circuit_s*>_circuit).gate_count - gc_before_or
 		_record_operation(
 			"or",
 			tuple(qubit_array[i] for i in range(3 * result_bits if type(other) != int else 2 * result_bits)),
 			sequence_ptr=<unsigned long long>seq,
+			gate_count=gc_delta_or,
 		)
 
 		# Capture end layer
@@ -2859,6 +2884,7 @@ cdef class qint(circuit):
 		cdef bint _controlled = _get_controlled()
 		cdef unsigned int[:] result_qubits
 		cdef unsigned int[:] other_qubits
+		cdef size_t gc_before_xor, gc_delta_xor
 
 		# Phase 18: Check for use-after-uncompute
 		self._check_not_uncomputed()
@@ -2905,6 +2931,9 @@ cdef class qint(circuit):
 		self_offset = 64 - self.bits
 		result_offset = 64 - result_bits
 
+		# Capture gate_count before multi-step XOR
+		gc_before_xor = (<circuit_s*>_circuit).gate_count
+
 		# First, copy self to result by XORing self into result (result starts at 0)
 		# CYT-03: Replace slice with explicit loop for memory view optimization
 		result_qubits = result.qubits
@@ -2914,7 +2943,7 @@ cdef class qint(circuit):
 			qubit_array[self.bits + i] = self.qubits[self_offset + i]
 		arr = qubit_array
 		seq = Q_xor(self.bits)  # XOR self into result (copying self to result)
-		run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
+		run_instruction(seq, &arr[0], False, _circuit)
 
 		# Now XOR other into result
 		if type(other) == int:
@@ -2926,7 +2955,7 @@ cdef class qint(circuit):
 						qubit_array[0] = result_qubits[64 - result_bits + i]
 						arr = qubit_array
 						seq = Q_not(1)
-						run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
+						run_instruction(seq, &arr[0], False, _circuit)
 		else:
 			other_offset = 64 - (<qint>other).bits
 			for i in range((<qint>other).bits):
@@ -2941,9 +2970,10 @@ cdef class qint(circuit):
 				seq = Q_xor((<qint>other).bits)
 
 			arr = qubit_array
-			run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
+			run_instruction(seq, &arr[0], False, _circuit)
 
 		# Record XOR operation on the DAG
+		gc_delta_xor = (<circuit_s*>_circuit).gate_count - gc_before_xor
 		_record_operation(
 			"xor",
 			tuple(result_qubits[result_offset + i] for i in range(result_bits))
@@ -2951,6 +2981,7 @@ cdef class qint(circuit):
 			+ (tuple((<qint>other).qubits[64 - (<qint>other).bits + i]
 			         for i in range((<qint>other).bits))
 			   if type(other) != int else ()),
+			gate_count=gc_delta_xor,
 		)
 
 		# Capture end layer
@@ -2992,6 +3023,7 @@ cdef class qint(circuit):
 		cdef int self_offset = 64 - self_bits
 		cdef int i
 		cdef int xor_bits
+		cdef size_t gc_before_ixor, gc_delta_ixor
 
 		# Phase 18: Check for use-after-uncompute
 		self._check_not_uncomputed()
@@ -3003,15 +3035,18 @@ cdef class qint(circuit):
 				raise NotImplementedError("Controlled classical-quantum XOR not yet supported")
 
 			# CQ path: for each set bit in classical value, apply Q_not(1)
+			gc_before_ixor = (<circuit_s*>_circuit).gate_count
 			for i in range(self_bits):
 				if ((<int64_t>other) >> i) & 1:
 					qubit_array[0] = self.qubits[self_offset + i]
 					arr = qubit_array
 					seq = Q_not(1)
-					run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
+					run_instruction(seq, &arr[0], False, _circuit)
+			gc_delta_ixor = (<circuit_s*>_circuit).gate_count - gc_before_ixor
 			_record_operation(
 				"ixor_cq",
 				tuple(self.qubits[self_offset + i] for i in range(self_bits)),
+				gate_count=gc_delta_ixor,
 			)
 			return self
 
@@ -3038,11 +3073,14 @@ cdef class qint(circuit):
 
 		arr = qubit_array
 		seq = Q_xor(xor_bits)
-		run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
+		gc_before_ixor = (<circuit_s*>_circuit).gate_count
+		run_instruction(seq, &arr[0], False, _circuit)
+		gc_delta_ixor = (<circuit_s*>_circuit).gate_count - gc_before_ixor
 		_record_operation(
 			"ixor_qq",
 			tuple(qubit_array[i] for i in range(2 * xor_bits)),
 			sequence_ptr=<unsigned long long>seq,
+			gate_count=gc_delta_ixor,
 		)
 		return self
 
@@ -3076,6 +3114,7 @@ cdef class qint(circuit):
 		cdef circuit_t *_circuit = <circuit_t*><unsigned long long>_get_circuit()
 		cdef bint _controlled = _get_controlled()
 		cdef object _control_bool = _get_control_bool()
+		cdef size_t gc_before_not, gc_delta_not
 
 		# Phase 18: Check for use-after-uncompute
 		self._check_not_uncomputed()
@@ -3098,11 +3137,14 @@ cdef class qint(circuit):
 			seq = Q_not(self.bits)
 
 		arr = qubit_array
-		run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
+		gc_before_not = (<circuit_s*>_circuit).gate_count
+		run_instruction(seq, &arr[0], False, _circuit)
+		gc_delta_not = (<circuit_s*>_circuit).gate_count - gc_before_not
 		_record_operation(
 			"not",
 			tuple(qubit_array[i] for i in range(self.bits + (1 if _controlled else 0))),
 			sequence_ptr=<unsigned long long>seq,
+			gate_count=gc_delta_not,
 		)
 
 		return self
@@ -3173,7 +3215,7 @@ cdef class qint(circuit):
 		qubit_array[self.bits:2*self.bits] = self.qubits[self_offset:64]
 		arr = qubit_array
 		seq = Q_xor(self.bits)
-		run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
+		run_instruction(seq, &arr[0], False, _circuit)
 
 		# Layer tracking for uncomputation
 		result._start_layer = start_layer
@@ -3247,7 +3289,7 @@ cdef class qint(circuit):
 		qubit_array[self.bits:2*self.bits] = self.qubits[self_offset:64]
 		arr = qubit_array
 		seq = Q_xor(self.bits)
-		run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
+		run_instruction(seq, &arr[0], False, _circuit)
 
 	def __getitem__(self, item: int):
 		"""Access individual qubit as qbool: self[index]
@@ -3327,6 +3369,7 @@ cdef class qint(circuit):
 		cdef bint _controlled = _get_controlled()
 		cdef object _control_bool = _get_control_bool()
 		cdef qubit_allocator_t *alloc
+		cdef size_t gc_before_eq, gc_delta_eq
 
 		# Phase 18: Check for use-after-uncompute
 		self._check_not_uncomputed()
@@ -3445,11 +3488,14 @@ cdef class qint(circuit):
 							qubit_array[start + i] = and_anc_start + i
 
 			arr = qubit_array
-			run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
+			gc_before_eq = (<circuit_s*>_circuit).gate_count
+			run_instruction(seq, &arr[0], False, _circuit)
+			gc_delta_eq = (<circuit_s*>_circuit).gate_count - gc_before_eq
 			_record_operation(
 				"eq_cq",
 				tuple(qubit_array[i] for i in range(start)),
 				sequence_ptr=<unsigned long long>seq,
+				gate_count=gc_delta_eq,
 			)
 
 			# Free AND-ancilla after use
@@ -3578,7 +3624,7 @@ cdef class qint(circuit):
 				qubit_array[1] = self.qubits[64 - operand_bits + i_bit]
 				arr = qubit_array
 				seq = Q_xor(1)
-				run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
+				run_instruction(seq, &arr[0], False, _circuit)
 
 			# Copy other's bits to temp_other (LSB-aligned)
 			operand_bits = (<qint>other).bits
@@ -3587,7 +3633,7 @@ cdef class qint(circuit):
 				qubit_array[1] = (<qint>other).qubits[64 - operand_bits + i_bit]
 				arr = qubit_array
 				seq = Q_xor(1)
-				run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
+				run_instruction(seq, &arr[0], False, _circuit)
 
 			# Subtract: temp_self -= temp_other
 			temp_self -= temp_other
@@ -3701,7 +3747,7 @@ cdef class qint(circuit):
 				qubit_array[1] = (<qint>other).qubits[64 - operand_bits + i_bit]
 				arr = qubit_array
 				seq = Q_xor(1)
-				run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
+				run_instruction(seq, &arr[0], False, _circuit)
 
 			# Copy self's bits to temp_self (LSB-aligned)
 			operand_bits = self.bits
@@ -3710,7 +3756,7 @@ cdef class qint(circuit):
 				qubit_array[1] = self.qubits[64 - operand_bits + i_bit]
 				arr = qubit_array
 				seq = Q_xor(1)
-				run_instruction(seq, &arr[0], False, _circuit, _get_tracking_only())
+				run_instruction(seq, &arr[0], False, _circuit)
 
 			# Subtract: temp_other -= temp_self
 			temp_other -= temp_self
@@ -3887,6 +3933,7 @@ cdef class qint(circuit):
 		cdef unsigned int divisor_qa[64]
 		cdef int div_bits = 0
 		cdef int d_offset = 0
+		cdef size_t gc_before_div, gc_delta_div
 
 		# Extract dividend qubits (LSB-first for C convention)
 		# Python qint right-aligned layout: qubits[64-bits] = LSB (bit 0), qubits[63] = MSB
@@ -3908,14 +3955,17 @@ cdef class qint(circuit):
 			remainder_qa[i] = (<qint>remainder).qubits[r_offset + i]
 
 		if type(divisor) == int:
+			gc_before_div = (<circuit_s*>_circ).gate_count
 			toffoli_divmod_cq(_circ, dividend_qa, n,
 			                  <int64_t>divisor,
 			                  quotient_qa, remainder_qa)
+			gc_delta_div = (<circuit_s*>_circ).gate_count - gc_before_div
 			_record_operation(
 				"divmod_cq",
 				tuple(dividend_qa[i] for i in range(n))
 				+ tuple(quotient_qa[i] for i in range(n))
 				+ tuple(remainder_qa[i] for i in range(n)),
+				gate_count=gc_delta_div,
 			)
 		elif type(divisor) == qint:
 			div_bits = (<qint>divisor).bits
@@ -3923,15 +3973,18 @@ cdef class qint(circuit):
 			for i in range(div_bits):
 				divisor_qa[i] = (<qint>divisor).qubits[d_offset + i]
 
+			gc_before_div = (<circuit_s*>_circ).gate_count
 			toffoli_divmod_qq(_circ, dividend_qa, n,
 			                  divisor_qa, div_bits,
 			                  quotient_qa, remainder_qa)
+			gc_delta_div = (<circuit_s*>_circ).gate_count - gc_before_div
 			_record_operation(
 				"divmod_qq",
 				tuple(dividend_qa[i] for i in range(n))
 				+ tuple(divisor_qa[i] for i in range(div_bits))
 				+ tuple(quotient_qa[i] for i in range(n))
 				+ tuple(remainder_qa[i] for i in range(n)),
+				gate_count=gc_delta_div,
 			)
 		else:
 			raise TypeError("Divisor must be int or qint")

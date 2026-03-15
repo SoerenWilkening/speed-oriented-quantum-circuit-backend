@@ -1,51 +1,55 @@
-"""Tests for tracking_only wiring and simulate=False in @ql.compile.
+"""Tests for simulate option and tracking-only mode in @ql.compile.
 
-Verifies that when simulate=False and opt=1, the compiled function
-passes tracking_only=1 to run_instruction so gates are counted but
-not stored in the global circuit. The DAG should still record gate
-counts via the circ->gate_count delta.
+Verifies that when ql.option('simulate') is False (default), gates are
+counted but not stored in the global circuit.  The DAG should still
+record gate counts via the circ->gate_count delta.
 """
 
 import quantum_language as ql
 from quantum_language._core import get_current_layer, get_gate_count
-from quantum_language.call_graph import get_tracking_only, set_tracking_only
 
 
-class TestTrackingOnlyFlag:
-    """Verify get/set_tracking_only module-level flag behavior."""
+class TestSimulateOption:
+    """Verify ql.option('simulate') get/set behavior."""
 
-    def test_default_tracking_only_is_zero(self):
-        """tracking_only flag defaults to 0 (normal mode)."""
-        set_tracking_only(0)
-        assert get_tracking_only() == 0
+    def test_default_simulate_is_false(self):
+        """simulate defaults to False."""
+        ql.circuit()
+        assert ql.option('simulate') is False
 
-    def test_set_and_get_tracking_only(self):
-        """Can set tracking_only to 1 and read it back."""
-        set_tracking_only(1)
-        assert get_tracking_only() == 1
-        set_tracking_only(0)
-        assert get_tracking_only() == 0
+    def test_set_simulate_true(self):
+        """Can set simulate to True and read it back."""
+        ql.circuit()
+        ql.option('simulate', True)
+        assert ql.option('simulate') is True
+
+    def test_set_simulate_false(self):
+        """Can set simulate to False and read it back."""
+        ql.circuit()
+        ql.option('simulate', True)
+        ql.option('simulate', False)
+        assert ql.option('simulate') is False
 
 
 class TestSimulateFalseCapture:
-    """Verify simulate=False with opt=1 uses tracking_only mode."""
+    """Verify simulate=False uses tracking-only mode."""
 
     def test_simulate_false_no_circuit_gates(self):
         """simulate=False should not add gates to the flat circuit.
 
         The layer count should not increase during capture when
-        tracking_only mode is active.
+        tracking-only mode is active.
         """
         ql.circuit()
 
-        @ql.compile(opt=1, simulate=False)
+        @ql.compile(opt=1)
         def inc(x):
             x += 1
             return x
 
         a = ql.qint(0, width=4)
         layer_before = get_current_layer()
-        inc(a)  # capture with tracking_only=1
+        inc(a)
         layer_after = get_current_layer()
 
         assert layer_after == layer_before, (
@@ -61,7 +65,7 @@ class TestSimulateFalseCapture:
         """
         ql.circuit()
 
-        @ql.compile(opt=1, simulate=False)
+        @ql.compile(opt=1)
         def inc(x):
             x += 1
             return x
@@ -80,7 +84,7 @@ class TestSimulateFalseCapture:
         ]
         assert len(call_nodes) >= 1, "Should have at least 1 call node"
         assert call_nodes[0].gate_count > 0, (
-            f"DAG node gate_count should be positive in tracking_only mode, "
+            f"DAG node gate_count should be positive in tracking-only mode, "
             f"got {call_nodes[0].gate_count}"
         )
 
@@ -88,7 +92,7 @@ class TestSimulateFalseCapture:
         """simulate=False capture should still return a valid qint."""
         ql.circuit()
 
-        @ql.compile(opt=1, simulate=False)
+        @ql.compile(opt=1)
         def inc(x):
             x += 1
             return x
@@ -99,49 +103,14 @@ class TestSimulateFalseCapture:
         assert result is not None, "Should return a qint"
         assert result.width == 4, f"Return width should be 4, got {result.width}"
 
-    def test_simulate_false_tracking_restored_after_capture(self):
-        """tracking_only flag should be restored after capture completes."""
-        set_tracking_only(0)
-        ql.circuit()
 
-        @ql.compile(opt=1, simulate=False)
-        def inc(x):
-            x += 1
-            return x
-
-        a = ql.qint(0, width=4)
-        inc(a)
-
-        assert get_tracking_only() == 0, (
-            "tracking_only should be restored to 0 after capture"
-        )
-
-    def test_simulate_false_tracking_restored_on_error(self):
-        """tracking_only flag should be restored even if capture raises."""
-        set_tracking_only(0)
-        ql.circuit()
-
-        @ql.compile(opt=1, simulate=False)
-        def bad_func(x):
-            raise ValueError("intentional error")
-
-        a = ql.qint(0, width=4)
-        try:
-            bad_func(a)
-        except ValueError:
-            pass
-
-        assert get_tracking_only() == 0, (
-            "tracking_only should be restored to 0 after error"
-        )
-
-
-class TestSimulateTrueDefault:
-    """Verify simulate=True (default) preserves normal behavior."""
+class TestSimulateTrueExplicit:
+    """Verify simulate=True enables normal gate injection."""
 
     def test_simulate_true_injects_gates(self):
-        """Default simulate=True should inject gates into circuit normally."""
+        """ql.option('simulate', True) should inject gates into circuit."""
         ql.circuit()
+        ql.option('simulate', True)
 
         @ql.compile(opt=1)
         def inc(x):
@@ -150,7 +119,7 @@ class TestSimulateTrueDefault:
 
         a = ql.qint(0, width=4)
         layer_before = get_current_layer()
-        inc(a)  # capture with simulate=True (default)
+        inc(a)
         layer_after = get_current_layer()
 
         assert layer_after > layer_before, (
@@ -161,6 +130,7 @@ class TestSimulateTrueDefault:
     def test_simulate_true_dag_gate_count_matches(self):
         """simulate=True DAG gate count should match stored gates."""
         ql.circuit()
+        ql.option('simulate', True)
 
         @ql.compile(opt=1)
         def inc(x):
@@ -187,7 +157,7 @@ class TestSimulateFalseAggregate:
         """Multiple calls with simulate=False should aggregate gate counts."""
         ql.circuit()
 
-        @ql.compile(opt=1, simulate=False)
+        @ql.compile(opt=1)
         def inc(x):
             x += 1
             return x

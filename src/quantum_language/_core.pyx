@@ -214,6 +214,9 @@ def option(key: str, value=None):
 	----------
 	key : str
 		Option name. Currently supported:
+		- 'simulate': Enable full circuit construction (bool, default False).
+		    When False, gates are counted but not stored (tracking-only mode).
+		    Set to True for benchmarking or when circuit output is needed.
 		- 'qubit_saving': Enable eager uncomputation (bool)
 		- 'fault_tolerant': Enable Toffoli-based arithmetic (bool)
 		- 'cla': Enable carry look-ahead adder dispatch (bool)
@@ -336,6 +339,13 @@ def option(key: str, value=None):
 			(<circuit_s*><circuit_t*><unsigned long long>_get_circuit()).cla_override = 0          # Allow CLA dispatch
 			(<circuit_s*><circuit_t*><unsigned long long>_get_circuit()).tradeoff_auto_threshold = 4  # Empirical threshold
 			(<circuit_s*><circuit_t*><unsigned long long>_get_circuit()).tradeoff_min_depth = 0
+	elif key == 'simulate':
+		_validate_circuit()
+		if value is None:
+			return (<circuit_s*><circuit_t*><unsigned long long>_get_circuit()).simulate == 1
+		if not isinstance(value, bool):
+			raise ValueError("simulate option requires bool value")
+		(<circuit_s*><circuit_t*><unsigned long long>_get_circuit()).simulate = 1 if value else 0
 	else:
 		raise ValueError(f"Unknown option: {key}")
 
