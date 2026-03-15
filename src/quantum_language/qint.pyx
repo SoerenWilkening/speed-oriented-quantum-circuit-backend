@@ -73,27 +73,54 @@ from .call_graph import record_operation as _record_operation
 from .history_graph import HistoryGraph
 
 
-def _run_inverted_on_circuit(seq_ptr, qubit_mapping):
+def _run_inverted_on_circuit(seq_ptr, qubit_mapping, int num_ancilla=0):
 	"""Run a sequence inverted on the active circuit.
 
 	Called by ``HistoryGraph.uncompute()`` to replay a single operation
 	in reverse.  Takes Python int arguments and casts internally to
 	C pointers.
 
+	When *num_ancilla* > 0, fresh ancilla qubits are allocated, appended
+	to the mapping, and freed after the inverse call.  This is needed
+	for operations like CQ equality whose forward path allocates
+	AND-decomposition ancilla that are freed immediately after use.
+
 	Parameters
 	----------
 	seq_ptr : int
 		Pointer to ``sequence_t`` as a Python int.
 	qubit_mapping : tuple[int, ...]
-		Qubit indices to pass to ``run_instruction``.
+		Core qubit indices (result + operand + optional control).
+	num_ancilla : int, optional
+		Number of ancilla to allocate and append (default 0).
 	"""
 	cdef sequence_t *_seq = <sequence_t*><unsigned long long>seq_ptr
 	cdef circuit_t *_circ = <circuit_t*><unsigned long long>_get_circuit()
 	cdef unsigned int _qa[256]
 	cdef int _i
-	for _i in range(len(qubit_mapping)):
+	cdef int _n = len(qubit_mapping)
+	cdef qubit_allocator_t *_alloc
+	cdef unsigned int _anc_start = 0
+
+	for _i in range(_n):
 		_qa[_i] = qubit_mapping[_i]
+
+	# Allocate fresh ancilla for MCX decomposition replay
+	if num_ancilla > 0:
+		_alloc = circuit_get_allocator(<circuit_s*>_circ)
+		if _alloc != NULL:
+			_anc_start = allocator_alloc(_alloc, num_ancilla, True)
+			if _anc_start != <unsigned int>(-1):
+				for _i in range(num_ancilla):
+					_qa[_n + _i] = _anc_start + _i
+
 	run_instruction(_seq, _qa, True, _circ)
+
+	# Free ancilla after inverse call
+	if num_ancilla > 0 and _anc_start != <unsigned int>(-1):
+		_alloc = circuit_get_allocator(<circuit_s*>_circ)
+		if _alloc != NULL:
+			allocator_free(_alloc, _anc_start, num_ancilla)
 
 
 cpdef void _set_layer_floor_to_used():

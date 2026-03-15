@@ -151,13 +151,10 @@
 		result._end_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
 
 		# Step 1.2: Record operation into result's per-variable history
-		_r_offset_h = 64 - result_bits
-		_self_offset_h = 64 - self.bits
-		_qm = tuple(result_qubits[_r_offset_h + i] for i in range(result_bits)) \
-			+ tuple(self.qubits[_self_offset_h + i] for i in range(self.bits))
-		if type(other) != int and isinstance(other, qint):
-			_other_offset_h = 64 - (<qint>other).bits
-			_qm = _qm + tuple((<qint>other).qubits[_other_offset_h + i] for i in range((<qint>other).bits))
+		# Must match the exact qubit_array layout passed to run_instruction,
+		# including zero-extension padding qubits for narrower operands.
+		_total_and = 3 * result_bits if (type(other) != int and isinstance(other, qint)) else 2 * result_bits
+		_qm = tuple(qubit_array[i] for i in range(_total_and))
 		result.history.append(<unsigned long long>seq, _qm)
 
 		if _circuit_initialized:
@@ -327,13 +324,10 @@
 		result._end_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
 
 		# Step 1.2: Record operation into result's per-variable history
-		_r_offset_h = 64 - result_bits
-		_self_offset_h = 64 - self.bits
-		_qm = tuple(result.qubits[_r_offset_h + i] for i in range(result_bits)) \
-			+ tuple(self.qubits[_self_offset_h + i] for i in range(self.bits))
-		if type(other) != int and isinstance(other, qint):
-			_other_offset_h = 64 - (<qint>other).bits
-			_qm = _qm + tuple((<qint>other).qubits[_other_offset_h + i] for i in range((<qint>other).bits))
+		# Must match the exact qubit_array layout passed to run_instruction,
+		# including zero-extension padding qubits for narrower operands.
+		_total_or = 3 * result_bits if (type(other) != int and isinstance(other, qint)) else 2 * result_bits
+		_qm = tuple(qubit_array[i] for i in range(_total_or))
 		result.history.append(<unsigned long long>seq, _qm)
 
 		if _circuit_initialized:

@@ -28,22 +28,22 @@ class TestAppendAndReverse:
 
         reversed_list = list(hg.reversed_entries())
         assert reversed_list == [
-            (300, (5,)),
-            (200, (3, 4)),
-            (100, (0, 1, 2)),
+            (300, (5,), 0),
+            (200, (3, 4), 0),
+            (100, (0, 1, 2), 0),
         ]
 
     def test_single_entry_reverse(self):
         hg = HistoryGraph()
         hg.append(42, (7, 8))
         reversed_list = list(hg.reversed_entries())
-        assert reversed_list == [(42, (7, 8))]
+        assert reversed_list == [(42, (7, 8), 0)]
 
     def test_entries_preserve_insertion_order(self):
         hg = HistoryGraph()
         for i in range(5):
             hg.append(i * 10, (i,))
-        assert hg.entries == [(i * 10, (i,)) for i in range(5)]
+        assert hg.entries == [(i * 10, (i,), 0) for i in range(5)]
 
 
 class TestLen:

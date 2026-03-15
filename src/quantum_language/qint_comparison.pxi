@@ -199,11 +199,12 @@
 			result._end_layer = (<circuit_s*>_circuit).used_layer if _circuit_initialized else 0
 
 			# Step 1.2: Record operation into result's per-variable history
-			_r_offset_h = 64 - (<qint>result).bits
-			_self_offset_h = 64 - self.bits
-			_qm = tuple((<qint>result).qubits[_r_offset_h + i] for i in range((<qint>result).bits)) \
-				+ tuple(self.qubits[_self_offset_h + i] for i in range(self.bits))
-			result.history.append(<unsigned long long>seq, _qm)
+			# Must match the exact qubit_array layout passed to run_instruction:
+			# [0]=result, [1..bits]=operand (MSB-first), [opt ctrl], then AND-ancilla.
+			# Store core qubits (no ancilla) and num_and_anc so the inverse path
+			# can allocate fresh ancilla at replay time.
+			_qm = tuple(qubit_array[i] for i in range(start))
+			result.history.append(<unsigned long long>seq, _qm, num_and_anc)
 
 			if _circuit_initialized:
 				(<circuit_s*>_circuit).layer_floor = _saved_floor

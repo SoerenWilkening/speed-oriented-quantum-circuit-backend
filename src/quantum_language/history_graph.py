@@ -35,7 +35,7 @@ class HistoryGraph:
     # Recording
     # ------------------------------------------------------------------
 
-    def append(self, sequence_ptr, qubit_mapping):
+    def append(self, sequence_ptr, qubit_mapping, num_ancilla=0):
         """Record an operation entry.
 
         Parameters
@@ -45,8 +45,12 @@ class HistoryGraph:
             executed.
         qubit_mapping : tuple[int, ...]
             Qubit indices passed to ``run_instruction``.
+        num_ancilla : int, optional
+            Number of temporary ancilla qubits that must be allocated
+            at the end of *qubit_mapping* when replaying the inverse.
+            Default 0 (no ancilla needed).
         """
-        self.entries.append((sequence_ptr, qubit_mapping))
+        self.entries.append((sequence_ptr, qubit_mapping, num_ancilla))
 
     def add_child(self, child):
         """Register *child* as a weakref dependency.
@@ -105,15 +109,16 @@ class HistoryGraph:
 
         Parameters
         ----------
-        run_fn : callable(sequence_ptr, qubit_mapping)
+        run_fn : callable(sequence_ptr, qubit_mapping, num_ancilla)
             Callback that executes ``run_instruction(seq, mapping,
-            invert=True)`` on the active circuit.  Provided by the
-            Cython caller.
+            invert=True)`` on the active circuit, allocating fresh
+            ancilla if *num_ancilla* > 0.  Provided by the Cython
+            caller.
         """
         # 1. Reverse-iterate entries and invoke inverted run_instruction
-        for seq_ptr, qubit_mapping in self.reversed_entries():
+        for seq_ptr, qubit_mapping, num_ancilla in self.reversed_entries():
             if seq_ptr != 0:
-                run_fn(seq_ptr, qubit_mapping)
+                run_fn(seq_ptr, qubit_mapping, num_ancilla)
 
         # 2. Clear own entries (idempotent: prevents double-uncompute)
         self.entries.clear()

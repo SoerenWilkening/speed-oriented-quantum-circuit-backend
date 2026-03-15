@@ -40,7 +40,7 @@ class TestAdditionRecordsHistory:
         a = ql.qint(3, width=4)
         b = ql.qint(2, width=4)
         c = a + b
-        seq_ptr, qm = c.history.entries[0]
+        seq_ptr, qm, _nac = c.history.entries[0]
         # qubit_mapping should be a tuple of integer-like values
         assert isinstance(qm, tuple)
         assert len(qm) > 0
@@ -154,7 +154,7 @@ class TestComparisonRecordsHistory:
         ql.circuit()
         a = ql.qint(5, width=4)
         cond = (a == 5)
-        seq_ptr, qm = cond.history.entries[0]
+        seq_ptr, qm, _nac = cond.history.entries[0]
         assert isinstance(qm, tuple)
         assert len(qm) > 0
 
@@ -211,7 +211,7 @@ class TestBitwiseRecordsHistory:
         a = ql.qint(0b1101, width=4)
         b = ql.qint(0b1011, width=4)
         c = a & b
-        seq_ptr, qm = c.history.entries[0]
+        seq_ptr, qm, _nac = c.history.entries[0]
         assert isinstance(qm, tuple)
         assert len(qm) > 0
 
@@ -334,7 +334,7 @@ class TestHistoryEntryContents:
         a = ql.qint(3, width=4)
         b = ql.qint(2, width=4)
         c = a + b
-        _, qm = c.history.entries[0]
+        _, qm, _nac = c.history.entries[0]
         # Result qubits should be in the mapping
         c_offset = 64 - c.width
         result_qubits = set(int(c.qubits[c_offset + i]) for i in range(c.width))
@@ -346,7 +346,7 @@ class TestHistoryEntryContents:
         ql.circuit()
         a = ql.qint(5, width=4)
         cond = (a == 5)
-        seq_ptr, _ = cond.history.entries[0]
+        seq_ptr, _, _nac = cond.history.entries[0]
         # The CQ equality path has a real sequence pointer
         assert seq_ptr != 0
 
@@ -356,7 +356,7 @@ class TestHistoryEntryContents:
         a = ql.qint(3, width=4)
         b = ql.qint(2, width=4)
         c = a + b
-        seq_ptr, _ = c.history.entries[0]
+        seq_ptr, _, _nac = c.history.entries[0]
         # Out-of-place addition is a compound op (copy + add),
         # so no single sequence_ptr
         assert seq_ptr == 0
