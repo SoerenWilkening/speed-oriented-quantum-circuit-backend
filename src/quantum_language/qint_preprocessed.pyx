@@ -70,6 +70,7 @@ import math
 from ._gates import emit_p, emit_p_raw, _toffoli_and, _uncompute_toffoli_and
 from ._core import _get_control_stack
 from .call_graph import record_operation as _record_operation
+from .history_graph import HistoryGraph
 
 
 cpdef void _set_layer_floor_to_used():
@@ -1015,6 +1016,9 @@ cdef class qint(circuit):
 			self._uncompute_mode = _get_qubit_saving_mode()
 			self._keep_flag = False
 
+			# Per-variable history graph for automatic uncomputation
+			self.history = HistoryGraph()
+
 			# Apply X gates based on binary representation of value
 			# Phase 15: Classical initialization via X gate application
 			if value != 0:
@@ -1067,6 +1071,9 @@ cdef class qint(circuit):
 			# Phase 20: Capture uncomputation mode at creation
 			self._uncompute_mode = _get_qubit_saving_mode()
 			self._keep_flag = False
+
+			# Per-variable history graph for automatic uncomputation
+			self.history = HistoryGraph()
 
 	@property
 	def width(self):

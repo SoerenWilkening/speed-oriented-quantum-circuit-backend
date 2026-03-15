@@ -18,6 +18,7 @@ cdef class qint(circuit):
 	cdef public int _end_layer
 	cdef public bint _uncompute_mode
 	cdef bint _keep_flag
+	cdef public object history
 
 	# cdef method declarations
 	cdef addition_inplace(self, other, int invert=*)
