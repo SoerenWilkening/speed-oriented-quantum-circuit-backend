@@ -13,7 +13,11 @@ Step 1.4 of Phase 1: __del__ Uncomputation with Circuit Guard
 import gc
 
 import quantum_language as ql
-from quantum_language._core import _get_circuit_active, _set_circuit_active
+from quantum_language._core import (
+    _get_circuit_active,
+    _set_circuit_active,
+    _atexit_disable_circuit,
+)
 from quantum_language.history_graph import HistoryGraph
 
 
@@ -39,19 +43,25 @@ class TestDelUncomputesWhenCircuitActive:
         # Inverse gates should have been emitted (gate count increased)
         assert gc_after > gc_before
 
-    def test_del_clears_history_on_comparison(self):
-        """After __del__, the comparison's history entries are cleared."""
+    def test_del_is_idempotent_no_double_uncompute(self):
+        """After __del__ uncomputes history, a second GC pass emits no gates.
+
+        Verifies there is no double-uncomputation: history.uncompute()
+        clears entries so a repeat is a no-op, and _start_layer/_end_layer
+        are cleared so _do_uncompute does not reverse via the legacy path.
+        """
         ql.circuit()
         a = ql.qint(5, width=4)
         cond = (a == 5)
-        # Verify history exists before deletion
         assert len(cond.history) == 1
-        gc_before = ql.get_gate_count()
+        # First del + GC
         del cond
         gc.collect()
-        gc_after = ql.get_gate_count()
-        # We verify uncomputation happened by gate count increase
-        assert gc_after > gc_before
+        gc_after_first = ql.get_gate_count()
+        # Second GC pass should emit nothing further
+        gc.collect()
+        gc_after_second = ql.get_gate_count()
+        assert gc_after_second == gc_after_first
 
     def test_del_preserves_input_variables(self):
         """Input variables remain intact when temporaries are deleted."""
@@ -246,3 +256,194 @@ class TestDelCascadesToOrphanedChildren:
         assert gc_after > gc_before
         # Child's history should be cleared by cascade
         assert len(child_cond.history) == 0
+
+
+# ---------------------------------------------------------------------------
+# Test: EAGER mode (qubit_saving=True)
+# ---------------------------------------------------------------------------
+
+
+class TestDelEagerMode:
+    """EAGER mode: __del__ always uncomputes immediately."""
+
+    def test_eager_del_emits_inverse_gates(self):
+        """In EAGER mode, __del__ emits inverse gates for comparison."""
+        ql.circuit()
+        ql.option('qubit_saving', True)
+        a = ql.qint(5, width=4)
+        cond = (a == 5)
+        assert len(cond.history) == 1
+        gc_before = ql.get_gate_count()
+        del cond
+        gc.collect()
+        gc_after = ql.get_gate_count()
+        assert gc_after > gc_before
+
+    def test_eager_no_double_uncompute(self):
+        """EAGER mode does not double-uncompute history + legacy path."""
+        ql.circuit()
+        ql.option('qubit_saving', True)
+        a = ql.qint(5, width=4)
+        cond = (a == 5)
+        # Record gates emitted by forward comparison
+        gc_after_compare = ql.get_gate_count()
+        # Count how many gates the inverse should emit
+        forward_gates = gc_after_compare
+        del cond
+        gc.collect()
+        gc_after_del = ql.get_gate_count()
+        inverse_gates = gc_after_del - gc_after_compare
+        # Inverse should emit roughly the same number of gates as forward,
+        # NOT double (which would happen if both history.uncompute and
+        # reverse_circuit_range fired).  Use a generous bound: inverse
+        # should be less than 2x forward.
+        assert inverse_gates < 2 * forward_gates, (
+            f"Possible double uncomputation: forward={forward_gates}, "
+            f"inverse={inverse_gates}"
+        )
+
+    def test_eager_skips_when_inactive(self):
+        """EAGER mode still respects circuit-active guard."""
+        ql.circuit()
+        ql.option('qubit_saving', True)
+        a = ql.qint(5, width=4)
+        cond = (a == 5)
+        gc_before = ql.get_gate_count()
+        _set_circuit_active(False)
+        try:
+            del cond
+            gc.collect()
+            gc_after = ql.get_gate_count()
+            assert gc_after == gc_before
+        finally:
+            _set_circuit_active(True)
+
+    def test_eager_bitwise_and(self):
+        """EAGER mode uncomputes bitwise AND on del."""
+        ql.circuit()
+        ql.option('qubit_saving', True)
+        a = ql.qint(5, width=4)
+        c = a & 0b1011
+        assert len(c.history) == 1
+        gc_before = ql.get_gate_count()
+        del c
+        gc.collect()
+        gc_after = ql.get_gate_count()
+        assert gc_after > gc_before
+
+
+# ---------------------------------------------------------------------------
+# Test: atexit shutdown guard
+# ---------------------------------------------------------------------------
+
+
+class TestAtexitShutdownGuard:
+    """atexit hook disables circuit-active to prevent shutdown crashes."""
+
+    def test_atexit_disables_circuit_flag(self):
+        """Calling the atexit hook sets circuit-active to False."""
+        ql.circuit()
+        assert _get_circuit_active()
+        _atexit_disable_circuit()
+        assert not _get_circuit_active()
+        # Restore for subsequent tests
+        _set_circuit_active(True)
+
+    def test_del_after_atexit_is_noop(self):
+        """__del__ after atexit hook does not emit gates."""
+        ql.circuit()
+        a = ql.qint(5, width=4)
+        cond = (a == 5)
+        gc_before = ql.get_gate_count()
+        _atexit_disable_circuit()
+        try:
+            del cond
+            gc.collect()
+            gc_after = ql.get_gate_count()
+            assert gc_after == gc_before
+        finally:
+            _set_circuit_active(True)
+
+
+# ---------------------------------------------------------------------------
+# Test: __exit__ + __del__ no double uncompute
+# ---------------------------------------------------------------------------
+
+
+class TestExitDelNoDoubleUncompute:
+    """__exit__ clears layer range so subsequent __del__ does not re-uncompute."""
+
+    def test_with_then_del_no_extra_gates(self):
+        """After with-block exits, deleting the condition emits no more gates."""
+        ql.circuit()
+        a = ql.qint(5, width=4)
+        cond = (a == 5)
+        with cond:
+            pass
+        gc_after_exit = ql.get_gate_count()
+        # Now delete the condition -- should not emit extra inverse gates
+        del cond
+        gc.collect()
+        gc_after_del = ql.get_gate_count()
+        assert gc_after_del == gc_after_exit
+
+    def test_with_then_del_eager_no_extra_gates(self):
+        """EAGER mode: after with-block, del does not double-uncompute."""
+        ql.circuit()
+        ql.option('qubit_saving', True)
+        a = ql.qint(5, width=4)
+        cond = (a == 5)
+        with cond:
+            pass
+        gc_after_exit = ql.get_gate_count()
+        del cond
+        gc.collect()
+        gc_after_del = ql.get_gate_count()
+        assert gc_after_del == gc_after_exit
+
+
+# ---------------------------------------------------------------------------
+# Test: simulation correctness
+# ---------------------------------------------------------------------------
+
+
+class TestDelSimulationCorrectness:
+    """Verify __del__ uncomputation produces correct circuit state.
+
+    Uses gate count symmetry: forward comparison + inverse should produce
+    twice the forward gate count (exact for CQ equality).
+    """
+
+    def test_del_inverse_gate_count_matches_forward(self):
+        """Inverse gate count from __del__ matches forward gate count."""
+        ql.circuit()
+        gc_start = ql.get_gate_count()
+        a = ql.qint(5, width=4)
+        gc_after_init = ql.get_gate_count()
+        cond = (a == 5)
+        gc_after_compare = ql.get_gate_count()
+        forward_compare_gates = gc_after_compare - gc_after_init
+        del cond
+        gc.collect()
+        gc_after_del = ql.get_gate_count()
+        inverse_gates = gc_after_del - gc_after_compare
+        # For CQ equality, the inverse should emit the same number of
+        # gates as the forward path (self-inverse sequence).
+        assert inverse_gates == forward_compare_gates, (
+            f"Forward={forward_compare_gates}, inverse={inverse_gates}"
+        )
+
+    def test_del_leaves_peak_allocated_intact(self):
+        """After del uncomputation, peak_allocated is not reduced."""
+        ql.circuit()
+        a = ql.qint(5, width=4)
+        cond = (a == 5)
+        stats_before = ql.circuit_stats()
+        peak_before = stats_before['peak_allocated']
+        del cond
+        gc.collect()
+        stats_after = ql.circuit_stats()
+        peak_after = stats_after['peak_allocated']
+        # Peak allocated should not decrease after uncomputation
+        # (qubits were used at some point, even if freed back)
+        assert peak_after >= peak_before

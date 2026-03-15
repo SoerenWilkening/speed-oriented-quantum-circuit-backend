@@ -100,20 +100,35 @@ def _run_inverted_on_circuit(seq_ptr, qubit_mapping, int num_ancilla=0):
 	cdef unsigned int _qa[256]
 	cdef int _i
 	cdef int _n = len(qubit_mapping)
+	cdef int _total = _n + num_ancilla
 	cdef qubit_allocator_t *_alloc
 	cdef unsigned int _anc_start = 0
+	cdef bint _anc_ok = True
+
+	# Bounds check: mapping + ancilla must fit in stack buffer
+	if _total > 256:
+		import sys
+		print(f"Warning: _run_inverted_on_circuit: mapping size {_total} exceeds buffer (256), skipping",
+		      file=sys.stderr)
+		return
 
 	for _i in range(_n):
 		_qa[_i] = qubit_mapping[_i]
 
 	# Allocate fresh ancilla for MCX decomposition replay
 	if num_ancilla > 0:
+		_anc_ok = False
 		_alloc = circuit_get_allocator(<circuit_s*>_circ)
 		if _alloc != NULL:
 			_anc_start = allocator_alloc(_alloc, num_ancilla, True)
 			if _anc_start != <unsigned int>(-1):
 				for _i in range(num_ancilla):
 					_qa[_n + _i] = _anc_start + _i
+				_anc_ok = True
+
+	# Skip run_instruction if ancilla allocation was required but failed
+	if not _anc_ok:
+		return
 
 	run_instruction(_seq, _qa, True, _circ)
 
@@ -1495,10 +1510,16 @@ cdef class qint(circuit):
 
 		# Step 1.4: History-based uncomputation via __del__
 		# If this variable has history entries, uncompute them in reverse
-		# and cascade to orphaned children.
+		# and cascade to orphaned children.  After successful history
+		# uncomputation, clear the layer range so the legacy
+		# _do_uncompute() path does not double-reverse the same gates.
 		if hasattr(self, 'history') and self.history:
 			try:
 				self.history.uncompute(_run_inverted_on_circuit)
+				# Prevent _do_uncompute from also calling
+				# reverse_circuit_range for the same operation.
+				self._start_layer = 0
+				self._end_layer = 0
 			except Exception as e:
 				import sys
 				print(f"Warning: __del__ history uncomputation failed: {e}",
@@ -1651,6 +1672,10 @@ cdef class qint(circuit):
 		# controlled by the condition itself.
 		if self.history:
 			self.history.uncompute(_run_inverted_on_circuit)
+			# Clear layer range so __del__ does not double-uncompute
+			# via the legacy reverse_circuit_range path.
+			self._start_layer = 0
+			self._end_layer = 0
 
 		return False  # do not suppress exceptions
 

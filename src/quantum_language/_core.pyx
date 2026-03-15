@@ -1,3 +1,4 @@
+import atexit
 import sys
 import warnings
 import weakref
@@ -71,6 +72,17 @@ def _set_circuit_active(bint value):
 	"""Set circuit-active flag."""
 	global _circuit_active
 	_circuit_active = value
+
+def _atexit_disable_circuit():
+	"""Disable circuit-active flag during interpreter shutdown.
+
+	Registered via atexit to prevent __del__ methods from injecting
+	inverse gates into a freed circuit during Python shutdown.
+	"""
+	global _circuit_active
+	_circuit_active = False
+
+atexit.register(_atexit_disable_circuit)
 
 def _get_num_qubits():
 	"""Get current qubit count."""
