@@ -2600,7 +2600,7 @@ def test_auto_uncompute_replay_path():
     result2 = complex_fn(b)
     gc_after_replay = ql.get_gate_count()
 
-    # Replay should also emit gates (same count as capture)
+    # Replay should also emit gates
     assert gc_after_replay > gc_before_replay, "Replay path should emit gates"
     assert result2.width == 4
     assert not result2._is_uncomputed

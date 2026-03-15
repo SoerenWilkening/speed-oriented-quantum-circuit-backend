@@ -396,7 +396,6 @@ class CompiledBlock:
         "_first_call_result",
         "_capture_ancilla_qubits",
         "_capture_virtual_to_real",
-        "_modifies_inputs",
         "return_type",  # 'qint', 'qarray', or None
         "_return_qarray_element_widths",  # List of element widths for qarray return
     )
@@ -424,7 +423,6 @@ class CompiledBlock:
         self._first_call_result = None
         self._capture_ancilla_qubits = None
         self._capture_virtual_to_real = None
-        self._modifies_inputs = None
         self.return_type = None
         self._return_qarray_element_widths = None
 
@@ -1410,7 +1408,6 @@ class CompiledFunc:
         if option('simulate'):
             inject_remapped_gates(block.gates, virtual_to_real)
 
-        end_layer = get_current_layer()
         # Restore layer_floor
         _set_layer_floor(saved_floor)
 
