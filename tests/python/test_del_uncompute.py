@@ -284,21 +284,19 @@ class TestDelEagerMode:
         ql.circuit()
         ql.option('qubit_saving', True)
         a = ql.qint(5, width=4)
+        gc_after_init = ql.get_gate_count()
         cond = (a == 5)
-        # Record gates emitted by forward comparison
         gc_after_compare = ql.get_gate_count()
-        # Count how many gates the inverse should emit
-        forward_gates = gc_after_compare
+        forward_compare_gates = gc_after_compare - gc_after_init
         del cond
         gc.collect()
         gc_after_del = ql.get_gate_count()
         inverse_gates = gc_after_del - gc_after_compare
-        # Inverse should emit roughly the same number of gates as forward,
-        # NOT double (which would happen if both history.uncompute and
-        # reverse_circuit_range fired).  Use a generous bound: inverse
-        # should be less than 2x forward.
-        assert inverse_gates < 2 * forward_gates, (
-            f"Possible double uncomputation: forward={forward_gates}, "
+        # Inverse should emit exactly the same number of gates as the
+        # forward comparison.  Double uncomputation (history.uncompute
+        # + reverse_circuit_range) would emit 2x.
+        assert inverse_gates == forward_compare_gates, (
+            f"Possible double uncomputation: forward={forward_compare_gates}, "
             f"inverse={inverse_gates}"
         )
 
