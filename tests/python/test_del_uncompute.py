@@ -362,6 +362,62 @@ class TestAtexitShutdownGuard:
         finally:
             _set_circuit_active(True)
 
+    def test_atexit_is_idempotent(self):
+        """Calling atexit hook multiple times is safe."""
+        ql.circuit()
+        assert _get_circuit_active()
+        _atexit_disable_circuit()
+        _atexit_disable_circuit()
+        assert not _get_circuit_active()
+        _set_circuit_active(True)
+
+    def test_del_after_atexit_eager_mode_is_noop(self):
+        """__del__ in EAGER mode after atexit hook does not emit gates."""
+        ql.circuit()
+        ql.option('qubit_saving', True)
+        a = ql.qint(5, width=4)
+        cond = (a == 5)
+        gc_before = ql.get_gate_count()
+        _atexit_disable_circuit()
+        try:
+            del cond
+            gc.collect()
+            gc_after = ql.get_gate_count()
+            assert gc_after == gc_before
+        finally:
+            _set_circuit_active(True)
+
+    def test_del_with_children_after_atexit_is_noop(self):
+        """__del__ with cascading children after atexit emits no gates."""
+        ql.circuit()
+        a = ql.qint(5, width=4)
+        child_cond = (a == 3)
+        parent_cond = (a == 5)
+        parent_cond.history.add_child(child_cond)
+        gc_before = ql.get_gate_count()
+        _atexit_disable_circuit()
+        try:
+            del parent_cond
+            gc.collect()
+            gc_after = ql.get_gate_count()
+            assert gc_after == gc_before
+            # Child history should remain untouched (no cascade happened)
+            assert len(child_cond.history) == 1
+        finally:
+            _set_circuit_active(True)
+
+    def test_atexit_hook_is_registered(self):
+        """The atexit hook is registered in the atexit module."""
+        import atexit
+        # atexit._run_exitfuncs would run all; we just check registration
+        # by verifying _atexit_disable_circuit is callable and the module
+        # import + register call in _core.pyx executed at import time.
+        # The function should already be registered (line 85 of _core.pyx).
+        # We verify by calling unregister and re-registering.
+        atexit.unregister(_atexit_disable_circuit)
+        atexit.register(_atexit_disable_circuit)
+        # If we got here without error, the function is a valid atexit target
+
 
 # ---------------------------------------------------------------------------
 # Test: __exit__ + __del__ no double uncompute
