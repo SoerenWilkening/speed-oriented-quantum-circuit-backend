@@ -1,9 +1,9 @@
 """Phase 0 integration test: end-to-end call graph verification.
 
-Compiles functions with mixed operations (additions, multiplications,
-comparisons on different registers) and validates execution-order edge
-structure, parallel branches, merge nodes, non-zero gate counts,
-graph immutability after replay, and clean to_dot() output.
+Compiles functions with additions, multiplications, and comparisons on
+different registers and validates execution-order edge structure, parallel
+branches, merge nodes, non-zero gate counts, graph immutability after
+replay, and clean to_dot() output.
 
 [Quantum_Assembly-vmq]
 """
@@ -97,19 +97,17 @@ class TestMixedOperationsDirect:
         # Nodes on disjoint qubits should NOT have an execution-order edge
         # between them (they can execute in parallel).
         edges = _exec_edges(dag)
-        node_indices = list(range(dag.node_count))
         # All qubit sets should be disjoint across the two registers
         a_qubit_set = nodes[0].qubit_set
         b_qubit_set = nodes[1].qubit_set
         assert a_qubit_set.isdisjoint(b_qubit_set), (
             f"Expected disjoint qubit sets, got {a_qubit_set} and {b_qubit_set}"
         )
-        # No execution-order edge between the two ops
-        for src, tgt in edges:
-            overlap = dag.nodes[src].qubit_set & dag.nodes[tgt].qubit_set
-            assert len(overlap) > 0, (
-                "Execution-order edge between disjoint operations should not exist"
-            )
+        # No execution-order edges between disjoint ops
+        assert len(edges) == 0, (
+            f"Expected no execution-order edges between disjoint operations, "
+            f"got {len(edges)}: {edges}"
+        )
 
     def test_same_register_produces_chain(self):
         """Multiple operations on the same register produce a linear chain."""
@@ -225,9 +223,9 @@ class TestMixedOperationsDirect:
 class TestCompileMixedOperations:
     """Integration via @ql.compile: mixed ops produce correct DAG structure."""
 
-    def test_compile_mixed_arithmetic_gate_counts(self):
-        """Mixed addition and multiplication inside @ql.compile
-        produce DAG nodes with nonzero gate counts."""
+    def test_compile_addition_gate_counts(self):
+        """Addition operations inside @ql.compile produce DAG nodes
+        with nonzero gate counts."""
         ql.circuit()
 
         @ql.compile(opt=1)
@@ -342,6 +340,79 @@ class TestCompileMixedOperations:
             f"Expected >= 2 parallel groups for disjoint registers, got {len(groups)}"
         )
 
+    def test_multiplication_gate_counts(self):
+        """Multiplication with DAG context produces DAG nodes with
+        nonzero gate counts."""
+        ql.circuit()
+        dag = CallGraphDAG()
+        push_dag_context(dag)
+        try:
+            a = qint(3, width=4)
+            a *= 2
+        finally:
+            pop_dag_context()
+
+        nodes = _op_nodes(dag)
+        mul_nodes = [n for n in nodes if "mul" in n.operation_type]
+        assert len(mul_nodes) > 0, "Expected at least one mul operation node"
+        for node in mul_nodes:
+            assert node.gate_count > 0, (
+                f"mul node gate_count should be > 0, got {node.gate_count}"
+            )
+
+    def test_comparison_gate_counts(self):
+        """Comparison with DAG context produces DAG nodes with
+        nonzero gate counts."""
+        ql.circuit()
+        dag = CallGraphDAG()
+        push_dag_context(dag)
+        try:
+            a = qint(3, width=4)
+            _ = (a == 5)
+        finally:
+            pop_dag_context()
+
+        nodes = _op_nodes(dag)
+        eq_nodes = [n for n in nodes if "eq" in n.operation_type]
+        assert len(eq_nodes) > 0, "Expected at least one eq operation node"
+        for node in eq_nodes:
+            assert node.gate_count > 0, (
+                f"eq node gate_count should be > 0, got {node.gate_count}"
+            )
+
+    def test_mixed_all_operation_types(self):
+        """Addition, multiplication, and comparison together produce
+        DAG nodes for each operation type, all with nonzero gate counts."""
+        ql.circuit()
+        dag = CallGraphDAG()
+        push_dag_context(dag)
+        try:
+            a = qint(2, width=4)
+            b = qint(3, width=4)
+            a += 1
+            b *= 2
+            _ = (a == 3)
+            a += b
+        finally:
+            pop_dag_context()
+
+        nodes = _op_nodes(dag)
+        op_types = {n.operation_type for n in nodes}
+
+        # Verify we have addition, multiplication, and comparison nodes
+        has_add = any("add" in t for t in op_types)
+        has_mul = any("mul" in t for t in op_types)
+        has_eq = any("eq" in t for t in op_types)
+        assert has_add, f"Expected add operation, got types: {op_types}"
+        assert has_mul, f"Expected mul operation, got types: {op_types}"
+        assert has_eq, f"Expected eq operation, got types: {op_types}"
+
+        # All nodes have nonzero gate counts
+        for node in nodes:
+            assert node.gate_count > 0, (
+                f"Node {node.operation_type} has gate_count={node.gate_count}"
+            )
+
 
 # ---------------------------------------------------------------------------
 # Test: to_dot() output quality
@@ -412,9 +483,11 @@ class TestToDotIntegration:
             pop_dag_context()
 
         groups = dag.parallel_groups()
+        assert len(groups) > 1, (
+            f"Expected > 1 parallel groups for disjoint registers, got {len(groups)}"
+        )
         dot = dag.to_dot()
-        if len(groups) > 1:
-            assert "subgraph cluster_" in dot
+        assert "subgraph cluster_" in dot
 
 
 # ---------------------------------------------------------------------------
@@ -510,10 +583,11 @@ class TestEndToEnd:
 
         @ql.compile(opt=1)
         def complex_fn(x, y):
-            x += 1          # op on x register
-            y += 2          # op on y register (independent)
+            x += 1          # add on x register
+            y *= 2          # mul on y register (independent)
+            _ = (x == 3)    # comparison on x register
             x += y          # merge: touches both registers
-            x += 3          # op on (now-merged) registers
+            x += 3          # add on (now-merged) registers
             return x
 
         a = qint(3, width=4)
@@ -523,9 +597,9 @@ class TestEndToEnd:
         dag = complex_fn.call_graph
         assert dag is not None
 
-        # 1. Correct number of operation nodes
+        # 1. Correct number of operation nodes (add, mul, eq, add_qq, add_cq)
         nodes = _op_nodes(dag)
-        assert len(nodes) == 4, f"Expected 4 operation nodes, got {len(nodes)}"
+        assert len(nodes) == 5, f"Expected 5 operation nodes, got {len(nodes)}"
 
         # 2. All gate counts non-zero
         for node in nodes:
