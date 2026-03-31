@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Verify libraries exist
+        run: |
+          ls -la build/libquantum*
+
+      - name: Build benchmarks
+        run: cmake --build build --target benchmark_runner
+
+      - name: Run benchmarks (CI mode - gate counts only)
+        run: |
+          python3 benchmarks/run.py --ci --build-dir build --output benchmarks/results.json

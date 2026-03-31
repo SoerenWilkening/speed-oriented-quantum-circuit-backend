@@ -1,0 +1,128 @@
+{
+  "qft_add:4": {
+    "operation": "qft_add",
+    "width": 4,
+    "total_gates": 30,
+    "depth": 18,
+    "elapsed_ms": 0.039
+  },
+  "qft_add:8": {
+    "operation": "qft_add",
+    "width": 8,
+    "total_gates": 108,
+    "depth": 38,
+    "elapsed_ms": 0.066
+  },
+  "qft_add:16": {
+    "operation": "qft_add",
+    "width": 16,
+    "total_gates": 408,
+    "depth": 78,
+    "elapsed_ms": 0.17
+  },
+  "qft_add:32": {
+    "operation": "qft_add",
+    "width": 32,
+    "total_gates": 1584,
+    "depth": 158,
+    "elapsed_ms": 0.787
+  },
+  "toffoli_cdkm:4": {
+    "operation": "toffoli_cdkm",
+    "width": 4,
+    "total_gates": 24,
+    "depth": 17,
+    "elapsed_ms": 0.014
+  },
+  "toffoli_cdkm:8": {
+    "operation": "toffoli_cdkm",
+    "width": 8,
+    "total_gates": 48,
+    "depth": 37,
+    "elapsed_ms": 0.024
+  },
+  "toffoli_cdkm:16": {
+    "operation": "toffoli_cdkm",
+    "width": 16,
+    "total_gates": 96,
+    "depth": 77,
+    "elapsed_ms": 0.035
+  },
+  "toffoli_cdkm:32": {
+    "operation": "toffoli_cdkm",
+    "width": 32,
+    "total_gates": 192,
+    "depth": 157,
+    "elapsed_ms": 0.275
+  },
+  "toffoli_cla:4": {
+    "operation": "toffoli_cla",
+    "width": 4,
+    "total_gates": 32,
+    "depth": 11,
+    "elapsed_ms": 0.018
+  },
+  "toffoli_cla:8": {
+    "operation": "toffoli_cla",
+    "width": 8,
+    "total_gates": 88,
+    "depth": 19,
+    "elapsed_ms": 0.044
+  },
+  "toffoli_cla:16": {
+    "operation": "toffoli_cla",
+    "width": 16,
+    "total_gates": 212,
+    "depth": 31,
+    "elapsed_ms": 0.07
+  },
+  "toffoli_cla:32": {
+    "operation": "toffoli_cla",
+    "width": 32,
+    "total_gates": 472,
+    "depth": 51,
+    "elapsed_ms": 0.156
+  },
+  "qft_mul:4": {
+    "operation": "qft_mul",
+    "width": 4,
+    "total_gates": 142,
+    "depth": 103,
+    "elapsed_ms": 6.121
+  },
+  "qft_mul:8": {
+    "operation": "qft_mul",
+    "width": 8,
+    "total_gates": 812,
+    "depth": 511,
+    "elapsed_ms": 63.962
+  },
+  "qft_mul:16": {
+    "operation": "qft_mul",
+    "width": 16,
+    "total_gates": 5272,
+    "depth": 3007,
+    "elapsed_ms": 1798.086
+  },
+  "toffoli_mul:4": {
+    "operation": "toffoli_mul",
+    "width": 4,
+    "total_gates": 160,
+    "depth": 101,
+    "elapsed_ms": 0.035
+  },
+  "toffoli_mul:8": {
+    "operation": "toffoli_mul",
+    "width": 8,
+    "total_gates": 640,
+    "depth": 457,
+    "elapsed_ms": 0.683
+  },
+  "toffoli_mul:16": {
+    "operation": "toffoli_mul",
+    "width": 16,
+    "total_gates": 2560,
+    "depth": 1937,
+    "elapsed_ms": 3.828
+  }
+}
