@@ -94,6 +94,15 @@ QC_EXTERN_C_BEGIN
  */
 typedef struct circuit_ctx circuit_ctx_t;
 
+/**
+ * @brief Opaque pre-built gate sequence.
+ *
+ * Represents a reusable sub-circuit (e.g., addition, comparison) that can
+ * be applied to specific qubits via qc_run_instruction(). Built by the
+ * various *_seq() builder functions. Free with qc_sequence_free().
+ */
+typedef struct qc_sequence qc_sequence_t;
+
 /* ====================================================================== */
 /* Gate types                                                              */
 /* ====================================================================== */
@@ -650,6 +659,24 @@ QC_API qc_error_t qc_toffoli_mod_mul_cq(circuit_ctx_t *ctx, const uint32_t *valu
                                           int64_t modulus);
 
 /* ====================================================================== */
+/* Arithmetic dispatch (mode-aware wrappers)                               */
+/* ====================================================================== */
+
+/**
+ * @brief Mode-aware quantum-quantum subtraction: a -= b.
+ *
+ * Dispatches to QFT (inverse Draper) or Toffoli (CDKM) subtraction
+ * depending on the arithmetic mode set on the context.
+ *
+ * @param ctx   Circuit context.
+ * @param a     Target register qubit indices (modified in place).
+ * @param b     Source register qubit indices (unchanged).
+ * @param width Bit width of registers (1-64).
+ */
+QC_API qc_error_t qc_dispatch_qq_sub(circuit_ctx_t *ctx, const uint32_t *a,
+                                      const uint32_t *b, uint32_t width);
+
+/* ====================================================================== */
 /* Comparison operations                                                   */
 /* ====================================================================== */
 
@@ -856,6 +883,86 @@ QC_API const char *qc_version_string(void);
  * @brief Get library version as integer (major * 10000 + minor * 100 + patch).
  */
 QC_API int qc_version_number(void);
+
+/* ====================================================================== */
+/* Sequence API                                                            */
+/* ====================================================================== */
+
+/** @brief Free a pre-built sequence (NULL-safe). */
+QC_API void qc_sequence_free(qc_sequence_t *seq);
+
+/** @brief Get total gate count of a sequence (0 if NULL). */
+QC_API uint32_t qc_sequence_gate_count(const qc_sequence_t *seq);
+
+/** @brief Recompute total_gate_count from per-layer counts. */
+QC_API void qc_sequence_compute_total(qc_sequence_t *seq);
+
+/**
+ * @brief Apply a pre-built sequence to specific qubits in the circuit.
+ *
+ * @param ctx         Circuit context (receives the gates).
+ * @param seq         Pre-built gate sequence (NULL is no-op).
+ * @param qubit_array Qubit mapping array.
+ * @param invert      0 = normal, 1 = apply in reverse with inverted rotations.
+ */
+QC_API void qc_run_instruction(circuit_ctx_t *ctx, qc_sequence_t *seq,
+                                const uint32_t qubit_array[], int invert);
+
+/* -- Sequence allocator (public for upstream builders) ------------------- */
+
+/**
+ * @brief Allocate a qc_sequence_t with the given number of layers.
+ *
+ * @param num_layers  Number of layers (must be > 0).
+ * @return Allocated sequence, or NULL on failure.
+ */
+QC_API qc_sequence_t *qc_sequence_alloc(int num_layers);
+
+/* -- Comparison sequence builders ---------------------------------------- */
+
+QC_API qc_sequence_t *qc_cmp_cq_equal_seq(int bits, int64_t value);
+QC_API qc_sequence_t *qc_cmp_cq_less_seq(int bits, int64_t value);
+QC_API qc_sequence_t *qc_cmp_cq_greater_seq(int bits, int64_t value);
+
+/* -- Controlled comparison sequence builders ----------------------------- */
+
+QC_API qc_sequence_t *qc_c_cmp_cq_equal_seq(int bits, int64_t value);
+QC_API qc_sequence_t *qc_c_cmp_cq_less_seq(int bits, int64_t value);
+QC_API qc_sequence_t *qc_c_cmp_cq_greater_seq(int bits, int64_t value);
+QC_API qc_sequence_t *qc_cmp_qq_less_seq(int bits);
+QC_API qc_sequence_t *qc_c_cmp_qq_less_seq(int bits);
+
+/* -- Bitwise sequence builders ------------------------------------------- */
+
+QC_API qc_sequence_t *qc_not_seq(int bits);
+QC_API qc_sequence_t *qc_xor_seq(int bits);
+QC_API qc_sequence_t *qc_and_seq(int bits);
+QC_API qc_sequence_t *qc_or_seq(int bits);
+
+/* -- Controlled bitwise sequence builders -------------------------------- */
+
+QC_API qc_sequence_t *qc_c_not_seq(int bits);
+QC_API qc_sequence_t *qc_c_xor_seq(int bits);
+QC_API qc_sequence_t *qc_c_and_seq(int bits);
+QC_API qc_sequence_t *qc_c_or_seq(int bits);
+
+/* -- Toffoli arithmetic sequence builders -------------------------------- */
+
+QC_API qc_sequence_t *qc_split_cq_add_seq(int bits, int64_t value);
+QC_API qc_sequence_t *qc_split_cq_sub_seq(int bits, int64_t value);
+QC_API qc_sequence_t *qc_toffoli_qq_add_ks_seq(int bits);
+QC_API qc_sequence_t *qc_toffoli_cq_add_ks_seq(int bits, int64_t value);
+QC_API qc_sequence_t *qc_toffoli_cqq_add_ks_seq(int bits);
+QC_API qc_sequence_t *qc_toffoli_ccq_add_ks_seq(int bits, int64_t value);
+
+/* -- QFT arithmetic sequence builders ------------------------------------ */
+
+QC_API qc_sequence_t *qc_arith_qq_add_seq(int bits);
+QC_API qc_sequence_t *qc_arith_cq_add_seq(int bits, int64_t value);
+QC_API qc_sequence_t *qc_arith_cqq_add_seq(int bits);
+QC_API qc_sequence_t *qc_arith_ccq_add_seq(int bits, int64_t value);
+QC_API qc_sequence_t *qc_arith_cq_mul_seq(int bits, int64_t value);
+QC_API qc_sequence_t *qc_arith_qq_mul_seq(int bits);
 
 QC_EXTERN_C_END
 

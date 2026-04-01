@@ -286,6 +286,227 @@ qc_sequence_t *qc_or_seq(int bits) {
 }
 
 /* ====================================================================== */
+/* Controlled NOT sequence: CX per bit (sequential, O(bits) depth)         */
+/* ====================================================================== */
+
+/**
+ * @brief Build a controlled bitwise NOT sequence.
+ *
+ * Qubit layout: [0..bits-1] = target, [bits] = control.
+ * Applies CX(target[i], control) for each bit i.
+ *
+ * @param bits  Width (1-64).
+ * @return Sequence, or NULL on error. Caller must free.
+ */
+qc_sequence_t *qc_c_not_seq(int bits) {
+    if (bits < 1 || bits > 64) {
+        return NULL;
+    }
+
+    qc_sequence_t *seq = logic_alloc_seq(bits, 1);
+    if (seq == NULL) {
+        return NULL;
+    }
+
+    seq->used_layer = (uint32_t)bits;
+    for (int i = 0; i < bits; i++) {
+        seq->gates_per_layer[i] = 1;
+        seq_gate_cx(&seq->seq[i][0], (uint32_t)i, (uint32_t)bits);
+    }
+
+    qc_sequence_compute_total_gate_count(seq);
+    return seq;
+}
+
+/* ====================================================================== */
+/* Controlled XOR sequence: CCX per bit (sequential, O(bits) depth)        */
+/* ====================================================================== */
+
+/**
+ * @brief Build a controlled bitwise XOR sequence: if ctrl then target ^= source.
+ *
+ * Qubit layout: [0..bits-1]=target, [bits..2*bits-1]=source, [2*bits]=control.
+ *
+ * @param bits  Width (1-64).
+ * @return Sequence, or NULL on error. Caller must free.
+ */
+qc_sequence_t *qc_c_xor_seq(int bits) {
+    if (bits < 1 || bits > 64) {
+        return NULL;
+    }
+
+    qc_sequence_t *seq = logic_alloc_seq(bits, 1);
+    if (seq == NULL) {
+        return NULL;
+    }
+
+    seq->used_layer = (uint32_t)bits;
+    for (int i = 0; i < bits; i++) {
+        seq->gates_per_layer[i] = 1;
+        seq_gate_ccx(&seq->seq[i][0],
+                      (uint32_t)i,                     /* target[i] */
+                      (uint32_t)(bits + i),             /* source[i] */
+                      (uint32_t)(2 * bits));            /* control */
+    }
+
+    qc_sequence_compute_total_gate_count(seq);
+    return seq;
+}
+
+/* ====================================================================== */
+/* Controlled AND sequence: MCX(3) per bit                                 */
+/* ====================================================================== */
+
+/**
+ * @brief Build a controlled bitwise AND sequence.
+ *
+ * Qubit layout: [0..bits-1]=result, [bits..2*bits-1]=a,
+ *               [2*bits..3*bits-1]=b, [3*bits]=control.
+ * Each bit uses MCX with 3 controls (a[i], b[i], control) -> result[i].
+ *
+ * @param bits  Width (1-64).
+ * @return Sequence, or NULL on error. Caller must free.
+ */
+qc_sequence_t *qc_c_and_seq(int bits) {
+    if (bits < 1 || bits > 64) {
+        return NULL;
+    }
+
+    /* Sequential: one MCX(3) per bit, each needs its own layer */
+    qc_sequence_t *seq = logic_alloc_seq(bits, 1);
+    if (seq == NULL) {
+        return NULL;
+    }
+
+    seq->used_layer = (uint32_t)bits;
+    for (int i = 0; i < bits; i++) {
+        seq->gates_per_layer[i] = 1;
+        qc_gate_internal_t *g = &seq->seq[i][0];
+        seq_gate_init(g);
+        g->Gate = QC_IGATE_X;
+        g->Target = (uint32_t)i;                       /* result[i] */
+        g->GateValue = 1;
+        g->NumControls = 3;
+        /* 3 controls > QC_MAX_INLINE_CONTROLS(2), must use large_control */
+        g->large_control = malloc(3 * sizeof(uint32_t));
+        if (g->large_control == NULL) {
+            /* Cleanup on allocation failure */
+            for (int j = 0; j < i; j++) {
+                free(seq->seq[j][0].large_control);
+            }
+            for (int j = 0; j < bits; j++) {
+                free(seq->seq[j]);
+            }
+            free(seq->seq);
+            free(seq->gates_per_layer);
+            free(seq);
+            return NULL;
+        }
+        g->large_control[0] = (uint32_t)(bits + i);     /* a[i] */
+        g->large_control[1] = (uint32_t)(2 * bits + i); /* b[i] */
+        g->large_control[2] = (uint32_t)(3 * bits);     /* control */
+    }
+
+    qc_sequence_compute_total_gate_count(seq);
+    return seq;
+}
+
+/* ====================================================================== */
+/* Controlled OR sequence: controlled De Morgan                            */
+/* ====================================================================== */
+
+/**
+ * @brief Build a controlled bitwise OR sequence.
+ *
+ * Qubit layout: [0..bits-1]=result, [bits..2*bits-1]=a,
+ *               [2*bits..3*bits-1]=b, [3*bits]=control.
+ *
+ * Uses controlled De Morgan: if ctrl then result = a | b.
+ * Steps: CX(ctrl->a[i]) NOT a, CX(ctrl->b[i]) NOT b,
+ *         controlled AND, uncompute NOTs, NOT result.
+ *
+ * @param bits  Width (1-64).
+ * @return Sequence, or NULL on error. Caller must free.
+ */
+qc_sequence_t *qc_c_or_seq(int bits) {
+    if (bits < 1 || bits > 64) {
+        return NULL;
+    }
+
+    /* Layers: 1(controlled NOT a+b) + bits(controlled AND) +
+               1(controlled un-NOT a+b) + 1(controlled NOT result) = bits+3 */
+    int num_layers = bits + 3;
+    int max_gpg = 2 * bits;
+
+    qc_sequence_t *seq = logic_alloc_seq(num_layers, max_gpg > 1 ? max_gpg : 1);
+    if (seq == NULL) {
+        return NULL;
+    }
+
+    int layer = 0;
+    uint32_t ctrl = (uint32_t)(3 * bits);
+
+    /* Step 1: Controlled NOT a and NOT b */
+    for (int i = 0; i < bits; i++) {
+        seq_gate_cx(&seq->seq[layer][seq->gates_per_layer[layer]++],
+                     (uint32_t)(bits + i), ctrl);
+    }
+    for (int i = 0; i < bits; i++) {
+        seq_gate_cx(&seq->seq[layer][seq->gates_per_layer[layer]++],
+                     (uint32_t)(2 * bits + i), ctrl);
+    }
+    layer++;
+    seq->used_layer++;
+
+    /* Step 2: Controlled AND (MCX(3) per bit) */
+    for (int i = 0; i < bits; i++) {
+        seq->gates_per_layer[layer] = 1;
+        qc_gate_internal_t *g = &seq->seq[layer][0];
+        seq_gate_init(g);
+        g->Gate = QC_IGATE_X;
+        g->Target = (uint32_t)i;
+        g->GateValue = 1;
+        g->NumControls = 3;
+        /* 3 controls > QC_MAX_INLINE_CONTROLS(2), must use large_control */
+        g->large_control = malloc(3 * sizeof(uint32_t));
+        if (g->large_control == NULL) {
+            /* Simplified cleanup: qc_sequence_free handles partial sequences */
+            qc_sequence_compute_total_gate_count(seq);
+            qc_sequence_free(seq);
+            return NULL;
+        }
+        g->large_control[0] = (uint32_t)(bits + i);
+        g->large_control[1] = (uint32_t)(2 * bits + i);
+        g->large_control[2] = ctrl;
+        layer++;
+        seq->used_layer++;
+    }
+
+    /* Step 3: Uncompute controlled NOT a and NOT b */
+    for (int i = 0; i < bits; i++) {
+        seq_gate_cx(&seq->seq[layer][seq->gates_per_layer[layer]++],
+                     (uint32_t)(bits + i), ctrl);
+    }
+    for (int i = 0; i < bits; i++) {
+        seq_gate_cx(&seq->seq[layer][seq->gates_per_layer[layer]++],
+                     (uint32_t)(2 * bits + i), ctrl);
+    }
+    layer++;
+    seq->used_layer++;
+
+    /* Step 4: Controlled NOT result */
+    for (int i = 0; i < bits; i++) {
+        seq_gate_cx(&seq->seq[layer][seq->gates_per_layer[layer]++],
+                     (uint32_t)i, ctrl);
+    }
+    layer++;
+    seq->used_layer++;
+
+    qc_sequence_compute_total_gate_count(seq);
+    return seq;
+}
+
+/* ====================================================================== */
 /* Public API wrappers                                                     */
 /* ====================================================================== */
 

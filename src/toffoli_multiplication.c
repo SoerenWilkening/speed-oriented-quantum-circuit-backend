@@ -135,9 +135,45 @@ void qc_dynamic_qq_add(circuit_ctx_t *ctx, const uint32_t *a,
 }
 
 /**
+ * @brief Reverse of MAJ: emits the 3 gates of MAJ(a,b,c) in reverse order.
+ *
+ * MAJ(a,b,c) = CX(c,b); CX(c,a); CCX(a,b,c).
+ * Reverse    = CCX(a,b,c); CX(c,a); CX(c,b).
+ *
+ * Since CX and CCX are self-inverse, this is also MAJ^{-1}.
+ */
+static void emit_rev_maj(circuit_ctx_t *ctx, uint32_t a, uint32_t b, uint32_t c) {
+    qc_emit_ccx_or_decomp(ctx, c, a, b);
+    qc_circuit_cx(ctx, c, a);
+    qc_circuit_cx(ctx, c, b);
+}
+
+/**
+ * @brief Reverse of UMA: emits the 3 gates of UMA(a,b,c) in reverse order.
+ *
+ * UMA(a,b,c) = CCX(a,b,c); CX(c,a); CX(a,b).
+ * Reverse    = CX(a,b); CX(c,a); CCX(a,b,c).
+ *
+ * Since CX and CCX are self-inverse, this is also UMA^{-1}.
+ */
+static void emit_rev_uma(circuit_ctx_t *ctx, uint32_t a, uint32_t b, uint32_t c) {
+    qc_circuit_cx(ctx, a, b);
+    qc_circuit_cx(ctx, c, a);
+    qc_emit_ccx_or_decomp(ctx, c, a, b);
+}
+
+/**
  * @brief CDKM ripple-carry subtraction: b -= a (inverse of addition).
  *
- * Runs the CDKM adder in reverse gate order.
+ * The addition sequence is:
+ *   MAJ(carry,b[0],a[0]), ..., MAJ(a[n-2],b[n-1],a[n-1]),
+ *   UMA(a[n-2],b[n-1],a[n-1]), ..., UMA(carry,b[0],a[0])
+ *
+ * The inverse (subtraction) reverses the entire gate list. Since each
+ * CX and CCX is self-inverse, this is equivalent to emitting the
+ * reversed-gate-order versions of UMA and MAJ in the opposite sweep:
+ *   rev_uma(carry,b[0],a[0]), ..., rev_uma(a[n-2],b[n-1],a[n-1]),
+ *   rev_maj(a[n-2],b[n-1],a[n-1]), ..., rev_maj(carry,b[0],a[0])
  */
 void qc_dynamic_qq_sub(circuit_ctx_t *ctx, const uint32_t *a,
                         const uint32_t *b, uint32_t width) {
@@ -150,40 +186,17 @@ void qc_dynamic_qq_sub(circuit_ctx_t *ctx, const uint32_t *a,
     uint32_t carry;
     if (qc_qubit_alloc(ctx, &carry) != QC_OK) return;
 
-    /* Inverse UMA sweep (forward) */
-    /* UMA inverse: CX(a,b); CX(c,a); CCX(a,b,c) */
-    /* = exactly the MAJ sequence with (a,b,c) -> reverse */
-    /* Actually the inverse of MAJ-then-UMA is UMA^-1 then MAJ^-1 */
-    /* Simpler: emit the same gates in reverse order. */
-
-    /* Reverse of:
-     *   MAJ(carry, b[0], a[0])
-     *   MAJ(a[0], b[1], a[1]) ... MAJ(a[n-2], b[n-1], a[n-1])
-     *   UMA(a[n-2], b[n-1], a[n-1]) ... UMA(a[0], b[1], a[1])
-     *   UMA(carry, b[0], a[0])
-     *
-     * Inverse = reverse order with each gate self-inverse:
-     *   inverse-UMA(carry, b[0], a[0])
-     *   inverse-UMA(a[0], b[1], a[1]) ... inverse-UMA(a[n-2], b[n-1], a[n-1])
-     *   inverse-MAJ(a[n-2], b[n-1], a[n-1]) ... inverse-MAJ(a[0], b[1], a[1])
-     *   inverse-MAJ(carry, b[0], a[0])
-     *
-     * Since MAJ = CX;CX;CCX and UMA = CCX;CX;CX, and each gate is self-inverse:
-     * inverse-MAJ = CCX;CX;CX (= UMA!) and inverse-UMA = CX;CX;CCX (= MAJ!)
-     *
-     * So subtraction = UMA sweep forward, then MAJ sweep backward. */
-
-    /* Forward UMA sweep (acts as inverse-MAJ) */
-    emit_uma(ctx, carry, b[0], a[0]);
+    /* Forward sweep: emit reversed UMA gates (UMA^{-1}) */
+    emit_rev_uma(ctx, carry, b[0], a[0]);
     for (uint32_t i = 1; i < width; i++) {
-        emit_uma(ctx, a[i - 1], b[i], a[i]);
+        emit_rev_uma(ctx, a[i - 1], b[i], a[i]);
     }
 
-    /* Reverse MAJ sweep (acts as inverse-UMA) */
+    /* Backward sweep: emit reversed MAJ gates (MAJ^{-1}) */
     for (int i = (int)width - 1; i >= 1; i--) {
-        emit_maj(ctx, a[i - 1], b[i], a[i]);
+        emit_rev_maj(ctx, a[i - 1], b[i], a[i]);
     }
-    emit_maj(ctx, carry, b[0], a[0]);
+    emit_rev_maj(ctx, carry, b[0], a[0]);
 
     qc_qubit_free(ctx, carry);
 }

@@ -258,13 +258,19 @@ QC_API char *qc_circuit_to_qasm(const circuit_ctx_t *ctx) {
 
     size_t offset = 0;
 
+    /* Compute qubit count: max of tracked usage and allocator high-water mark */
+    uint32_t qubit_count = ctx->used_qubits + 1;
+    if (ctx->allocator != NULL && ctx->allocator->next_qubit > qubit_count) {
+        qubit_count = ctx->allocator->next_qubit;
+    }
+
     /* Header */
     int written = sprintf(buffer + offset,
                           "OPENQASM 3.0;\n"
                           "include \"stdgates.inc\";\n"
                           "\n"
                           "qubit[%u] q;\n",
-                          ctx->used_qubits + 1);
+                          qubit_count);
     offset += (size_t)written;
 
     /* Classical register for measurements */

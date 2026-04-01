@@ -42,30 +42,15 @@
 /* ====================================================================== */
 
 /**
- * @brief Free a dynamically allocated qc_sequence_t.
- */
-static void qc_sequence_free(qc_sequence_t *seq) {
-    if (seq == NULL)
-        return;
-    if (seq->seq != NULL) {
-        for (uint32_t i = 0; i < seq->num_layer; ++i) {
-            free(seq->seq[i]);
-        }
-        free(seq->seq);
-    }
-    free(seq->gates_per_layer);
-    free(seq);
-}
-
-/**
  * @brief Allocate a qc_sequence_t with the given layer count and
- *        gates_per_layer capacity.
+ *        gates_per_layer capacity. Local helper (not the public single-arg
+ *        qc_sequence_alloc).
  *
  * @param num_layers   Number of layers to allocate.
  * @param gates_cap    Max gates per layer (each layer gets this many slots).
  * @return Allocated sequence, or NULL on failure.
  */
-static qc_sequence_t *qc_sequence_alloc(uint32_t num_layers, uint32_t gates_cap) {
+static qc_sequence_t *qft_sequence_alloc(uint32_t num_layers, uint32_t gates_cap) {
     qc_sequence_t *seq = malloc(sizeof(qc_sequence_t));
     if (seq == NULL)
         return NULL;
@@ -205,9 +190,9 @@ static void qc_seq_qft_inv(qc_sequence_t *seq, int n) {
  *
  * Total layers: QFT(2n-1) + rotations(n) + IQFT(2n-1) = 5n-2
  */
-static qc_sequence_t *qc_seq_qq_add(int bits) {
+qc_sequence_t *qc_arith_qq_add_seq(int bits) {
     uint32_t num_layers = (uint32_t)(5 * bits - 2);
-    qc_sequence_t *seq = qc_sequence_alloc(num_layers, (uint32_t)(2 * bits));
+    qc_sequence_t *seq = qft_sequence_alloc(num_layers, (uint32_t)(2 * bits));
     if (seq == NULL)
         return NULL;
 
@@ -249,7 +234,7 @@ static qc_sequence_t *qc_seq_qq_add(int bits) {
  * The classical value is encoded as phase rotation angles.
  * Total layers: 5*bits - 2
  */
-static qc_sequence_t *qc_seq_cq_add(int bits, int64_t value) {
+qc_sequence_t *qc_arith_cq_add_seq(int bits, int64_t value) {
     int *bin = qc_two_complement(value, bits);
     if (bin == NULL)
         return NULL;
@@ -269,7 +254,7 @@ static qc_sequence_t *qc_seq_cq_add(int bits, int64_t value) {
     free(bin);
 
     uint32_t num_layers = (uint32_t)(5 * bits - 2);
-    qc_sequence_t *seq = qc_sequence_alloc(num_layers, (uint32_t)(2 * bits));
+    qc_sequence_t *seq = qft_sequence_alloc(num_layers, (uint32_t)(2 * bits));
     if (seq == NULL) {
         free(rotations);
         return NULL;
@@ -309,7 +294,7 @@ static qc_sequence_t *qc_seq_cq_add(int bits, int64_t value) {
  *
  * Uses CCP decomposition: CCP(theta) = CP(theta/2,a) + CX + CP(-theta/2,a) + CX + CP(theta/2,b)
  */
-static qc_sequence_t *qc_seq_cqq_add(int bits) {
+qc_sequence_t *qc_arith_cqq_add_seq(int bits) {
     /* Estimate layers conservatively */
     uint32_t est_layers = (uint32_t)(bits * (bits + 1) / 2 * 4 + 4 * bits - 2
                                      - bits / 4 * 4 + 3);
@@ -319,7 +304,7 @@ static qc_sequence_t *qc_seq_cqq_add(int bits) {
     if (est_layers < (uint32_t)(10 * bits * bits))
         est_layers = (uint32_t)(10 * bits * bits);
 
-    qc_sequence_t *seq = qc_sequence_alloc(est_layers, (uint32_t)(2 * bits));
+    qc_sequence_t *seq = qft_sequence_alloc(est_layers, (uint32_t)(2 * bits));
     if (seq == NULL)
         return NULL;
 
@@ -397,7 +382,7 @@ static qc_sequence_t *qc_seq_cqq_add(int bits) {
  *
  * Total layers: 5*bits - 2
  */
-static qc_sequence_t *qc_seq_ccq_add(int bits, int64_t value) {
+qc_sequence_t *qc_arith_ccq_add_seq(int bits, int64_t value) {
     int *bin = qc_two_complement(value, bits);
     if (bin == NULL)
         return NULL;
@@ -417,7 +402,7 @@ static qc_sequence_t *qc_seq_ccq_add(int bits, int64_t value) {
     free(bin);
 
     uint32_t num_layers = (uint32_t)(5 * bits - 2);
-    qc_sequence_t *seq = qc_sequence_alloc(num_layers, (uint32_t)(2 * bits));
+    qc_sequence_t *seq = qft_sequence_alloc(num_layers, (uint32_t)(2 * bits));
     if (seq == NULL) {
         free(rotations);
         return NULL;
@@ -454,7 +439,7 @@ qc_error_t qc_arith_qq_add(circuit_ctx_t *ctx, const uint32_t *a,
     if (width < 1 || width > 64)
         return QC_ERR_WIDTH;
 
-    qc_sequence_t *seq = qc_seq_qq_add((int)width);
+    qc_sequence_t *seq = qc_arith_qq_add_seq((int)width);
     if (seq == NULL)
         return QC_ERR_ALLOC;
 
@@ -478,7 +463,7 @@ qc_error_t qc_arith_cq_add(circuit_ctx_t *ctx, const uint32_t *target,
     if (width < 1 || width > 64)
         return QC_ERR_WIDTH;
 
-    qc_sequence_t *seq = qc_seq_cq_add((int)width, value);
+    qc_sequence_t *seq = qc_arith_cq_add_seq((int)width, value);
     if (seq == NULL)
         return QC_ERR_ALLOC;
 
@@ -501,7 +486,7 @@ qc_error_t qc_arith_cqq_add(circuit_ctx_t *ctx, const uint32_t *a,
     if (width < 1 || width > 64)
         return QC_ERR_WIDTH;
 
-    qc_sequence_t *seq = qc_seq_cqq_add((int)width);
+    qc_sequence_t *seq = qc_arith_cqq_add_seq((int)width);
     if (seq == NULL)
         return QC_ERR_ALLOC;
 
@@ -527,7 +512,7 @@ qc_error_t qc_arith_ccq_add(circuit_ctx_t *ctx, const uint32_t *target,
     if (width < 1 || width > 64)
         return QC_ERR_WIDTH;
 
-    qc_sequence_t *seq = qc_seq_ccq_add((int)width, value);
+    qc_sequence_t *seq = qc_arith_ccq_add_seq((int)width, value);
     if (seq == NULL)
         return QC_ERR_ALLOC;
 

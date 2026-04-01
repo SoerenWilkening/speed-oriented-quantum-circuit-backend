@@ -34,18 +34,6 @@
 /* Sequence memory helpers (shared with qft_addition.c via linker)         */
 /* ====================================================================== */
 
-static void qc_mul_sequence_free(qc_sequence_t *seq) {
-    if (seq == NULL)
-        return;
-    if (seq->seq != NULL) {
-        for (uint32_t i = 0; i < seq->num_layer; ++i)
-            free(seq->seq[i]);
-        free(seq->seq);
-    }
-    free(seq->gates_per_layer);
-    free(seq);
-}
-
 static qc_sequence_t *qc_mul_sequence_alloc(uint32_t num_layers,
                                              uint32_t gates_cap) {
     qc_sequence_t *seq = malloc(sizeof(qc_sequence_t));
@@ -170,7 +158,7 @@ static void mul_qft_inv(qc_sequence_t *seq, int n) {
  *
  * Classical value is encoded as phase rotation angles.
  */
-static qc_sequence_t *qc_seq_cq_mul(int bits, int64_t value) {
+qc_sequence_t *qc_arith_cq_mul_seq(int bits, int64_t value) {
     int *bin = qc_two_complement(value, bits);
     if (bin == NULL)
         return NULL;
@@ -238,7 +226,7 @@ static qc_sequence_t *qc_seq_cq_mul(int bits, int64_t value) {
  *   CX(a_ctrl, b_ctrl)
  *   CP(theta/2, target, b_ctrl)
  */
-static qc_sequence_t *qc_seq_qq_mul(int bits) {
+qc_sequence_t *qc_arith_qq_mul_seq(int bits) {
     uint32_t num_layers = QC_MUL_MAX_LAYERS;
     if (bits <= 8)
         num_layers = (uint32_t)(50 * bits * bits * bits);
@@ -327,7 +315,7 @@ qc_error_t qc_arith_qq_mul(circuit_ctx_t *ctx, const uint32_t *result,
     if (width < 1 || width > 64)
         return QC_ERR_WIDTH;
 
-    qc_sequence_t *seq = qc_seq_qq_mul((int)width);
+    qc_sequence_t *seq = qc_arith_qq_mul_seq((int)width);
     if (seq == NULL)
         return QC_ERR_ALLOC;
 
@@ -342,7 +330,7 @@ qc_error_t qc_arith_qq_mul(circuit_ctx_t *ctx, const uint32_t *result,
 
     qc_run_instruction(ctx, seq, qmap, 0);
 
-    qc_mul_sequence_free(seq);
+    qc_sequence_free(seq);
     return QC_OK;
 }
 
@@ -354,7 +342,7 @@ qc_error_t qc_arith_cq_mul(circuit_ctx_t *ctx, const uint32_t *result,
     if (width < 1 || width > 64)
         return QC_ERR_WIDTH;
 
-    qc_sequence_t *seq = qc_seq_cq_mul((int)width, value);
+    qc_sequence_t *seq = qc_arith_cq_mul_seq((int)width, value);
     if (seq == NULL)
         return QC_ERR_ALLOC;
 
@@ -367,6 +355,6 @@ qc_error_t qc_arith_cq_mul(circuit_ctx_t *ctx, const uint32_t *result,
 
     qc_run_instruction(ctx, seq, qmap, 0);
 
-    qc_mul_sequence_free(seq);
+    qc_sequence_free(seq);
     return QC_OK;
 }

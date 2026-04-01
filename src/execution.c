@@ -54,8 +54,8 @@ void qc_sequence_compute_total_gate_count(qc_sequence_t *seq) {
  * When invert is 1, the sequence is applied in reverse layer order with
  * negated gate values for non-self-inverse gates (rotation inversion).
  */
-void qc_run_instruction(circuit_ctx_t *ctx, qc_sequence_t *seq,
-                        const uint32_t qubit_array[], int invert) {
+QC_API void qc_run_instruction(circuit_ctx_t *ctx, qc_sequence_t *seq,
+                               const uint32_t qubit_array[], int invert) {
     if (ctx == NULL || seq == NULL)
         return;
 

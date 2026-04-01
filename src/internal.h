@@ -261,14 +261,18 @@ qc_alloc_stats_internal_t qc_allocator_get_stats(const qc_allocator_t *alloc);
  *
  * A sequence represents a pre-built sub-circuit (e.g., QFT, addition) that
  * can be applied to specific qubits via qc_run_instruction().
+ *
+ * Note: qc_sequence_t is forward-declared in the public header
+ * (quantum_circuit.h) as `typedef struct qc_sequence qc_sequence_t;`.
+ * This definition provides the struct body.
  */
-typedef struct {
+struct qc_sequence {
     qc_gate_internal_t **seq;    /**< [layer][gate_index] */
     uint32_t num_layer;          /**< Allocated layer count */
     uint32_t used_layer;         /**< Used layer count */
     uint32_t *gates_per_layer;   /**< [layer] gate count */
     uint32_t total_gate_count;   /**< Pre-computed total gate count */
-} qc_sequence_t;
+};
 
 /* ====================================================================== */
 /* Internal function declarations -- execution (Module 1.5)                */
@@ -312,11 +316,9 @@ void qc_reverse_circuit_range(circuit_ctx_t *ctx, int start_layer, int end_layer
 /* Internal function declarations -- toffoli_helpers (Module 1.9)          */
 /* ====================================================================== */
 
-/** @brief Allocate a qc_sequence_t with the given number of layers. */
-qc_sequence_t *qc_toffoli_seq_alloc(int num_layers);
-
-/** @brief Free a qc_sequence_t and all internal arrays. */
-void qc_toffoli_seq_free(qc_sequence_t *seq);
+/* Backward-compatibility macros: old names map to new public names */
+#define qc_toffoli_seq_alloc qc_sequence_alloc
+#define qc_toffoli_seq_free  qc_sequence_free
 
 /* ====================================================================== */
 /* Internal function declarations -- integer (Module 1.12)                 */

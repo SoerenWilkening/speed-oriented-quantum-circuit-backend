@@ -1,12 +1,14 @@
 /**
  * @file toffoli_helpers.c
- * @brief Helper functions for Toffoli addition sequences.
+ * @brief Helper functions for sequence allocation and lifecycle.
  *
  * Module 1.9 (Phase 1) - refactor-w6f
  *
  * Provides:
- *   - qc_toffoli_seq_alloc: allocate a qc_sequence_t with given layers
- *   - qc_toffoli_seq_free: free a qc_sequence_t (including large_control)
+ *   - qc_sequence_alloc: allocate a qc_sequence_t with given layers
+ *   - qc_sequence_free: free a qc_sequence_t (including large_control)
+ *   - qc_sequence_gate_count: get total gate count (NULL-safe)
+ *   - qc_sequence_compute_total: recompute total from per-layer counts
  *
  * These replace the monolith's alloc_sequence and toffoli_sequence_free
  * functions, adapted for qc_sequence_t / qc_gate_internal_t.
@@ -20,7 +22,7 @@
 #include <string.h>
 
 /* ====================================================================== */
-/* qc_toffoli_seq_alloc                                                    */
+/* qc_sequence_alloc                                                       */
 /* ====================================================================== */
 
 /**
@@ -30,7 +32,7 @@
  * @param num_layers  Number of layers to allocate.
  * @return Allocated sequence, or NULL on failure.
  */
-qc_sequence_t *qc_toffoli_seq_alloc(int num_layers) {
+QC_API qc_sequence_t *qc_sequence_alloc(int num_layers) {
     if (num_layers <= 0)
         return NULL;
 
@@ -71,7 +73,7 @@ qc_sequence_t *qc_toffoli_seq_alloc(int num_layers) {
 }
 
 /* ====================================================================== */
-/* qc_toffoli_seq_free                                                     */
+/* qc_sequence_free                                                        */
 /* ====================================================================== */
 
 /**
@@ -82,7 +84,7 @@ qc_sequence_t *qc_toffoli_seq_alloc(int num_layers) {
  *
  * @param seq  Sequence to free (NULL is safe no-op).
  */
-void qc_toffoli_seq_free(qc_sequence_t *seq) {
+QC_API void qc_sequence_free(qc_sequence_t *seq) {
     if (seq == NULL)
         return;
 
@@ -105,6 +107,33 @@ void qc_toffoli_seq_free(qc_sequence_t *seq) {
 
     free(seq->gates_per_layer);
     free(seq);
+}
+
+/* ====================================================================== */
+/* qc_sequence_gate_count                                                  */
+/* ====================================================================== */
+
+/**
+ * @brief Get total gate count of a sequence.
+ *
+ * @param seq  Sequence to query (NULL returns 0).
+ * @return Total gate count.
+ */
+QC_API uint32_t qc_sequence_gate_count(const qc_sequence_t *seq) {
+    return seq ? seq->total_gate_count : 0;
+}
+
+/* ====================================================================== */
+/* qc_sequence_compute_total (public alias)                                */
+/* ====================================================================== */
+
+/**
+ * @brief Recompute total_gate_count as sum of gates_per_layer.
+ *
+ * Public alias for qc_sequence_compute_total_gate_count.
+ */
+QC_API void qc_sequence_compute_total(qc_sequence_t *seq) {
+    qc_sequence_compute_total_gate_count(seq);
 }
 
 /* qc_two_complement is defined in integer.c and declared in internal.h */

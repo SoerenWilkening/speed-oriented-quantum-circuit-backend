@@ -210,6 +210,32 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_integration.c")
     add_test(NAME test_integration COMMAND test_integration)
 endif()
 
+# Comparison fix regression tests: ancilla allocation in CQ wrappers
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_comparison_fix.c")
+    add_executable(test_comparison_fix
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_comparison_fix.c
+    )
+    target_include_directories(test_comparison_fix PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+    )
+    target_link_libraries(test_comparison_fix PRIVATE quantum_static m)
+    add_test(NAME test_comparison_fix COMMAND test_comparison_fix)
+endif()
+
+# Sequence API: test public sequence lifecycle, builders, and replay
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_sequence_api.c")
+    add_executable(test_sequence_api
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_sequence_api.c
+    )
+    target_include_directories(test_sequence_api PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+    )
+    target_link_libraries(test_sequence_api PRIVATE quantum_static m)
+    add_test(NAME test_sequence_api COMMAND test_sequence_api)
+endif()
+
 # ── Benchmarks ─────────────────────────────────────────────────────────
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/benchmarks/benchmark_runner.c")
     add_executable(benchmark_runner
