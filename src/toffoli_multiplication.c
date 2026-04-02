@@ -315,8 +315,34 @@ void qc_dynamic_cqq_add(circuit_ctx_t *ctx, const uint32_t *a,
     qc_qubit_free(ctx, carry);
 }
 
+/** @brief Reverse of controlled MAJ: 5 gates of emit_cmaj in reverse order. */
+static void emit_c_rev_maj(circuit_ctx_t *ctx, uint32_t a, uint32_t b,
+                            uint32_t c, uint32_t ext_ctrl, uint32_t and_anc) {
+    qc_emit_ccx_or_decomp(ctx, and_anc, a, b);
+    qc_emit_ccx_or_decomp(ctx, c, and_anc, ext_ctrl);
+    qc_emit_ccx_or_decomp(ctx, and_anc, a, b);
+    qc_emit_ccx_or_decomp(ctx, a, c, ext_ctrl);
+    qc_emit_ccx_or_decomp(ctx, b, c, ext_ctrl);
+}
+
+/** @brief Reverse of controlled UMA: 5 gates of emit_cuma in reverse order. */
+static void emit_c_rev_uma(circuit_ctx_t *ctx, uint32_t a, uint32_t b,
+                            uint32_t c, uint32_t ext_ctrl, uint32_t and_anc) {
+    qc_emit_ccx_or_decomp(ctx, b, a, ext_ctrl);
+    qc_emit_ccx_or_decomp(ctx, a, c, ext_ctrl);
+    qc_emit_ccx_or_decomp(ctx, and_anc, a, b);
+    qc_emit_ccx_or_decomp(ctx, c, and_anc, ext_ctrl);
+    qc_emit_ccx_or_decomp(ctx, and_anc, a, b);
+}
+
 /**
  * @brief Dynamic controlled CDKM subtraction: b -= a, controlled.
+ *
+ * Subtraction = inverse of addition. The addition circuit is:
+ *   cMAJ(0), ..., cMAJ(n-1), cUMA(n-1), ..., cUMA(0)
+ * The inverse reverses the entire gate list. Since all gates are
+ * self-inverse (CCX), this is:
+ *   c_rev_UMA(0), ..., c_rev_UMA(n-1), c_rev_MAJ(n-1), ..., c_rev_MAJ(0)
  */
 void qc_dynamic_cqq_sub(circuit_ctx_t *ctx, const uint32_t *a,
                          const uint32_t *b, uint32_t width,
@@ -334,16 +360,17 @@ void qc_dynamic_cqq_sub(circuit_ctx_t *ctx, const uint32_t *a,
         return;
     }
 
-    /* Inverse: cUMA forward then cMAJ backward */
-    emit_cuma(ctx, carry, b[0], a[0], control, and_anc);
+    /* Forward c_rev_UMA sweep (reversed gate order within each triple) */
+    emit_c_rev_uma(ctx, carry, b[0], a[0], control, and_anc);
     for (uint32_t i = 1; i < width; i++) {
-        emit_cuma(ctx, a[i - 1], b[i], a[i], control, and_anc);
+        emit_c_rev_uma(ctx, a[i - 1], b[i], a[i], control, and_anc);
     }
 
+    /* Backward c_rev_MAJ sweep */
     for (int i = (int)width - 1; i >= 1; i--) {
-        emit_cmaj(ctx, a[i - 1], b[i], a[i], control, and_anc);
+        emit_c_rev_maj(ctx, a[i - 1], b[i], a[i], control, and_anc);
     }
-    emit_cmaj(ctx, carry, b[0], a[0], control, and_anc);
+    emit_c_rev_maj(ctx, carry, b[0], a[0], control, and_anc);
 
     qc_qubit_free(ctx, and_anc);
     qc_qubit_free(ctx, carry);
