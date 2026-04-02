@@ -288,6 +288,19 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_qq_comparison.c")
     add_test(NAME test_qq_comparison COMMAND test_qq_comparison)
 endif()
 
+# Toffoli sequence builders: multiplication and CQ comparison
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_toffoli_seq_builders.c")
+    add_executable(test_toffoli_seq_builders
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_toffoli_seq_builders.c
+    )
+    target_include_directories(test_toffoli_seq_builders PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+    )
+    target_link_libraries(test_toffoli_seq_builders PRIVATE quantum_static m)
+    add_test(NAME test_toffoli_seq_builders COMMAND test_toffoli_seq_builders)
+endif()
+
 # Sequence qubit count metadata tests
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_sequence_qubit_count.c")
     add_executable(test_sequence_qubit_count

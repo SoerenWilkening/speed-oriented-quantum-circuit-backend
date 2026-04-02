@@ -999,12 +999,30 @@ QC_API qc_sequence_t *qc_toffoli_ccq_add_ks_seq(int bits, int64_t value);
 QC_API qc_sequence_t *qc_toffoli_qq_add_bk_seq(int bits);
 QC_API qc_sequence_t *qc_toffoli_cq_add_bk_seq(int bits, int64_t value);
 QC_API qc_sequence_t *qc_toffoli_cqq_add_bk_seq(int bits);
+QC_API qc_sequence_t *qc_toffoli_ccq_add_bk_seq(int bits, int64_t value);
 QC_API qc_sequence_t *qc_sequence_dup(const qc_sequence_t *src);
 
 /* -- Toffoli QQ comparison sequence builders ----------------------------- */
 
 QC_API qc_sequence_t *qc_cmp_qq_less_toffoli_seq(int bits);
 QC_API qc_sequence_t *qc_c_cmp_qq_less_toffoli_seq(int bits);
+
+/* -- Toffoli multiplication sequence builders (capture-based) ------------ */
+
+QC_API qc_sequence_t *qc_toffoli_cq_mul_seq(int bits, int64_t value);
+QC_API qc_sequence_t *qc_toffoli_qq_mul_seq(int bits);
+
+/* -- Controlled toffoli multiplication sequence builders (capture-based) -- */
+
+QC_API qc_sequence_t *qc_toffoli_cmul_cq_seq(int bits, int64_t value);
+QC_API qc_sequence_t *qc_toffoli_cmul_qq_seq(int bits);
+
+/* -- Toffoli CQ comparison sequence builders ----------------------------- */
+
+QC_API qc_sequence_t *qc_cmp_cq_less_toffoli_seq(int bits, int64_t value);
+QC_API qc_sequence_t *qc_cmp_cq_greater_toffoli_seq(int bits, int64_t value);
+QC_API qc_sequence_t *qc_c_cmp_cq_less_toffoli_seq(int bits, int64_t value);
+QC_API qc_sequence_t *qc_c_cmp_cq_greater_toffoli_seq(int bits, int64_t value);
 
 /* -- QFT arithmetic sequence builders ------------------------------------ */
 

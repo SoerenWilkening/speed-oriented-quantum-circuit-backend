@@ -232,3 +232,44 @@ qc_sequence_t *qc_toffoli_cqq_add_bk_seq(int bits) {
     qc_circuit_destroy(ctx);
     return seq;
 }
+
+/* ====================================================================== */
+/* qc_toffoli_ccq_add_bk_seq -- controlled CQ BK CLA add sequence        */
+/* ====================================================================== */
+
+qc_sequence_t *qc_toffoli_ccq_add_bk_seq(int bits, int64_t value) {
+    if (bits < 1 || bits > 64)
+        return NULL;
+
+    uint32_t n = (uint32_t)bits;
+    uint32_t total = 4 * n + 64;
+
+    circuit_ctx_t *ctx = cmp_create_capture_ctx(total);
+    if (!ctx)
+        return NULL;
+    qc_circuit_set_arith_mode(ctx, QC_ARITH_TOFFOLI);
+
+    /* Pre-allocate: n target qubits + 1 control qubit */
+    uint32_t start;
+    if (qc_qubit_alloc_n(ctx, n + 1, &start) != QC_OK) {
+        qc_circuit_destroy(ctx);
+        return NULL;
+    }
+
+    uint32_t target[64];
+    for (uint32_t i = 0; i < n; i++)
+        target[i] = i;
+    uint32_t control = n;  /* control qubit is last pre-allocated */
+
+    qc_error_t err = qc_toffoli_ccq_add(ctx, target, n, value, control);
+    if (err != QC_OK) {
+        qc_circuit_destroy(ctx);
+        return NULL;
+    }
+
+    qc_sequence_t *seq = cmp_capture_circuit_to_sequence(ctx);
+    if (seq)
+        seq->total_qubits = ctx->allocator->next_qubit;
+    qc_circuit_destroy(ctx);
+    return seq;
+}
