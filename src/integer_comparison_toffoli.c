@@ -78,11 +78,12 @@ qc_sequence_t *qc_cmp_qq_less_toffoli_seq(int bits) {
     qc_dynamic_qq_add(ctx, b, a, n);
 
     /* Capture and cleanup */
+    uint32_t actual_qubits = ctx->allocator->next_qubit;
     qc_sequence_t *seq = cmp_capture_circuit_to_sequence(ctx);
     qc_circuit_destroy(ctx);
 
     if (seq)
-        seq->total_qubits = total_reg;
+        seq->total_qubits = actual_qubits;
     return seq;
 }
 
@@ -144,10 +145,11 @@ qc_sequence_t *qc_c_cmp_qq_less_toffoli_seq(int bits) {
     qc_dynamic_cqq_add(ctx, b, a, n, ctrl);
 
     /* Capture and cleanup */
+    uint32_t actual_qubits = ctx->allocator->next_qubit;
     qc_sequence_t *seq = cmp_capture_circuit_to_sequence(ctx);
     qc_circuit_destroy(ctx);
 
     if (seq)
-        seq->total_qubits = total_reg;
+        seq->total_qubits = actual_qubits;
     return seq;
 }

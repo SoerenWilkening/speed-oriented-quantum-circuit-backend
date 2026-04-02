@@ -11,6 +11,7 @@
  */
 
 #include "comparison_internal.h"
+#include "capture_helpers.h"
 
 /* ====================================================================== */
 /* Extern declarations for uncontrolled _seq builders (in integer_comparison.c) */
@@ -399,4 +400,91 @@ qc_error_t qc_cmp_cq_greater(circuit_ctx_t *ctx, const uint32_t *a,
     qc_sequence_free(seq);
     qc_qubit_free(ctx, borrow);
     return QC_OK;
+}
+
+/* ====================================================================== */
+/* Controlled QQ less-than: result = (A < B) conditioned on ctrl           */
+/* ====================================================================== */
+
+/**
+ * @brief Build a controlled QQ less-than comparison sequence.
+ *
+ * Qubit layout: [0]=result, [1..bits]=A, [bits+1..2*bits]=B,
+ *               [2*bits+1]=borrow, [2*bits+2]=zero_ext, [2*bits+3]=control
+ *
+ * Same algorithm as qc_cmp_qq_less_seq but uses controlled QQ addition
+ * and CCX instead of CX for the borrow copy.
+ *
+ * @param bits  Width of operands (1-63).
+ * @return Sequence (caller must free), or NULL on error.
+ */
+qc_sequence_t *qc_c_cmp_qq_less_seq(int bits) {
+    if (bits <= 0 || bits > 63)
+        return NULL;
+
+    uint32_t n = (uint32_t)bits;
+    uint32_t total_reg = 2 * n + 4;
+    uint32_t ctrl = 2 * n + 3;
+
+    /* Build sub-sequences: controlled QQ add on n bits and n+1 bits */
+    qc_sequence_t *cadd_n_seq = qc_arith_cqq_add_seq(bits);
+    qc_sequence_t *cadd_ext_seq = qc_arith_cqq_add_seq(bits + 1);
+    if (!cadd_n_seq || !cadd_ext_seq) {
+        qc_sequence_free(cadd_n_seq);
+        qc_sequence_free(cadd_ext_seq);
+        return NULL;
+    }
+
+    /* Qubit mapping for cQQ_add(n): [0..n-1]=target, [n..2n-1]=source, [2n]=ctrl */
+    uint32_t map_n[128];
+    for (uint32_t i = 0; i < n; i++) {
+        map_n[i] = i + 1;           /* target -> A */
+        map_n[n + i] = n + 1 + i;   /* source -> B */
+    }
+    map_n[2 * n] = ctrl;            /* control */
+
+    /* Qubit mapping for cQQ_add(n+1): [0..n]=target, [n+1..2n+1]=source, [2n+2]=ctrl */
+    uint32_t map_ext[128];
+    for (uint32_t i = 0; i < n; i++) {
+        map_ext[i] = i + 1;             /* target LSBs -> A */
+        map_ext[n + 1 + i] = n + 1 + i; /* source LSBs -> B */
+    }
+    map_ext[n] = 2 * n + 1;             /* target MSB -> borrow */
+    map_ext[2 * n + 1] = 2 * n + 2;     /* source MSB -> zero_ext */
+    map_ext[2 * n + 2] = ctrl;          /* control */
+
+    /* Create capture circuit */
+    circuit_ctx_t *cap = cmp_create_capture_ctx(total_reg + 64);
+    if (!cap) {
+        qc_sequence_free(cadd_n_seq);
+        qc_sequence_free(cadd_ext_seq);
+        return NULL;
+    }
+    qc_qubit_alloc_n(cap, total_reg, &(uint32_t){0});
+
+    /* Step 1: Controlled A -= B (inverse cQQ_add on n bits) */
+    qc_run_instruction(cap, cadd_n_seq, map_n, 1);
+
+    /* Step 2: Controlled [A,borrow] += [B,zero_ext] (forward cQQ_add on n+1 bits) */
+    qc_run_instruction(cap, cadd_ext_seq, map_ext, 0);
+
+    /* Step 3: CCX(ctrl1=borrow, ctrl2=control, target=result) */
+    qc_circuit_ccx(cap, 2 * n + 1, ctrl, 0);
+
+    /* Step 4: Undo step 2 */
+    qc_run_instruction(cap, cadd_ext_seq, map_ext, 1);
+
+    /* Step 5: Controlled A += B (forward cQQ_add on n bits, restore) */
+    qc_run_instruction(cap, cadd_n_seq, map_n, 0);
+
+    /* Capture and cleanup */
+    qc_sequence_t *seq = cmp_capture_circuit_to_sequence(cap);
+    qc_circuit_destroy(cap);
+    qc_sequence_free(cadd_n_seq);
+    qc_sequence_free(cadd_ext_seq);
+
+    if (seq) {
+        seq->total_qubits = total_reg;
+    }
+    return seq;
 }

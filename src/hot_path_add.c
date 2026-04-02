@@ -218,6 +218,7 @@ qc_sequence_t *qc_split_cq_add_seq(int bits, int64_t value) {
     hp_iqft(seq, w);
 
     qc_sequence_compute_total_gate_count(seq);
+    seq->total_qubits = bits + 1;
     return seq;
 }
 

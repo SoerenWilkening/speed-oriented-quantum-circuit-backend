@@ -249,6 +249,58 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_sequence_api.c")
     add_test(NAME test_sequence_api COMMAND test_sequence_api)
 endif()
 
+# Controlled multiplication and division tests
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_ctrl_mul_div.c")
+    add_executable(test_ctrl_mul_div
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_ctrl_mul_div.c
+    )
+    target_include_directories(test_ctrl_mul_div PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+    )
+    target_link_libraries(test_ctrl_mul_div PRIVATE quantum_static m)
+    add_test(NAME test_ctrl_mul_div COMMAND test_ctrl_mul_div)
+endif()
+
+# Divmod sequence builder tests
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_divmod_seq.c")
+    add_executable(test_divmod_seq
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_divmod_seq.c
+    )
+    target_include_directories(test_divmod_seq PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+    )
+    target_link_libraries(test_divmod_seq PRIVATE quantum_static m)
+    add_test(NAME test_divmod_seq COMMAND test_divmod_seq)
+endif()
+
+# QQ comparison sequence builder tests
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_qq_comparison.c")
+    add_executable(test_qq_comparison
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_qq_comparison.c
+    )
+    target_include_directories(test_qq_comparison PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+    )
+    target_link_libraries(test_qq_comparison PRIVATE quantum_static m)
+    add_test(NAME test_qq_comparison COMMAND test_qq_comparison)
+endif()
+
+# Sequence qubit count metadata tests
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_sequence_qubit_count.c")
+    add_executable(test_sequence_qubit_count
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_sequence_qubit_count.c
+    )
+    target_include_directories(test_sequence_qubit_count PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+    )
+    target_link_libraries(test_sequence_qubit_count PRIVATE quantum_static m)
+    add_test(NAME test_sequence_qubit_count COMMAND test_sequence_qubit_count)
+endif()
+
 # ── Benchmarks ─────────────────────────────────────────────────────────
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/benchmarks/benchmark_runner.c")
     add_executable(benchmark_runner

@@ -24,6 +24,7 @@
  */
 
 #include "comparison_internal.h"
+#include "capture_helpers.h"
 
 /* ====================================================================== */
 /* Gate initializers for sequence building                                 */
@@ -399,26 +400,69 @@ qc_sequence_t *qc_cmp_cq_greater_seq(int bits, int64_t value) {
  * @return Sequence (caller must free), or NULL on error.
  */
 qc_sequence_t *qc_cmp_qq_less_seq(int bits) {
-    /* Stub: returns NULL -- Python layer converts to QQ addition pattern */
-    (void)bits;
-    return NULL;
-}
+    if (bits <= 0 || bits > 63)
+        return NULL;
 
-/* ====================================================================== */
-/* Controlled QQ less-than                                                 */
-/* ====================================================================== */
+    uint32_t n = (uint32_t)bits;
+    uint32_t total_reg = 2 * n + 3;
 
-/**
- * @brief Build a controlled QQ less-than comparison sequence.
- *
- * Qubit layout: [0]=result, [1..bits]=A, [bits+1..2*bits]=B,
- *               [2*bits+1]=borrow, [2*bits+2]=zero_ext, [2*bits+3]=control
- *
- * @param bits  Width of operands (1-63).
- * @return Sequence (caller must free), or NULL on error.
- */
-qc_sequence_t *qc_c_cmp_qq_less_seq(int bits) {
-    /* Stub: returns NULL -- Python layer converts to QQ addition pattern */
-    (void)bits;
-    return NULL;
+    /* Build sub-sequences: QQ add on n bits and n+1 bits */
+    qc_sequence_t *add_n_seq = qc_arith_qq_add_seq(bits);
+    qc_sequence_t *add_ext_seq = qc_arith_qq_add_seq(bits + 1);
+    if (!add_n_seq || !add_ext_seq) {
+        qc_sequence_free(add_n_seq);
+        qc_sequence_free(add_ext_seq);
+        return NULL;
+    }
+
+    /* Qubit mapping for QQ_add(n): [0..n-1]=target, [n..2n-1]=source */
+    uint32_t map_n[128];
+    for (uint32_t i = 0; i < n; i++) {
+        map_n[i] = i + 1;           /* target -> A */
+        map_n[n + i] = n + 1 + i;   /* source -> B */
+    }
+
+    /* Qubit mapping for QQ_add(n+1): [0..n]=target, [n+1..2n+1]=source */
+    uint32_t map_ext[128];
+    for (uint32_t i = 0; i < n; i++) {
+        map_ext[i] = i + 1;             /* target LSBs -> A */
+        map_ext[n + 1 + i] = n + 1 + i; /* source LSBs -> B */
+    }
+    map_ext[n] = 2 * n + 1;             /* target MSB -> borrow */
+    map_ext[2 * n + 1] = 2 * n + 2;     /* source MSB -> zero_ext */
+
+    /* Create capture circuit */
+    circuit_ctx_t *ctx = cmp_create_capture_ctx(total_reg + 64);
+    if (!ctx) {
+        qc_sequence_free(add_n_seq);
+        qc_sequence_free(add_ext_seq);
+        return NULL;
+    }
+    qc_qubit_alloc_n(ctx, total_reg, &(uint32_t){0});
+
+    /* Step 1: A -= B (inverse QQ_add on n bits) */
+    qc_run_instruction(ctx, add_n_seq, map_n, 1);
+
+    /* Step 2: [A,borrow] += [B,zero_ext] (forward QQ_add on n+1 bits) */
+    qc_run_instruction(ctx, add_ext_seq, map_ext, 0);
+
+    /* Step 3: CX(control=borrow, target=result) */
+    qc_circuit_cx(ctx, 2 * n + 1, 0);
+
+    /* Step 4: Undo step 2 (inverse extended add) */
+    qc_run_instruction(ctx, add_ext_seq, map_ext, 1);
+
+    /* Step 5: A += B (forward QQ_add on n bits, restore) */
+    qc_run_instruction(ctx, add_n_seq, map_n, 0);
+
+    /* Capture and cleanup */
+    qc_sequence_t *seq = cmp_capture_circuit_to_sequence(ctx);
+    qc_circuit_destroy(ctx);
+    qc_sequence_free(add_n_seq);
+    qc_sequence_free(add_ext_seq);
+
+    if (seq) {
+        seq->total_qubits = total_reg;
+    }
+    return seq;
 }

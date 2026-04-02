@@ -58,6 +58,7 @@ static qc_sequence_t *qft_sequence_alloc(uint32_t num_layers, uint32_t gates_cap
     seq->used_layer = 0;
     seq->num_layer = num_layers;
     seq->total_gate_count = 0;
+    seq->total_qubits = 0;
 
     seq->gates_per_layer = calloc(num_layers, sizeof(uint32_t));
     if (seq->gates_per_layer == NULL) {
@@ -218,6 +219,7 @@ qc_sequence_t *qc_arith_qq_add_seq(int bits) {
     qc_seq_qft_inv(seq, bits);
 
     qc_sequence_compute_total_gate_count(seq);
+    seq->total_qubits = 2 * bits;
     return seq;
 }
 
@@ -277,6 +279,7 @@ qc_sequence_t *qc_arith_cq_add_seq(int bits, int64_t value) {
     qc_seq_qft_inv(seq, bits);
 
     qc_sequence_compute_total_gate_count(seq);
+    seq->total_qubits = bits;
     return seq;
 }
 
@@ -366,6 +369,7 @@ qc_sequence_t *qc_arith_cqq_add_seq(int bits) {
     qc_seq_qft_inv(seq, bits);
 
     qc_sequence_compute_total_gate_count(seq);
+    seq->total_qubits = 2 * bits + 1;
     return seq;
 }
 
@@ -425,6 +429,7 @@ qc_sequence_t *qc_arith_ccq_add_seq(int bits, int64_t value) {
     qc_seq_qft_inv(seq, bits);
 
     qc_sequence_compute_total_gate_count(seq);
+    seq->total_qubits = bits + 1;
     return seq;
 }
 

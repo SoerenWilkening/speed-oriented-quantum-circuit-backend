@@ -141,6 +141,7 @@ qc_sequence_t *qc_not_seq(int bits) {
     }
 
     qc_sequence_compute_total_gate_count(seq);
+    seq->total_qubits = bits;
     return seq;
 }
 
@@ -173,6 +174,7 @@ qc_sequence_t *qc_xor_seq(int bits) {
     }
 
     qc_sequence_compute_total_gate_count(seq);
+    seq->total_qubits = 2 * bits;
     return seq;
 }
 
@@ -209,6 +211,7 @@ qc_sequence_t *qc_and_seq(int bits) {
     }
 
     qc_sequence_compute_total_gate_count(seq);
+    seq->total_qubits = 3 * bits;
     return seq;
 }
 
@@ -282,6 +285,7 @@ qc_sequence_t *qc_or_seq(int bits) {
     seq->used_layer++;
 
     qc_sequence_compute_total_gate_count(seq);
+    seq->total_qubits = 3 * bits;
     return seq;
 }
 
@@ -315,6 +319,7 @@ qc_sequence_t *qc_c_not_seq(int bits) {
     }
 
     qc_sequence_compute_total_gate_count(seq);
+    seq->total_qubits = bits + 1;
     return seq;
 }
 
@@ -350,6 +355,7 @@ qc_sequence_t *qc_c_xor_seq(int bits) {
     }
 
     qc_sequence_compute_total_gate_count(seq);
+    seq->total_qubits = 2 * bits + 1;
     return seq;
 }
 
@@ -408,6 +414,7 @@ qc_sequence_t *qc_c_and_seq(int bits) {
     }
 
     qc_sequence_compute_total_gate_count(seq);
+    seq->total_qubits = 3 * bits + 1;
     return seq;
 }
 
@@ -503,6 +510,7 @@ qc_sequence_t *qc_c_or_seq(int bits) {
     seq->used_layer++;
 
     qc_sequence_compute_total_gate_count(seq);
+    seq->total_qubits = 3 * bits + 1;
     return seq;
 }
 

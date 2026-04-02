@@ -43,6 +43,7 @@ static qc_sequence_t *qc_mul_sequence_alloc(uint32_t num_layers,
     seq->used_layer = 0;
     seq->num_layer = num_layers;
     seq->total_gate_count = 0;
+    seq->total_qubits = 0;
 
     seq->gates_per_layer = calloc(num_layers, sizeof(uint32_t));
     if (seq->gates_per_layer == NULL) {
@@ -204,6 +205,7 @@ qc_sequence_t *qc_arith_cq_mul_seq(int bits, int64_t value) {
 
     free(bin);
     qc_sequence_compute_total_gate_count(seq);
+    seq->total_qubits = 2 * bits;
     return seq;
 }
 
@@ -294,6 +296,7 @@ qc_sequence_t *qc_arith_qq_mul_seq(int bits) {
     mul_qft_inv(seq, bits);
 
     qc_sequence_compute_total_gate_count(seq);
+    seq->total_qubits = 3 * bits;
     return seq;
 }
 

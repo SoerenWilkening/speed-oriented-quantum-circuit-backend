@@ -1,224 +1,364 @@
-# Implementation Plan: Fix CQ Comparison Wrapper Qubit Mapping
+# Implementation Plan: Controlled Division and QQ Multiplication
 
 ## Overview
 
-The public API wrappers `qc_cmp_cq_less()`, `qc_cmp_cq_greater()`, and
-`qc_cmp_cq_equal()` in `integer_comparison.c` fail to allocate and map ancilla
-qubits that their underlying sequences require. This causes hangs, memory
-corruption, or incorrect results for certain width/value combinations.
+Add four controlled arithmetic functions to the C backend. The work is split into
+three steps, each independently testable. Total estimated new code: ~350 lines
+across two existing source files and one new test file.
 
-See `PRD.md` for full root cause analysis and evidence.
+Current file sizes:
+- `toffoli_multiplication.c`: 474 lines (budget: 500 max -> ~26 lines headroom)
+- `toffoli_division.c`: 240 lines (budget: 500 max -> ~260 lines headroom)
 
-## Step 1: Fix `qc_cmp_cq_greater` and `qc_cmp_cq_less` borrow ancilla
+---
 
-**Priority note:** `qc_cmp_cq_greater` is the PRIMARY fix target because it
-is the actual downstream call path used by quantum-cython-types
-(`_qint_compare.py` calls `cmp_cq_greater`). `qc_cmp_cq_less` is fixed for
-API completeness but is not currently called by downstream consumers.
+## Step 1: Controlled QQ and CQ Multiplication
 
-**Files modified:** `circuit-c-backend/src/integer_comparison.c`
-**Estimated lines changed:** ~40
+**Files modified:**
+- `circuit-c-backend/src/toffoli_multiplication.c` (add ~100 lines)
+- `circuit-c-backend/include/quantum_circuit.h` (add 2 declarations)
+- `circuit-c-backend/src/internal.h` (no change expected; dynamic helpers already exposed)
 
-### Changes
+**Estimated lines added:** ~110 total
 
-In `qc_cmp_cq_greater()` (line 718) -- fix FIRST as it is the downstream
-call path:
+### 1a: `qc_toffoli_cmul_qq` (~60 lines)
 
-1. After building `qubit_array[0..width]`, allocate a borrow ancilla qubit
-   using `qc_qubit_alloc(ctx, &borrow)`.
-2. Set `qubit_array[width + 1] = borrow`.
-3. **Empty-sequence edge case:** `qc_cmp_cq_greater_seq()` returns an empty
-   sequence when `value >= max_val` (i.e., `value >= (1 << width) - 1`),
-   because "a > max_val" is trivially false. When the sequence is empty
-   (gate count == 0), skip `qc_run_instruction` entirely and do NOT allocate
-   the ancilla qubit. The result qubit remains unchanged (stays |0>, meaning
-   "not greater"), which is the correct behavior.
-4. When the sequence is non-empty, call `qc_run_instruction(ctx, seq,
-   qubit_array, 0)` as before, then free the borrow ancilla with
-   `qc_qubit_free(ctx, borrow)`.
-5. Handle allocation failure by returning `QC_ERR_ALLOC`.
+Port of monolith `toffoli_cmul_qq` (ToffoliMultiplication.c:405-502). Key
+translation from monolith to refactored API:
 
-In `qc_cmp_cq_less()` (line 688) -- same pattern:
+| Monolith | Refactored |
+|----------|------------|
+| `emit_ccx_or_clifford_t(circ, tgt, c1, c2, decompose)` | `qc_emit_ccx_or_decomp(ctx, tgt, c1, c2)` |
+| `allocator_alloc(circ->allocator, 1, true)` | `qc_qubit_alloc(ctx, &qubit)` |
+| `allocator_free(circ->allocator, q, 1)` | `qc_qubit_free(ctx, q)` |
+| `toffoli_cQQ_add` sequence via `run_instruction` | `qc_dynamic_cqq_add(ctx, a, b, width, control)` |
 
-1. Same ancilla allocation and mapping as above.
-2. **Empty-sequence edge case:** `qc_cmp_cq_less_seq()` can return an empty
-   sequence for certain inputs (e.g., `value == 0` means "a < 0" is trivially
-   false for unsigned). When the sequence is empty, skip `qc_run_instruction`
-   and do not allocate the ancilla.
-3. Otherwise, run the sequence and free the ancilla.
+Algorithm (for each multiplier bit b[j]):
+1. Allocate `and_anc` qubit (reuse across loop iterations -- alloc before loop).
+2. Compute `and_anc = b[j] AND ext_ctrl` via `qc_emit_ccx_or_decomp(ctx, and_anc, b[j], ext_ctrl)`.
+3. Use `and_anc` as control for `qc_dynamic_cqq_add(ctx, a, &result[j], add_width, and_anc)`.
+4. Uncompute AND: `qc_emit_ccx_or_decomp(ctx, and_anc, b[j], ext_ctrl)` (self-inverse).
+
+Width-1 special case: Decompose MCX(3 controls: a[0], b[j], ext_ctrl) via
+AND-ancilla pattern (3 CCX gates).
+
+**Note on file size:** toffoli_multiplication.c will grow to ~574 lines, which
+exceeds the 500-line limit. To stay within budget, the controlled multiplication
+functions should be placed in a **new file** `toffoli_ctrl_multiplication.c`
+(~110 lines). This file includes `internal.h` and has access to all the dynamic
+helpers declared there. The existing `toffoli_multiplication.c` is unchanged.
+
+**Note on CMakeLists.txt:** No CMakeLists.txt change is needed for the new source
+file. The existing `file(GLOB ...)` pattern in CMakeLists.txt auto-picks up all
+`src/*.c` files, so `toffoli_ctrl_multiplication.c` will be included automatically.
+
+### 1b: `qc_toffoli_cmul_cq` (~40 lines)
+
+Port of monolith `toffoli_cmul_cq` (ToffoliMultiplication.c:525-609). Simpler
+than QQ because classical bit selection is compile-time; only `ext_ctrl` gates
+each addition.
+
+Algorithm (for each set bit j of classical value):
+1. `qc_dynamic_cqq_add(ctx, target, &result[j], add_width, ext_ctrl)` -- the
+   ext_ctrl directly serves as the single control.
+2. Width-1 special case: `qc_emit_ccx_or_decomp(ctx, result[n-1], target[0], ext_ctrl)`.
+
+### 1c: Header declarations
+
+Add to `quantum_circuit.h` after the existing `qc_toffoli_cq_mul` declaration:
+
+```c
+QC_API qc_error_t qc_toffoli_cmul_qq(circuit_ctx_t *ctx, const uint32_t *result,
+                                       uint32_t result_bits, const uint32_t *a,
+                                       uint32_t a_bits, const uint32_t *b,
+                                       uint32_t b_bits, uint32_t ext_ctrl);
+
+QC_API qc_error_t qc_toffoli_cmul_cq(circuit_ctx_t *ctx, const uint32_t *result,
+                                       uint32_t result_bits, const uint32_t *target,
+                                       uint32_t target_bits, int64_t value,
+                                       uint32_t ext_ctrl);
+```
 
 ### Verification
 
 ```bash
-# Build
 cd circuit-c-backend && cmake -B build && cmake --build build
-
-# Quick smoke test: compile and run a C test that calls qc_cmp_cq_less
-# at widths 1-4 with values that previously hung (w=1,v=2; w=2,v=0; etc.)
+# Verify compilation succeeds
+# Run Step 3 tests (or a quick smoke test)
 ```
 
-### Test criteria
+### Test criteria (verified in Step 3)
 
-- `qc_cmp_cq_greater(ctx, a, 2, 0, result)` returns QC_OK (primary path)
-- `qc_cmp_cq_greater(ctx, a, 2, 3, result)` returns QC_OK with 0 gates
-  (trivially-false case: value == max_val)
-- `qc_cmp_cq_less(ctx, a, 2, 0, result)` returns QC_OK (previously hung)
-- `qc_cmp_cq_less(ctx, a, 1, 2, result)` returns QC_OK (previously hung)
-- Gate counts match `qc_sequence_gate_count(qc_cmp_cq_less_seq(w, v))`
-  for all tested width/value pairs
+- `qc_toffoli_cmul_qq` with 2-bit operands returns QC_OK and emits more gates
+  than `qc_toffoli_qq_mul` (CCX overhead per multiplier bit).
+- `qc_toffoli_cmul_cq` with 2-bit operands, value=3 returns QC_OK.
+- NULL ctx, NULL registers, and zero-width all return appropriate error codes.
 
 ---
 
-## Step 2: Fix `qc_cmp_cq_equal` AND-ancilla for width >= 3
+## Step 2: Controlled CQ and QQ Division
 
-**Files modified:** `circuit-c-backend/src/integer_comparison.c`
-**Estimated lines changed:** ~25
+**Files modified:**
+- `circuit-c-backend/src/toffoli_division.c` (add ~220 lines, total ~460)
+- `circuit-c-backend/include/quantum_circuit.h` (add 2 declarations)
 
-### Changes
+**Estimated lines added:** ~230 total
 
-In `qc_cmp_cq_equal()` (line 657):
+**500-line contingency:** toffoli_division.c is estimated to reach ~460 lines.
+If the controlled functions exceed their estimates and push the file past 500 lines,
+split the controlled variants into a new file `toffoli_ctrl_division.c` (mirroring
+the `toffoli_ctrl_multiplication.c` split in Step 1).
 
-1. For width >= 3, the equality sequence uses `width - 2` AND-ancilla at
-   abstract indices `[width+1 .. width+width-2]`.
-2. After building `qubit_array[0..width]`, allocate `width - 2` ancilla
-   using `qc_qubit_alloc_n(ctx, width - 2, &anc_start)`.
-3. Map: `qubit_array[width + 1 + i] = anc_start + i` for `i` in
-   `[0, width - 3]`.
-4. After `qc_run_instruction`, free with `qc_qubit_free_n(ctx, anc_start,
-   width - 2)`.
-5. For width <= 2, no ancilla are needed (MCX with 1-2 controls doesn't
-   decompose). No change to this path.
+### 2a: `qc_toffoli_cdivmod_cq` (~110 lines)
+
+Port of monolith `toffoli_cdivmod_cq` (ToffoliDivision.c:856-946). Key
+differences from uncontrolled `qc_toffoli_divmod_cq`:
+
+1. **Controlled copy**: Replace `qc_circuit_cx(ctx, dividend[i], remainder[i])`
+   with `qc_emit_ccx_or_decomp(ctx, remainder[i], dividend[i], ext_ctrl)`.
+
+2. **Controlled comparison subtract/add**: Replace
+   `qc_dynamic_cq_add(ctx, temp_arr, wide, -trial)` with
+   `qc_dynamic_ccq_add(ctx, temp_arr, wide, -trial, ext_ctrl)`.
+
+3. **Doubly-controlled conditional subtract**: The uncontrolled version uses
+   `qc_dynamic_ccq_add(ctx, remainder, n, -trial, cmp_anc)`. The controlled
+   version needs TWO controls (cmp_anc AND ext_ctrl). Use AND-ancilla pattern:
+   - Allocate `and_anc`
+   - `qc_emit_ccx_or_decomp(ctx, and_anc, cmp_anc, ext_ctrl)` -- compute AND
+   - `qc_dynamic_ccq_add(ctx, remainder, n, -trial, and_anc)` -- controlled sub
+   - `qc_circuit_cx(ctx, and_anc, quotient[k])` -- set quotient bit
+   - `qc_emit_ccx_or_decomp(ctx, and_anc, cmp_anc, ext_ctrl)` -- uncompute AND
+   - Free `and_anc`
+
+4. **Controlled division-by-zero sentinel**: Replace CX with
+   `qc_circuit_cx(ctx, ext_ctrl, quotient[i])` and CCX for remainder copy.
+
+5. **Sign bit copy**: The `qc_circuit_cx(ctx, temp_arr[n], cmp_anc)` remains
+   unconditional (Bennett's trick: the sign bit is already conditioned on
+   ext_ctrl because the comparison was controlled).
+
+6. **cmp_anc reset**: Same pattern as uncontrolled
+   (`qc_circuit_cx(ctx, quotient[k], cmp_anc); qc_circuit_x(ctx, cmp_anc)`).
+
+### 2b: `qc_toffoli_cdivmod_qq` (~100 lines)
+
+Port of monolith `toffoli_cdivmod_qq` (ToffoliDivision.c:948-1038). Key
+differences from uncontrolled:
+
+1. **Controlled copy**: CCX instead of CX for initial dividend-to-remainder copy.
+
+2. **Controlled comparison**: The widened subtraction
+   `qc_dynamic_qq_sub(ctx, wide_div, temp_arr, wide)` becomes controlled.
+   The monolith uses `div_cqq_add(circ, temp_arr, wide_div, wide, ext_ctrl, 1)`
+   (controlled QQ subtract). Map to:
+   `qc_dynamic_cqq_sub(ctx, wide_div, temp_arr, wide, ext_ctrl)`.
+
+3. **Controlled uncompute**: `qc_dynamic_cqq_add(ctx, wide_div, temp_arr, wide, ext_ctrl)` for the add-back.
+
+4. **Controlled copy/uncopy of remainder to temp**: CCX instead of CX.
+
+5. **Doubly-controlled conditional subtract**: AND-ancilla pattern
+   (same as controlled CQ division):
+   - `qc_emit_ccx_or_decomp(ctx, and_anc, cmp_anc, ext_ctrl)`
+   - `qc_dynamic_cqq_sub(ctx, divisor, remainder, n, and_anc)` -- controlled sub
+   - `qc_dynamic_ccq_add(ctx, quotient, n, 1, and_anc)` -- controlled increment
+   - Uncompute AND
+
+6. **cmp_anc leak**: Same as uncontrolled QQ division -- cmp_anc is not freed.
+
+### 2c: Header declarations
+
+Add to `quantum_circuit.h` after the existing `qc_toffoli_divmod_qq` declaration:
+
+```c
+QC_API qc_error_t qc_toffoli_cdivmod_cq(circuit_ctx_t *ctx,
+                                          const uint32_t *dividend,
+                                          uint32_t dividend_bits, int64_t divisor,
+                                          const uint32_t *quotient,
+                                          const uint32_t *remainder,
+                                          uint32_t ext_ctrl);
+
+QC_API qc_error_t qc_toffoli_cdivmod_qq(circuit_ctx_t *ctx,
+                                          const uint32_t *dividend,
+                                          uint32_t dividend_bits,
+                                          const uint32_t *divisor,
+                                          uint32_t divisor_bits,
+                                          const uint32_t *quotient,
+                                          const uint32_t *remainder,
+                                          uint32_t ext_ctrl);
+```
 
 ### Verification
 
 ```bash
 cmake --build build
-# Test qc_cmp_cq_equal at width=3,4,5 with various values
+# Verify compilation succeeds
+# Run Step 3 tests
+```
+
+### Test criteria (verified in Step 3)
+
+- `qc_toffoli_cdivmod_cq` with 2-bit dividend, divisor=2 returns QC_OK.
+- `qc_toffoli_cdivmod_cq` with divisor=0 returns QC_ERR_DIVISOR and emits
+  controlled sentinel gates (more gates than uncontrolled sentinel).
+- `qc_toffoli_cdivmod_qq` with 2-bit operands returns QC_OK.
+- Gate counts for controlled > gate counts for uncontrolled (same inputs).
+- NULL/zero-width error handling works.
+
+---
+
+## Step 3: C Tests and QASM Verification
+
+**Files created:**
+- `circuit-c-backend/tests/test_ctrl_mul_div.c` (~200 lines)
+
+**Files modified:**
+- `circuit-c-backend/CMakeLists.txt` (add test target)
+
+**Estimated lines added:** ~210 total
+
+### Test cases
+
+#### 3a: Controlled multiplication tests
+
+1. **`test_cmul_qq_basic`**: Create 2-bit a, b, result registers + ext_ctrl.
+   Call `qc_toffoli_cmul_qq`. Verify QC_OK, gate_count > 0.
+
+2. **`test_cmul_qq_vs_uncontrolled`**: Same inputs, compare gate counts:
+   controlled must emit strictly more gates than uncontrolled (extra CCX per
+   multiplier bit for AND compute/uncompute).
+
+3. **`test_cmul_cq_basic`**: 2-bit target, result, value=3, ext_ctrl.
+   Verify QC_OK, gate_count > 0.
+
+4. **`test_cmul_cq_zero_value`**: value=0 should emit zero gates (no set bits).
+
+5. **`test_cmul_error_handling`**: NULL ctx, NULL registers, zero widths.
+
+#### 3b: Controlled division tests
+
+6. **`test_cdivmod_cq_basic`**: 2-bit dividend, divisor=2, quotient, remainder,
+   ext_ctrl. Verify QC_OK.
+
+7. **`test_cdivmod_cq_div_zero`**: divisor=0. Verify QC_ERR_DIVISOR. Gate count
+   should be nonzero (controlled sentinel).
+
+8. **`test_cdivmod_cq_vs_uncontrolled`**: Same inputs, controlled gate count >
+   uncontrolled gate count.
+
+9. **`test_cdivmod_qq_basic`**: 2-bit dividend and divisor. Verify QC_OK.
+   (Note: QQ division is O(2^n) iterations, so keep width small.)
+
+10. **`test_cdivmod_qq_vs_uncontrolled`**: Controlled > uncontrolled gate count.
+
+11. **`test_cdivmod_error_handling`**: NULL ctx, NULL registers, zero widths.
+
+#### 3c: QASM export smoke test
+
+12. **`test_cmul_qq_qasm_export`**: 2-bit controlled QQ mul, export to QASM
+    string, verify non-NULL and contains "ccx" or "cx" gates. Compare gate type
+    counts (not literal QASM strings) since qubit indices may differ from the
+    monolith due to dynamic ancilla allocation.
+
+13. **`test_cdivmod_cq_qasm_export`**: 2-bit controlled CQ divmod, export to
+    QASM, verify non-NULL. Compare gate type counts, not literal strings.
+
+### Build integration
+
+Add to `CMakeLists.txt`:
+```cmake
+add_executable(test_ctrl_mul_div tests/test_ctrl_mul_div.c)
+target_link_libraries(test_ctrl_mul_div PRIVATE quantum_static m)
+target_include_directories(test_ctrl_mul_div PRIVATE ${CMAKE_SOURCE_DIR}/include ${CMAKE_SOURCE_DIR}/src)
+add_test(NAME test_ctrl_mul_div COMMAND test_ctrl_mul_div)
+```
+
+### Verification
+
+```bash
+cmake -B build && cmake --build build
+cd build && ctest --output-on-failure -R ctrl_mul_div
 ```
 
 ### Test criteria
 
-- `qc_cmp_cq_equal(ctx, a, 4, 5, result)` returns QC_OK (previously
-  accessed uninitialized memory)
-- Gate count matches sequence-level output
-- Width 1 and 2 continue to work (no regression)
+- All 13 test cases pass.
+- Total test runtime < 10 seconds (QQ division at width 2 = 4 iterations).
+- No memory errors under sanitizers (if available).
 
 ---
 
-## Step 3: Add C-level regression tests
+## Step 4: Update CLAUDE.md
 
-**Files modified:** `circuit-c-backend/tests/test_integration.c` (or new file
-`circuit-c-backend/tests/test_comparison_fix.c`)
-**Estimated lines changed:** ~120
+**Files modified:**
+- `circuit-c-backend/CLAUDE.md` (add 4 function signatures)
 
-### Test cases
+Add the four new public API function signatures to the "Toffoli-Based Arithmetic"
+and "Toffoli Division and Modular Arithmetic" sections of `CLAUDE.md` so downstream
+consumers can discover them:
 
-1. **`test_cq_greater_all_widths`** (primary -- downstream call path):
-   For widths 1-8, test `qc_cmp_cq_greater` with explicit boundary values:
-   - `value = 0` (typical case)
-   - `value = 1` (near-minimum)
-   - `value = max_val - 1` (where `max_val = (1 << width) - 1`)
-   - `value = max_val` (trivially-false case: empty sequence, 0 gates)
-   Verify for each:
-   - Returns QC_OK
-   - Gate count matches `qc_sequence_gate_count(qc_cmp_cq_greater_seq(w, v))`
-   - For `value = max_val`, gate count is 0
+```c
+// Under "Toffoli-Based Arithmetic":
+qc_error_t qc_toffoli_cmul_qq(ctx, const uint32_t *result, uint32_t result_bits,
+                               const uint32_t *a, uint32_t a_bits,
+                               const uint32_t *b, uint32_t b_bits, uint32_t ext_ctrl);
+qc_error_t qc_toffoli_cmul_cq(ctx, const uint32_t *result, uint32_t result_bits,
+                               const uint32_t *target, uint32_t target_bits,
+                               int64_t value, uint32_t ext_ctrl);
 
-2. **`test_cq_less_all_widths`**: For widths 1-8, test `qc_cmp_cq_less` with
-   explicit boundary values:
-   - `value = 0` (trivially-false case: empty sequence, 0 gates)
-   - `value = 1` (near-minimum)
-   - `value = max_val / 2` (mid-range)
-   - `value = max_val` (maximum)
-   Verify:
-   - Returns QC_OK
-   - Gate count matches `qc_sequence_gate_count(qc_cmp_cq_less_seq(w, v))`
-   - For `value = 0`, gate count is 0
+// Under "Toffoli Division and Modular Arithmetic":
+qc_error_t qc_toffoli_cdivmod_cq(ctx, const uint32_t *dividend, uint32_t dividend_bits,
+                                  int64_t divisor, const uint32_t *quotient,
+                                  const uint32_t *remainder, uint32_t ext_ctrl);
+qc_error_t qc_toffoli_cdivmod_qq(ctx, const uint32_t *dividend, uint32_t dividend_bits,
+                                  const uint32_t *divisor, uint32_t divisor_bits,
+                                  const uint32_t *quotient, const uint32_t *remainder,
+                                  uint32_t ext_ctrl);
+```
 
-3. **`test_cq_equal_all_widths`**: For widths 1-8, test `qc_cmp_cq_equal`
-   with values 0, 1, and max_unsigned. Verify same criteria.
+### Verification
 
-4. **`test_cq_less_previously_hanging`**: Specifically test the known-bad
-   combinations: (w=1, v=2), (w=2, v=0), (w=2, v=1), (w=2, v=3). All must
-   return QC_OK within bounded time.
-
-5. **`test_cq_greater_simulate_mode`**: For width=2, set simulate=true, run
-   `qc_cmp_cq_greater`, extract gates, verify gate count matches.
-
-### Build integration
-
-If creating a new test file, add it to `CMakeLists.txt` test targets.
-
-### Test criteria
-
-- All test cases pass
-- No memory leaks (valgrind clean if available)
-- Tests complete in < 5 seconds total
-
----
-
-## Step 4: Verify and fix controlled CQ wrappers and `qc_cmp_qq_less`
-
-**Files modified:** `circuit-c-backend/src/integer_comparison.c` (if needed)
-**Estimated lines changed:** ~40 (if changes needed), 0 (if not exposed)
-
-### Analysis
-
-1. **Controlled CQ variants:** The controlled variants `qc_c_cmp_cq_less_seq`
-   and `qc_c_cmp_cq_equal_seq` exist as sequence builders. Check whether
-   there are public API wrappers for them (like `qc_c_cmp_cq_less(ctx, ...)`)
-   that have the same missing-ancilla pattern. If so, apply the same fix.
-   Currently, the controlled variants are used by quantum-cython-types through
-   the sequence API (the Python layer handles qubit mapping). If there are no
-   C-level wrappers, this step is a no-op -- just document that the controlled
-   `_seq()` functions are correct and the Python layer must handle ancilla
-   mapping.
-
-2. **`qc_cmp_qq_less` wrapper:** Also verify whether the QQ less-than wrapper
-   `qc_cmp_qq_less()` has similar ancilla allocation issues. The QQ less-than
-   sequence may require a borrow ancilla similar to the CQ variants. If the
-   wrapper does not map the ancilla, apply the same fix pattern. If it already
-   handles ancilla correctly, document why.
-
-### Test criteria
-
-- If wrappers exist with bugs: same test pattern as Steps 1-3
-- If no wrappers or wrappers are correct: document in code comments that
-  callers are responsible for ancilla mapping when using `_seq()` functions
-  directly
-- `qc_cmp_qq_less` at widths 1-4 returns QC_OK and produces correct gate
-  counts
+Review the updated CLAUDE.md to confirm all four signatures are present and correctly
+placed in the appropriate sections.
 
 ---
 
 ## Summary
 
-| Step | Description                                 | Files | Est. lines |
-|------|---------------------------------------------|-------|------------|
-| 1    | Fix borrow ancilla in greater/less (+ edge) | 1     | ~40        |
-| 2    | Fix AND-ancilla in equal (width>=3)         | 1     | ~25        |
-| 3    | C-level regression tests                    | 1-2   | ~150       |
-| 4    | Verify controlled wrappers + qq_less        | 0-1   | ~0-40      |
+| Step | Description | New file? | Files modified | Est. lines |
+|------|-------------|-----------|----------------|------------|
+| 1 | Controlled QQ/CQ multiplication | `toffoli_ctrl_multiplication.c` (new) | `quantum_circuit.h` | ~110 |
+| 2 | Controlled CQ/QQ division | No | `toffoli_division.c`, `quantum_circuit.h` | ~230 |
+| 3 | C tests + QASM verification | `test_ctrl_mul_div.c` (new) | `CMakeLists.txt` | ~210 |
+| 4 | Update CLAUDE.md | No | `CLAUDE.md` | ~10 |
 
-**Total estimated:** ~215-255 lines changed across 3-4 steps.
+**Total:** ~560 lines of new code across 2 new files and 3 modified files.
 
 ## Dependencies
 
-- Steps 1 and 2 are independent and can be done in parallel.
-- Step 3 depends on Steps 1 and 2.
-- Step 4 is independent of all other steps.
+- Step 1 and Step 2 are independent (multiplication and division are in separate files).
+- Step 3 depends on both Steps 1 and 2.
+- Step 4 depends on Steps 1 and 2 (needs final function signatures).
+
+## File Size Budget Check
+
+| File | Current | After change | Limit | OK? |
+|------|---------|--------------|-------|-----|
+| `toffoli_multiplication.c` | 474 | 474 (unchanged) | 500 | Yes |
+| `toffoli_ctrl_multiplication.c` | 0 (new) | ~110 | 500 | Yes |
+| `toffoli_division.c` | 240 | ~460 | 500 | Yes |
+| `test_ctrl_mul_div.c` | 0 (new) | ~210 | 500 | Yes |
 
 ## Sibling Package Follow-Up (not implemented here)
 
-After this fix lands:
+After this work lands, file issues for:
 
-1. **quantum-cython-types** should:
-   - Remove `_MAX_CMP_CQ_WIDTH = 2` from `_qint_compare.py`
-   - Un-skip CQ ordering comparison tests
-   - This is a separate issue to be filed against quantum-cython-types
+1. **quantum-cython-types**: Add `.pxd` declarations and `.pyx` wrappers for
+   `qc_toffoli_cmul_qq`, `qc_toffoli_cmul_cq`, `qc_toffoli_cdivmod_cq`,
+   `qc_toffoli_cdivmod_qq`.
 
-2. **integration-tests** should:
-   - Add or update Python-level simulation tests that verify CQ less-than
-     and greater-than produce correct results when simulated via OpenQASM
-   - This corresponds to PRD R5, which lives in integration-tests/, not in
-     circuit-c-backend
+2. **quantum-core**: Add sequence dispatch entries for `divmod_cq`, `divmod_qq`,
+   `c_divmod_cq`, `c_divmod_qq`, `c_mul_cq` (real controlled), `c_mul_qq`
+   (real controlled). Remove the workaround comments on lines 65-66 of
+   `sequences.py`.

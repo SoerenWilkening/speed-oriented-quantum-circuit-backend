@@ -156,6 +156,12 @@ qc_error_t qc_toffoli_qq_mul(ctx, const uint32_t *result, uint32_t result_bits,
                               const uint32_t *a, uint32_t a_bits, const uint32_t *b, uint32_t b_bits);
 qc_error_t qc_toffoli_cq_mul(ctx, const uint32_t *result, uint32_t result_bits,
                               const uint32_t *target, uint32_t target_bits, int64_t value);
+qc_error_t qc_toffoli_cmul_qq(ctx, const uint32_t *result, uint32_t result_bits,
+                               const uint32_t *a, uint32_t a_bits,
+                               const uint32_t *b, uint32_t b_bits, uint32_t ext_ctrl);
+qc_error_t qc_toffoli_cmul_cq(ctx, const uint32_t *result, uint32_t result_bits,
+                               const uint32_t *target, uint32_t target_bits,
+                               int64_t value, uint32_t ext_ctrl);
 ```
 
 ### Toffoli Division and Modular Arithmetic
@@ -166,6 +172,13 @@ qc_error_t qc_toffoli_divmod_cq(ctx, const uint32_t *dividend, uint32_t dividend
 qc_error_t qc_toffoli_divmod_qq(ctx, const uint32_t *dividend, uint32_t dividend_bits,
                                  const uint32_t *divisor, uint32_t divisor_bits,
                                  const uint32_t *quotient, const uint32_t *remainder);
+qc_error_t qc_toffoli_cdivmod_cq(ctx, const uint32_t *dividend, uint32_t dividend_bits,
+                                  int64_t divisor, const uint32_t *quotient,
+                                  const uint32_t *remainder, uint32_t ext_ctrl);
+qc_error_t qc_toffoli_cdivmod_qq(ctx, const uint32_t *dividend, uint32_t dividend_bits,
+                                  const uint32_t *divisor, uint32_t divisor_bits,
+                                  const uint32_t *quotient, const uint32_t *remainder,
+                                  uint32_t ext_ctrl);
 qc_error_t qc_toffoli_mod_reduce(ctx, const uint32_t *value, uint32_t value_bits, int64_t modulus);
 qc_error_t qc_toffoli_mod_add_cq(ctx, const uint32_t *value, uint32_t value_bits, int64_t addend, int64_t modulus);
 qc_error_t qc_toffoli_mod_add_qq(ctx, const uint32_t *value, uint32_t value_bits,

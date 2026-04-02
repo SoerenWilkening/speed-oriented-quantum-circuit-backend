@@ -272,6 +272,7 @@ struct qc_sequence {
     uint32_t used_layer;         /**< Used layer count */
     uint32_t *gates_per_layer;   /**< [layer] gate count */
     uint32_t total_gate_count;   /**< Pre-computed total gate count */
+    uint32_t total_qubits;       /**< Total virtual qubits (register + ancillae), 0 = unknown */
 };
 
 /* ====================================================================== */

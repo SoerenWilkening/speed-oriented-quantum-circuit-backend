@@ -608,6 +608,22 @@ QC_API qc_error_t qc_toffoli_cq_mul(circuit_ctx_t *ctx, const uint32_t *result,
                                       uint32_t result_bits, const uint32_t *target,
                                       uint32_t target_bits, int64_t value);
 
+/**
+ * @brief Controlled Toffoli QQ multiplication: result += a * b, gated by ext_ctrl.
+ */
+QC_API qc_error_t qc_toffoli_cmul_qq(circuit_ctx_t *ctx, const uint32_t *result,
+                                       uint32_t result_bits, const uint32_t *a,
+                                       uint32_t a_bits, const uint32_t *b,
+                                       uint32_t b_bits, uint32_t ext_ctrl);
+
+/**
+ * @brief Controlled Toffoli CQ multiplication: result += target * value, gated by ext_ctrl.
+ */
+QC_API qc_error_t qc_toffoli_cmul_cq(circuit_ctx_t *ctx, const uint32_t *result,
+                                       uint32_t result_bits, const uint32_t *target,
+                                       uint32_t target_bits, int64_t value,
+                                       uint32_t ext_ctrl);
+
 /* ====================================================================== */
 /* Toffoli division and modular arithmetic                                 */
 /* ====================================================================== */
@@ -629,6 +645,26 @@ QC_API qc_error_t qc_toffoli_divmod_qq(circuit_ctx_t *ctx, const uint32_t *divid
                                          uint32_t divisor_bits,
                                          const uint32_t *quotient,
                                          const uint32_t *remainder);
+
+/**
+ * @brief Controlled Toffoli divmod with classical divisor.
+ */
+QC_API qc_error_t qc_toffoli_cdivmod_cq(circuit_ctx_t *ctx, const uint32_t *dividend,
+                                          uint32_t dividend_bits, int64_t divisor,
+                                          const uint32_t *quotient,
+                                          const uint32_t *remainder,
+                                          uint32_t ext_ctrl);
+
+/**
+ * @brief Controlled Toffoli divmod with quantum divisor.
+ */
+QC_API qc_error_t qc_toffoli_cdivmod_qq(circuit_ctx_t *ctx, const uint32_t *dividend,
+                                          uint32_t dividend_bits,
+                                          const uint32_t *divisor,
+                                          uint32_t divisor_bits,
+                                          const uint32_t *quotient,
+                                          const uint32_t *remainder,
+                                          uint32_t ext_ctrl);
 
 /**
  * @brief Modular reduction: value = value mod N.
@@ -897,6 +933,9 @@ QC_API uint32_t qc_sequence_gate_count(const qc_sequence_t *seq);
 /** @brief Recompute total_gate_count from per-layer counts. */
 QC_API void qc_sequence_compute_total(qc_sequence_t *seq);
 
+/** @brief Get total virtual qubit count of a sequence (0 if NULL or unknown). */
+QC_API uint32_t qc_sequence_total_qubits(const qc_sequence_t *seq);
+
 /**
  * @brief Apply a pre-built sequence to specific qubits in the circuit.
  *
@@ -955,6 +994,18 @@ QC_API qc_sequence_t *qc_toffoli_cq_add_ks_seq(int bits, int64_t value);
 QC_API qc_sequence_t *qc_toffoli_cqq_add_ks_seq(int bits);
 QC_API qc_sequence_t *qc_toffoli_ccq_add_ks_seq(int bits, int64_t value);
 
+/* -- Toffoli BK CLA sequence builders (capture-based) ------------------- */
+
+QC_API qc_sequence_t *qc_toffoli_qq_add_bk_seq(int bits);
+QC_API qc_sequence_t *qc_toffoli_cq_add_bk_seq(int bits, int64_t value);
+QC_API qc_sequence_t *qc_toffoli_cqq_add_bk_seq(int bits);
+QC_API qc_sequence_t *qc_sequence_dup(const qc_sequence_t *src);
+
+/* -- Toffoli QQ comparison sequence builders ----------------------------- */
+
+QC_API qc_sequence_t *qc_cmp_qq_less_toffoli_seq(int bits);
+QC_API qc_sequence_t *qc_c_cmp_qq_less_toffoli_seq(int bits);
+
 /* -- QFT arithmetic sequence builders ------------------------------------ */
 
 QC_API qc_sequence_t *qc_arith_qq_add_seq(int bits);
@@ -963,6 +1014,18 @@ QC_API qc_sequence_t *qc_arith_cqq_add_seq(int bits);
 QC_API qc_sequence_t *qc_arith_ccq_add_seq(int bits, int64_t value);
 QC_API qc_sequence_t *qc_arith_cq_mul_seq(int bits, int64_t value);
 QC_API qc_sequence_t *qc_arith_qq_mul_seq(int bits);
+
+/* -- Controlled multiplication sequence builders (capture-based) ----------- */
+
+QC_API qc_sequence_t *qc_c_arith_cq_mul_seq(int bits, int64_t value);
+QC_API qc_sequence_t *qc_c_arith_qq_mul_seq(int bits);
+
+/* -- Divmod sequence builders (capture-based) ------------------------------ */
+
+QC_API qc_sequence_t *qc_divmod_cq_seq(int bits, int64_t value);
+QC_API qc_sequence_t *qc_divmod_qq_seq(int bits);
+QC_API qc_sequence_t *qc_c_divmod_cq_seq(int bits, int64_t value);
+QC_API qc_sequence_t *qc_c_divmod_qq_seq(int bits);
 
 QC_EXTERN_C_END
 

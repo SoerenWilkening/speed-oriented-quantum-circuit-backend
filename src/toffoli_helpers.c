@@ -136,4 +136,19 @@ QC_API void qc_sequence_compute_total(qc_sequence_t *seq) {
     qc_sequence_compute_total_gate_count(seq);
 }
 
+/* ====================================================================== */
+/* qc_sequence_total_qubits                                                */
+/* ====================================================================== */
+
+/**
+ * @brief Get total virtual qubit count of a sequence.
+ *
+ * @param seq  Sequence to query (NULL returns 0).
+ * @return Total virtual qubit count (0 if unknown or NULL).
+ */
+QC_API uint32_t qc_sequence_total_qubits(const qc_sequence_t *seq) {
+    if (seq == NULL) return 0;
+    return seq->total_qubits;
+}
+
 /* qc_two_complement is defined in integer.c and declared in internal.h */
