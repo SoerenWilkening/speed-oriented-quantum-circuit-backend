@@ -1,5 +1,13 @@
 # PRD: Toffoli Multiplication and CQ Comparison Sequence Builders
 
+## Status: DONE (2026-04-02)
+
+All 6 C sequence builders implemented, tested (19 C tests pass), Cython wrappers added,
+dispatch table wired, Python selection logic updated for fault_tolerant=True. Controlled
+toffoli mul sequences deferred (no C builders yet — incorrect dispatch entries removed).
+Critical ancilla allocation bug in CQ controlled comparison runtime path found and fixed
+during final review.
+
 ## Problem
 
 Two gaps in the circuit-c-backend sequence builder coverage prevent the compile-mode pipeline from selecting toffoli-based circuits when `fault_tolerant=True`:
