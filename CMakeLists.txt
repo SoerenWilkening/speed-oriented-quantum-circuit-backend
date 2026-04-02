@@ -223,6 +223,19 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_comparison_fix.c")
     add_test(NAME test_comparison_fix COMMAND test_comparison_fix)
 endif()
 
+# Visualization overlap: sub-column splitting for overlapping gates
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_visualize_overlap.c")
+    add_executable(test_visualize_overlap
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_visualize_overlap.c
+    )
+    target_include_directories(test_visualize_overlap PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+    )
+    target_link_libraries(test_visualize_overlap PRIVATE quantum_static m)
+    add_test(NAME test_visualize_overlap COMMAND test_visualize_overlap)
+endif()
+
 # Sequence API: test public sequence lifecycle, builders, and replay
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_sequence_api.c")
     add_executable(test_sequence_api

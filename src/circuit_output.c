@@ -338,6 +338,98 @@ QC_API qc_error_t qc_circuit_to_qasm_file(const circuit_ctx_t *ctx,
 /* Public API — visualization                                              */
 /* ====================================================================== */
 
+/**
+ * @brief Compute visual sub-column assignments for gates in a single layer.
+ *
+ * Gates whose qubit ranges [min_qubit, max_qubit] overlap are placed into
+ * separate sub-columns.  Non-overlapping gates share a sub-column.
+ * This is purely for visualization — no circuit data is modified.
+ *
+ * Uses greedy interval coloring: sort gates by min qubit, assign each to
+ * the first sub-column whose highest qubit is below the gate's min qubit.
+ *
+ * @param ctx           Circuit context.
+ * @param layer         Layer index.
+ * @param subcol_of_gate Output array: subcol_of_gate[gi] = sub-column index.
+ * @param max_gates     Capacity of subcol_of_gate array.
+ * @return Number of sub-columns (>= 1).
+ */
+static uint32_t compute_visual_subcols(const circuit_ctx_t *ctx,
+                                       uint32_t layer,
+                                       uint32_t *subcol_of_gate,
+                                       uint32_t max_gates) {
+    uint32_t n = ctx->used_gates_per_layer[layer];
+    if (n == 0) return 1;
+    if (n > max_gates) n = max_gates;
+
+    /* Build sort indices by min qubit (insertion sort — n is small) */
+    uint32_t sorted[QC_GATES_PER_LAYER_BLOCK];
+    for (uint32_t i = 0; i < n; i++) sorted[i] = i;
+
+    for (uint32_t i = 1; i < n; i++) {
+        uint32_t key = sorted[i];
+        uint32_t key_min = qc_min_qubit(&ctx->sequence[layer][key]);
+        int j = (int)i - 1;
+        while (j >= 0 &&
+               qc_min_qubit(&ctx->sequence[layer][sorted[j]]) > key_min) {
+            sorted[j + 1] = sorted[j];
+            j--;
+        }
+        sorted[j + 1] = key;
+    }
+
+    /* Greedy assign: subcol_max[sc] = highest qubit used by sub-column sc */
+    uint32_t subcol_max[QC_GATES_PER_LAYER_BLOCK];
+    uint32_t num_subcols = 0;
+
+    for (uint32_t i = 0; i < n; i++) {
+        uint32_t gi = sorted[i];
+        uint32_t gmin = qc_min_qubit(&ctx->sequence[layer][gi]);
+        uint32_t gmax = qc_max_qubit(&ctx->sequence[layer][gi]);
+
+        /* Find first sub-column where max qubit < this gate's min qubit */
+        uint32_t assigned = UINT32_MAX;
+        for (uint32_t sc = 0; sc < num_subcols; sc++) {
+            if (subcol_max[sc] < gmin) {
+                assigned = sc;
+                break;
+            }
+        }
+
+        if (assigned == UINT32_MAX) {
+            /* New sub-column needed */
+            assigned = num_subcols++;
+        }
+
+        subcol_of_gate[gi] = assigned;
+        if (gmax > subcol_max[assigned] || assigned == num_subcols - 1)
+            subcol_max[assigned] = gmax;
+    }
+
+    return num_subcols > 0 ? num_subcols : 1;
+}
+
+/** @brief Print a gate symbol for the visualization. */
+static void vis_print_gate(const qc_gate_internal_t *g, uint32_t qubit) {
+    if (g->Target == qubit) {
+        switch (g->Gate) {
+        case QC_IGATE_X:
+            printf(g->NumControls > 0 ? " + " : " X ");
+            break;
+        case QC_IGATE_H:   printf(" H ");   break;
+        case QC_IGATE_Z:   printf(" Z ");   break;
+        case QC_IGATE_Y:   printf(" Y ");   break;
+        case QC_IGATE_P:   printf(" P ");   break;
+        case QC_IGATE_M:   printf(" M ");   break;
+        case QC_IGATE_T:   printf(" T ");   break;
+        case QC_IGATE_TDG: printf("Tdg");   break;
+        default:           printf(" ? ");   break;
+        }
+    } else {
+        printf(" @ ");
+    }
+}
+
 QC_API void qc_circuit_visualize(const circuit_ctx_t *ctx) {
     if (ctx == NULL) {
         printf("Circuit is NULL\n");
@@ -357,13 +449,23 @@ QC_API void qc_circuit_visualize(const circuit_ctx_t *ctx) {
         printf("(showing first 60 of %u layers)\n\n", ctx->used_layer);
     }
 
-    /* Layer header */
+    /* Pre-compute sub-column assignments for all displayed layers */
+    uint32_t subcol_data[60][QC_GATES_PER_LAYER_BLOCK];
+    uint32_t subcol_count[60];
+
+    for (uint32_t layer = 0; layer < max_display; layer++) {
+        subcol_count[layer] = compute_visual_subcols(
+            ctx, layer, subcol_data[layer], QC_GATES_PER_LAYER_BLOCK);
+    }
+
+    /* Layer header — each layer occupies 3 * subcol_count characters */
     printf("     ");
     for (uint32_t layer = 0; layer < max_display; layer++) {
+        uint32_t width = 3 * subcol_count[layer];
         if (layer % 5 == 0) {
-            printf("%-3u", layer);
+            printf("%-*u", (int)width, layer);
         } else {
-            printf("   ");
+            printf("%*s", (int)width, "");
         }
     }
     printf("\n");
@@ -378,48 +480,38 @@ QC_API void qc_circuit_visualize(const circuit_ctx_t *ctx) {
         printf("q%-3u ", qubit);
 
         for (uint32_t layer = 0; layer < max_display; layer++) {
-            int gate_idx = -1;
-            if (ctx->gate_index_of_layer_and_qubits != NULL &&
-                ctx->gate_index_of_layer_and_qubits[layer] != NULL) {
-                gate_idx = ctx->gate_index_of_layer_and_qubits[layer][qubit];
-            }
+            for (uint32_t sc = 0; sc < subcol_count[layer]; sc++) {
+                /* Look up whether this qubit has a gate in this layer */
+                int gate_idx = -1;
+                if (ctx->gate_index_of_layer_and_qubits != NULL &&
+                    ctx->gate_index_of_layer_and_qubits[layer] != NULL) {
+                    gate_idx =
+                        ctx->gate_index_of_layer_and_qubits[layer][qubit];
+                }
 
-            if (gate_idx >= 0) {
-                const qc_gate_internal_t *g =
-                    &ctx->sequence[layer][gate_idx];
-
-                if (g->Target == qubit) {
-                    switch (g->Gate) {
-                    case QC_IGATE_X:
-                        printf(g->NumControls > 0 ? " + " : " X ");
-                        break;
-                    case QC_IGATE_H:   printf(" H ");   break;
-                    case QC_IGATE_Z:   printf(" Z ");   break;
-                    case QC_IGATE_Y:   printf(" Y ");   break;
-                    case QC_IGATE_P:   printf(" P ");   break;
-                    case QC_IGATE_M:   printf(" M ");   break;
-                    case QC_IGATE_T:   printf(" T ");   break;
-                    case QC_IGATE_TDG: printf("Tdg");   break;
-                    default:           printf(" ? ");   break;
-                    }
+                /* Check if this gate belongs to the current sub-column */
+                if (gate_idx >= 0 &&
+                    (uint32_t)gate_idx < ctx->used_gates_per_layer[layer] &&
+                    subcol_data[layer][gate_idx] == sc) {
+                    vis_print_gate(&ctx->sequence[layer][gate_idx], qubit);
                 } else {
-                    printf(" @ ");
-                }
-            } else {
-                /* Check if wire passes between control and target */
-                bool is_between = false;
-                for (uint32_t gi = 0;
-                     gi < ctx->used_gates_per_layer[layer]; gi++) {
-                    const qc_gate_internal_t *g =
-                        &ctx->sequence[layer][gi];
-                    uint32_t minq = qc_min_qubit(g);
-                    uint32_t maxq = qc_max_qubit(g);
-                    if (qubit > minq && qubit < maxq) {
-                        is_between = true;
-                        break;
+                    /* Check if wire passes between control and target
+                     * for any gate in THIS sub-column only */
+                    bool is_between = false;
+                    for (uint32_t gi = 0;
+                         gi < ctx->used_gates_per_layer[layer]; gi++) {
+                        if (subcol_data[layer][gi] != sc) continue;
+                        const qc_gate_internal_t *g =
+                            &ctx->sequence[layer][gi];
+                        uint32_t minq = qc_min_qubit(g);
+                        uint32_t maxq = qc_max_qubit(g);
+                        if (qubit > minq && qubit < maxq) {
+                            is_between = true;
+                            break;
+                        }
                     }
+                    printf(is_between ? " | " : "---");
                 }
-                printf(is_between ? " | " : "---");
             }
         }
         printf("\n");
