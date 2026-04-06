@@ -190,3 +190,47 @@ qc_sequence_t *qc_iqft_seq(int n) {
     qc_sequence_compute_total_gate_count(seq);
     return seq;
 }
+
+/* ====================================================================== */
+/* Public bare-QFT convenience wrappers                                    */
+/* ====================================================================== */
+
+qc_error_t qc_qft(circuit_ctx_t *ctx, const uint32_t *qubits, uint32_t n) {
+    if (ctx == NULL)
+        return QC_ERR_NULL;
+    if (n > 64)
+        return QC_ERR_WIDTH;
+    if (n == 0)
+        return QC_OK;
+    if (qubits == NULL)
+        return QC_ERR_NULL;
+
+    qc_sequence_t *seq = qc_qft_seq((int)n);
+    if (seq == NULL)
+        return QC_ERR_ALLOC;
+
+    qc_run_instruction(ctx, seq, qubits, 0);
+
+    qc_sequence_free(seq);
+    return QC_OK;
+}
+
+qc_error_t qc_iqft(circuit_ctx_t *ctx, const uint32_t *qubits, uint32_t n) {
+    if (ctx == NULL)
+        return QC_ERR_NULL;
+    if (n > 64)
+        return QC_ERR_WIDTH;
+    if (n == 0)
+        return QC_OK;
+    if (qubits == NULL)
+        return QC_ERR_NULL;
+
+    qc_sequence_t *seq = qc_iqft_seq((int)n);
+    if (seq == NULL)
+        return QC_ERR_ALLOC;
+
+    qc_run_instruction(ctx, seq, qubits, 0);
+
+    qc_sequence_free(seq);
+    return QC_OK;
+}
