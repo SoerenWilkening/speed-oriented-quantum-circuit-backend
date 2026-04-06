@@ -1,5 +1,12 @@
 # PRD: Standalone QFT / Inverse-QFT Sequence Builders
 
+## Status
+
+**COMPLETE** — 2026-04-06. All requirements in this PRD were met. The
+implementation work was completed by beads issues refactor-623,
+refactor-2ed, refactor-q0f, refactor-6s9, and refactor-z1c (see
+`PLAN_qft_standalone.md` for the per-step mapping).
+
 ## 1. Goal & Motivation
 
 Expose **bare** Quantum Fourier Transform and inverse QFT as first-class

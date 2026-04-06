@@ -1,5 +1,11 @@
 # PLAN: Standalone QFT / Inverse-QFT Sequence Builders
 
+## Status
+
+**COMPLETE** — 2026-04-06. All five steps below have shipped and all
+requirements were met. Work was completed by beads issues:
+refactor-623, refactor-2ed, refactor-q0f, refactor-6s9, refactor-z1c.
+
 Companion to `PRD_qft_standalone.md`. Five independently testable
 steps; each step is small (well under the 500-line module cap).
 
@@ -7,7 +13,7 @@ Total expected new code: ~250–350 lines in `src/qft.c`, ~10 lines
 in `include/quantum_circuit.h`, ~250 lines of new tests, no edits
 to existing source files except the public header and CMakeLists.
 
-## Step 1 — Public header declarations
+## Step 1 — Public header declarations  [x] Status: DONE (refactor-623)
 
 **Goal:** introduce the four new public symbols so downstream
 consumers can `cimport` them, before any implementation lands.
@@ -41,7 +47,7 @@ Implementation in step 2 will satisfy the linker.
 
 **Dependencies:** none.
 
-## Step 2 — Implement `qc_qft_seq` / `qc_iqft_seq`
+## Step 2 — Implement `qc_qft_seq` / `qc_iqft_seq`  [x] Status: DONE (refactor-2ed)
 
 **Goal:** produce the two new builder functions in a brand-new
 source file, fully independent of `qft_addition.c`.
@@ -101,7 +107,7 @@ source file, fully independent of `qft_addition.c`.
 
 **Dependencies:** Step 1.
 
-## Step 3 — Implement `qc_qft` / `qc_iqft` wrappers
+## Step 3 — Implement `qc_qft` / `qc_iqft` wrappers  [x] Status: DONE (refactor-q0f)
 
 **Goal:** thin public wrappers that build, run, free.
 
@@ -130,7 +136,7 @@ source file, fully independent of `qft_addition.c`.
 
 **Dependencies:** Step 2.
 
-## Step 4 — Functional / round-trip tests
+## Step 4 — Functional / round-trip tests  [x] Status: DONE (refactor-6s9)
 
 **Goal:** verify correctness end-to-end against a simulator.
 
@@ -175,7 +181,7 @@ source file, fully independent of `qft_addition.c`.
 
 **Dependencies:** Step 3.
 
-## Step 5 — Regression check on existing QFT-arithmetic path
+## Step 5 — Regression check on existing QFT-arithmetic path  [x] Status: DONE (refactor-z1c)
 
 **Goal:** prove the existing `qc_arith_*` builders are unaffected.
 
