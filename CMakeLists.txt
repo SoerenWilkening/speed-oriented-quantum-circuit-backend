@@ -301,6 +301,19 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_toffoli_seq_builders.c")
     add_test(NAME test_toffoli_seq_builders COMMAND test_toffoli_seq_builders)
 endif()
 
+# Standalone QFT/IQFT sequence builder tests
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_qft_standalone.c")
+    add_executable(test_qft_standalone
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_qft_standalone.c
+    )
+    target_include_directories(test_qft_standalone PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+    )
+    target_link_libraries(test_qft_standalone PRIVATE quantum_static m)
+    add_test(NAME test_qft_standalone COMMAND test_qft_standalone)
+endif()
+
 # Sequence qubit count metadata tests
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_sequence_qubit_count.c")
     add_executable(test_sequence_qubit_count
