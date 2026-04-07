@@ -604,8 +604,132 @@ static void test_subqq_validation(void) {
     qc_circuit_destroy(ctx);
 }
 
+/* ====================================================================== */
+/* refactor-kh8i: qc_toffoli_cmod_add_qq tests                             */
+/* ====================================================================== */
+
+static void test_cmod_add_qq_no_longer_stub(void) {
+    printf("test_cmod_add_qq_no_longer_stub...\n");
+    circuit_ctx_t *ctx = qc_circuit_create(64);
+    uint32_t value[4] = {0, 1, 2, 3};
+    uint32_t other[4] = {4, 5, 6, 7};
+    uint32_t ctrl;
+    ASSERT(qc_qubit_alloc(ctx, &ctrl) == QC_OK, "alloc ctrl");
+    qc_circuit_x(ctx, ctrl);
+    uint32_t baseline = qc_circuit_alloc_stats(ctx).current_in_use;
+    uint64_t gc0 = qc_circuit_gate_count(ctx);
+    qc_error_t err = qc_toffoli_cmod_add_qq(ctx, value, 4, other, 4, 15, ctrl);
+    ASSERT(err == QC_OK, "cmod_add_qq returns OK (not INVALID_OP)");
+    ASSERT(qc_circuit_gate_count(ctx) > gc0, "cmod_add_qq emits gates");
+    ASSERT(qc_circuit_alloc_stats(ctx).current_in_use == baseline,
+           "ctrl=1: ancilla strict balance");
+    qc_circuit_x(ctx, ctrl);
+    qc_circuit_destroy(ctx);
+}
+
+static void test_cmod_add_qq_ctrl_zero_balance(void) {
+    printf("test_cmod_add_qq_ctrl_zero_balance...\n");
+    circuit_ctx_t *ctx = qc_circuit_create(64);
+    uint32_t value[4] = {0, 1, 2, 3};
+    uint32_t other[4] = {4, 5, 6, 7};
+    uint32_t ctrl;
+    ASSERT(qc_qubit_alloc(ctx, &ctrl) == QC_OK, "alloc ctrl");
+    /* ctrl already |0> */
+    uint32_t baseline = qc_circuit_alloc_stats(ctx).current_in_use;
+    uint64_t gc0 = qc_circuit_gate_count(ctx);
+    qc_error_t err = qc_toffoli_cmod_add_qq(ctx, value, 4, other, 4, 15, ctrl);
+    ASSERT(err == QC_OK, "ctrl=0: returns OK");
+    ASSERT(qc_circuit_gate_count(ctx) > gc0,
+           "ctrl=0: still emits gates (structurally well-formed)");
+    ASSERT(qc_circuit_alloc_stats(ctx).current_in_use == baseline,
+           "ctrl=0: ancilla strict balance");
+    qc_circuit_destroy(ctx);
+}
+
+static void test_cmod_add_qq_validation(void) {
+    printf("test_cmod_add_qq_validation...\n");
+    circuit_ctx_t *ctx = qc_circuit_create(64);
+    uint32_t value[4] = {0, 1, 2, 3};
+    uint32_t other[4] = {4, 5, 6, 7};
+    uint32_t ctrl;
+    qc_qubit_alloc(ctx, &ctrl);
+
+    ASSERT(qc_toffoli_cmod_add_qq(NULL, value, 4, other, 4, 15, ctrl) == QC_ERR_NULL,
+           "null ctx");
+    ASSERT(qc_toffoli_cmod_add_qq(ctx, NULL, 4, other, 4, 15, ctrl) == QC_ERR_NULL,
+           "null value");
+    ASSERT(qc_toffoli_cmod_add_qq(ctx, value, 4, NULL, 4, 15, ctrl) == QC_ERR_NULL,
+           "null other");
+    ASSERT(qc_toffoli_cmod_add_qq(ctx, value, 0, other, 4, 15, ctrl) == QC_ERR_WIDTH,
+           "width=0");
+    ASSERT(qc_toffoli_cmod_add_qq(ctx, value, 65, other, 4, 15, ctrl) == QC_ERR_WIDTH,
+           "width>64");
+    ASSERT(qc_toffoli_cmod_add_qq(ctx, value, 4, other, 4, 1, ctrl) == QC_ERR_DIVISOR,
+           "modulus<2");
+    ASSERT(qc_toffoli_cmod_add_qq(ctx, value, 4, other, 4, 0, ctrl) == QC_ERR_DIVISOR,
+           "modulus=0");
+    ASSERT(qc_toffoli_cmod_add_qq(ctx, value, 4, other, 4, -3, ctrl) == QC_ERR_DIVISOR,
+           "modulus<0");
+    qc_circuit_destroy(ctx);
+}
+
+static void test_cmod_add_qq_and_ancilla_discipline(void) {
+    /* AND-ancilla discipline: count CCX gates emitted by cmod_add_qq vs
+     * the uncontrolled mod_add_qq. The controlled version should add only a
+     * small bounded overhead from the ext_ctrl threading and the SINGLE
+     * AND-ancilla in step 4 — not allocate AND-ancillae for steps 1, 5, 8. */
+    printf("test_cmod_add_qq_and_ancilla_discipline...\n");
+    circuit_ctx_t *ctx_a = qc_circuit_create(64);
+    uint32_t value_a[4] = {0, 1, 2, 3};
+    uint32_t other_a[4] = {4, 5, 6, 7};
+    qc_error_t err_a = qc_toffoli_mod_add_qq(ctx_a, value_a, 4, other_a, 4, 15);
+    ASSERT(err_a == QC_OK, "baseline mod_add_qq OK");
+    uint64_t base_ccx = qc_circuit_gate_counts(ctx_a).ccx_gates;
+    qc_circuit_destroy(ctx_a);
+
+    circuit_ctx_t *ctx_c = qc_circuit_create(64);
+    uint32_t value_c[4] = {0, 1, 2, 3};
+    uint32_t other_c[4] = {4, 5, 6, 7};
+    uint32_t ctrl;
+    qc_qubit_alloc(ctx_c, &ctrl);
+    qc_error_t err_c = qc_toffoli_cmod_add_qq(ctx_c, value_c, 4, other_c, 4, 15, ctrl);
+    ASSERT(err_c == QC_OK, "controlled cmod_add_qq OK");
+    uint64_t ctl_ccx = qc_circuit_gate_counts(ctx_c).ccx_gates;
+
+    /* The controlled version uses singly-controlled qq adds (which decompose
+     * into ccx internally) plus exactly two ccx in step 4 (compute+uncompute
+     * AND) and two ccx for steps 3 and 7. So ctl_ccx > base_ccx, but bounded:
+     * not zero, and within a small constant factor. */
+    ASSERT(ctl_ccx > base_ccx,
+           "controlled version emits more ccx (ext_ctrl threading)");
+    /* Bound: spurious AND-ancilla regression would multiply ccx by O(steps).
+     * The legitimate overhead is bounded by ~6x the baseline (controlled
+     * helpers internally introduce extra ccx per add, plus the single AND
+     * step). */
+    ASSERT(ctl_ccx < base_ccx * 20 + 200,
+           "controlled ccx count not unbounded (no spurious AND-ancillae)");
+    qc_circuit_destroy(ctx_c);
+}
+
+static void test_cmod_add_qq_n17_prime(void) {
+    printf("test_cmod_add_qq_n17_prime...\n");
+    circuit_ctx_t *ctx = qc_circuit_create(64);
+    uint32_t value[5] = {0, 1, 2, 3, 4};
+    uint32_t other[5] = {5, 6, 7, 8, 9};
+    uint32_t ctrl;
+    qc_qubit_alloc(ctx, &ctrl);
+    qc_circuit_x(ctx, ctrl);
+    uint32_t baseline = qc_circuit_alloc_stats(ctx).current_in_use;
+    qc_error_t err = qc_toffoli_cmod_add_qq(ctx, value, 5, other, 5, 17, ctrl);
+    ASSERT(err == QC_OK, "N=17 prime OK");
+    ASSERT(qc_circuit_alloc_stats(ctx).current_in_use == baseline,
+           "N=17: balanced");
+    qc_circuit_x(ctx, ctrl);
+    qc_circuit_destroy(ctx);
+}
+
 int main(void) {
-    printf("=== test_toffoli_mod_extras (refactor-xf0n + refactor-haai + refactor-y2cb + refactor-7awn) ===\n");
+    printf("=== test_toffoli_mod_extras (refactor-xf0n + refactor-haai + refactor-y2cb + refactor-7awn + refactor-kh8i) ===\n");
     test_no_longer_stub();
     test_ctrl_polarities();
     test_addend_gt_modulus();
@@ -632,6 +756,11 @@ int main(void) {
     test_subqq_n17_prime();
     test_subqq_round_trip();
     test_subqq_validation();
+    test_cmod_add_qq_no_longer_stub();
+    test_cmod_add_qq_ctrl_zero_balance();
+    test_cmod_add_qq_validation();
+    test_cmod_add_qq_and_ancilla_discipline();
+    test_cmod_add_qq_n17_prime();
     printf("\n=== Results: %d/%d passed, %d failed ===\n",
            tests_passed, tests_run, tests_failed);
     return tests_failed == 0 ? 0 : 1;

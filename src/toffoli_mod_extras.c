@@ -254,10 +254,102 @@ QC_API qc_error_t qc_toffoli_cmod_add_qq(circuit_ctx_t *ctx,
                                            uint32_t other_bits,
                                            int64_t modulus,
                                            uint32_t ext_ctrl) {
-    (void)ctx; (void)value; (void)value_bits;
-    (void)other; (void)other_bits;
-    (void)modulus; (void)ext_ctrl;
-    return QC_ERR_INVALID_OP;
+    /* Step 4 (refactor-kh8i): controlled Beauregard QQ modular addition.
+     *
+     * Mirrors qc_toffoli_mod_add_qq, but each of the 8 Beauregard steps is
+     * gated on ext_ctrl. Steps 1, 2, 5, 7, 8 are SINGLY controlled on
+     * ext_ctrl directly via the dynamic c* helpers. Step 4 (the conditional
+     * +N gated on cmp_anc) is the ONLY step requiring an AND-ancilla:
+     * we AND ext_ctrl & cmp_anc into a fresh ancilla via Toffoli, use it
+     * as the single control on ccq_add(+N), and uncompute the Toffoli
+     * before freeing. Steps 3 and 6 use ccx and cx of cmp_anc with the
+     * ext_ctrl threading.
+     *
+     * Constant subtractions use the negated-constant idiom (no
+     * cq_sub/ccq_sub helpers exist). See PRD §4.4.
+     */
+    if (!ctx || !value || !other) return QC_ERR_NULL;
+    if (value_bits == 0 || value_bits > 64) return QC_ERR_WIDTH;
+    if (modulus < 2) return QC_ERR_DIVISOR;
+
+    uint32_t n = value_bits;
+
+    uint32_t high_bit;
+    if (qc_qubit_alloc(ctx, &high_bit) != QC_OK) return QC_ERR_ALLOC;
+
+    uint32_t cmp_anc;
+    if (qc_qubit_alloc(ctx, &cmp_anc) != QC_OK) {
+        qc_qubit_free(ctx, high_bit);
+        return QC_ERR_ALLOC;
+    }
+
+    uint32_t wide_reg[65];
+    for (uint32_t i = 0; i < n; i++)
+        wide_reg[i] = value[i];
+    wide_reg[n] = high_bit;
+
+    /* Pad source if needed (identical to mod_add_qq). */
+    uint32_t pad_count = 0;
+    uint32_t pad_start = 0;
+    uint32_t src[65];
+    for (uint32_t i = 0; i < other_bits && i < n + 1; i++) {
+        src[i] = other[i];
+    }
+    if (other_bits < n + 1) {
+        pad_count = n + 1 - other_bits;
+        if (qc_qubit_alloc_n(ctx, pad_count, &pad_start) != QC_OK) {
+            qc_qubit_free(ctx, cmp_anc);
+            qc_qubit_free(ctx, high_bit);
+            return QC_ERR_ALLOC;
+        }
+        for (uint32_t i = other_bits; i < n + 1; i++) {
+            src[i] = pad_start + (i - other_bits);
+        }
+    }
+
+    /* Step 1: controlled value += other */
+    qc_dynamic_cqq_add(ctx, src, wide_reg, n + 1, ext_ctrl);
+
+    /* Step 2: controlled value -= N (negated-constant idiom) */
+    qc_dynamic_ccq_add(ctx, wide_reg, n + 1, -modulus, ext_ctrl);
+
+    /* Step 3: CCX(ext_ctrl, sign, cmp_anc) — copy sign gated on ext_ctrl */
+    qc_emit_ccx_or_decomp(ctx, cmp_anc, ext_ctrl, wide_reg[n]);
+
+    /* Step 4: conditional value += N — the SINGLE AND-ancilla step.
+     * AND(ext_ctrl, cmp_anc) -> and_anc, ccq_add(+N, and_anc), uncompute. */
+    uint32_t and_anc;
+    if (qc_qubit_alloc(ctx, &and_anc) != QC_OK) {
+        if (pad_count > 0) qc_qubit_free_n(ctx, pad_start, pad_count);
+        qc_qubit_free(ctx, cmp_anc);
+        qc_qubit_free(ctx, high_bit);
+        return QC_ERR_ALLOC;
+    }
+    qc_emit_ccx_or_decomp(ctx, and_anc, ext_ctrl, cmp_anc);
+    qc_dynamic_ccq_add(ctx, wide_reg, n + 1, modulus, and_anc);
+    qc_emit_ccx_or_decomp(ctx, and_anc, ext_ctrl, cmp_anc);
+    qc_qubit_free(ctx, and_anc);
+
+    /* Step 5: controlled value -= other */
+    qc_dynamic_cqq_sub(ctx, src, wide_reg, n + 1, ext_ctrl);
+
+    /* Step 6: CX(ext_ctrl, cmp_anc) — flips cmp_anc only when ext_ctrl=1 */
+    qc_circuit_cx(ctx, ext_ctrl, cmp_anc);
+
+    /* Step 7: CCX(ext_ctrl, sign, cmp_anc) — uncompute cmp_anc */
+    qc_emit_ccx_or_decomp(ctx, cmp_anc, ext_ctrl, wide_reg[n]);
+
+    /* Step 8: controlled value += other */
+    qc_dynamic_cqq_add(ctx, src, wide_reg, n + 1, ext_ctrl);
+
+    if (pad_count > 0) {
+        qc_qubit_free_n(ctx, pad_start, pad_count);
+    }
+
+    qc_qubit_free(ctx, cmp_anc);
+    qc_qubit_free(ctx, high_bit);
+
+    return QC_OK;
 }
 
 QC_API qc_error_t qc_toffoli_cmod_sub_cq(circuit_ctx_t *ctx,
