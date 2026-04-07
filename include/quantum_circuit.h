@@ -1024,6 +1024,75 @@ QC_API qc_sequence_t *qc_cmp_cq_greater_toffoli_seq(int bits, int64_t value);
 QC_API qc_sequence_t *qc_c_cmp_cq_less_toffoli_seq(int bits, int64_t value);
 QC_API qc_sequence_t *qc_c_cmp_cq_greater_toffoli_seq(int bits, int64_t value);
 
+/* -- Bare QFT ------------------------------------------------------------- */
+/**
+ * @file
+ * Standalone Quantum Fourier Transform sequence builders and circuit
+ * wrappers, independent of the QFT-based arithmetic builders.
+ *
+ * Convention: these implementations use the textbook QFT pattern
+ * WITHOUT the final bit-reversal SWAP layer. Callers that need the
+ * canonical bit ordering must apply SWAPs themselves.
+ *
+ * Edge cases:
+ *   - n == 0: empty/no-op sequence (or no-op circuit wrapper).
+ *   - n == 1: a single Hadamard on qubit 0 (or qubits[0]).
+ *
+ * Ownership: sequences returned by qc_qft_seq / qc_iqft_seq are
+ * heap-allocated and the caller is responsible for releasing them
+ * via qc_sequence_free.
+ */
+
+/**
+ * @brief Build a standalone QFT sequence on @p n logical qubits.
+ *
+ * The returned sequence has @c total_qubits == n and @c used_layer
+ * equal to @c 2*n-1 for @c n >= 1 (0 for @c n <= 0). No final swaps
+ * are emitted. Caller must free with qc_sequence_free.
+ *
+ * @param n Number of logical qubits the sequence acts on.
+ * @return  Newly-allocated sequence, or NULL on allocation failure.
+ */
+QC_API qc_sequence_t *qc_qft_seq(int n);
+
+/**
+ * @brief Build a standalone inverse QFT sequence on @p n logical qubits.
+ *
+ * Mirror of qc_qft_seq with negated phase angles and reversed layer
+ * order. No final swaps are emitted. Caller must free with
+ * qc_sequence_free.
+ *
+ * @param n Number of logical qubits the sequence acts on.
+ * @return  Newly-allocated sequence, or NULL on allocation failure.
+ */
+QC_API qc_sequence_t *qc_iqft_seq(int n);
+
+/**
+ * @brief Apply a bare QFT to the given qubit array.
+ *
+ * Builds qc_qft_seq(n) internally, runs it against @p qubits on
+ * @p ctx, and frees the sequence. No final swaps are emitted.
+ *
+ * @param ctx    Target circuit context (must be non-NULL).
+ * @param qubits Array of @p n qubit indices (must be non-NULL when @c n > 0).
+ * @param n      Number of qubits; @c n == 0 is a no-op, @c n == 1 emits a single H.
+ * @return       QC_OK on success, or an error code.
+ */
+QC_API qc_error_t qc_qft (circuit_ctx_t *ctx, const uint32_t *qubits, uint32_t n);
+
+/**
+ * @brief Apply a bare inverse QFT to the given qubit array.
+ *
+ * Builds qc_iqft_seq(n) internally, runs it against @p qubits on
+ * @p ctx, and frees the sequence. No final swaps are emitted.
+ *
+ * @param ctx    Target circuit context (must be non-NULL).
+ * @param qubits Array of @p n qubit indices (must be non-NULL when @c n > 0).
+ * @param n      Number of qubits; @c n == 0 is a no-op, @c n == 1 emits a single H.
+ * @return       QC_OK on success, or an error code.
+ */
+QC_API qc_error_t qc_iqft(circuit_ctx_t *ctx, const uint32_t *qubits, uint32_t n);
+
 /* -- QFT arithmetic sequence builders ------------------------------------ */
 
 QC_API qc_sequence_t *qc_arith_qq_add_seq(int bits);
