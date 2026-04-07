@@ -154,9 +154,97 @@ QC_API qc_error_t qc_toffoli_mod_sub_qq(circuit_ctx_t *ctx,
                                           const uint32_t *other,
                                           uint32_t other_bits,
                                           int64_t modulus) {
-    (void)ctx; (void)value; (void)value_bits;
-    (void)other; (void)other_bits; (void)modulus;
-    return QC_ERR_INVALID_OP;
+    /* Step 3b (refactor-7awn): qc_toffoli_mod_sub_qq as the unitary
+     * inverse (dagger) of qc_toffoli_mod_add_qq.
+     *
+     * The Beauregard 8-step block in qc_toffoli_mod_add_qq is run
+     * backwards here, with each gate replaced by its inverse:
+     *   - CX, X are self-inverse
+     *   - qq_add <-> qq_sub
+     *   - cq_add(-N) <-> cq_add(+N)
+     *   - ccq_add(+N, cmp_anc) <-> ccq_add(-N, cmp_anc)
+     *
+     * The cmp_anc and high_bit ancilla allocation/free positions are
+     * invariant under daggering: both ancillae must begin and end in
+     * |0>, so they bracket the whole block exactly as in mod_add_qq.
+     *
+     * TWO'S-COMPLEMENT IS FORBIDDEN (PRD §4.2): computing
+     * value += (2^n - other) mod 2^n does NOT equal (value - other) mod N
+     * for non-power-of-two N. The dagger construction avoids this trap.
+     */
+    if (!ctx || !value || !other) return QC_ERR_NULL;
+    if (value_bits == 0 || value_bits > 64) return QC_ERR_WIDTH;
+    if (modulus <= 0) return QC_ERR_DIVISOR;
+
+    uint32_t n = value_bits;
+
+    uint32_t high_bit;
+    if (qc_qubit_alloc(ctx, &high_bit) != QC_OK) return QC_ERR_ALLOC;
+
+    uint32_t cmp_anc;
+    if (qc_qubit_alloc(ctx, &cmp_anc) != QC_OK) {
+        qc_qubit_free(ctx, high_bit);
+        return QC_ERR_ALLOC;
+    }
+
+    uint32_t wide_reg[65];
+    for (uint32_t i = 0; i < n; i++)
+        wide_reg[i] = value[i];
+    wide_reg[n] = high_bit;
+
+    /* Pad source if needed (identical to mod_add_qq). */
+    uint32_t pad_count = 0;
+    uint32_t pad_start = 0;
+    uint32_t src[65];
+    for (uint32_t i = 0; i < other_bits && i < n + 1; i++) {
+        src[i] = other[i];
+    }
+    if (other_bits < n + 1) {
+        pad_count = n + 1 - other_bits;
+        if (qc_qubit_alloc_n(ctx, pad_count, &pad_start) != QC_OK) {
+            qc_qubit_free(ctx, cmp_anc);
+            qc_qubit_free(ctx, high_bit);
+            return QC_ERR_ALLOC;
+        }
+        for (uint32_t i = other_bits; i < n + 1; i++) {
+            src[i] = pad_start + (i - other_bits);
+        }
+    }
+
+    /* Dagger of mod_add_qq: steps 8..1 inverted. */
+
+    /* Inverse of step 8 (value += other)  ==>  value -= other */
+    qc_dynamic_qq_sub(ctx, src, wide_reg, n + 1);
+
+    /* Inverse of step 7 (CX(sign, cmp_anc)) — self-inverse */
+    qc_circuit_cx(ctx, wide_reg[n], cmp_anc);
+
+    /* Inverse of step 6 (X(cmp_anc)) — self-inverse */
+    qc_circuit_x(ctx, cmp_anc);
+
+    /* Inverse of step 5 (value -= other)  ==>  value += other */
+    qc_dynamic_qq_add(ctx, src, wide_reg, n + 1);
+
+    /* Inverse of step 4 (conditional value += N)  ==>  conditional value -= N */
+    qc_dynamic_ccq_add(ctx, wide_reg, n + 1, -modulus, cmp_anc);
+
+    /* Inverse of step 3 (CX(sign, cmp_anc)) — self-inverse */
+    qc_circuit_cx(ctx, wide_reg[n], cmp_anc);
+
+    /* Inverse of step 2 (value -= N)  ==>  value += N */
+    qc_dynamic_cq_add(ctx, wide_reg, n + 1, modulus);
+
+    /* Inverse of step 1 (value += other)  ==>  value -= other */
+    qc_dynamic_qq_sub(ctx, src, wide_reg, n + 1);
+
+    if (pad_count > 0) {
+        qc_qubit_free_n(ctx, pad_start, pad_count);
+    }
+
+    qc_qubit_free(ctx, cmp_anc);
+    qc_qubit_free(ctx, high_bit);
+
+    return QC_OK;
 }
 
 QC_API qc_error_t qc_toffoli_cmod_add_qq(circuit_ctx_t *ctx,
