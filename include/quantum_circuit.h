@@ -694,6 +694,81 @@ QC_API qc_error_t qc_toffoli_mod_mul_cq(circuit_ctx_t *ctx, const uint32_t *valu
                                           uint32_t result_bits, int64_t multiplier,
                                           int64_t modulus);
 
+/* ---------------------------------------------------------------------- */
+/* Extended modular primitives (qint_mod support).                        */
+/* Declarations reserved by refactor-m38p Step 0; bodies are stubs that   */
+/* return QC_ERR_INVALID_OP until subsequent steps fill them in.          */
+/* ---------------------------------------------------------------------- */
+
+/**
+ * @brief Controlled modular CQ addition: if ctrl, value = (value + addend) mod N.
+ */
+QC_API qc_error_t qc_toffoli_cmod_add_cq(circuit_ctx_t *ctx, const uint32_t *value,
+                                           uint32_t value_bits, int64_t addend,
+                                           int64_t modulus, uint32_t ext_ctrl);
+
+/**
+ * @brief Controlled modular CQ multiplication: if ctrl, result = (value * multiplier) mod N.
+ */
+QC_API qc_error_t qc_toffoli_cmod_mul_cq(circuit_ctx_t *ctx, const uint32_t *value,
+                                           uint32_t value_bits, const uint32_t *result,
+                                           uint32_t result_bits, int64_t multiplier,
+                                           int64_t modulus, uint32_t ext_ctrl);
+
+/**
+ * @brief Modular CQ subtraction: value = (value - subtrahend) mod N.
+ */
+QC_API qc_error_t qc_toffoli_mod_sub_cq(circuit_ctx_t *ctx, const uint32_t *value,
+                                          uint32_t value_bits, int64_t subtrahend,
+                                          int64_t modulus);
+
+/**
+ * @brief Modular QQ subtraction: value = (value - other) mod N.
+ */
+QC_API qc_error_t qc_toffoli_mod_sub_qq(circuit_ctx_t *ctx, const uint32_t *value,
+                                          uint32_t value_bits, const uint32_t *other,
+                                          uint32_t other_bits, int64_t modulus);
+
+/**
+ * @brief Controlled modular QQ addition: if ctrl, value = (value + other) mod N.
+ */
+QC_API qc_error_t qc_toffoli_cmod_add_qq(circuit_ctx_t *ctx, const uint32_t *value,
+                                           uint32_t value_bits, const uint32_t *other,
+                                           uint32_t other_bits, int64_t modulus,
+                                           uint32_t ext_ctrl);
+
+/**
+ * @brief Controlled modular CQ subtraction: if ctrl, value = (value - subtrahend) mod N.
+ */
+QC_API qc_error_t qc_toffoli_cmod_sub_cq(circuit_ctx_t *ctx, const uint32_t *value,
+                                           uint32_t value_bits, int64_t subtrahend,
+                                           int64_t modulus, uint32_t ext_ctrl);
+
+/**
+ * @brief Controlled modular QQ subtraction: if ctrl, value = (value - other) mod N.
+ */
+QC_API qc_error_t qc_toffoli_cmod_sub_qq(circuit_ctx_t *ctx, const uint32_t *value,
+                                           uint32_t value_bits, const uint32_t *other,
+                                           uint32_t other_bits, int64_t modulus,
+                                           uint32_t ext_ctrl);
+
+/**
+ * @brief Modular QQ multiplication: result = (a * b) mod N.
+ */
+QC_API qc_error_t qc_toffoli_mod_mul_qq(circuit_ctx_t *ctx, const uint32_t *a,
+                                          uint32_t a_bits, const uint32_t *b,
+                                          uint32_t b_bits, const uint32_t *result,
+                                          uint32_t result_bits, int64_t modulus);
+
+/**
+ * @brief Controlled modular QQ multiplication: if ctrl, result = (a * b) mod N.
+ */
+QC_API qc_error_t qc_toffoli_cmod_mul_qq(circuit_ctx_t *ctx, const uint32_t *a,
+                                           uint32_t a_bits, const uint32_t *b,
+                                           uint32_t b_bits, const uint32_t *result,
+                                           uint32_t result_bits, int64_t modulus,
+                                           uint32_t ext_ctrl);
+
 /* ====================================================================== */
 /* Arithmetic dispatch (mode-aware wrappers)                               */
 /* ====================================================================== */

@@ -160,7 +160,7 @@ QC_API qc_error_t qc_toffoli_mod_add_cq(circuit_ctx_t *ctx,
 /* Controlled Beauregard CQ Modular Addition                               */
 /* ====================================================================== */
 
-static qc_error_t toffoli_cmod_add_cq_internal(circuit_ctx_t *ctx,
+qc_error_t toffoli_cmod_add_cq_internal(circuit_ctx_t *ctx,
                                                  const uint32_t *value,
                                                  uint32_t value_bits,
                                                  int64_t addend,

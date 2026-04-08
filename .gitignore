@@ -20,3 +20,4 @@ Thumbs.db
 *.a
 *.dll
 *.lib
+tests/__pycache__

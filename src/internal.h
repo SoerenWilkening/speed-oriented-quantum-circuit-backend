@@ -362,6 +362,22 @@ void qc_dynamic_cq_add(circuit_ctx_t *ctx, const uint32_t *target,
 void qc_dynamic_ccq_add(circuit_ctx_t *ctx, const uint32_t *target,
                          uint32_t width, int64_t value, uint32_t control);
 
+/**
+ * @brief Internal: controlled Beauregard modular CQ addition core.
+ *
+ * Implements the 8-step controlled Beauregard block for
+ * value = (value + addend) mod modulus, externally controlled by ext_ctrl.
+ * Defined in toffoli_mod_reduce.c. Used by both qc_toffoli_mod_mul_cq
+ * (internal Beauregard ladder) and the public wrapper
+ * qc_toffoli_cmod_add_cq in toffoli_mod_extras.c.
+ */
+qc_error_t toffoli_cmod_add_cq_internal(circuit_ctx_t *ctx,
+                                          const uint32_t *value,
+                                          uint32_t value_bits,
+                                          int64_t addend,
+                                          int64_t modulus,
+                                          uint32_t ext_ctrl);
+
 /* ====================================================================== */
 /* Internal function declarations -- arithmetic dispatch (Module 1.13)     */
 /* ====================================================================== */

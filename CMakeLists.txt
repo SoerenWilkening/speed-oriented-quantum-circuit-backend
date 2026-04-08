@@ -10,6 +10,7 @@ set(CMAKE_C_EXTENSIONS OFF)
 add_compile_options(-Wall -Wextra -Wpedantic)
 
 # ── Collect sources ──────────────────────────────────────────────────────────
+# Note: src/toffoli_mod_extras.c (refactor-m38p) is picked up by this glob.
 file(GLOB QUANTUM_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c")
 
 # ── Shared library (libquantum.so / libquantum.dylib) ────────────────────────
@@ -325,6 +326,19 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_sequence_qubit_count.c")
     )
     target_link_libraries(test_sequence_qubit_count PRIVATE quantum_static m)
     add_test(NAME test_sequence_qubit_count COMMAND test_sequence_qubit_count)
+endif()
+
+# Toffoli mod extras: cmod_add_cq wrapper and future modular primitives
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_toffoli_mod_extras.c")
+    add_executable(test_toffoli_mod_extras
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_toffoli_mod_extras.c
+    )
+    target_include_directories(test_toffoli_mod_extras PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+    )
+    target_link_libraries(test_toffoli_mod_extras PRIVATE quantum_static m)
+    add_test(NAME test_toffoli_mod_extras COMMAND test_toffoli_mod_extras)
 endif()
 
 # ── Benchmarks ─────────────────────────────────────────────────────────
