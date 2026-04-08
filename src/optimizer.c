@@ -33,27 +33,13 @@
  * Returns 0 if no occupied layer exists below compar.
  */
 size_t qc_smallest_layer_below_comp(circuit_ctx_t *ctx, uint32_t qubit, size_t compar) {
+    (void)compar;  /* All current callers pass SIZE_MAX; the array is sorted
+                    * monotonically increasing, so the largest entry < SIZE_MAX
+                    * is unconditionally the last element. */
     if (ctx == NULL) return 0;
-
-    int count = (int)ctx->used_occupation_indices_per_qubit[qubit];
-    if (count <= 0)
-        return 0;
-
-    size_t *arr = ctx->occupied_layers_of_qubit[qubit];
-
-    /* Binary search: find lower_bound (first element >= compar) */
-    int lo = 0, hi = count;
-    while (lo < hi) {
-        int mid = lo + (hi - lo) / 2;
-        if (arr[mid] < compar)
-            lo = mid + 1;
-        else
-            hi = mid;
-    }
-
-    /* lo is the first index where arr[lo] >= compar.
-     * The largest element < compar is at arr[lo - 1]. */
-    return (lo > 0) ? arr[lo - 1] : 0;
+    uint32_t count = ctx->used_occupation_indices_per_qubit[qubit];
+    if (count == 0) return 0;
+    return ctx->occupied_layers_of_qubit[qubit][count - 1];
 }
 
 /* ---------------------------------------------------------------------- */

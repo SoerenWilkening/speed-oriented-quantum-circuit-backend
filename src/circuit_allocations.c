@@ -23,7 +23,8 @@ void qc_allocate_more_qubits(circuit_ctx_t *ctx, const qc_gate_internal_t *g) {
     if (max <= ctx->allocated_qubits)
         return;
 
-    uint32_t new_cap = max + QC_QUBIT_BLOCK;
+    uint32_t doubled = ctx->allocated_qubits ? ctx->allocated_qubits * 2 : QC_QUBIT_BLOCK;
+    uint32_t new_cap = (max + QC_QUBIT_BLOCK > doubled) ? max + QC_QUBIT_BLOCK : doubled;
 
     /* used_occupation_indices_per_qubit */
     uint32_t *new_used_occ = realloc(ctx->used_occupation_indices_per_qubit,
@@ -77,7 +78,12 @@ void qc_allocate_more_layer(circuit_ctx_t *ctx, size_t min_possible_layer) {
     if (min_possible_layer < ctx->allocated_layer)
         return;
 
-    uint32_t new_cap = ctx->allocated_layer + QC_LAYER_BLOCK;
+    uint32_t new_cap = ctx->allocated_layer * 2;
+    if (new_cap < ctx->allocated_layer + QC_LAYER_BLOCK)
+        new_cap = ctx->allocated_layer + QC_LAYER_BLOCK;
+    if (new_cap <= min_possible_layer)
+        new_cap = (uint32_t)min_possible_layer + 1;
+    uint32_t added = new_cap - ctx->allocated_layer;
 
     /* used_gates_per_layer */
     uint32_t *new_used = realloc(ctx->used_gates_per_layer,
@@ -85,7 +91,7 @@ void qc_allocate_more_layer(circuit_ctx_t *ctx, size_t min_possible_layer) {
     if (!new_used) return;
     ctx->used_gates_per_layer = new_used;
     memset(&ctx->used_gates_per_layer[ctx->allocated_layer], 0,
-           QC_LAYER_BLOCK * sizeof(uint32_t));
+           added * sizeof(uint32_t));
 
     /* allocated_gates_per_layer */
     uint32_t *new_alloc = realloc(ctx->allocated_gates_per_layer,
@@ -137,7 +143,10 @@ void qc_allocate_more_gates_per_layer(circuit_ctx_t *ctx, size_t layer, size_t p
     if (pos < ctx->allocated_gates_per_layer[layer])
         return;
 
-    uint32_t new_size = ctx->allocated_gates_per_layer[layer] + QC_GATES_PER_LAYER_BLOCK;
+    uint32_t old = ctx->allocated_gates_per_layer[layer];
+    uint32_t new_size = old * 2;
+    if (new_size < old + QC_GATES_PER_LAYER_BLOCK)
+        new_size = old + QC_GATES_PER_LAYER_BLOCK;
     qc_gate_internal_t *new_seq = realloc(ctx->sequence[layer],
                                           new_size * sizeof(qc_gate_internal_t));
     if (!new_seq) return;
@@ -153,8 +162,10 @@ void qc_allocate_more_indices_per_qubit(circuit_ctx_t *ctx, int loc) {
     uint32_t uloc = (uint32_t)loc;
     if (ctx->used_occupation_indices_per_qubit[uloc] ==
         ctx->allocated_occupation_indices_per_qubit[uloc]) {
-        uint32_t new_cap = ctx->allocated_occupation_indices_per_qubit[uloc] +
-                           QC_QUBIT_INDEX_BLOCK;
+        uint32_t old = ctx->allocated_occupation_indices_per_qubit[uloc];
+        uint32_t new_cap = old * 2;
+        if (new_cap < old + QC_QUBIT_INDEX_BLOCK)
+            new_cap = old + QC_QUBIT_INDEX_BLOCK;
         size_t *new_arr = realloc(ctx->occupied_layers_of_qubit[uloc],
                                   new_cap * sizeof(size_t));
         if (!new_arr) return;
