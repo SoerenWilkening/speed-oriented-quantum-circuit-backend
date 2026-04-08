@@ -25,7 +25,7 @@ ctest --test-dir build --output-on-failure
 
 ## QFT Generation Benchmark
 
-![QFT generation timing](circuit-gen-results/time_circuit_generation.pdf)
+![QFT generation timing](circuit-gen-results/time_circuit_generation.png)
 
 Wall-clock cost of building a standard n-qubit Quantum Fourier Transform with
 `libquantum`, swept over 43 register widths from n=1 to n=2000 (logarithmically
