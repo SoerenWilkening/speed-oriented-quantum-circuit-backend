@@ -21,3 +21,5 @@ Thumbs.db
 *.dll
 *.lib
 tests/__pycache__
+circuit-gen-results/qsharp/bin
+circuit-gen-results/qsharp/obj
